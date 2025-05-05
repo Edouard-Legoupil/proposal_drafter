@@ -1,0 +1,68 @@
+.Dashboard_project {
+        height: 250px;
+        min-width: 100%;
+        max-width: 590px;
+        background: white;
+
+        border: none;
+        outline: none;
+        border-radius: 15px;
+
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+
+        padding: 20px 30px;
+
+        cursor: pointer;
+}
+
+.Dashboard_project_title {
+        display: flex;
+        justify-content: space-between;
+        font-family: "Noto";
+        font-weight: 700;
+        font-size: 16px;
+        color: #141419;
+}
+
+.Dashboard_project_description {
+        font-family: "Noto";
+        font-weight: 500;
+        font-size: 12px;
+        color: #5A656D;
+        text-align: left;
+
+        display: flex;
+        flex-grow: 1;
+}
+
+.Dashboard_project_footer {
+        display: flex;
+        justify-content: space-between;
+}
+
+.Dashboard_project_date {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        font-family: "Noto";
+        font-weight: 500;
+        font-size: 14px;
+        color: #141419;
+        width: 200px;
+}
+
+.Dashboard_project_label {
+        height: 25px;
+        border-radius: 100px;
+        padding: 0 10px;
+        font-family: "Noto";
+        font-weight: 500;
+        font-size: 12px;
+        line-height: 18px;
+        text-align: center;
+        color: white;
+        display: flex;
+        align-items: center;
+}
