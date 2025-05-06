@@ -80,17 +80,11 @@ Create a file called **`.env`** in the backend directory and add the following l
 
 ```bash
 # Azure OpenAI Configuration
-AZURE_OPENAI_API_KEY=your-azure-openai-key
-AZURE_OPENAI_ENDPOINT=https://your-resource-name.openai.azure.com
-AZURE_OPENAI_API_VERSION=2023-05-15
+AZURE_API_KEY=your-api-key # Replace with KEY1 or KEY2
+AZURE_API_BASE=https://example.openai.azure.com/  # Replace with your endpoint
+AZURE_API_VERSION=2024-08-01-preview # API version
+AZURE_DEPLOYMENT_NAME=your-deployment-name # Replace with your deployment name
 
-# Embedding Configuration
-AZURE_EMBEDDING_MODEL=text-embedding-ada-002
-AZURE_EMBEDDING_DEPLOYMENT_NAME=your-embedding-deployment-name
-
-# Optional: If you also need chat/completion models
-AZURE_CHAT_MODEL=gpt-4
-AZURE_CHAT_DEPLOYMENT_NAME=your-chat-deployment-name
 ```
 
 
@@ -102,13 +96,12 @@ uvicorn main:app --host 0.0.0.0 --port 8502 --reload
 
 ### Frontend Setup
 
-React  
-
-Go to the frontend folder:
+Open a new terminal and go to the frontend folder:
 
 ```bash
-cd .../frontend
+cd frontend
 ```
+
 Create environment file (.env) that contains the API URL for the backend server. This file is used to store environment variables that can be accessed in the React application. The `.env` file should be located in the root of your React project. Create a file called **`.env`** in the frontend directory and add the following line:
 ```bash
 echo "VITE_API_URL=http://localhost:8502  # For local development" > .env
