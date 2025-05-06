@@ -1,0 +1,68 @@
+content_generation_task:
+  description: >
+    Generate content for "{section}" based on the following:
+    - **Project Description:** {project_description}
+    - **Form Data:** {form_data}
+    - **Instructions:** {instructions}
+    
+    Ensure that the response is well-structured, coherent, and does NOT exceed {word_limit} words.
+    If the output exceeds the limit, rephrase or summarize to fit within the given limit.
+    Respond with a raw JSON object, no Markdown formatting, no triple backticks.
+
+  expected_output: >
+    Return a JSON with the following format:
+    {
+      "generated_content": "<Generated proposal section>",
+      "evaluation_status": "",
+      "feedback": ""
+    }
+
+    "generated_content" should contain a well-written section of the project proposal that strictly follows the given instructions and does not exceed {word_limit} words.
+    Leave "evaluation_status" and "feedback" as empty strings for now.
+
+  agent: content_generator
+
+evaluation_task:
+  description: >
+    Review the generated content for the "{section}" and verify it against the JSON instructions: {instructions}.
+    Ensure that the content does NOT exceed {word_limit} words.
+    
+    If the content meets the requirements, approve it.
+    If the content is too long, provide feedback asking for a shorter version within the limit.
+    Respond with a raw JSON object, no Markdown formatting, no triple backticks.
+
+  expected_output: >
+    Return a JSON with the following format:
+    {
+      "generated_content": "<Copy original content or revised if minor edits>",
+      "evaluation_status": "Approved" OR "Requires Revision",
+      "feedback": "<Only if revision is required, provide constructive feedback>"
+    }
+
+    Approve only if the content aligns with the instructions and does not exceed the {word_limit} word.
+
+  agent: evaluator
+
+regeneration_task:
+  description: >
+    Regenerate content for "{section}" based on the following:
+    - **Project Description:** {project_description}
+    - **Form Data:** {form_data}
+    - **User's Concise Input:** {concise_input}
+    - **Instructions:** {instructions}
+
+    Ensure that the response integrates the user’s input while remaining structured, coherent, and within {word_limit} words.
+    If the output exceeds the limit, rephrase or summarize to fit within the given limit.
+    Respond with a raw JSON object, no Markdown formatting, no triple backticks.
+
+  expected_output: >
+    Return a JSON with the following format:
+    {
+      "generated_content": "<Revised version of the proposal section>",
+      "evaluation_status": "Approved",
+      "feedback": "<Mention it was revised as per feedback>"
+    }
+
+    The revised content must be coherent, respect the word limit, and align with both the project context and evaluator's feedback.
+
+  agent: regenerator

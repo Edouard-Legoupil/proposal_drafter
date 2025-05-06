@@ -1,0 +1,91 @@
+{
+  "bad_examples": [
+    {
+      "example_id": "BADEXAMPLE1",
+      "project_title": "Support to Syrian Refugees in Turkey through Access to Livelihood Opportunities, Transportation Services and Strengthened Municipal Services",
+      "project_code": "CS.075",
+      "template_type": "Standard",
+      "example_category": "POOR_RESULT_ARTICULATION_AND_MATRIX",
+      "weaknesses": [
+        "Poor articulation of project rationale and result chain in narrative form",
+        "Weak vertical logic in results matrix",
+        "Activity-focused rather than results-oriented approach",
+        "Lack of clear theory of change between activities and outcomes"
+      ],
+      "content": {
+        "full_text": "With the Syrian crisis now in its sixth year, over 2.78 million Syrians are registered under temporary protection (SuTP) in Turkey...",
+        "problematic_sections": [
+          {
+            "section_name": "Summary",
+            "content": "With the Syrian crisis now in its sixth year, over 2.78 million Syrians are registered under temporary protection (SuTP) in Turkey. As part of the 3RP (Regional Refugee and Resilience Plan), IOM is currently implementing humanitarian actions to enhance access to basic services (basic needs, food security, education, school transportation, primary health care and psychosocial support) as well as livelihoods support and vocational training assistance to build the resilience of Syrians who have been displaced by the protracted conflict in Syria. \n\nIOM is expanding its assistance portfolio and sustaining the existing humanitarian operation. Under this project, IOM will contribute to improving livelihoods and living conditions of Syrian migrants and refugees living in and outside of camps in Turkey and improving social cohesion with their host communities, through :\na) Quick impact income Generating Small Conditional Grants/Equipment\nb) Provision of transportation services for people living in camps or outside camps\nc) Support the municipal services in Gaziantep and Sanliurfa",
+            "alignment_with_template": "Summary",
+            "issues": [
+              "Lists activities instead of focusing on expected outcomes",
+              "No clear articulation of the problem or need the project will address",
+              "Missing explanation of how the listed activities will achieve the vaguely stated objective of 'improving livelihoods'",
+              "No indication of expected impact or how success will be measured"
+            ],
+            "improvement_suggestions": [
+              "Clearly state the specific problems faced by Syrian refugees that the project will address",
+              "Articulate the strategic approach rather than just listing activities",
+              "Include expected outcomes and impacts with quantifiable targets",
+              "Explain the theory of change connecting activities to outcomes"
+            ]
+          },
+          {
+            "section_name": "Rationale",
+            "content": "In October 2014, the Government of Turkey adapted the Temporary Protection (TP) Regulation that extends protection and assistance to all Syrians in Turkey and provides refugees with rights and duties and the framework to access health care, education, and social assistance. As of 15 January 2016, the Government extended access to the labour market to those under TP, albeit with restrictions. The regulation is an important step for Syrian refugees to be self-sufficient and to reduce the risk of exploitation through informal labour. Despite the new regulation, the large number of refugees accessing social services has stretched national structures and capacity to the utmost, particularly in those areas which host a high proportion of Syrians such as the border provinces and towns.",
+            "alignment_with_template": "Rationale",
+            "issues": [
+              "Focuses on policy context without clearly identifying the specific problems being addressed",
+              "Does not establish a clear need for the specific interventions proposed",
+              "Fails to provide supporting evidence for the claims made about stretched services",
+              "No explanation of why the proposed interventions are the most appropriate solutions"
+            ],
+            "improvement_suggestions": [
+              "Include specific data on the problems faced by Syrian refugees in accessing livelihoods",
+              "Provide evidence of the gap in services and how this project will address these gaps",
+              "Explain why the three proposed interventions are the most effective approach",
+              "Include analysis of other interventions that have been tried and lessons learned"
+            ]
+          },
+          {
+            "section_name": "Proposed Response",
+            "content": "A- Quick impact income Generating Small Conditional Grants/Equipment\nFollowing the regulation allowing Syrians under TP to access the formal labour market, IOM Turkey launched its livelihoods project focusing on three main activities including i) quick impact in-kind grants ii) job placements, and iii) entrepreneurship training across Gaziantep, Hatay and Sanliurfa...",
+            "alignment_with_template": "Project Description",
+            "issues": [
+              "Overly focused on activity descriptions rather than strategic approach",
+              "Missing clear connection between activities and intended outcomes",
+              "Lacks explanation of how the three components (grants, transportation, municipal services) work together coherently",
+              "No discussion of sustainability beyond the project period"
+            ],
+            "improvement_suggestions": [
+              "Restructure to focus on strategic approach rather than activity details",
+              "Clearly articulate how each activity contributes to specific outcomes",
+              "Explain the synergies between the three main components",
+              "Include sustainability considerations for each intervention"
+            ]
+          }
+        ]
+      },
+      "references": [
+        "Regional Refugee and Resilience Plan (3RP)",
+        "Turkey's upcoming National Action Plan",
+        "Strategy Document on Harmonization"
+      ],
+      "alignment_with_proposal_template": {
+        "Summary": "Poor",
+        "Rationale": "Poor",
+        "Project Description": "Poor",
+        "Partnerships and Coordination": "Poor",
+        "Monitoring": "Not included in example"
+      },
+      "common_error_categories": [
+        "Activity-focused rather than results-oriented",
+        "Missing theory of change",
+        "Lack of supporting evidence",
+        "Unclear strategic approach"
+      ]
+    }
+  ]
+}

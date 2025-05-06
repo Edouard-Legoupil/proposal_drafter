@@ -1,0 +1,161 @@
+{
+  "project_info": {
+    "section_name": "Project Information",
+    "fields": [
+      {"field": "Project title", "instructions": "[PROJECT TITLE]"},
+      {"field": "Project type", "instructions": "Choose primary project type"},
+      {"field": "Secondary project type", "instructions": "Choose secondary project type if applicable"},
+      {"field": "Geographical Coverage", "instructions": "Specify the geographical location/s covered by the project. Include city, region, country and/or international region, as relevant."},
+      {"field": "Executing agency", "instructions": "International Organization for Migration (IOM)"},
+      {"field": "Beneficiaries", "instructions": "Specify the individuals, groups and/or institutions intended to benefit from the project. To the extent possible, disaggregate the beneficiaries by age, sex and other key characteristics, such as beneficiary type and/or vulnerability criteria (e.g. unaccompanied minors, persons with a disability, children and ex combatants)."},
+      {"field": "Partner(s)", "instructions": "Insert the names of the project partners that will actively contribute to and/or take part in project operations."},
+      {"field": "Management site", "instructions": "From the dropdown list, select the IOM office that will be managing the project."},
+      {"field": "Duration", "instructions": "Insert the duration of the project in terms of the number of months."},
+      {"field": "Budget", "instructions": "Indicate both the currency and total estimated budget amount. All project budgets should be in US dollars, unless a prospective donor has specified that contributions be made in a different currency (e.g. all EU funded projects are in euros)."}
+    ]
+  },
+  "sections": [
+    {
+      "section_name": "Summary",
+      "word_limit": 350,
+      "instructions": "Provide a brief overview of the proposed project, including the context and the need, and the objective of the project. Also, describe how the project's activities will achieve the key outputs, and how outputs are likely to influence the achievement of the project's outcomes.",
+      "reference": "See Module 2 of the IOM Project Handbook (Step 3: Preparing a Project Summary)."
+    },
+    {
+      "section_name": "Rationale",
+      "word_limit": 400,
+      "instructions": "Justify the project being proposed by describing its rationale: (a) What is the problem, for whom is it a problem and why is it significant? • What is the situation to be addressed? • Why is the situation a problem? • Is the problem ongoing or is it foreseen to be realized within the foreseeable future? • Where, specifically, is it a problem? • For whom is it a problem? How is it affecting certain groups differently, such as men, women, boys, girls and other groups? (b) Why is the problem the right one to address? • How would solving the problem be of value to the intended beneficiaries? How might it affect other groups? Consider unintended negative consequences for all groups affected, whether or not they are the focus of the project. (c) How is the project linked to broader national, regional, and/or global initiatives, including IOM internal strategies and results frameworks?",
+      "reference": "See Module 2 of the IOM Project Handbook (Step 4: Developing a Project Rationale)."
+    },
+    {
+      "section_name": "Project Description",
+      "word_limit": 600,
+      "instructions": "Articulate how and why a set of intended results and activities will bring about the changes the project seeks to achieve. (a) What is the intended change brought about by the project? What are the assumptions and hypotheses underlying the casual relationships between activities, outputs and outcomes? • Why is the approach being proposed to address the problem(s) the best course of action? • What are the assumptions that must hold true in order that results are realized? • What are the hypotheses explaining why it is thought that the implementation of activities will lead to the achievement of outputs, why the achievement of outputs will influence the achievement of outcomes, and why the achievement of outcomes will contribute to the project objective? (b) Who are the stakeholders? • Why is IOM best placed to address the problem? What is IOM's added value/comparative advantage in implementing the project? What special skills, knowledge and/or capacities does IOM have to justify its involvement? • Which other stakeholders would be involved in the project, and why are they required for the project to succeed? • Consider gender and age when identifying stakeholders and strive for stakeholders who are representative of the target population. (c) How will the project address the following cross-cutting themes of rights-based approach to programming, gender mainstreaming, environmental sensitivity and sustainability, sustainability of project results, principled humanitarian action and mainstreaming protection in crisis response?",
+      "reference": "See Module 2 of the IOM Project Handbook (Step 5: Outlining the Project Description)."
+    },
+    {
+      "section_name": "Partnerships and Coordination",
+      "word_limit": 350,
+      "instructions": "Describe the role and/or the key responsibilities of each of the main partners who will be involved in the implementation of the project. Also describe how the project management structure will ensure that the main partners will coordinate their activities.",
+      "reference": "See Module 2 (Step 6: Describing Partnerships and Coordination Arrangements)."
+    },
+    {
+      "section_name": "Monitoring",
+      "word_limit": 350,
+      "instructions": "Indicate how the project will monitor the main aspects of the project by providing an overview of the roles and responsibilities of team members. Describe how data for the project indicators will be collected, what data collection tools will be used, and how often data will be collected and analysed. If working through implementing partners, mention how they will be monitored and their reporting requirements, and in particular if working in a remote management situation with difficult access due to security.",
+      "reference": "See Module 2 (Step 7: Describing the Monitoring Approach)."
+    },
+    {
+      "section_name": "Evaluation",
+      "word_limit": 350,
+      "instructions": "Indicate the timing and purpose of the evaluation, its intended use and the evaluation criteria to be used. Briefly describe the expected methodology to be employed in realizing the evaluation purpose, and indicate if the evaluation would be conducted internally or externally.",
+      "reference": "See Module 2 (Step 8: Describing the Evaluation Approach)."
+    },
+    {
+      "section_name": "Results Matrix",
+      "instructions": "Complete the results matrix with objective, outcomes, outputs, indicators, data sources, baseline, targets, and assumptions.",
+      "reference": "See Module 2 (Step 9: Preparing the Results Matrix).",
+      "table": {
+        "columns": ["", "Indicators", "Data Source and Collection Method", "Baseline", "Target", "Assumptions"],
+        "rows": [
+          {
+            "row_title": "Objective",
+            "row_description": "The most significant, realistic goal to which the project can contribute. It seeks to align to a broader, longer-term strategy, whether internal or external.",
+            "cells": {
+              "Indicators": "Quantitative or qualitative factors or variables to measure achievement or to reflect expected changes. Data is disaggregated by key characteristics (age, sex), wherever relevant.",
+              "Data Source and Collection Method": "Data source and collection method indicate from where and how information will be gathered for the purposes of measuring the indicator.",
+              "Baseline": "Establishes the value of the indicator at the beginning of the project planning period. Disaggregated by key characteristics (age, sex), wherever relevant.",
+              "Target": "Describes the expected value of the indicator upon completion of the result. Disaggregated by key characteristics (age, sex), wherever relevant.",
+              "Assumptions": ""
+            }
+          },
+          {
+            "row_title": "Outcome 1",
+            "row_description": "The intended changes in institutional performance, individual or group behaviour or attitudes, or the political, economic, or social position of the beneficiaries.",
+            "cells": {
+              "Indicators": "Quantitative or qualitative factors or variables to measure achievement or to reflect expected changes. Data is disaggregated by key characteristics (age, sex), wherever relevant.",
+              "Data Source and Collection Method": "Data source and collection method indicate from where and how information will be gathered for the purposes of measuring the indicator.",
+              "Baseline": "Establishes the value of the indicator at the beginning of the project planning period. Disaggregated by key characteristics (age, sex), wherever relevant.",
+              "Target": "Describes the expected value of the indicator upon completion of the result. Disaggregated by key characteristics (age, sex), wherever relevant.",
+              "Assumptions": "Assumptions necessary for the outcomes to contribute to the achievement of the objective."
+            }
+          },
+          {
+            "row_title": "Output 1.1",
+            "row_description": "The intended changes in the skills or abilities of the beneficiaries, or the availability of new products or services as a result of project activities.",
+            "cells": {
+              "Indicators": "Quantitative or qualitative factors or variables to measure achievement or to reflect expected changes. Data is disaggregated by key characteristics (age, sex), wherever relevant.",
+              "Data Source and Collection Method": "Data source and collection method indicate from where and how information will be gathered for the purposes of measuring the indicator.",
+              "Baseline": "Establishes the value of the indicator at the beginning of the project planning period. Disaggregated by key characteristics (age, sex), wherever relevant.",
+              "Target": "Describes the expected value of the indicator upon completion of the result. Disaggregated by key characteristics (age, sex), wherever relevant.",
+              "Assumptions": "Assumptions necessary for the outputs to deliver the outcomes."
+            }
+          },
+          {
+            "row_title": "Activities that lead to Output 1.1",
+            "row_description": "The coordination, technical assistance, training, production, delivery, transportation, and other tasks that are organized and executed under the project.",
+            "cells": {
+              "Assumptions": "Assumptions necessary for the activities to deliver the outputs."
+            }
+          },
+          {
+            "row_title": "Output 1.2",
+            "row_description": "The intended changes in the skills or abilities of the beneficiaries, or the availability of new products or services as a result of project activities.",
+            "cells": {
+              "Indicators": "Quantitative or qualitative factors or variables to measure achievement or to reflect expected changes. Data is disaggregated by key characteristics (age, sex), wherever relevant.",
+              "Data Source and Collection Method": "Data source and collection method indicate from where and how information will be gathered for the purposes of measuring the indicator.",
+              "Baseline": "Establishes the value of the indicator at the beginning of the project planning period. Disaggregated by key characteristics (age, sex), wherever relevant.",
+              "Target": "Describes the expected value of the indicator upon completion of the result. Disaggregated by key characteristics (age, sex), wherever relevant.",
+              "Assumptions": "Assumptions necessary for the outputs to deliver the outcomes."
+            }
+          },
+          {
+            "row_title": "Activities that lead to Output 1.2",
+            "row_description": "The coordination, technical assistance, training, production, delivery, transportation, and other tasks that are organized and executed under the project.",
+            "cells": {
+              "Assumptions": "Assumptions necessary for the activities to deliver the outputs."
+            }
+          }
+        ]
+      }
+    },
+    {
+      "section_name": "7. Work Plan",
+      "instructions": "Complete a basic Workplan that includes the following information: (a) When are the main activities expected to begin? How long will they last? When will they be completed? (b) Which partners are responsible for the implementation of each of the main activities?",
+      "reference": "See Module 2 (Step 10: Developing the Workplan).",
+      "table": {
+        "columns": ["Activity", "Responsible Party", "Time Frame (Month 1 through Month 8)"],
+        "note": "Time Frame is divided into 8 columns for Month 1-8"
+      }
+    },
+    {
+      "section_name": "8. Budget",
+      "instructions": "Prepare a budget using the appropriate budget template.",
+      "reference": "See Module 2 Proposal Development (Step 11: Budget)."
+    },
+    {
+      "section_name": "Annex 1. Risk Assessment Plan",
+      "instructions": "The Risk Assessment Plan is an internal document and will not be submitted to the donor, unless requested.",
+      "reference": "See Module 2 Proposal Development (Step 12 Analysing Risks and Developing the Risk Assessment Plan.",
+      "table": {
+        "columns": ["Risk Factor", "Consequence", "Likelihood and Timeline", "Risk Treatment Plan"],
+        "rows": [
+          {
+            "Risk Factor": "List the risk factors identified during risk analysis processes.",
+            "Consequence": "Indicate a rank of the risk consequence, from 1 to 6, based on the analysis done using a modified version of Tool 1.10 as per the context of the project idea.",
+            "Likelihood and Timeline": "Insert likelihood and timeline ranking as per the Risk Register, with any necessary revisions or updates.",
+            "Risk Treatment Plan": {
+              "Option": "Select the treatment option: • Avoiding the risk • Changing the likelihood of the risk • Changing the consequence of the risk • Sharing the risk with another party • Tolerating the risk without further treatment.",
+              "Action": "Describe the treatment action to be taken to implement the treatment option (e.g. build a road, conduct public info campaigns)."
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "headquarters_info": {
+    "note": "please change details as appropriate",
+    "address": "17 route des Morillons • C.P. 71 • CH-1211 Geneva 19 • Switzerland",
+    "contact": "Tel: +41.22.717 91 11 • Fax: +41.22.798 61 50 • E-mail: hq@iom.int • Internet: http://www.iom.int"
+  }
+}

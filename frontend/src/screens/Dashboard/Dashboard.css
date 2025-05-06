@@ -1,0 +1,103 @@
+.Dashboard {
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+
+        padding: 30px;
+        padding-bottom: 5px;
+}
+
+.Dashboard_top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 30px;
+
+        max-width: 100%;
+        overflow: hidden;
+        min-height: fit-content;
+}
+
+.Dashboard_label {
+        /* height: 40px; */
+
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+        gap: 10px;
+
+        font-family: "Noto";
+        font-weight: 700;
+        font-size: 20px;
+        line-height: 18px;
+
+        color: #222222;
+}
+
+.Dashboard_label_fileIcon {
+        height: 24px;
+}
+
+.Dashboard_search {
+        margin-top: 17.5px;
+
+        background: white;
+
+        border-radius: 40px;
+
+        display: flex;
+        align-items: center;
+        gap: 12.5px;
+        width: 100%;
+        max-width: 320px;
+        min-height: 24px;
+
+        padding: 8px 16px;
+
+        box-sizing: content-box;
+}
+
+.Dashboard_search > img {
+        height: 12.5px;
+}
+
+.Dashboard_search_input {
+        display: flex;
+        flex-grow: 1;
+
+        border: none;
+        outline: none;
+
+        font-family: Helvetica;
+        font-weight: 400;
+        font-size: 14px;
+        line-height: 20px;
+}
+
+.Dashboard_projects {
+        margin-top: 20px;
+        margin-right: -25px;
+
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        flex-wrap: wrap;
+        align-content: flex-start;
+        flex-grow: 1;
+        overflow-y: auto;
+        gap: 20px;
+
+        padding-right: 22.5px;
+        padding-bottom: 20px;
+}
+
+@media (max-width: 1150px) {
+        .Dashboard_projects {
+                grid-template-columns: repeat(2, 1fr);
+        }
+}
+
+@media (max-width: 790px) {
+        .Dashboard_projects {
+                grid-template-columns: repeat(1, 1fr);
+        }
+}

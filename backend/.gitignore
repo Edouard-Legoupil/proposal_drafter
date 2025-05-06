@@ -1,0 +1,10 @@
+# Ignore virtual environment
+uc1_env/
+
+# Ignore environment variable files
+.env
+
+# Ignore Python cache files
+__pycache__/
+*.py[cod]
+

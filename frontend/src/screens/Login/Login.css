@@ -1,0 +1,233 @@
+.Login {
+        height: 100%;
+        display: flex;
+}
+
+.Login-errorPopover:popover-open {
+        background: #FF0000;
+        width: 450px;
+        max-width: 90%;
+        height: 65px;
+
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        padding: 0 15px;
+
+        font-family: "Noto";
+        font-weight: 600;
+        color: #fff;
+        font-size: 18px;
+
+        border: none;
+        border-radius: 15px;
+
+        top: 15px;
+        margin: 0 auto;
+
+        transition: display 0.2s ease-in;
+}
+
+.Login-left {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+}
+
+.Login-appLogo {
+        width: 100%;
+
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 15px;
+}
+
+.Login_icon {
+        height: 60px;
+        margin-top: auto;
+}
+
+.Login-form {
+        /* margin-top: -10px; Negate top margin of first label */
+
+        width: 100%; /* Trigger it to grow in width */
+        max-width: 450px; /* Then stop it at our required limit, thus making it responsive */
+        padding: 15px 50px;
+        margin-top: 55px;
+
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+
+        overflow: hidden;
+}
+
+.Login_form-header {
+        font-family: "Noto";
+        font-weight: 800;
+        font-size: 20px;
+        line-height: 100%;
+        letter-spacing: 0%;
+        vertical-align: middle;
+}
+
+.Login-label {
+        margin-top: 30px;
+
+        font-family: "Noto";
+        font-weight: 600;
+        font-size: 16px;
+        line-height: 100%;
+        letter-spacing: 0%;
+        color: #767676;
+}
+
+.Login-form > input {
+        border: 1px solid #D4D7E3;
+        border-radius: 5px;
+
+        background: #F7FBFF;
+
+        padding: 0 15px;
+
+        width: 100%;
+        height: 48px;
+
+        font-family: 'Noto';
+        font-weight: 600;
+        font-size: 14px;
+
+        margin-top: 8px;
+
+        outline: none;
+}
+
+.Login-submit {
+        margin-top: 30px;
+
+        width: 100%;
+        outline: none;
+        border: none;
+
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: center;
+
+        font-family: "Noto";
+        font-weight: 700;
+        font-size: 14px;
+        color: #fff;
+
+        background: #0033AE;
+        height: 48px;
+        border-radius: 50px;
+
+        box-shadow: 0px 5px 10px 0px #1053B133;
+
+        cursor: pointer;
+}
+
+.submitButtonSpinner {
+        height: 22.5px;
+        aspect-ratio: 1;
+        border: 5px solid hsla(0, 0%, 100%, 0.5);
+        border-bottom-color: white;
+        border-radius: 50%;
+        animation: rotation 1s linear infinite;
+
+        display: flex;
+        flex-shrink: 0;
+}
+
+@keyframes rotation {
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
+        }
+}
+
+.Login-submit:disabled {
+        cursor: not-allowed;
+
+        background: hsl(222, 5%, 90%);
+
+        box-shadow: none;
+}
+
+.Login-errorNotice {
+        margin-top: 20px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+
+        height: 15px;
+}
+
+.Login_form_errorNotice-bang {
+        height: 15px;
+        margin-right: 5px;
+}
+
+.Login_form_errorNotice-label {
+        font-family: "Noto";
+        font-size: 12px;
+        color: brown;
+}
+
+.Login_right-tabAndFold {
+        display: none;
+}
+
+.Login-rightIllustration {
+        display: flex;
+        flex-shrink: 0;
+}
+
+@media (max-width: 800px ) {
+        .Login-topIllustration {
+                display: block;
+                width: 100%;
+        }
+
+        .Login-right {
+                display: none;
+        }
+
+        .Login-left {
+                justify-content: space-between;
+        }
+
+        .Login-appLogo {
+                margin-top: 35px;
+        }
+
+        .Login-icon.loginScreen {
+                display: none;
+        }
+
+        .Login-icon.registerScreen {
+                display: inline;
+        }
+
+        .Login-form {
+                padding: 0 20px;
+                flex-grow: 1;
+        }
+
+        .Login-rightIllustration {
+                display: none;
+        }
+}

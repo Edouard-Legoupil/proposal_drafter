@@ -1,0 +1,382 @@
+.Chat {
+        display: flex;
+
+        height: 100%;
+        overflow: hidden;
+}
+
+.Chat_sidebar {
+        background: #17223B;
+
+        list-style-type: none;
+
+        width: 200px;
+        height: 100%;
+
+        padding-top: 20px;
+}
+
+.Chat_sidebarOption {
+        display: flex;
+        align-items: center;
+
+        font-family: "Noto";
+        font-size: 14px;
+        font-weight: 500;
+        color: #728DCB;
+        /* height: 40px; */
+
+        padding: 8px 16px;
+
+        border-left: 4px solid transparent;
+
+        cursor: pointer;
+}
+
+.Chat_sidebarOption.selectedSection {
+        background: #0E2963;
+        border-left-color: white;
+        color: white;
+}
+
+.Chat_right {
+        margin: 5px;
+        margin-left: 0;
+
+        display: flex;
+        flex-grow: 1;
+        flex-direction: column;
+        padding: 20px 30px;
+        padding-right: 22.5px;
+        overflow-x: hidden;
+        overflow-y: auto;
+}
+
+.Chat_inputArea {
+        margin-top: 20px;
+
+        border-radius: 15px;
+
+        background-color: white;
+
+        padding: 25px;
+        padding-bottom: 22.5px;
+
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+
+        overflow: hidden;
+}
+
+.Chat_inputArea.no-shrink {
+        flex-shrink: 0;
+}
+
+.Chat_inputArea_prompt {
+        outline: none;
+        border: 1px solid #ACB8CB;
+        border-radius: 5px;
+
+        padding: 15px 20px;
+
+        background-color: #F0F3F8;
+
+        resize: none;
+
+        height: 100px;
+        width: 100%;
+
+        display: flex;
+        flex-shrink: 0;
+
+        font-family: "Noto";
+        font-weight: 500;
+        color: #141419;
+        font-size: 16px;
+}
+
+.Chat_inputArea_justify {
+        margin-top: 27.5px;
+
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+}
+
+.Chat_inputArea_additionalDetails {
+        margin-top: 30px;
+
+        display: flex;
+        gap: 12.5px;
+        width: fit-content;
+
+        font-family: "Noto";
+        font-weight: 700;
+        font-size: 16px;
+        color: #0033A0;
+
+        cursor: pointer;
+}
+
+.Chat_inputArea_additionalDetails > img {
+        transform: scaleY(-1);
+        max-width: 14px;
+}
+
+.Chat_inputArea_additionalDetails.expanded > img {
+        transform: scaleY(1);
+}
+
+.Chat_form {
+        margin-top: 17.5px;
+        margin-bottom: 10px;
+
+        padding: 1px;
+
+        display: grid;
+        row-gap: 15px;
+        column-gap: 25px;
+        grid-template-columns: repeat(5, 1fr);
+
+        overflow-y: auto;
+}
+
+@media (min-height: 746px) {
+        .Chat_form {
+                padding-right: 1px;
+        }
+}
+
+.Chat_form_inputContainer {
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+        gap: 8px;
+}
+
+.Chat_form_inputLabel {
+        font-family: "Noto";
+        font-size: 14px;
+        color: #141419;
+}
+
+.Chat_form_input_mandatoryAsterisk {
+        color: orangered;
+}
+
+.Chat_form_input_mandatoryAsterisk.hidden {
+        display: none;
+}
+
+.Chat_form_input {
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+
+        height: 40px;
+        width: 100%;
+
+        font-family: "Noto";
+        font-weight: 500;
+        font-size: 14px;
+        color: #141419;
+
+        padding: 0 12.5px;
+}
+
+.Chat_inputArea_buttonContainer {
+        display: flex;
+        justify-content: flex-end;
+}
+
+.Chat_proposalContainer {
+        margin-top: 20px;
+
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+}
+
+.Chat_proposalSection {
+        background: white;
+
+        border-radius: 15px;
+
+        scroll-margin: 15px;
+}
+
+.Chat_sectionHeader {
+        display: flex;
+        align-items: center;
+        padding: 25px;
+}
+
+.Chat_sectionTitle {
+        font-family: "Noto";
+        font-size: 16px;
+        font-weight: 700;
+        color: #0033A0;
+}
+
+.Chat_sectionOptions {
+        display: flex;
+        gap: 15px;
+        margin: 0 30px 0 auto;
+}
+
+.Chat_sectionOptions > button {
+        border: none;
+        outline: none;
+        background: #E6ECF5;
+
+        width: fit-content;
+        height: fit-content;
+
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+
+        cursor: pointer;
+
+        position: relative;
+}
+
+.Chat_sectionOptions > button > span {
+        display: none;
+}
+
+.Chat_sectionOptions > button:hover > span {
+        display: flex;
+        position: absolute;
+        top: -45px;
+        left: 50%;
+        transform: translateX(-50%);
+        text-align: center;
+
+        border-radius: 8px;
+        background: black;
+
+        font-family: "Noto";
+        font-size: 14px;
+        color: white;
+
+        padding: 8px 16px;
+}
+
+.Chat_sectionOptions > button:hover > span::after {
+        content: " ";
+        position: absolute;
+        top: 100%; /* At the bottom of the tooltip */
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: black transparent transparent transparent;
+}
+
+.Chat_sectionOptions > button > img {
+        max-height: 40px;
+}
+
+.Chat_sectionContent {
+        font-family: "Noto";
+        font-size: 14px;
+        font-weight: 500;
+        color: #141419;
+
+        text-align: justify;
+
+        padding: 25px;
+
+        border-top: 1px solid hsla(205, 10%, 39%, 20%);
+}
+
+.Chat_sectionContent > textarea {
+        width: 100%;
+        field-sizing: content;
+        resize: none;
+
+        font-family: monospace;
+        font-size: 14px;
+
+        border: none;
+        outline: none;
+}
+
+.Chat_sectionContent > h2 {
+        margin-top: 10px;
+}
+
+.Chat_sectionContent > p {
+        margin-top: 10px;
+}
+
+.Chat_sectionContent > ul, .Chat_sectionContent > ol {
+        margin-left: 30px;
+        margin-top: 5px;;
+}
+
+.Chat_sectionContent_loading {
+        display: flex;
+        filter: invert();
+}
+
+.Chat_sectionContent_loading {
+        margin-left: 10px;
+}
+
+.Chat_regenerate[open] {
+        border: none;
+        background: #F0F3F8;
+
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+
+        /* top: 0; */
+        margin-left: auto;
+
+        height: 100%;
+        width: 920px;
+}
+
+.Chat_regenerate::backdrop {
+        background: #181b2371;
+}
+
+.Chat_regenerate_header {
+        height: 65px;
+
+        background: white;
+
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        padding: 0 30px;
+
+        font-family: "Noto";
+        font-size: 18px;
+        font-weight: 700;
+        color: #141419
+}
+
+.Chat_regenerate_content {
+        width: 100%;
+
+        padding: 20px 30px;
+}
+
+.Chat_regenerate_promptArea {
+        background: white;
+
+        border-radius: 15px;
+
+        height: 265px;
+
+        padding: 25px;
+}
+
+.Chat_expanderArrow.closed {
+        transform: scaleY(-1);
+}
