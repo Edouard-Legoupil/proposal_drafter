@@ -125,12 +125,40 @@ npm run dev
 ## Docker Configuration
 
 We have two Dockerfiles, one for the backend and one for the frontend. The backend is a FastAPI application, and the frontend is a React application. Then `docker-compose.yml` brings the two components together.
+The containerization process involves creating Docker images for both the backend and frontend applications, allowing them to run in isolated environments. This ensures consistency across different development and production setups.
 
-How to Verify that the dockerisation Works?
-Use Docker Desktop with admin privileges, login without your account and then generate the image to check that the image is built correctly. From your project root, run:
+```
+project/
+├── docker-compose.yml
+├── backend/
+│   ├── Dockerfile
+│   └── requirements.txt
+└── frontend/
+    ├── Dockerfile
+    └── package.json
+```
+
+__How to Verify that the dockerisation Works?__ Use Docker Desktop with admin privileges, login without your account and then generate the image to check that the image is built correctly. From your project root, run:
+
+You may first clean the Build Environment. To do so, run these commands in sequence:
 
 ```bash
+docker system prune -a --volumes
+docker builder prune -a 
+```
+
+Test Docker build for backend and frontend
+```bash 
+docker build -f backend/Dockerfile -t backend-test .
+# or for a more verbose output
+docker build -f backend/Dockerfile -t backend-test --no-cache --progress plain ./backend
+docker build -f frontend/Dockerfile -t frontend-test .
+```
+
+Now the full image can be built using docker-compose. This will build both the backend and frontend images and run them in separate containers.
+```bash
 docker-compose up --build
+docker-compose build --no-cache --progress plain 
 ```
 
 Check that:
@@ -141,25 +169,30 @@ Check that:
 
 ## CI/CD Pipeline
 
-Create Azure service principal:
+Create Azure service principal:   https://learn.microsoft.com/en-us/azure/container-registry/container-registry-get-started-portal?tabs=azure-cli 
 
 ```bash
-az ad sp create-for-rbac --name MyAppSP \
-                         --role contributor \
-                         --scopes /subscriptions/<sub-id>/resourceGroups/ProposalDrafter \
-                         --sdk-auth
+az login
+az acr login --name ProposalDrafterAppSP  
+
+az appservice plan create \
+   --resource-group MY_RESOURCE_GROUP \
+   --name MY_APP_SERVICE_PLAN \
+   --is-linux
+
 ```
 
 Add these secrets to GitHub so that the workflow can access them and the docker images can be pushed to the Azure Container Registry.
+
 Go to your GitHub repository, click on **Settings** > **Secrets and variables** > **Actions** > **New repository secret**.
 
  * AZURE_CREDENTIALS: Output from above command
 
- * REGISTRY_LOGIN_SERVER: myappregistry.azurecr.io
+ * REGISTRY_LOGIN_SERVER: proposaldrafterappsp.azurecr.io
 
- * REGISTRY_USERNAME: ACR username
+ * REGISTRY_USERNAME: ProposalDrafterAppSP
 
- * REGISTRY_PASSWORD: ACR password
+ * REGISTRY_PASSWORD: ....
 
  Workflow Configuration is done through `.github/workflows/deploy.yml`. When ever there is a push to the main branch, the workflow will be triggered. It builds the Docker images for both frontend and backend, pushes them to Azure Container Registry, and deploys them to Azure App Service.
 

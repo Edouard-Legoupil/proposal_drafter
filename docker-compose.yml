@@ -2,52 +2,34 @@ version: '3.8'
 
 services:
   backend:
-    build: 
+    build:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "8502:8502"  # Exposes Uvicorn port
+      - "8502:8502"
     environment:
-      - APP_ENV=production
-    #  - DATABASE_URL=postgresql://user:pass@db:5432/mydb  # Example - replace with your DB
+      - PYTHONUNBUFFERED=1
     volumes:
-      - ./backend/app:/app/app  # For development: hot-reload code changes
+      - ./backend:/app
+      - backend-venv:/app/venv
     restart: unless-stopped
-    networks:
-      - app-network
 
   frontend:
-    build: 
+    build:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "5173:5173"  # Vite dev server port (dev mode)
-      - "80:80"      # Production Nginx port
+      - "5173:5173"
     environment:
-      - VITE_API_URL=http://backend:8502  # Points to backend service
+      - NODE_ENV=development
     volumes:
-      - ./frontend/src:/app/src  # For development: hot-reload code changes
+      - ./frontend:/app
+      - /app/node_modules
     depends_on:
       - backend
     restart: unless-stopped
-    networks:
-      - app-network
+    command: npm run dev  
 
-  # Uncomment if you need PostgreSQL
-  # db:
-  #   image: postgres:13
-  #   environment:
-  #     - POSTGRES_USER=user
-  #     - POSTGRES_PASSWORD=pass
-  #     - POSTGRES_DB=mydb
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #   networks:
-  #     - app-network
+volumes:
+  backend-venv:
 
-networks:
-  app-network:
-    driver: bridge
-
-# volumes:
-#   postgres_data:

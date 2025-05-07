@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 env:
-  REGISTRY: myappregistry.azurecr.io
+  REGISTRY: proposaldrafterappsp.azurecr.io
   BACKEND_IMAGE: ${{ env.REGISTRY }}/backend
   FRONTEND_IMAGE: ${{ env.REGISTRY }}/frontend
 
