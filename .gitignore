@@ -174,3 +174,4 @@ cython_debug/
 .pypirc
 backend/.azure
 .github/workflow/profile.publishsettings
+.github/workflows/profile.publishsettings

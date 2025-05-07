@@ -85,17 +85,17 @@ class ProposalCrew():
             process=Process.sequential,
             verbose=True,
             output_log_file = self.generate_proposal_log,
-            knowledge_sources=[self.json_knowledge],      
-            embedder={
-                "provider": "azure",
-                "config": {
-                    "model": os.getenv("AZURE_DEPLOYMENT_NAME", "text-embedding-ada-002"),
-                    "api_key": os.getenv("AZURE_API_KEY"),
-                    "api_version": os.getenv("AZURE_API_VERSION", "2023-05-15"),
-                    "azure_endpoint": os.getenv("AZURE_API_BASE"),
-                    "azure_deployment": os.getenv("AZURE_DEPLOYMENT_NAME")
-                    }
-            }     
+            knowledge_sources=[self.json_knowledge]#,      
+            # embedder={
+            #     "provider": "azure",
+            #     "config": {
+            #         "model": os.getenv("AZURE_DEPLOYMENT_NAME", "text-embedding-ada-002"),
+            #         "api_key": os.getenv("AZURE_API_KEY"),
+            #         "api_version": os.getenv("AZURE_API_VERSION", "2023-05-15"),
+            #         "azure_endpoint": os.getenv("AZURE_API_BASE"),
+            #         "azure_deployment": os.getenv("AZURE_DEPLOYMENT_NAME")
+            #         }
+            # }     
             # embedder={
             #     "provider": "openai",
             #     "config": {
@@ -115,17 +115,17 @@ class ProposalCrew():
             process=Process.sequential,
             verbose=True,
             output_log_file = self.regenerate_proposal_log,
-            knowledge_sources=[self.json_knowledge],       
-            embedder={
-                "provider": "azure",
-                "config": {
-                    "model": os.getenv("AZURE_DEPLOYMENT_NAME", "text-embedding-ada-002"),
-                    "api_key": os.getenv("AZURE_API_KEY"),
-                    "api_version": os.getenv("AZURE_API_VERSION", "2023-05-15"),
-                    "azure_endpoint": os.getenv("AZURE_API_BASE"),
-                    "azure_deployment": os.getenv("AZURE_DEPLOYMENT_NAME")
-                    }
-            }     
+            knowledge_sources=[self.json_knowledge]#,       
+            # embedder={
+            #     "provider": "azure",
+            #     "config": {
+            #         "model": os.getenv("AZURE_DEPLOYMENT_NAME", "text-embedding-ada-002"),
+            #         "api_key": os.getenv("AZURE_API_KEY"),
+            #         "api_version": os.getenv("AZURE_API_VERSION", "2023-05-15"),
+            #         "azure_endpoint": os.getenv("AZURE_API_BASE"),
+            #         "azure_deployment": os.getenv("AZURE_DEPLOYMENT_NAME")
+            #         }
+            # }     
             # embedder={
             #     "provider": "openai",
             #     "config": {
