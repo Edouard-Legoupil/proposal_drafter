@@ -172,27 +172,37 @@ Check that:
 Create Azure service principal:   https://learn.microsoft.com/en-us/azure/container-registry/container-registry-get-started-portal?tabs=azure-cli 
 
 ```bash
-az login
-az acr login --name ProposalDrafterAppSP  
+az login  # Log in to your Azure account
 
-az appservice plan create \
-   --resource-group MY_RESOURCE_GROUP \
-   --name MY_APP_SERVICE_PLAN \
-   --is-linux
+# Create a resource group
+az group create --name myAppGroup --location eastus
 
+# Create App Service plan (Linux)
+az appservice plan create --name myAppPlan --resource-group myAppGroup --is-linux
+
+# Create the Web App with Docker support
+az webapp create \
+  --resource-group myAppGroup \
+  --plan myAppPlan \
+  --name my-app-name \
+  --multicontainer-config-type compose \
+  --multicontainer-config-file docker-compose.yml
+
+# Get your deployment user and password:
+az webapp deployment user set --user-name <your-username> --password <your-password>
 ```
 
 Add these secrets to GitHub so that the workflow can access them and the docker images can be pushed to the Azure Container Registry.
 
 Go to your GitHub repository, click on **Settings** > **Secrets and variables** > **Actions** > **New repository secret**.
 
- * AZURE_CREDENTIALS: Output from above command
+ * AZURE_CREDENTIALS: Output from below command
 
- * REGISTRY_LOGIN_SERVER: proposaldrafterappsp.azurecr.io
-
- * REGISTRY_USERNAME: ProposalDrafterAppSP
-
- * REGISTRY_PASSWORD: ....
+```bash
+az ad sp create-for-rbac --name "myAppServicePrincipal" --sdk-auth
+```
+ * AZURE_WEBAPP_PUBLISH_PROFILE
+→ Download it from the Azure Portal: Go to your Web App → Deployment Center → Get publish profile
 
  Workflow Configuration is done through `.github/workflows/deploy.yml`. When ever there is a push to the main branch, the workflow will be triggered. It builds the Docker images for both frontend and backend, pushes them to Azure Container Registry, and deploys them to Azure App Service.
 

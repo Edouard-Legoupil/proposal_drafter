@@ -1,57 +1,28 @@
-name: Build and deploy to Azure
+name: Deploy to Azure Web App
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-
-env:
-  REGISTRY: proposaldrafterappsp.azurecr.io
-  BACKEND_IMAGE: ${{ env.REGISTRY }}/backend
-  FRONTEND_IMAGE: ${{ env.REGISTRY }}/frontend
+    branches:
+      - main
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
+
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
-
-    - name: Login to Azure Container Registry
-      uses: docker/login-action@v1
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ secrets.REGISTRY_USERNAME }}
-        password: ${{ secrets.REGISTRY_PASSWORD }}
-
-    # Build and push backend
-    - name: Build and push backend image
-      working-directory: ./backend
-      run: |
-        docker build -t ${{ env.BACKEND_IMAGE }}:latest .
-        docker push ${{ env.BACKEND_IMAGE }}:latest
-
-    # Build and push frontend
-    - name: Build and push frontend image
-      working-directory: ./frontend
-      run: |
-        docker build -t ${{ env.FRONTEND_IMAGE }}:latest .
-        docker push ${{ env.FRONTEND_IMAGE }}:latest
+      uses: actions/checkout@v3
 
     - name: Login to Azure
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Deploy to Azure Web App
+    - name: Deploy Docker Compose to Azure Web App
       uses: azure/webapps-deploy@v2
       with:
-        app-name: myapp-backend
-        images: ${{ env.REGISTRY }}/backend:latest
+        app-name: proposal-drafter
+        slot-name: production
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        images: ''
 
-    - name: Deploy frontend to Azure Web App
-      uses: azure/webapps-deploy@v2
-      with:
-        app-name: myapp-frontend
-        images: ${{ env.REGISTRY }}/frontend:latest
