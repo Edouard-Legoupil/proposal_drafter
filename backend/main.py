@@ -31,21 +31,47 @@ app = FastAPI()
 
 # Allow CORS from specific frontend origin(s)
 origins = [
-    "http://localhost:8503"  # here the frontend url will be there
-  ]
+    "http://localhost:8503",   # Frontend URL
+    "http://localhost:8502",   # Backend URL
+    "http://127.0.0.1:8503",   # Alternative frontend URL
+    "*"                        # Allow all origins temporarily for debugging
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,            
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],               
-    allow_headers=["*"],              
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
 
 session_data = {}
-redis_client = redis.Redis(host="localhost", port=6379, db=0, decode_responses=True)
+
+# Initialize Redis with error handling
+try:
+    redis_client = redis.Redis(host="localhost", port=6379, db=0, decode_responses=True)
+    # Test connection
+    redis_client.ping()
+    print("Successfully connected to Redis")
+except redis.ConnectionError:
+    print("Warning: Could not connect to Redis. Using in-memory storage as fallback.")
+    # Use a simple dict as fallback if Redis is not available
+    class DictStorage:
+        def __init__(self):
+            self.storage = {}
+            
+        def setex(self, key, ttl, value):
+            self.storage[key] = value
+            
+        def set(self, key, value):
+            self.storage[key] = value
+            
+        def get(self, key):
+            return self.storage.get(key)
+    
+    redis_client = DictStorage()
 
 
 

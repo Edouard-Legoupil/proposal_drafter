@@ -1,35 +1,35 @@
-version: '3.8'
+version: '3'
 
 services:
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    build: ./backend
     ports:
       - "8502:8502"
     environment:
-      - PYTHONUNBUFFERED=1
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     volumes:
       - ./backend:/app
-      - backend-venv:/app/venv
+      - ./proposal-documents:/app/proposal-documents
+    depends_on:
+      - redis
     restart: unless-stopped
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    build: ./frontend
     ports:
-      - "5173:5173"
-    environment:
-      - NODE_ENV=development
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - "8503:80"
     depends_on:
       - backend
     restart: unless-stopped
-    command: npm run dev  
 
 volumes:
-  backend-venv:
-
+  redis_data:

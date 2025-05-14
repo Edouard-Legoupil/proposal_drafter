@@ -7,6 +7,36 @@ import os
 import uuid
 from datetime import datetime
 
+from langchain_openai import AzureChatOpenAI
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Configure Azure OpenAI
+os.environ["AZURE_API_TYPE"] = "azure"
+os.environ["AZURE_API_BASE"] = os.getenv("AZURE_OPENAI_ENDPOINT")
+os.environ["AZURE_API_KEY"] = os.getenv("AZURE_OPENAI_API_KEY")
+os.environ["AZURE_API_VERSION"] = os.getenv("OPENAI_API_VERSION")
+os.environ["AZURE_DEPLOYMENT_NAME"] = os.getenv("AZURE_DEPLOYMENT_NAME")
+
+# Validate environment variables
+required_vars = ["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY", "OPENAI_API_VERSION", "AZURE_DEPLOYMENT_NAME"]
+missing_vars = [var for var in required_vars if not os.getenv(var)]
+if missing_vars:
+    raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
+
+# Initialize LLM
+llm = AzureChatOpenAI(
+    azure_deployment=os.getenv("AZURE_DEPLOYMENT_NAME"),
+    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+    api_version=os.getenv("OPENAI_API_VERSION"),
+    model=f"azure/{os.getenv('AZURE_DEPLOYMENT_NAME')}",
+    max_retries=3,
+    timeout=30
+)
+
 # Load JSON instructions from the config folder
 CONFIG_PATH = "config/templates/iom_proposal_template.json"
 with open(CONFIG_PATH, "r", encoding="utf-8") as file:
@@ -33,6 +63,7 @@ class ProposalCrew():
     def content_generator(self) -> Agent:
         return Agent(
             config=self.agents_config['content_generator'],
+            llm= llm,
             verbose=True
         )
 
@@ -40,6 +71,7 @@ class ProposalCrew():
     def evaluator(self) -> Agent:
         return Agent(
             config=self.agents_config['evaluator'],
+            llm= llm,
             verbose=True
         )
     #Introducing a new agent- regenerator agent - [NEED TO DISCUSS ON THIS WITH NISHANT]
@@ -47,6 +79,7 @@ class ProposalCrew():
     def regenerator(self) -> Agent:  # ✅ New agent for regeneration
         return Agent(
             config=self.agents_config['regenerator'],
+            llm= llm,
             verbose=True
         )
     #Introducing a new agent- regenerator agent - [NEED TO DISCUSS ON THIS WITH NISHANT]
@@ -85,17 +118,7 @@ class ProposalCrew():
             process=Process.sequential,
             verbose=True,
             output_log_file = self.generate_proposal_log,
-            knowledge_sources=[self.json_knowledge]#,      
-            # embedder={
-            #     "provider": "azure",
-            #     "config": {
-            #         "model": os.getenv("AZURE_DEPLOYMENT_NAME", "text-embedding-ada-002"),
-            #         "api_key": os.getenv("AZURE_API_KEY"),
-            #         "api_version": os.getenv("AZURE_API_VERSION", "2023-05-15"),
-            #         "azure_endpoint": os.getenv("AZURE_API_BASE"),
-            #         "azure_deployment": os.getenv("AZURE_DEPLOYMENT_NAME")
-            #         }
-            # }     
+            knowledge_sources=[self.json_knowledge],           
             # embedder={
             #     "provider": "openai",
             #     "config": {
@@ -115,17 +138,7 @@ class ProposalCrew():
             process=Process.sequential,
             verbose=True,
             output_log_file = self.regenerate_proposal_log,
-            knowledge_sources=[self.json_knowledge]#,       
-            # embedder={
-            #     "provider": "azure",
-            #     "config": {
-            #         "model": os.getenv("AZURE_DEPLOYMENT_NAME", "text-embedding-ada-002"),
-            #         "api_key": os.getenv("AZURE_API_KEY"),
-            #         "api_version": os.getenv("AZURE_API_VERSION", "2023-05-15"),
-            #         "azure_endpoint": os.getenv("AZURE_API_BASE"),
-            #         "azure_deployment": os.getenv("AZURE_DEPLOYMENT_NAME")
-            #         }
-            # }     
+            knowledge_sources=[self.json_knowledge],
             # embedder={
             #     "provider": "openai",
             #     "config": {

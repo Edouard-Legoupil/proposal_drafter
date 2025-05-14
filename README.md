@@ -1,235 +1,113 @@
-# IOM - Proposal Generator  
+# IOM Proposal Drafter
 
-## Brief Introduction  
-An agentic AI application to help generate project proposals for IOM.  
+An agentic AI application to help generate project proposals for IOM.
 
-## Table of Contents
+## Project Structure
 
-1. [Prerequisites](#prerequisites)
+- `frontend/` - React application
+- `backend/` - FastAPI application with CrewAI integration
+- `.github/workflows/` - CI/CD configuration
 
-2. [Local Development Setup](#local-development-setup)
-   - [Backend Setup](#backend-setup)
-   - [Frontend Setup](#frontend-setup)
+## Deployment Options
 
-3. [Docker Configuration](#docker-configuration)
+### Option 1: Deploy with Docker (Recommended)
 
-4. [Azure Deployment](#azure-deployment)
-   - [Resource Creation](#resource-creation)
-   - [Container Registry Setup](#container-registry-setup)
+Prerequisites:
+- Docker
+- Docker Compose
 
-5. [CI/CD Pipeline](#cicd-pipeline)
-   - [GitHub Secrets](#github-secrets)
-   - [Workflow Configuration](#workflow-configuration)
+Steps:
 
-6. [Post-Deployment](#post-deployment)
-   - [Accessing the App](#accessing-your-app)
-   - [Troubleshooting](#troubleshooting)
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd proposal_drafter-dev
+   ```
 
-## Prerequisites
+2. Start all services:
+   ```bash
+   docker-compose up -d
+   ```
 
-- **GitHub Account** with your project repository
-- **Python 3.9+** with Uvicorn installed
-- **Node.js 16+** for React development
-- **Azure Account** with active subscription
-- **Azure CLI** installed (`az` command)
-- **Docker** for containerization
+3. Access the application:
+   - Frontend: http://localhost:8503
+   - Backend API: http://localhost:8502
 
-Once you have this clone this repository.
-
-## Local Development Setup
-
-### Backend Setup
-
-Go to the backend folder:
-
+To rebuild the containers after changes:
 ```bash
-cd backend
+docker-compose up -d --build
 ```
 
-We need to use a virtual environment in Python development. This is essential for managing dependencies, avoiding conflicts, and ensuring reproducibility. It allows you to isolate project-specific libraries and versions, preventing interference with other projects or the global Python installation. This isolation helps maintain a clean development environment, simplifies project setup for collaborators, and enhances security by reducing the risk of introducing vulnerabilities. Overall, virtual environments provide a consistent and organized way to manage your Python projects effectively.
+### Option 2: Deploy without Docker
 
-Make sure to install the last [stable version of python language](https://www.python.org/downloads/) and create a dedicated python environment to have a fresh install where to manage correctly all the dependencies between packages. To specify a particular version of Python when creating a virtual environment, you can use the full path to the desired Python executable. Here is how you can do it:
+Prerequisites:
+- Node.js 20.x
+- Python 3.11
+- Redis server
+- Nginx (for production)
 
-Open your terminal (Command Prompt, PowerShell, or any terminal emulator).
+Steps:
 
-Navigate to your project directory where you want to create the virtual environment.
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd proposal_drafter-dev
+   ```
 
-Run the following command to create a virtual environment,here called **`.venv`**:
+2. Setup and start the backend:
+   ```bash
+   cd backend
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -r requirements.txt
+   uvicorn main:app --host 0.0.0.0 --port 8502 --reload
+   ```
 
+3. Setup and start the frontend:
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
+4. Access the application:
+   - Frontend: http://localhost:8503 (development server)
+   - Backend API: http://localhost:8502
+
+For production deployment, use the provided `deploy.sh` script:
 ```bash
-python -m venv .venv`
+./deploy.sh
 ```
-Then, activate the virtual environment:
-
-```bash
-# On Windows:
-.\.venv\Scripts\activate
-# On macOS/Linux:
-source .venv/bin/activate
-```
-
-Install the required python packages using:
-
-```bash
-pip install -r requirements.txt   
-```
-
-Now configure the environment variables. This assumes you have already created an Azure OpenAI resource and have the necessary keys and endpoints.
-
-Create a file called **`.env`** in the backend directory and add the following lines to [configure crewai with Azure OpenAI](https://blog.crewai.com/configuring-azure-openai-with-crewai-a-comprehensive-guide/):
-
-```bash
-# Azure OpenAI Configuration
-AZURE_API_KEY=your-api-key # Replace with KEY1 or KEY2
-AZURE_API_BASE=https://example.openai.azure.com/  # Replace with your endpoint
-AZURE_API_VERSION=2024-08-01-preview # API version
-AZURE_DEPLOYMENT_NAME=your-deployment-name # Replace with your deployment name
-
-```
-
-
-Test run the server with
-
-```bash 
-uvicorn main:app --host 0.0.0.0 --port 8502 --reload
-```
-
-### Frontend Setup
-
-Open a new terminal and go to the frontend folder:
-
-```bash
-cd frontend
-```
-
-Create environment file (.env) that contains the API URL for the backend server. This file is used to store environment variables that can be accessed in the React application. The `.env` file should be located in the root of your React project. Create a file called **`.env`** in the frontend directory and add the following line:
-```bash
-echo "VITE_API_URL=http://localhost:8502  # For local development" > .env
-```
-
-Install dependencies using npm:
-```bash
-npm install
-```
-
-Build the frontend server:
-```bash
-npm run build
-```
-
-Start development server:
-```bash
-npm run dev 
-```
-
-## Docker Configuration
-
-We have two Dockerfiles, one for the backend and one for the frontend. The backend is a FastAPI application, and the frontend is a React application. Then `docker-compose.yml` brings the two components together.
-The containerization process involves creating Docker images for both the backend and frontend applications, allowing them to run in isolated environments. This ensures consistency across different development and production setups.
-
-```
-project/
-├── docker-compose.yml
-├── backend/
-│   ├── Dockerfile
-│   └── requirements.txt
-└── frontend/
-    ├── Dockerfile
-    └── package.json
-```
-
-__How to Verify that the dockerisation Works?__ Use Docker Desktop with admin privileges, login without your account and then generate the image to check that the image is built correctly. From your project root, run:
-
-You may first clean the Build Environment. To do so, run these commands in sequence:
-
-```bash
-docker system prune -a --volumes
-docker builder prune -a 
-```
-
-Test Docker build for backend and frontend
-```bash 
-docker build -f backend/Dockerfile -t backend-test .
-# or for a more verbose output
-docker build -f backend/Dockerfile -t backend-test --no-cache --progress plain ./backend
-docker build -f frontend/Dockerfile -t frontend-test .
-```
-
-Now the full image can be built using docker-compose. This will build both the backend and frontend images and run them in separate containers.
-```bash
-docker-compose up --build
-docker-compose build --no-cache --progress plain 
-```
-
-Check that:
-
-* Backend becomes available at http://localhost:8501
-* Frontend appears at http://localhost
-
 
 ## CI/CD Pipeline
 
-Create Azure service principal:   https://learn.microsoft.com/en-us/azure/container-registry/container-registry-get-started-portal?tabs=azure-cli 
+The project includes two CI/CD pipeline configurations:
+
+1. `docker-ci.yml` - For Docker-based deployment
+2. `standard-ci.yml` - For traditional deployment
+
+These pipelines handle:
+- Code linting and testing
+- Building the frontend
+- Creating Docker images (Docker pipeline)
+- Deploying to a production server (Standard pipeline)
+
+## Development
+
+### Frontend
 
 ```bash
-az login  # Log in to your Azure account
-
-# Create a resource group
-az group create --name myAppGroup --location eastus
-
-# Create App Service plan (Linux)
-az appservice plan create --name myAppPlan --resource-group myAppGroup --is-linux
-
-# Create the Web App with Docker support
-az webapp create \
-  --resource-group myAppGroup \
-  --plan myAppPlan \
-  --name my-app-name \
-  --multicontainer-config-type compose \
-  --multicontainer-config-file docker-compose.yml
-
-# Get your deployment user and password:
-az webapp deployment user set --user-name <your-username> --password <your-password>
+cd frontend
+npm install
+npm run dev
 ```
 
-Add these secrets to GitHub so that the workflow can access them and the docker images can be pushed to the Azure Container Registry.
-
-Go to your GitHub repository, click on **Settings** > **Secrets and variables** > **Actions** > **New repository secret**.
-
- * AZURE_CREDENTIALS: Output from below command
+### Backend
 
 ```bash
-az ad sp create-for-rbac --name "myAppServicePrincipal" --sdk-auth
+cd backend
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn main:app --host 0.0.0.0 --port 8502 --reload
 ```
- * AZURE_WEBAPP_PUBLISH_PROFILE
-→ Download it from the Azure Portal: Go to your Web App → Deployment Center → Get publish profile
-
- Workflow Configuration is done through `.github/workflows/deploy.yml`. When ever there is a push to the main branch, the workflow will be triggered. It builds the Docker images for both frontend and backend, pushes them to Azure Container Registry, and deploys them to Azure App Service.
-
-## Post-Deployment
-
-### Accessing the App
-
- * Frontend: https://myapp-frontend.azurewebsites.net
-
- * Backend API: https://myapp-backend.azurewebsites.net
-
-### Troubleshooting
-
-Check logs:
-```bash
-az webapp log tail --name myapp-backend --resource-group ProposalDrafter
-```
-
-Verify deployment:
-```bash
-az webapp config container list --name myapp-backend --resource-group ProposalDrafter
-```
-
-Common issues:
-
-* Port mismatch: Verify WEBSITES_PORT matches your Uvicorn port
-
-* CORS errors: Configure FastAPI CORS middleware
-
-*  Database connections: Verify connection strings

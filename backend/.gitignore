@@ -1,6 +1,6 @@
 # Ignore virtual environment
 uc1_env/
-.venv/
+
 # Ignore environment variable files
 .env
 
