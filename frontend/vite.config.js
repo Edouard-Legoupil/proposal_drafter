@@ -7,7 +7,8 @@ export default defineConfig({
     port: 8503,
     host: '0.0.0.0',
     allowedHosts: [
-      'localhost'
+      'localhost',
+      'http://proposal-drafter.azurewebsites.net/'
     ],
     proxy: {
       '/api': {
