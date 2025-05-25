@@ -6,3 +6,10 @@ python-docx
 langchain
 langchain-openai
 langchain-community
+sqlalchemy 
+psycopg2-binary 
+python-dotenv 
+PyJWT 
+werkzeug
+reportlab
+apscheduler

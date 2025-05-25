@@ -19,6 +19,7 @@ os.environ["AZURE_API_BASE"] = os.getenv("AZURE_OPENAI_ENDPOINT")
 os.environ["AZURE_API_KEY"] = os.getenv("AZURE_OPENAI_API_KEY")
 os.environ["AZURE_API_VERSION"] = os.getenv("OPENAI_API_VERSION")
 os.environ["AZURE_DEPLOYMENT_NAME"] = os.getenv("AZURE_DEPLOYMENT_NAME")
+# os.environ["EMBEDDING_MODEL"] = os.getenv("EMBEDDING_MODEL")
 
 # Validate environment variables
 required_vars = ["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY", "OPENAI_API_VERSION", "AZURE_DEPLOYMENT_NAME"]
@@ -33,6 +34,7 @@ llm = AzureChatOpenAI(
     api_key=os.getenv("AZURE_OPENAI_API_KEY"),
     api_version=os.getenv("OPENAI_API_VERSION"),
     model=f"azure/{os.getenv('AZURE_DEPLOYMENT_NAME')}",
+    # deployment_model=f"azure/{os.getenv('"EMBEDDING_MODEL"')}",
     max_retries=3,
     timeout=30
 )

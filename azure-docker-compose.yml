@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  nginx-proxy:
+    build:
+      context: ./nginx-proxy
+    image: proposalgenacr.azurecr.io/proposalgen-nginx:latest
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - frontend
+      - backend
+
+  frontend:
+    image: proposalgenacr.azurecr.io/proposalgen-frontend:latest
+    restart: always
+    environment:
+      - VITE_BACKEND_URL=/api
+    depends_on:
+      - backend
+
+  backend:
+    image: proposalgenacr.azurecr.io/proposalgen-backend:latest
+    restart: always
+    environment:
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
+      - OPENAI_API_VERSION=${OPENAI_API_VERSION}
+      - AZURE_DEPLOYMENT_NAME=${AZURE_DEPLOYMENT_NAME}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - SECRET_KEY=${SECRET_KEY}
+    depends_on:
+      - redis
+  
+  redis:
+    image: redis:alpine
+    restart: always
+    ports:
+      - "6379:6379"

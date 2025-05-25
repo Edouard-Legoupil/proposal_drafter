@@ -27,6 +27,10 @@ input, button, textarea, select {
         font: inherit;
 }
 
+input::-ms-reveal, input::-ms-clear {
+        display: none;
+}
+
 p, h1, h2, h3, h4, h5, h6 {
         overflow-wrap: break-word;
 }

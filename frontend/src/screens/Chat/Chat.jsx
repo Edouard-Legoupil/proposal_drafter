@@ -1,6 +1,7 @@
 import './Chat.css'
 
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Markdown from 'react-markdown'
 
 import Base from '../../components/Base/Base'
@@ -14,13 +15,19 @@ import generateIcon from "../../assets/images/generateIcon.svg"
 import resultsIcon from "../../assets/images/Chat_resultsIcon.svg"
 import edit from "../../assets/images/Chat_edit.svg"
 import save from "../../assets/images/Chat_save.svg"
+import cancel from "../../assets/images/Chat_editCancel.svg"
 import copy from "../../assets/images/Chat_copy.svg"
 import tick from "../../assets/images/Chat_copiedTick.svg"
 import regenerate from "../../assets/images/Chat_regenerate.svg"
 import regenerateClose from "../../assets/images/Chat_regenerateClose.svg"
+import word_icon from "../../assets/images/word.svg"
+import pdf_icon from "../../assets/images/pdf.svg"
+import approved_icon from "../../assets/images/Chat_approved.svg"
 
 export default function Chat (props)
 {
+        const navigate = useNavigate()
+
         const [sidebarOpen, setSidebarOpen] = useState(false)
 
         const [titleName, setTitleName] = useState(props?.title ?? "Create Proposal")
@@ -29,6 +36,10 @@ export default function Chat (props)
 
         const [form_expanded, setFormExpanded] = useState(true)
         const [formData, setFormData] = useState({
+                "Project title": {
+                        mandatory: true,
+                        value: ""
+                },
                 "Project type": {
                         mandatory: true,
                         value: ""
@@ -115,8 +126,8 @@ export default function Chat (props)
                         open: true
                 }
         })
-        const [latestSection, setLatestSection] = useState(Object.keys(proposal)[0])
-        async function getSections()
+
+        async function getSections(latestSection = Object.keys(proposal)[0])
         {
                 let i
                 for (i = 0; Object.keys(proposal)[i] !== latestSection; i++);
@@ -126,16 +137,19 @@ export default function Chat (props)
 
                 for(let j = i; j < Object.keys(proposal).length; j++)
                 {
-                        const response = await fetch(`${API_BASE_URL}/process_section/${localStorage.getItem("session_id")}`, {
+                        const response = await fetch(`${API_BASE_URL}/process_section/${sessionStorage.getItem("session_id")}`, {
                                 method: "POST",
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
                                         section: Object.keys(proposal)[j],
-                                })
+                                        proposal_id: sessionStorage.getItem("proposal_id")
+                                }),
+                                credentials: 'include'
                         })
 
                         if(response.ok) {
                                 const data = await response.json()
+
                                 setProposal(p => ({
                                         ...p,
                                         [Object.keys(p)[j]]: { // We have index, not key, hence
@@ -144,7 +158,10 @@ export default function Chat (props)
                                         }
                                 }))
                                 setSelectedSection(j)
-                                proposalRef?.current?.children[j]?.scrollIntoView({behavior: "smooth"})
+                                const el = proposalRef.current?.children[j];
+                                if (typeof el?.scrollIntoView === 'function') {
+                                        el.scrollIntoView({ behavior: 'smooth' });
+                                }
                         }
 
                         else
@@ -166,6 +183,48 @@ export default function Chat (props)
 
         const [generateLoading, setGenerateLoading] = useState(false)
         const [generateLabel, setGenerateLabel] = useState("Generate")
+        async function saveDraft ()
+        {
+                setGenerateLoading(true)
+                setFormExpanded(false)
+
+                for (const section in proposal)
+                        proposal[section].content = ""
+
+                try
+                {
+                        const response = await fetch(`${API_BASE_URL}/save-draft`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                        session_id: sessionStorage.getItem("session_id"),
+                                        project_description: userPrompt,
+                                        form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value]))
+                                }),
+                                credentials: 'include'
+                        })
+
+                        if(response.ok)
+                        {
+                                const data = await response.json()
+                                sessionStorage.setItem("proposal_id", data.proposal_id)
+                                setSidebarOpen(true)
+                                getSections()
+                        }
+                        else
+                        {
+                                setGenerateLoading(false)
+                                setGenerateLabel("Regenerate")
+                                console.log("Error: ", response)
+                        }
+                }
+                catch (error)
+                {
+                        setGenerateLoading(false)
+                        setGenerateLabel("Regenerate")
+                        console.log("Error", error)
+                }
+        }
         async function handleGenerateClick ()
         {
                 setGenerateLoading(true)
@@ -182,15 +241,20 @@ export default function Chat (props)
                                 body: JSON.stringify({
                                         project_description: userPrompt,
                                         form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value]))
-                                })
+                                }),
+                                credentials: 'include'
                         })
 
                         if(response.ok)
                         {
                                 const data = await response.json()
-                                localStorage.setItem("session_id", data.session_id)
-                                setSidebarOpen(true)
-                                getSections()
+                                sessionStorage.setItem("session_id", data.session_id)
+                                saveDraft()
+                        }
+                        else if(response.status === 401)
+                        {
+                                sessionStorage.setItem("session_expired", "Session expired. Please login again.")
+                                navigate("/login")
                         }
                         else
                         {
@@ -244,13 +308,15 @@ export default function Chat (props)
         {
                 setRegenerateSectionLoading(true)
 
-                const response = await fetch(`${API_BASE_URL}/regenerate_section/${localStorage.getItem("session_id")}`, {
+                const response = await fetch(`${API_BASE_URL}/regenerate_section/${sessionStorage.getItem("session_id")}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                                 section: Object.keys(proposal)[selectedSection],
-                                concise_input: ip
-                        })
+                                concise_input: ip,
+                                proposal_id: sessionStorage.getItem("proposal_id")
+                        }),
+                        credentials: 'include'
                 })
 
                 if(response.ok) {
@@ -263,11 +329,18 @@ export default function Chat (props)
                                 }
                         }))
                 }
+                else if(response.status === 401)
+                {
+                        sessionStorage.setItem("session_expired", "Session expired. Please login again.")
+                        navigate("/login")
+                }
                 else
                         console.log("Error: ", response)
 
                 setRegenerateInput("")
-                dialogRef.current.close()
+                if (typeof dialogRef.current?.close === 'function') {
+                        dialogRef.current.close()
+                }
                 setRegenerateSectionLoading(false)
 
                 if (isEdit)
@@ -310,6 +383,114 @@ export default function Chat (props)
                 }
         }
 
+        const [isApproved, setIsApproved] = useState(false)
+        async function getContent()
+        {
+                if(sessionStorage.getItem("proposal_id"))
+                {
+                        const response = await fetch(`${API_BASE_URL}/load-draft/${sessionStorage.getItem("proposal_id")}`, {
+                                method: "GET",
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: "include"
+                        })
+
+                        if(response.ok)
+                        {
+                                const data = await response.json()
+
+                                sessionStorage.setItem("proposal_id", data.proposal_id)
+                                sessionStorage.setItem("session_id", data.session_id)
+
+                                setUserPrompt(data.project_description)
+
+                                setFormData(p => Object.fromEntries(Object.entries(data.form_data).map(field =>
+                                        [field[0], {
+                                                value: field[1],
+                                                mandatory: p[field[0]].mandatory
+                                        }]
+                                )))
+
+                                setProposal(p => Object.fromEntries(Object.entries(data.generated_sections).map(section =>
+                                        [section[0], {
+                                                content: section[1],
+                                                open: p[section[0]].open
+                                        }]
+                                )))
+
+                                setIsApproved(data.is_accepted)
+
+                                setSidebarOpen(true)
+
+                                if(!data.is_accepted && !data.generated_sections["Evaluation"])
+                                {
+                                        setGenerateLoading(true)
+                                        setFormExpanded(false)
+
+                                        let i
+                                        for(i = 0; Object.entries(data.generated_sections)[i][1]; i++);
+
+                                        getSections(Object.entries(data.generated_sections)[i][0])
+                                }
+                        }
+                        else if(response.status === 401)
+                        {
+                                sessionStorage.setItem("session_expired", "Session expired. Please login again.")
+                                navigate("/login")
+                        }
+                }
+        }
+        useEffect(() => {
+                getContent()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [])
+
+        async function handleExport (format)
+        {
+                const response = await fetch(`${API_BASE_URL}/generate-document/${sessionStorage.getItem("proposal_id")}?format=${format}`, {
+                        method: "GET",
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: "include"
+                })
+
+                if(response.ok)
+                {
+                        const blob = await response.blob();
+                        const link = document.createElement('a');
+                        link.href = URL.createObjectURL(blob);
+                        link.download = formData["Project title"].value ?? "proposal" + "." + format;
+                        document.body.appendChild(link);
+                        link.click();
+                        link.remove();
+
+                        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+                }
+                else if(response.status === 401)
+                {
+                        sessionStorage.setItem("session_expired", "Session expired. Please login again.")
+                        navigate("/login")
+                }
+                else
+                        throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+        }
+
+        async function handleApprove ()
+        {
+                const response = await fetch(`${API_BASE_URL}/finalize-proposal`, {
+                        method: "POST",
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ proposal_id: sessionStorage.getItem("proposal_id")}),
+                        credentials: "include"
+                })
+
+                if(response.ok)
+                        getContent()
+                else if(response.status === 401)
+                {
+                        sessionStorage.setItem("session_expired", "Session expired. Please login again.")
+                        navigate("/login")
+                }
+        }
+
         return  <Base>
                 <div className="Chat">
                         {sidebarOpen ? <aside>
@@ -334,39 +515,60 @@ export default function Chat (props)
                         </aside> : ""}
 
                         <main className="Chat_right" ref={topRef}>
-                                <div className='Dashboard_top'>
-                                        <div className='Dashboard_label'>
-                                                <img className='Dashboard_label_fileIcon' src={fileIcon} />
-                                                {titleName}
-                                        </div>
-                                </div>
+                                {!isApproved ?
+                                        <>
+                                                <div className='Dashboard_top'>
+                                                        <div className='Dashboard_label'>
+                                                                <img className='Dashboard_label_fileIcon' src={fileIcon} />
+                                                                {titleName}
+                                                        </div>
+                                                </div>
 
-                                <div className="Chat_inputArea">
-                                        <textarea value={userPrompt} onChange={e => setUserPrompt(e.target.value)} placeholder='Enter your project requirements' className='Chat_inputArea_prompt' />
+                                                <div className="Chat_inputArea">
+                                                        <textarea value={userPrompt} onChange={e => setUserPrompt(e.target.value)} placeholder='Enter your project requirements' className='Chat_inputArea_prompt' />
 
-                                        <span onClick={() => setFormExpanded(p => !p)} className={`Chat_inputArea_additionalDetails ${form_expanded && "expanded"}`}>
-                                                Additional Details
-                                                <img src={arrow} alt="Arrow" />
-                                        </span>
+                                                        <span onClick={() => setFormExpanded(p => !p)} className={`Chat_inputArea_additionalDetails ${form_expanded && "expanded"}`}>
+                                                                Additional Details
+                                                                <img src={arrow} alt="Arrow" />
+                                                        </span>
 
-                                        {form_expanded ? <form className='Chat_form'>
-                                                {Object.entries(formData).map((fieldObj, i) => <div key={i} className='Chat_form_inputContainer'>
-                                                        <label className='Chat_form_inputLabel'>{fieldObj[0]} <span className={`Chat_form_input_mandatoryAsterisk ${!fieldObj[1].mandatory ? "hidden" : ""}`}>*</span></label>
-                                                        <input type="text" className='Chat_form_input' placeholder={`Enter ${fieldObj[0]}`} value={fieldObj[1].value} onChange={e => handleFormInput(e, fieldObj[0])} />
-                                                </div>)}
-                                        </form> : ""}
+                                                        {form_expanded ? <form className='Chat_form'>
+                                                                {Object.entries(formData).map((fieldObj, i) => <div key={i} className='Chat_form_inputContainer'>
+                                                                        <label className='Chat_form_inputLabel' htmlFor={`Chat_form_input_${fieldObj[0].replaceAll(' ', '')}`}>{fieldObj[0]} <span className={`Chat_form_input_mandatoryAsterisk ${!fieldObj[1].mandatory ? "hidden" : ""}`}>*</span></label>
+                                                                        <input type="text" className='Chat_form_input' id={`Chat_form_input_${fieldObj[0].replaceAll(' ', '')}`} placeholder={`Enter ${fieldObj[0]}`} value={fieldObj[1].value} onChange={e => handleFormInput(e, fieldObj[0])} />
+                                                                </div>)}
+                                                        </form> : ""}
 
-                                        <div className="Chat_inputArea_buttonContainer">
-                                                <CommonButton onClick={handleGenerateClick} icon={generateIcon} label={generateLabel} loading={generateLoading} loadingLabel={generateLabel === "Generate" ? "Generating" : "Regenerating"} disabled={!buttonEnable}/>
-                                        </div>
-                                </div>
+                                                        <div className="Chat_inputArea_buttonContainer">
+                                                                <CommonButton onClick={handleGenerateClick} icon={generateIcon} label={generateLabel} loading={generateLoading} loadingLabel={generateLabel === "Generate" ? "Generating" : "Regenerating"} disabled={!buttonEnable}/>
+                                                        </div>
+                                                </div>
+                                        </>
+                                        :
+                                        ""
+                                }
 
                                 {sidebarOpen ? <>
-                                        <div className='Dashboard_top' style={{marginTop: "30px"}}>
+                                        <div className='Dashboard_top'>
                                                 <div className='Dashboard_label'>
                                                         <img className='Dashboard_label_fileIcon' src={resultsIcon} />
                                                         Results
                                                 </div>
+
+                                                {proposal.Evaluation.content ? <div className='Chat_exportButtons'>
+                                                        <button type="button" onClick={() => handleExport("docx")}>
+                                                                <img src={word_icon} />
+                                                                Download .DOCX
+                                                        </button>
+                                                        <button type="button" onClick={() => handleExport("pdf")}>
+                                                                <img src={pdf_icon} />
+                                                                Download .PDF
+                                                        </button>
+                                                        {!isApproved ? <button type="button" onClick={handleApprove}>
+                                                                <img src={approved_icon} />
+                                                                Approve
+                                                        </button> : ""}
+                                                </div> : ""}
                                         </div>
 
                                         <div ref={proposalRef} className="Chat_proposalContainer">
@@ -375,11 +577,16 @@ export default function Chat (props)
                                                                 <div className="Chat_sectionHeader">
                                                                         <div className="Chat_sectionTitle">{sectionObj[0]}</div>
 
-                                                                        <div className="Chat_sectionOptions">
-                                                                                <button type="button" onClick={() => handleEditClick(i)} style={(selectedSection === i && isEdit && regenerateSectionLoading) ? {pointerEvents: "none"} : {}}>
+                                                                        {!generateLoading && sectionObj[1].content && sectionObj[1].open && !isApproved ? <div className="Chat_sectionOptions">
+                                                                                {!isEdit || (selectedSection === i && isEdit) ? <button type="button" onClick={() => handleEditClick(i)} style={(selectedSection === i && isEdit && regenerateSectionLoading) ? {pointerEvents: "none"} : {}} aria-label={`edit-section-${i}`}>
                                                                                         <img src={(selectedSection === i && isEdit) ? save : edit} />
                                                                                         <span>{(selectedSection === i && isEdit) ? "Save" : "Edit"}</span>
-                                                                                </button>
+                                                                                </button> : "" }
+
+                                                                                {selectedSection === i && isEdit ? <button type="button" onClick={() => setIsEdit(false)}>
+                                                                                        <img src={cancel} />
+                                                                                        <span>Cancel</span>
+                                                                                </button> : "" }
 
                                                                                 {!isEdit ?
                                                                                         <>
@@ -394,17 +601,17 @@ export default function Chat (props)
                                                                                                 </button>
                                                                                         </>
                                                                                 : "" }
-                                                                        </div>
+                                                                        </div> : ""}
 
-                                                                        <div className={`Chat_expanderArrow ${sectionObj[1].open ? "" : "closed"}`} onClick={() => handleExpanderToggle(i)}>
+                                                                        {sectionObj[1].content && !(isEdit && selectedSection === i) ? <div className={`Chat_expanderArrow ${sectionObj[1].open ? "" : "closed"}`} onClick={() => handleExpanderToggle(i)}>
                                                                                 <img src={arrow} />
-                                                                        </div>
+                                                                        </div> : ""}
                                                                 </div>
 
-                                                                {sectionObj[1].open ? <div className='Chat_sectionContent'>
+                                                                {sectionObj[1].open || !sectionObj[1].content ? <div className='Chat_sectionContent'>
                                                                         {sectionObj[1].content ?
                                                                                 (selectedSection === i && isEdit) ?
-                                                                                        <textarea value={editorContent} onChange={e => setEditorContent(e.target.value)}/>
+                                                                                        <textarea value={editorContent} onChange={e => setEditorContent(e.target.value)} aria-label={`editor for ${sectionObj[0]}`} />
                                                                                         :
                                                                                         <Markdown>{sectionObj[1].content}</Markdown>
                                                                                 :
