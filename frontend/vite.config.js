@@ -7,9 +7,8 @@ export default defineConfig({
     port: 8503,
     host: '0.0.0.0',
     allowedHosts: [
-      'ec2-65-2-181-226.ap-south-1.compute.amazonaws.com',
       'localhost',
-      'proposalgen-app.azurewebsites.net'
+      'http://proposal-drafter.azurewebsites.net/'
     ],
     proxy: {
       '/api': {
