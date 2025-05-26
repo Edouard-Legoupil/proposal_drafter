@@ -1,5 +1,6 @@
 # Ignore virtual environment
 uc1_env/
+proposal-documents/
 
 # Ignore environment variable files
 .env

@@ -13,7 +13,7 @@
         background: #0033A0;
 
         font-family: "Noto";
-        font-weight: 600;
+        font-weight: 350;
         font-size: 14px;
 
         color: white;
@@ -22,6 +22,8 @@
         outline: none;
 
         cursor: pointer;
+
+        box-shadow: 0px 5px 10px 0px #1053B133;
 }
 
 .CommonButton > img {
@@ -30,10 +32,4 @@
 
 .CommonButton:disabled {
         cursor: not-allowed;
-
-        background: #5A656D;
-}
-
-.CommonButton.loading:disabled {
-        background: #0033A0;
 }

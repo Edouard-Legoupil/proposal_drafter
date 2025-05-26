@@ -6,9 +6,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - VITE_BACKEND_URL=http://proposalgen-app.azurewebsites.net:8502/api
-    image: ${DOCKER_REGISTRY_SERVER_URL}/proposalgen-frontend:${TAG:-latest}
-    restart: always
+        - VITE_BACKEND_URL=http://localhost:8502/api
     ports:
       - "8503:80"
     depends_on:
@@ -18,8 +16,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    image: ${DOCKER_REGISTRY_SERVER_URL}/proposalgen-backend:${TAG:-latest}
-    restart: always
     ports:
       - "8502:8502"
     environment:
@@ -30,20 +26,32 @@ services:
       - DB_USERNAME=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DB_NAME}
-      - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT}
+      - DB_HOST=db
+      - DB_PORT=5432
       - SECRET_KEY=${SECRET_KEY}
     depends_on:
+      - db
       - redis
-    # Note: No volumes used as they're not supported in Azure Multi-container App Service
 
-  # Using external Azure Database for PostgreSQL instead of container
-  # For local development, use docker-compose-local.yml which includes a containerized database
-  
-  # Redis cache for session management
+  db:
+    image: postgres:15
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${DB_USERNAME}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database-setup.sql:/docker-entrypoint-initdb.d/setup.sql
+
   redis:
     image: redis:alpine
-    restart: always
     ports:
       - "6379:6379"
-    # Note: No volumes used as they're not supported in Azure Multi-container App Service
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
