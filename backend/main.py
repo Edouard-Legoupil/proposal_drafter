@@ -6,16 +6,26 @@ import os
 import re
 import uuid
 import io
-from datetime import datetime
+from datetime import datetime, timedelta
 import pprint
+import traceback
 
 #  Third-Party Libraries
 from fastapi import FastAPI, HTTPException, File, UploadFile, Form
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi import Request
+from fastapi.responses import Response
+from fastapi import Query
 from pydantic import BaseModel
-from typing import Dict
+from typing import Dict, Optional
 import redis
 from fastapi.middleware.cors import CORSMiddleware
+from werkzeug.security import generate_password_hash, check_password_hash
+import jwt
+from functools import wraps
+from sqlalchemy import create_engine, text
+import urllib.parse
+from fastapi import Depends
 
 #  Internal Modules
 from crew import ProposalCrew
@@ -27,14 +37,45 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 
+from fastapi.responses import FileResponse
+from docx import Document
+from docx.shared import Pt
+# from docx2pdf import convert
+import tempfile
+
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import inch
+
+from reportlab.platypus import (
+    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+)
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_JUSTIFY
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import inch
+import re
+from docx.shared import Pt
+
+from apscheduler.schedulers.background import BackgroundScheduler
+from datetime import timedelta, datetime, timezone
+
+
+# import platform
+# import pypandoc
+# from docx2pdf import convert
+
 app = FastAPI()
 
 # Allow CORS from specific frontend origin(s)
 origins = [
-    "http://localhost:8503",   # Frontend URL
-    "http://localhost:8502",   # Backend URL
-    "http://127.0.0.1:8503",   # Alternative frontend URL
-    "*"                        # Allow all origins temporarily for debugging
+    "http://192.168.29.172:8503",
+    "http://192.168.1.107:8503",
+    "http://localhost:8503",
+    "https://proposalgen-app.azurewebsites.net",
+    "https://proposalgen-app.azurewebsites.net:8503",
+    "*"  # Allow all origins for development - remove in production
 ]
 
 app.add_middleware(
@@ -49,9 +90,56 @@ app.add_middleware(
 
 session_data = {}
 
+redis_client = redis.Redis(host="redis", port=6379, db=0, decode_responses=True)
+
+SECRET_KEY = os.getenv("SECRET_KEY", "your_default_dev_secret")
+
+db_username = os.getenv('DB_USERNAME')
+db_password = os.getenv('DB_PASSWORD')
+db_host = os.getenv('DB_HOST')
+db_port = os.getenv('DB_PORT')
+db_name = os.getenv('DB_NAME')
+                
+encoded_password = urllib.parse.quote_plus(db_password)
+    
+connection_string = f"postgresql://{db_username}:{encoded_password}@{db_host}:{db_port}/{db_name}"
+engine = create_engine(connection_string)
+
+def get_current_user(request: Request):
+    token = request.cookies.get("auth_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Authentication token missing.")
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        email = payload.get("email")
+        if not email:
+            raise HTTPException(status_code=401, detail="Invalid token payload.")
+
+        with engine.connect() as connection:
+            result = connection.execute(text("SELECT id, name, email FROM users WHERE email = :email"), {"email": email})
+            user = result.fetchone()
+
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found.")
+
+        return {
+            "user_id": str(user[0]),
+            "name" : user[1],
+            "email": user[2]
+        }
+
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired.")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Auth error: {str(e)}")
+
+
 # Initialize Redis with error handling
 try:
-    redis_client = redis.Redis(host="localhost", port=6379, db=0, decode_responses=True)
+    redis_client = redis.Redis(host="redis", port=6379, db=0, decode_responses=True)
     # Test connection
     redis_client.ping()
     print("Successfully connected to Redis")
@@ -70,6 +158,9 @@ except redis.ConnectionError:
             
         def get(self, key):
             return self.storage.get(key)
+        
+        def delete(self, key):   #just this and it will get solved, tested it 
+            self.storage.pop(key, None)
     
     redis_client = DictStorage()
 
@@ -90,27 +181,41 @@ class BaseDataRequest(BaseModel):
     project_description: str 
 
 class SectionRequest(BaseModel):
-    section: str  
+    section: str
+    proposal_id: str  
 
 class RegenerateRequest(BaseModel):
     section: str
     concise_input: str
+    proposal_id: str
+
+class SaveDraftRequest(BaseModel):
+    session_id: Optional[str] = None 
+    proposal_id: Optional[str] = None
+    form_data: Dict[str, str]
+    project_description: str
+    generated_sections: Optional[Dict[str, str]] = {}
+
+class FinalizeProposalRequest(BaseModel):
+    proposal_id: str
 
 def get_session_id():
     """Generate a unique session ID (UUID) for each user session."""
     return str(uuid.uuid4())  # Later, replace with SSO session ID
 
 @app.post("/api/store_base_data")
-async def store_base_data(request: BaseDataRequest):
+async def store_base_data(request: BaseDataRequest,current_user: dict = Depends(get_current_user) ):
     session_id = get_session_id()  
     data = {
         "form_data": request.form_data,
-        "project_description": request.project_description
+        "project_description": request.project_description,
+        "user_id": current_user["user_id"] 
     }
     # Store in Redis with a 1-hour expiration (3600 seconds)
     redis_client.setex(session_id, 3600, json.dumps(data))
     
     return {"message": "Base data stored successfully", "session_id": session_id}
+
 
 @app.get("/api/get_base_data/{session_id}")
 async def get_base_data(session_id: str):
@@ -120,7 +225,7 @@ async def get_base_data(session_id: str):
     
     return json.loads(data)  # Convert JSON string back to dictionary
 
-def regenerate_section_logic(session_id: str, section: str, concise_input: str) -> str:
+def regenerate_section_logic(session_id: str, section: str, concise_input: str, proposal_id: str) -> str:
     """Shared logic for regenerating a section using a custom concise input (from user or evaluator)."""
     session_data_str = redis_client.get(session_id)
 
@@ -175,16 +280,63 @@ def regenerate_section_logic(session_id: str, section: str, concise_input: str) 
 
     session_data["generated_sections"][section] = generated_text
     redis_client.set(session_id, json.dumps(session_data))
+    
+    user_id = session_data.get("user_id")
+    if not user_id:
+        print("[regenerate_section_logic] ❌ user_id missing in Redis. Skipping DB update.")
+        return generated_text
+    
+    try:
+        with engine.begin() as connection:
+            result = connection.execute(
+                text("SELECT generated_sections FROM proposals WHERE id = :proposal_id AND user_id = :user_id"),
+                {
+                    "proposal_id": proposal_id,
+                    "user_id": session_data.get("user_id")
+                }
+            )
+            draft = result.fetchone()
+
+            if draft:
+                updated_sections = json.loads(draft[0]) if draft[0] else {}
+                updated_sections[section] = generated_text
+
+                connection.execute(
+                    text("""
+                        UPDATE proposals
+                        SET generated_sections = :sections, updated_at = NOW()
+                        WHERE id = :proposal_id AND user_id = :user_id
+                    """),
+                    {
+                        "sections": json.dumps(updated_sections),
+                        "proposal_id": proposal_id,
+                        "user_id": session_data["user_id"]
+                    }
+                )
+    except Exception as e:
+        print(f"[DB UPDATE ERROR in regenerate_section_logic] {e}")
+
 
     return generated_text
 
+
 @app.post("/api/process_section/{session_id}")
-async def process_section(session_id: str, request: SectionRequest):
+async def process_section(session_id: str, request: SectionRequest,current_user: dict = Depends(get_current_user)):
     section = request.section
+    proposal_id = request.proposal_id
     session_data_str = redis_client.get(session_id)
 
     if not session_data_str:
         raise HTTPException(status_code=400, detail="Base data not found. Please store it first.")
+
+    with engine.connect() as connection:
+        result = connection.execute(
+            text("SELECT is_accepted FROM proposals WHERE id = :proposal_id AND user_id = :user_id"),
+            {"proposal_id": request.proposal_id, "user_id": current_user["user_id"]}
+        )
+        row = result.fetchone()
+        if row and row[0]:  # is_accepted is True
+            raise HTTPException(status_code=403, detail="This proposal is finalized and cannot be modified.")
 
     session_data = json.loads(session_data_str)
     form_data = session_data["form_data"]
@@ -237,33 +389,92 @@ async def process_section(session_id: str, request: SectionRequest):
         generated_text = regenerate_section_logic(
             session_id=session_id,
             section=section,
-            concise_input=evaluator_feedback
+            concise_input=evaluator_feedback,
+            proposal_id=proposal_id
         )
         message = f"Initial content flagged. Regenerated using evaluator feedback for {section}"
     else:
-        session_data.setdefault("generated_sections", {})[section] = generated_text
-        redis_client.set(session_id, json.dumps(session_data))
         message = f"Content generated for {section}"
+    session_data.setdefault("generated_sections", {})[section] = generated_text
+    redis_client.set(session_id, json.dumps(session_data))
+    
+    #  Save section to PostgreSQL proposal (persistent)
+    try:
+            with engine.begin() as connection:
+                result = connection.execute(
+                    text("SELECT generated_sections FROM proposals WHERE id = :proposal_id AND user_id = :user_id"),
+                    {
+                        "proposal_id": proposal_id,
+                        "user_id": current_user["user_id"]
+                    }
+                )
+                draft = result.fetchone()
+
+                
+                if draft:
+                    # Handle the case where draft[0] could be a string or already a dict
+                    draft_value = draft[0]
+                    
+                    # Ensure it's a dictionary
+                    if isinstance(draft_value, str):
+                        try:
+                            updated_sections = json.loads(draft_value)
+                        except Exception as e:
+                            print(f"[PARSE ERROR] Couldn't parse string as JSON: {e}")
+                            updated_sections = {}
+                    elif isinstance(draft_value, dict):
+                        updated_sections = draft_value
+                    else:
+                        updated_sections = {}
+
+                    # Add the new section
+                    updated_sections[section] = generated_text
+
+                    connection.execute(
+                        text("""
+                            UPDATE proposals
+                            SET generated_sections = :sections, updated_at = NOW()
+                            WHERE id = :proposal_id AND user_id = :user_id
+                        """),
+                        {
+                            "sections": json.dumps(updated_sections),  # Always serialize to JSON string
+                            "proposal_id": proposal_id,
+                            "user_id": current_user["user_id"]
+                        }
+                    )
+    except Exception as e:
+            print(f"[DB UPDATE ERROR - generated_sections] {e}")
+
 
 
     return {
         "message": message,
         "generated_text": generated_text
-    }
+    } 
 
 
 @app.post("/api/regenerate_section/{session_id}")
-async def regenerate_section(session_id: str,request: RegenerateRequest):
+async def regenerate_section(session_id: str,request: RegenerateRequest, current_user: dict = Depends(get_current_user)):
     """Handles regeneration of a section using a concise input for refinement."""
 
     section = request.section
     concise_input = request.concise_input
+    proposal_id = request.proposal_id
 
     # ✅ Fetch session data from Redis
     session_data = redis_client.get(session_id)
 
     if not session_data:
         raise HTTPException(status_code=400, detail="Base data not found. Please store it first.")
+
+    with engine.connect() as connection:
+        result = connection.execute(
+            text("SELECT is_accepted FROM proposals WHERE id = :proposal_id AND user_id = :user_id"),
+            {"proposal_id": request.proposal_id, "user_id": current_user["user_id"]}
+        )
+        row = result.fetchone()
+        if row and row[0]:  # is_accepted is True
+            raise HTTPException(status_code=403, detail="This proposal is finalized and cannot be modified.")
 
     # Convert stored JSON string to dictionary
     session_data = json.loads(session_data)
@@ -315,8 +526,55 @@ async def regenerate_section(session_id: str,request: RegenerateRequest):
 
     if "generated_sections" not in session_data:
         session_data["generated_sections"] = {}  # Initialize if missing
+    
     session_data["generated_sections"][section] = generated_text
     redis_client.set(session_id, json.dumps(session_data))
+
+    user_id = current_user.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=400, detail="User ID missing for database update")
+
+    try:
+        with engine.begin() as connection:
+            result = connection.execute(
+                text("SELECT generated_sections FROM proposals WHERE id = :proposal_id AND user_id = :user_id"),
+                {"proposal_id": proposal_id, "user_id": user_id}
+            )
+            draft = result.fetchone()
+
+            if draft:
+                draft_value = draft[0]
+                
+                # 💡 Ensure it's a dictionary
+                if isinstance(draft_value, str):
+                    try:
+                        updated_sections = json.loads(draft_value)
+                    except Exception as e:
+                        print(f"[PARSE ERROR] Couldn't parse string as JSON: {e}")
+                        updated_sections = {}
+                elif isinstance(draft_value, dict):
+                    updated_sections = draft_value
+                else:
+                    updated_sections = {}
+
+                updated_sections[section] = generated_text
+
+                connection.execute(
+                    text("""
+                        UPDATE proposals
+                        SET generated_sections = :sections, updated_at = NOW()
+                        WHERE id = :proposal_id AND user_id = :user_id
+                    """),
+                    {
+                        "sections": json.dumps(updated_sections),  # ✅ Always a dict here
+                        "proposal_id": proposal_id,
+                        "user_id": current_user["user_id"]
+                    }
+                )
+                
+    
+    except Exception as e:
+        print(f"[DB UPDATE ERROR - generated_sections] {e}")
 
     return {
         "message": f"Content regenerated for {section}",
@@ -324,87 +582,862 @@ async def regenerate_section(session_id: str,request: RegenerateRequest):
     }
 
 
-@app.post("/api/generate-document/{session_id}")
-async def generate_document(session_id: str):
-    """Generates final document in Word format after all sections are processed"""
+# @app.post("/api/generate-document/{session_id}")
+# async def generate_document(session_id: str):
+#     """Generates final document in Word format after all sections are processed"""
 
-    session_data = redis_client.get(session_id)
-    if not session_data:
-        raise HTTPException(status_code=400, detail="Session data not found.")
+#     session_data = redis_client.get(session_id)
+#     if not session_data:
+#         raise HTTPException(status_code=400, detail="Session data not found.")
 
-    session_data = json.loads(session_data)
+#     session_data = json.loads(session_data)
 
-    generated_sections = session_data.get("generated_sections", {})
-    if len(generated_sections) != len(SECTIONS):
-        missing_sections = [s for s in SECTIONS if s not in generated_sections]
-        raise HTTPException(
-            status_code=400,
-            detail=f"Not all sections processed yet. Missing: {missing_sections}"
+#     generated_sections = session_data.get("generated_sections", {})
+#     if len(generated_sections) != len(SECTIONS):
+#         missing_sections = [s for s in SECTIONS if s not in generated_sections]
+#         raise HTTPException(
+#             status_code=400,
+#             detail=f"Not all sections processed yet. Missing: {missing_sections}"
+#         )
+
+#     # ✅ Create a Word document
+#     doc = Document()
+#     doc.add_heading("Project Proposal", level=1)
+
+#     # ✅ Add form data in table format
+#     form_data = session_data["form_data"]
+#     table = doc.add_table(rows=1, cols=2)
+#     table.style = 'Table Grid'
+#     hdr_cells = table.rows[0].cells
+#     hdr_cells[0].text = 'Field'
+#     hdr_cells[1].text = 'Value'
+
+#     for key, value in form_data.items():
+#         row_cells = table.add_row().cells
+#         row_cells[0].text = key
+#         row_cells[1].text = value
+
+#     doc.add_paragraph("\n")  # Adding a line break
+
+#     # ✅ Add section-wise content (with markdown beautification)
+#     for section, content in generated_sections.items():
+#         doc.add_heading(section, level=2)
+
+#         # Clean markdown syntax
+#         cleaned_content = re.sub(r'^#{1,6}\s*', '', content, flags=re.MULTILINE)  # Headers
+#         cleaned_content = re.sub(r'(\*\*|__)(.*?)\1', r'\2', cleaned_content)     # Bold
+#         cleaned_content = re.sub(r'(\*|_)(.*?)\1', r'\2', cleaned_content)        # Italic
+#         cleaned_content = re.sub(r'`{1,3}(.*?)`{1,3}', r'\1', cleaned_content)    # Inline code
+
+#         # Separate bullet points and regular lines
+#         bullet_lines = []
+#         normal_lines = []
+#         for line in cleaned_content.splitlines():
+#             if re.match(r'^\s*[-*]\s+', line):
+#                 bullet_lines.append(re.sub(r'^\s*[-*]\s+', '', line))
+#             else:
+#                 normal_lines.append(line)
+
+#         if normal_lines:
+#             paragraph = doc.add_paragraph("\n".join(normal_lines).strip())
+#             paragraph.paragraph_format.space_after = Pt(12)
+#             paragraph.paragraph_format.line_spacing = 1.5
+
+#         for bullet in bullet_lines:
+#             doc.add_paragraph(bullet.strip(), style='List Bullet')
+
+#     # ✅ Save the document
+#     folder_name = "proposal-documents"
+#     os.makedirs(folder_name, exist_ok=True)
+#     unique_id = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:6]}"
+#     file_path = os.path.join(folder_name, f"proposal_document_{unique_id}.docx")
+
+#     doc.save(file_path)
+
+#     return {
+#         "message": "Proposal document generated successfully",
+#         "file_path": file_path
+#     }
+
+
+@app.post("/api/signup")
+async def signup(request: Request):
+    data = await request.json()
+    name = data.get('username')
+    email = data.get('email')
+    password = data.get('password')
+
+    if not name or not email or not password:
+        return JSONResponse(status_code=400, content={"error": "Username, Email, and Password are required."})
+
+    hashed_password = generate_password_hash(password)
+
+    try:
+        with engine.begin() as connection:
+            # Check if user exists by email
+            result = connection.execute(
+                text("SELECT id FROM users WHERE email = :email"),
+                {'email': email}
+            )
+            existing_user = result.fetchone()
+
+            if existing_user:
+                return JSONResponse(status_code=400, content={"error": "User with this email already exists. Please log in."})
+
+            # Insert user into the table
+            connection.execute(
+            text("INSERT INTO users (id, email, name, password) VALUES (:id, :email, :name, :password)"),
+            {
+                'id': str(uuid.uuid4()),
+                'email': email,
+                'name': name,
+                'password': hashed_password  
+            }
+        )
+        connection.commit()
+
+        return JSONResponse(status_code=201, content={"message": "Signup successful! Please log in."})
+
+    except Exception as e:
+        print(f"[SIGNUP ERROR] {e}")
+        return JSONResponse(status_code=500, content={"error": "Signup failed. Please try again later."})
+    
+
+@app.post("/api/login")
+async def login(request: Request):
+    try:
+        data = await request.json()
+        email = data.get('email')
+        password = data.get('password')
+
+        if not email or not password:
+            return JSONResponse(status_code=400, content={"error": "Email and password are required."})
+
+        with engine.connect() as connection:
+            result = connection.execute(text("SELECT id, email, name, password FROM users WHERE email = :email"), {'email': email})
+            print("📧 Incoming email for login:", email)
+
+            user = result.fetchone()
+            print("🧑‍💻 DB query result:", user)
+
+
+        if not user:
+            return JSONResponse(status_code=404, content={"error": "User does not exist!"})
+
+        user_id = user[0]
+        stored_password = user[3]  # password is 3rd column
+
+        if not check_password_hash(stored_password, password):
+            return JSONResponse(status_code=401, content={"error": "Invalid password!"})
+
+        # ✅ Check if user already has an active session
+        existing_session_token = redis_client.get(f"user_session:{user_id}")
+        if existing_session_token:
+            return JSONResponse(
+                status_code=403,
+                content={"error": "You are already logged in from another session."}
+            )
+        
+        # ✅ Create JWT token
+        token = jwt.encode(
+            {
+                "email": email,
+                "exp": datetime.utcnow() + timedelta(minutes=30)
+            },
+            SECRET_KEY,
+            algorithm="HS256"
+        )
+        
+        # ✅ Store token in Redis for this user
+        redis_client.setex(
+            f"user_session:{user_id}",
+            1800,  # 30 minutes
+            token
         )
 
-    # ✅ Create a Word document
-    doc = Document()
-    doc.add_heading("Project Proposal", level=1)
+        # ✅ Set token in HttpOnly cookie
+        response = JSONResponse(content={"message": "Login successful!"})
+        response.set_cookie(
+            key="auth_token",
+            value=token,
+            httponly=True,
+            samesite="Lax",
+            max_age=1800  # 30 minutes
+        )
 
-    # ✅ Add form data in table format
-    form_data = session_data["form_data"]
-    table = doc.add_table(rows=1, cols=2)
-    table.style = 'Table Grid'
-    hdr_cells = table.rows[0].cells
-    hdr_cells[0].text = 'Field'
-    hdr_cells[1].text = 'Value'
+        return response
 
-    for key, value in form_data.items():
-        row_cells = table.add_row().cells
-        row_cells[0].text = key
-        row_cells[1].text = value
+    except Exception as e:
+        print(f"[LOGIN ERROR] {e}")
+        return JSONResponse(status_code=500, content={"error": "Login failed. Please try again later."})
 
-    doc.add_paragraph("\n")  # Adding a line break
 
-    # ✅ Add section-wise content (with markdown beautification)
-    for section, content in generated_sections.items():
-        doc.add_heading(section, level=2)
-
-        # Clean markdown syntax
-        cleaned_content = re.sub(r'^#{1,6}\s*', '', content, flags=re.MULTILINE)  # Headers
-        cleaned_content = re.sub(r'(\*\*|__)(.*?)\1', r'\2', cleaned_content)     # Bold
-        cleaned_content = re.sub(r'(\*|_)(.*?)\1', r'\2', cleaned_content)        # Italic
-        cleaned_content = re.sub(r'`{1,3}(.*?)`{1,3}', r'\1', cleaned_content)    # Inline code
-
-        # Separate bullet points and regular lines
-        bullet_lines = []
-        normal_lines = []
-        for line in cleaned_content.splitlines():
-            if re.match(r'^\s*[-*]\s+', line):
-                bullet_lines.append(re.sub(r'^\s*[-*]\s+', '', line))
-            else:
-                normal_lines.append(line)
-
-        if normal_lines:
-            paragraph = doc.add_paragraph("\n".join(normal_lines).strip())
-            paragraph.paragraph_format.space_after = Pt(12)
-            paragraph.paragraph_format.line_spacing = 1.5
-
-        for bullet in bullet_lines:
-            doc.add_paragraph(bullet.strip(), style='List Bullet')
-
-    # ✅ Save the document
-    folder_name = "proposal-documents"
-    os.makedirs(folder_name, exist_ok=True)
-    unique_id = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:6]}"
-    file_path = os.path.join(folder_name, f"proposal_document_{unique_id}.docx")
-
-    doc.save(file_path)
-
+@app.get("/api/profile")
+async def profile(current_user: dict = Depends(get_current_user)):
     return {
-        "message": "Proposal document generated successfully",
-        "file_path": file_path
+        "message": "Profile fetched successfully",
+        "user": {
+            "name": current_user["name"],
+            "email": current_user["email"]
+        }
     }
 
+@app.post("/api/logout")
+async def logout(current_user: dict = Depends(get_current_user)):
+    """Logs out the user by removing the auth_token cookie and Redis session."""
+    user_id = current_user["user_id"]
 
-@app.get("/")
+    try:
+        # ✅ Delete active session token from Redis
+        redis_client.delete(f"user_session:{user_id}")
+        print(f"[LOGOUT] Removed session for user_id: {user_id}")
+
+    except Exception as e:
+        print(f"[LOGOUT ERROR] Failed to remove session for user_id {user_id}: {e}")
+
+    # ✅ Remove cookie
+    response = JSONResponse(content={"message": "Logout successful!"})
+    response.delete_cookie(key="auth_token")
+
+    return response
+
+
+@app.post("/api/save-draft")
+async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get_current_user)):
+    try:
+        user_id = current_user["user_id"]
+        proposal_id = request.proposal_id or str(uuid.uuid4())
+        
+        with engine.begin() as connection:
+            result = connection.execute(
+                text("SELECT id FROM proposals WHERE id = :proposal_id AND user_id = :user_id"),
+                {"proposal_id": proposal_id, "user_id": user_id}
+            )
+            existing = result.fetchone()
+
+            if existing:
+                # Update existing proposal
+                connection.execute(
+                    text("""
+                        UPDATE proposals 
+                        SET form_data = :form_data,
+                            project_description = :project_description,
+                            generated_sections = :sections,
+                            updated_at = NOW()
+                        WHERE id = :proposal_id AND user_id = :user_id
+                    """),
+                    {
+                        "form_data": json.dumps(request.form_data),
+                        "project_description": request.project_description,  # ✅ Match bind key
+                        "sections": json.dumps(request.generated_sections),
+                        "proposal_id": proposal_id,
+                        "user_id": user_id
+                    }
+                )
+
+                message = "Draft updated successfully"
+            else:
+                # Insert new proposal
+                connection.execute(
+                    text("""
+                        INSERT INTO proposals 
+                        (id, user_id, form_data, project_description, generated_sections)
+                        VALUES (:id, :user_id, :form_data, :project_description, :sections)
+                    """),
+                    {
+                        "id": proposal_id,
+                        "user_id": user_id,
+                        "form_data": json.dumps(request.form_data),
+                        "project_description": request.project_description,  # ✅ Correct key
+                        "sections": json.dumps(request.generated_sections)
+                    }
+
+                )
+                message = "Draft created successfully"
+        if request.session_id:
+            try:
+                redis_data_raw = redis_client.get(request.session_id)
+                if redis_data_raw:
+                    if isinstance(redis_data_raw, bytes):
+                        redis_data_raw = redis_data_raw.decode("utf-8")
+                    redis_data = json.loads(redis_data_raw)
+                    redis_data["proposal_id"] = proposal_id
+                    redis_client.setex(request.session_id, 3600, json.dumps(redis_data))
+                    print(f"[SAVE-DRAFT] Updated Redis session {request.session_id} with proposal_id: {proposal_id}")
+            except Exception as e:
+                print(f"[SAVE-DRAFT REDIS UPDATE ERROR] {e}")
+
+        return {
+            "message": message,
+            "proposal_id": proposal_id
+        }
+
+    except Exception as e:
+        print(f"[SAVE DRAFT ERROR] {e}")
+        raise HTTPException(status_code=500, detail="Failed to save draft")
+
+
+
+@app.get("/api/list-drafts")
+async def list_drafts(current_user: dict = Depends(get_current_user)):
+    user_id = current_user["user_id"]
+
+    try:
+        with engine.connect() as connection:
+            # ✅ Include form_data in the query itself
+            result = connection.execute(
+                text("""
+                    SELECT id, form_data, generated_sections, created_at, updated_at, is_accepted
+                    FROM proposals
+                    WHERE user_id = :user_id
+                    ORDER BY updated_at DESC
+                """),
+                {"user_id": user_id}
+            )
+            drafts = result.fetchall()
+
+        if not drafts:
+            return {
+                "message": "No drafts found.",
+                "drafts": []
+            }
+
+        draft_list = []
+
+        for row in drafts:
+            proposal_id = row[0]
+            form_data_raw = row[1]
+            generated_sections_raw = row[2]
+            created_at = row[3]
+            updated_at = row[4]
+            is_accepted = row[5] if len(row) > 5 else False
+
+
+            # ✅ Parse form_data
+            try:
+                if isinstance(form_data_raw, str):
+                    form_data = json.loads(form_data_raw)
+                elif isinstance(form_data_raw, dict):
+                    form_data = form_data_raw
+                else:
+                    form_data = {}
+            except Exception as e:
+                print(f"[FORM_DATA PARSE ERROR for {proposal_id}] {e}")
+                form_data = {}
+
+            project_title = form_data.get("Project title", "Untitled Proposal")
+
+            # ✅ Parse generated_sections
+            try:
+                if isinstance(generated_sections_raw, str):
+                    generated_sections = json.loads(generated_sections_raw)
+                elif isinstance(generated_sections_raw, dict):
+                    generated_sections = generated_sections_raw
+                else:
+                    generated_sections = {}
+            except Exception as e:
+                print(f"[PARSE ERROR] Could not parse generated_sections for {proposal_id}: {e}")
+                generated_sections = {}
+
+            summary = generated_sections.get("Summary")
+
+            draft_list.append({
+                "proposal_id": proposal_id,
+                "project_title": project_title,
+                "summary": summary,
+                "is_accepted": is_accepted,
+                "created_at": created_at.isoformat() if created_at else None,
+                "updated_at": updated_at.isoformat() if updated_at else None
+            })
+
+        return {
+            "message": "Drafts fetched successfully.",
+            "drafts": draft_list
+        }
+
+    except Exception as e:
+        print(f"[LIST DRAFTS ERROR] {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch drafts")
+
+
+# @app.get("/api/load-draft/{proposal_id}")
+# async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_user)):
+#     user_id = current_user["user_id"]
+
+#     try:
+#         # ✅ Check if a Redis session already exists for this proposal
+#         redis_keys = redis_client.keys("*")
+#         for key in redis_keys:
+#             data = redis_client.get(key)
+#             if not data:
+#                 continue
+
+#             try:
+#                 if isinstance(data, bytes):
+#                     data = data.decode("utf-8")
+
+#                 if data.strip():  # Only try parsing if data is non-empty
+#                     parsed = json.loads(data)
+#                 else:
+#                     continue
+#             except Exception as e:
+#                 print(f"[REDIS JSON PARSE ERROR for key={key}] {e}")
+#                 continue  # Skip this corrupted session
+
+#             if parsed.get("user_id") == user_id and parsed.get("proposal_id") == proposal_id:
+#                     print(f"[LOAD DRAFT] Reusing existing Redis session: {key}")
+#                     return {
+#                         "form_data": parsed["form_data"],
+#                         "project_description": parsed["project_description"],
+#                         "generated_sections": {section: parsed.get("generated_sections", {}).get(section) for section in SECTIONS},
+#                         "session_id": key,
+#                         "proposal_id": proposal_id,
+#                         "is_accepted": parsed.get("is_accepted", False) 
+#                     }
+                
+#         with engine.connect() as connection:
+#             result = connection.execute(
+#                 text("""
+#                     SELECT form_data, project_description, generated_sections, is_accepted
+#                     FROM proposals
+#                     WHERE id = :proposal_id AND user_id = :user_id
+#                 """),
+#                 {"proposal_id": proposal_id, "user_id": user_id}
+#             )
+#             draft = result.fetchone()
+
+#         if not draft:
+#             raise HTTPException(status_code=404, detail="Draft not found for this proposal_id")
+
+#         form_data_raw, project_description, generated_sections_raw, is_accepted = draft
+
+#         # Parse loaded data
+#         form_data = json.loads(draft[0]) if isinstance(draft[0], str) else draft[0]
+#         project_description = draft[1]
+#         loaded_sections = json.loads(draft[2]) if draft[2] and isinstance(draft[2], str) else draft[2] or {}
+#         ordered_sections = {section: loaded_sections.get(section) for section in SECTIONS}
+#         # form_data, project_description, generated_sections_raw, is_accepted = draft
+        
+#         # ✅ Create a new session_id
+#         session_id = str(uuid.uuid4())
+
+#         # ✅ Push form_data and project_description to Redis under new session_id
+#         redis_client.setex(
+#             session_id,
+#             3600,  # 1 hour expiry
+#             json.dumps({
+#                 "form_data": form_data,
+#                 "project_description": project_description,
+#                 "generated_sections": ordered_sections,
+#                 "project_title": form_data.get("project_title", "Untitled Proposal"),
+#                 "user_id": user_id,
+#                 "proposal_id": proposal_id,
+#                 "is_accepted": is_accepted,
+#             })
+#         )
+
+#         print(f"[LOAD DRAFT] Created new Redis session: {session_id}")
+
+#         # ✅ Return data including new session_id
+#         return {
+#             "form_data": form_data,
+#             "project_description": project_description,
+#             "generated_sections": ordered_sections,
+#             "session_id": session_id,  
+#             "proposal_id": proposal_id,
+#             "is_accepted": is_accepted
+#         }
+
+#     except Exception as e:
+#         print(f"[LOAD DRAFT ERROR] {e}")
+#         raise HTTPException(status_code=404, detail="Draft not found")
+
+@app.get("/api/load-draft/{proposal_id}")
+async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_user)):
+    user_id = current_user["user_id"]
+
+    try:
+        with engine.connect() as connection:
+            # ✅ Always load latest data directly from DB (not Redis)
+            result = connection.execute(
+                text("""
+                    SELECT form_data, project_description, generated_sections, is_accepted, created_at, updated_at
+                    FROM proposals
+                    WHERE id = :proposal_id AND user_id = :user_id
+                """),
+                {"proposal_id": proposal_id, "user_id": user_id}
+            )
+            draft = result.fetchone()
+
+        if not draft:
+            raise HTTPException(status_code=404, detail="Draft not found for this proposal_id")
+
+        form_data_raw, project_description, generated_sections_raw, is_accepted, created_at, updated_at = draft
+
+        # ✅ Parse form_data
+        try:
+            if isinstance(form_data_raw, str):
+                form_data = json.loads(form_data_raw)
+            elif isinstance(form_data_raw, dict):
+                form_data = form_data_raw
+            else:
+                form_data = {}
+        except Exception as e:
+            print(f"[FORM_DATA PARSE ERROR] {e}")
+            form_data = {}
+
+        # ✅ Parse generated_sections
+        try:
+            if isinstance(generated_sections_raw, str):
+                generated_sections = json.loads(generated_sections_raw)
+            elif isinstance(generated_sections_raw, dict):
+                generated_sections = generated_sections_raw
+            else:
+                generated_sections = {}
+        except Exception as e:
+            print(f"[GENERATED SECTIONS PARSE ERROR] {e}")
+            generated_sections = {}
+
+        # ✅ Ensure all expected sections are present (as per SECTIONS list)
+        ordered_sections = {section: generated_sections.get(section) for section in SECTIONS}
+
+        # ✅ Create new session and store in Redis (optional, for continuity)
+        session_id = str(uuid.uuid4())
+        redis_client.setex(
+            session_id,
+            3600,  # 1 hour expiry
+            json.dumps({
+                "form_data": form_data,
+                "project_description": project_description,
+                "generated_sections": ordered_sections,
+                "project_title": form_data.get("Project title", "Untitled Proposal"),
+                "user_id": user_id,
+                "proposal_id": proposal_id,
+                "is_accepted": is_accepted,
+            })
+        )
+        print(f"[LOAD DRAFT] Redis session created: {session_id}")
+
+        # ✅ Return final payload (no dependency on Redis for loading)
+        return {
+            "form_data": form_data,
+            "project_description": project_description,
+            "generated_sections": ordered_sections,
+            "session_id": session_id,
+            "proposal_id": proposal_id,
+            "is_accepted": is_accepted,
+            "created_at": created_at.isoformat() if created_at else None,
+            "updated_at": updated_at.isoformat() if updated_at else None
+        }
+
+    except Exception as e:
+        print(f"[LOAD DRAFT ERROR] {e}")
+        raise HTTPException(status_code=500, detail="Failed to load draft")
+
+
+def add_markdown_paragraph(doc, text):
+    paragraph = doc.add_paragraph()
+    # Split on things wrapped with **
+    parts = re.split(r'(\*\*.*?\*\*)', text)
+    
+    for part in parts:
+        if part.startswith("**") and part.endswith("**"):
+            paragraph.add_run(part[2:-2]).bold = True
+        else:
+            paragraph.add_run(part)
+    
+    # Optional formatting
+    paragraph.paragraph_format.space_after = Pt(12)
+    paragraph.paragraph_format.line_spacing = 1.5
+
+def convert_markdown_bold(text):
+    """
+    Safely converts **bold** markdown to <b>bold</b> for ReportLab.
+    """
+    return re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", text)
+
+def create_pdf_from_sections(output_path, form_data, ordered_sections):
+    
+    doc = SimpleDocTemplate(output_path, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=72)
+    styles = getSampleStyleSheet()
+
+    # Custom paragraph style for justified text
+    normal_style = ParagraphStyle(
+        name='Body',
+        parent=styles['Normal'],
+        alignment=TA_JUSTIFY,
+        leading=14
+    )
+
+    story = []
+
+    # Title
+    story.append(Paragraph("Project Proposal", styles['Title']))
+    story.append(Spacer(1, 12))
+
+    # Build table data from form_data
+    table_data = [["Field", "Value"]]
+    for key, value in form_data.items():
+        table_data.append([key, value])
+
+    table = Table(table_data, colWidths=[2.5 * inch, 3.5 * inch])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+    ]))
+    story.append(table)
+    story.append(Spacer(1, 20))
+
+    # Add each section
+    for section, content in ordered_sections.items():
+        if not content:
+            continue  # skip empty sections
+
+        story.append(Paragraph(section, styles['Heading2']))
+        story.append(Spacer(1, 6))
+
+        for paragraph in content.split("\n\n"):
+            cleaned = convert_markdown_bold(paragraph.strip())
+            story.append(Paragraph(cleaned, normal_style))
+            story.append(Spacer(1, 10))
+
+    # Build the PDF
+    doc.build(story)
+
+
+
+@app.get("/api/generate-document/{proposal_id}")
+async def generate_and_download_document(
+    proposal_id: str,
+    format: str = "docx",  # either 'docx' or 'pdf'
+    current_user: dict = Depends(get_current_user)
+):
+    """Generates final document (Word & PDF) and returns requested file as download"""
+
+    user_id = current_user["user_id"]
+
+    try:
+        with engine.connect() as connection:
+            result = connection.execute(
+                text("""
+                    SELECT form_data, project_description, generated_sections
+                    FROM proposals
+                    WHERE id = :proposal_id AND user_id = :user_id
+                """),
+                {"proposal_id": proposal_id, "user_id": user_id}
+            )
+            draft = result.fetchone()
+
+        if not draft:
+            raise HTTPException(status_code=404, detail="Proposal not found for this user.")
+
+        form_data = json.loads(draft[0]) if isinstance(draft[0], str) else draft[0]
+        # generated_sections = json.loads(draft[2]) if draft[2] and isinstance(draft[2], str) else {}
+        try:
+            if draft[2] and isinstance(draft[2], str):
+                # Handle double-encoded JSON (common when inserted via json.dumps twice)
+                first_pass = json.loads(draft[2])
+                generated_sections = json.loads(first_pass) if isinstance(first_pass, str) else first_pass
+            elif isinstance(draft[2], dict):
+                generated_sections = draft[2]
+            else:
+                generated_sections = {}
+        except Exception as e:
+            print(f"[JSON PARSE ERROR - generated_sections] {e}")
+            generated_sections = {}
+
+
+        if len(generated_sections) != len(SECTIONS):
+            missing_sections = [s for s in SECTIONS if s not in generated_sections]
+            raise HTTPException(status_code=400, detail=f"Missing sections: {missing_sections}")
+
+        ordered_sections = {section: generated_sections.get(section) for section in SECTIONS}
+
+        # ✅ Create Word document
+        doc = Document()
+        doc.add_heading("Project Proposal", level=1)
+
+        table = doc.add_table(rows=1, cols=2)
+        table.style = 'Table Grid'
+        hdr_cells = table.rows[0].cells
+        hdr_cells[0].text = 'Field'
+        hdr_cells[1].text = 'Value'
+
+        for key, value in form_data.items():
+            row_cells = table.add_row().cells
+            row_cells[0].text = key
+            row_cells[1].text = value
+
+        doc.add_paragraph("\n")
+
+        for section, content in ordered_sections.items():
+            doc.add_heading(section, level=2)
+            for para in content.split("\n\n"):
+                add_markdown_paragraph(doc, para.strip())
+
+        # ✅ Save DOCX
+        folder_name = "proposal-documents"
+        os.makedirs(folder_name, exist_ok=True)
+        unique_id = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:6]}"
+        docx_file_path = os.path.join(folder_name, f"proposal_{unique_id}.docx")
+        
+        doc.save(docx_file_path)
+    
+        pdf_file_path = None
+
+        if format == "pdf":
+            pdf_file_path = docx_file_path.replace(".docx", ".pdf")
+            try:
+                create_pdf_from_sections(pdf_file_path, form_data, ordered_sections)
+                print(f"[PDF Created] {pdf_file_path}")
+            except Exception as e:
+                print(f"[PDF Generation Error] {e}")
+                pdf_file_path = None
+
+        # ✅ Return requested file
+        if format == "pdf":
+            if not pdf_file_path or not os.path.exists(pdf_file_path):
+                raise HTTPException(status_code=500, detail="Failed to generate PDF document.")
+            return FileResponse(
+                path=pdf_file_path,
+                filename=f"Proposal_{proposal_id}.pdf",
+                media_type='application/pdf'
+            )
+        else:
+            return FileResponse(
+                path=docx_file_path,
+                filename=f"Proposal_{proposal_id}.docx",
+                media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            )
+
+    except Exception as e:
+        traceback.print_exc()  # 🔍 Print full traceback
+        print(f"[GENERATE & DOWNLOAD ERROR] {type(e).__name__}: {e}")
+        raise HTTPException(status_code=500, detail=f"Document generation failed due to: {str(e)}")
+
+
+
+@app.post("/api/finalize-proposal")
+async def finalize_proposal(request: FinalizeProposalRequest, current_user: dict = Depends(get_current_user)):
+    proposal_id = request.proposal_id
+    user_id = current_user["user_id"]
+
+    try:
+        with engine.begin() as connection:
+            result = connection.execute(
+                text("SELECT is_accepted FROM proposals WHERE id = :proposal_id AND user_id = :user_id"),
+                {"proposal_id": proposal_id, "user_id": user_id}
+            )
+            proposal = result.fetchone()
+
+            if not proposal:
+                raise HTTPException(status_code=404, detail="Proposal not found.")
+
+            if proposal[0]:  # already finalized
+                return {"message": "Proposal is already finalized."}
+
+            # ✅ Set is_accepted = TRUE
+            connection.execute(
+                text("""
+                    UPDATE proposals
+                    SET is_accepted = TRUE, updated_at = NOW()
+                    WHERE id = :proposal_id AND user_id = :user_id
+                """),
+                {"proposal_id": proposal_id, "user_id": user_id}
+            )
+
+        return {
+            "message": "Proposal finalized successfully.",
+            "proposal_id": proposal_id,
+            "is_accepted": True
+        }
+
+    except Exception as e:
+        print(f"[FINALIZE PROPOSAL ERROR] {e}")
+        raise HTTPException(status_code=500, detail="Failed to finalize proposal.")
+
+
+@app.delete("/api/delete-draft/{proposal_id}")
+async def delete_draft(
+    proposal_id: str,
+    # session_id: Optional[str] = Query(None),  # 👈 optional query param for Redis session_id
+    current_user: dict = Depends(get_current_user)
+):
+    user_id = current_user["user_id"]
+
+    try:
+        with engine.begin() as connection:
+            # Check if the proposal exists for this user
+            result = connection.execute(
+                text("SELECT id FROM proposals WHERE id = :proposal_id AND user_id = :user_id"),
+                {"proposal_id": proposal_id, "user_id": user_id}
+            )
+            draft = result.fetchone()
+
+            if not draft:
+                raise HTTPException(status_code=404, detail="Draft not found.")
+
+            # Delete the proposal from the DB
+            connection.execute(
+                text("DELETE FROM proposals WHERE id = :proposal_id AND user_id = :user_id"),
+                {"proposal_id": proposal_id, "user_id": user_id}
+            )
+
+        # If a session_id is provided, delete the associated Redis session
+        # Step 2: Delete any Redis sessions associated with this draft
+        session_deleted = False
+        redis_keys = redis_client.keys("*")
+        for key in redis_keys:
+            data = redis_client.get(key)
+            if not data:
+                continue
+
+            try:
+                parsed = json.loads(data)
+                if parsed.get("user_id") == user_id and parsed.get("proposal_id") == proposal_id:
+                    redis_client.delete(key)
+                    session_deleted = True
+                    print(f"[DELETE] Removed Redis session for session_id: {key}")
+            except Exception as e:
+                print(f"[REDIS CLEANUP ERROR - key={key}] {e}")
+
+        return {
+            "message": f"Draft '{proposal_id}' deleted successfully.",
+            "session_deleted": session_deleted
+        }
+
+    except Exception as e:
+        print(f"[DELETE DRAFT ERROR] {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete draft")
+
+@app.get("/api/health_check")
 def health_check():
     return {"status": "API is running"}
+
+def delete_old_proposals():
+    try:
+        # ⏱ For testing: delete proposals older than 5 minutes
+        threshold = datetime.now(timezone.utc) - timedelta(days=90)
+
+        with engine.begin() as connection:
+            result = connection.execute(
+                text("DELETE FROM proposals WHERE created_at < :threshold"),
+                {"threshold": threshold}
+            )
+            print(f"[CLEANUP] Deleted old proposals older than {threshold}")
+    except Exception as e:
+        print(f"[CLEANUP ERROR] {e}")
+
+# 🗓 Start the background scheduler
+scheduler = BackgroundScheduler()
+scheduler.add_job(delete_old_proposals, 'interval', minutes=1)  # Runs every 1 minute
+scheduler.start()
+
 
 if __name__ == "__main__":
     import uvicorn

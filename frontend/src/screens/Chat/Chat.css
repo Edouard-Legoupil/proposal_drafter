@@ -40,14 +40,10 @@
 }
 
 .Chat_right {
-        margin: 5px;
-        margin-left: 0;
-
         display: flex;
         flex-grow: 1;
         flex-direction: column;
-        padding: 20px 30px;
-        padding-right: 22.5px;
+
         overflow-x: hidden;
         overflow-y: auto;
 }
@@ -55,10 +51,13 @@
 .Chat_inputArea {
         margin-top: 20px;
 
+        box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.06) 0px 2px 4px -1px;
+
         border-radius: 15px;
 
         background-color: white;
 
+        margin: 15px 30px;
         padding: 25px;
         padding-bottom: 22.5px;
 
@@ -130,7 +129,7 @@
 
 .Chat_form {
         margin-top: 17.5px;
-        margin-bottom: 10px;
+        margin-bottom: 27.5px;
 
         padding: 1px;
 
@@ -159,6 +158,8 @@
         font-family: "Noto";
         font-size: 14px;
         color: #141419;
+
+        white-space: nowrap;
 }
 
 .Chat_form_input_mandatoryAsterisk {
@@ -189,15 +190,55 @@
         justify-content: flex-end;
 }
 
-.Chat_proposalContainer {
-        margin-top: 20px;
-
+.Chat_exportButtons {
         display: flex;
-        flex-direction: column;
         gap: 15px;
 }
 
+.Chat_exportButtons > button {
+        height: 40px;
+        box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.06) 0px 2px 4px -1px;
+        border-radius: 20px;
+        /* border: 1.5px solid #0033A0; */
+        border: none;
+        background: white;
+        padding: 0 16px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+
+        font-family: "Noto";
+        font-size: 14px;
+        font-weight: 350;
+
+        cursor: pointer;
+}
+
+.Chat_exportButtons > button:first-child > img {
+        filter: brightness(0) saturate(100%) invert(15%) sepia(45%) saturate(5296%) hue-rotate(217deg) brightness(94%) contrast(109%);
+}
+
+.Chat_exportButtons > button:nth-child(2) > img {
+        filter: brightness(0) saturate(100%) invert(14%) sepia(90%) saturate(3910%) hue-rotate(1deg) brightness(84%) contrast(124%);
+}
+
+
+.Chat_proposalContainer {
+        margin-top: 20px;
+        padding-bottom: 20px;
+
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+}
+
 .Chat_proposalSection {
+        margin: 0 30px;
+
+        box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.06) 0px 2px 4px -1px;
+
         background: white;
 
         border-radius: 15px;
@@ -213,15 +254,17 @@
 
 .Chat_sectionTitle {
         font-family: "Noto";
-        font-size: 16px;
-        font-weight: 700;
+        font-size: 20px;
+        font-weight: 350;
         color: #0033A0;
+
+        margin-right: auto;
 }
 
 .Chat_sectionOptions {
         display: flex;
         gap: 15px;
-        margin: 0 30px 0 auto;
+        margin-left: auto;
 }
 
 .Chat_sectionOptions > button {
@@ -278,10 +321,21 @@
         max-height: 40px;
 }
 
+.Chat_expanderArrow {
+        margin-left: 30px;
+
+        cursor: pointer;
+}
+
+.Chat_expanderArrow.closed {
+        margin-left: auto;
+        transform: scaleY(-1);
+}
+
 .Chat_sectionContent {
         font-family: "Noto";
         font-size: 14px;
-        font-weight: 500;
+        font-weight: 350;
         color: #141419;
 
         text-align: justify;
@@ -375,8 +429,4 @@
         height: 265px;
 
         padding: 25px;
-}
-
-.Chat_expanderArrow.closed {
-        transform: scaleY(-1);
 }

@@ -1,54 +1,120 @@
 import './Login.css'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+import CommonButton from '../../components/CommonButton/CommonButton'
 import ResponsiveIllustration from '../../components/ResponsiveIllustration/ResponsiveIllustration'
 
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
+
 import logo from "../../assets/images/App_logo.svg"
-import CommonButton from '../../components/CommonButton/CommonButton'
+import show from "../../assets/images/login_showPassword.svg"
+import hide from "../../assets/images/login_hidePassword.svg"
 
 export default function Login (props)
 {
         const navigate = useNavigate()
 
         const errorPopover = useRef()
+        const [errorText, setErrorText] = useState("")
+        useEffect(() => {
+                const sessionExpiredError = sessionStorage.getItem("session_expired")
+                if(sessionExpiredError && errorPopover.current.showPopover) {
+                        setErrorText(sessionExpiredError)
+                        errorPopover.current.showPopover()
+                        sessionStorage.removeItem("session_expired")
+                }
+        }, [])
+
+        const [username, setUsername] = useState("")
 
         const [email, setEmail] = useState("")
-        const [errorText, setErrorText] = useState("")
 
+        const [password, setPassword] = useState("")
+        const [showPassword, setShowPassword] = useState(false)
+
+        const [submitButtonText, setSubmitButtonText] = useState(props?.register ? "REGISTER" : "LOGIN")
         const [loading, setLoading] = useState(false)
+
+        useEffect(() => {
+                if(errorPopover.current?.hidePopover && password) {
+                        setErrorText("")
+                        errorPopover.current.hidePopover()
+                }
+                else
+                        setShowPassword(false)
+        }, [email, password])
+
         async function handleLoginClick (e)
         {
                 e.preventDefault()
 
+                setSubmitButtonText("LOGGING IN")
                 setLoading(true)
 
-                // const response = await fetch('http://192.168.157.40:8501/login', {
-                //         method: 'POST',
-                //         headers: { 'Content-Type': 'application/json' },
-                //         body: JSON.stringify({ email }),
-                //         credentials: 'include'
-                // })
+                const response = await fetch(`${API_BASE_URL}/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password }),
+                        credentials: 'include'
+                })
 
-                // if (response.ok) {
-                //         console.log("response.ok")
-                //         navigate("/dashboard")
-                // }
-                // else
-                // {
-                //         const data = await response.json()
-                //         errorPopover.current.showPopover()
-                //         setErrorText(data.error || "Login failed!")
-                // }
+                if (response.ok)
+                {
+                        navigate("/dashboard")
+                }
+                else
+                {
+                        setSubmitButtonText(props?.register ? "REGISTER" : "LOGIN")
+                        setLoading(false)
 
-                window.location.href = "/dashboard"
+                        const data = await response.json() ?? { error: "Login failed! Please try again." }
+
+                        setPassword("")
+                        setShowPassword(false)
+                        if(errorPopover.current.showPopover)
+                                errorPopover.current.showPopover()
+                        setErrorText(data.error)
+                }
+        }
+
+        async function handleRegisterClick (e)
+        {
+                setSubmitButtonText("REGISTERING")
+                setLoading(true)
+
+                e.preventDefault()
+
+                const response = await fetch(`${API_BASE_URL}/signup`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, email, password })
+                })
+
+                if (response.ok)
+                        handleLoginClick(e)
+                else
+                {
+                        setSubmitButtonText("REGISTER")
+                        setLoading(false)
+
+                        const data = await response.json()
+
+                        errorPopover.current.showPopover()
+                        setErrorText(data.error || "Signup failed!")
+
+                        setUsername("")
+                        setEmail("")
+                        setPassword("")
+                        setShowPassword(false)
+                }
         }
 
         return  <div className='Login'>
                 <div popover="auto" className='Login-errorPopover' ref={errorPopover}>
                         <span>🛇 {errorText}</span>
-                        <span onClick={() => errorPopover.current.hidePopover()}>✖</span>
+                        <span onClick={() => errorPopover.current.hidePopover()} style={{ cursor: "pointer" }}>✖</span>
                 </div>
 
                 <div className='Login-left'>
@@ -56,34 +122,67 @@ export default function Login (props)
                                 <img className='Login-logo' src={logo} alt='My Rafiki logo' />
                         </div>
 
-                        <form className='Login-form' onSubmit={handleLoginClick}>
-                                <h3 className='Login_form-header'>LOGIN</h3>
-                                <div className='Login-label'>Email</div>
+                        <form className='Login-form' onSubmit={props?.register ? handleRegisterClick : handleLoginClick}>
+                                <h3 className='Login_form-header'>{props?.register ? "Register" : "Login"}</h3>
+
+                                {props?.register ?
+                                        <>
+                                                <label className='Login-label' htmlFor='Login_nameInput'>Name</label>
+                                                <input
+                                                        type="text"
+                                                        id='Login_nameInput'
+                                                        value={username}
+                                                        placeholder='Your name'
+                                                        onChange={e => /^[A-Za-z\s]{0,16}$/.test(e.target.value) && setUsername(e.target.value)}
+                                                />
+                                        </>
+                                        :
+                                        ""
+                                }
+
+                                <label className='Login-label' htmlFor='Login_emailInput'>Email</label>
                                 <input
                                         type="email"
+                                        id="Login_emailInput"
                                         value={email}
-                                        placeholder='Enter your email here'
+                                        placeholder={props?.register ? 'example@email.com' : 'Enter your email here'}
                                         onChange={e => /^[a-zA-Z0-9@._%+-]*$/.test(e.target.value) && setEmail(e.target.value.toLowerCase())}
                                 />
 
-                                <button
-                                        type='submit'
-                                        className="Login-submit"
-                                        disabled={!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)}
-                                >
-                                        {loading ?
+                                <label className='Login-label' htmlFor='Login_passwordInput'>Password</label>
+                                <input
+                                        type={showPassword ? 'text' : 'password'}
+                                        id="Login_passwordInput"
+                                        className='Login_inputPassword'
+                                        value={password}
+                                        placeholder={props?.register ? 'At least 8 characters' : 'Enter your password here'}
+                                        onChange={e => setPassword(e.target.value)}
+                                />
+                                {password ? <div className="Login_showPasswordToggleContainer">
+                                        <img className='Login_passwordShowToggle' src={showPassword ? hide : show} onClick={() => setShowPassword(p => !p)}/>
+                                </div> : ""}
+
+                                <CommonButton
+                                        type="submit"
+                                        disabled={(props?.register && !username) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length >= 255 || password.length < 8}
+                                        label={submitButtonText}
+                                        loading={loading}
+                                        style={{ marginTop: "45px" }}
+                                />
+
+                                <div className='Login-register'>
+                                        {props?.register ?
                                                 <>
-                                                        LOGGING IN
-                                                        <span className='submitButtonSpinner' />
+                                                        Already have an account?
+                                                        <a href="/login"> Log in</a>
                                                 </>
                                                 :
                                                 <>
-                                                        LOGIN WITH SSO
+                                                        Don't have an account?
+                                                        <a href="/register"> Sign up</a>
                                                 </>
                                         }
-                                </button>
-
-                                {/* <CommonButton type="submit" disabled={!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)} label="LOGIN WITH SSO" loading={loading} loadingLabel="LOGGING IN" /> */}
+                                </div>
                         </form>
                 </div>
 

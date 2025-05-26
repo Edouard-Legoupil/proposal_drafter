@@ -7,11 +7,12 @@ export default function CommonButton (props)
                 className={`CommonButton ${props?.loading ? "loading" : ""}`}
                 onClick={props?.onClick}
                 disabled={props?.disabled || props?.loading}
+                style={props?.style}
         >
                 {props?.loading ?
                         <>
                                 <span className='submitButtonSpinner' />
-                                {props?.loadingLabel}
+                                {props?.loadingLabel ?? props?.label}
                         </>
                         :
                         <>
