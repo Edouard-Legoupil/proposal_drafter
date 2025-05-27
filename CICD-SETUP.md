@@ -280,7 +280,7 @@ In your GitHub repo, go to **Settings > Secrets and Variables > Actions**, and a
 - `AZURE_CREDENTIALS` (from `az ad sp create-for-rbac`)
 - `REGISTRY_USERNAME`
 - `REGISTRY_PASSWORD`
-- `AZURE_WEBAPP_PUBLISH_PROFILE`
+- `AZURE_WEBAPP_PUBLISH_PROFILE` -- 
 - `REGISTRY_LOGIN_SERVER`
 
 ### Step 3: Application Settings (Environment Variables)

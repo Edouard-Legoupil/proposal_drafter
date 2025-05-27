@@ -7,6 +7,8 @@ on:
 
 env:
   IMAGE_TAG: ${{ github.sha }}
+  REGISTRY_LOGIN_SERVER: ${{ secrets.REGISTRY_LOGIN_SERVER }}
+  AZURE_WEBAPP_PUBLISH_PROFILE: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
 
 jobs:
   build-and-deploy:
@@ -30,16 +32,16 @@ jobs:
 
       - name: Build and Push Frontend Image
         run: |
-          docker build -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/proposalgen-frontend:$IMAGE_TAG \
+          docker build -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/proposalgen-frontend:${{ env.IMAGE_TAG }} \
             --build-arg VITE_BACKEND_URL=http://${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}.azurewebsites.net:8502/api \
             -f frontend/Dockerfile ./frontend
-          docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/proposalgen-frontend:$IMAGE_TAG
+          docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/proposalgen-frontend:${{ env.IMAGE_TAG }}
 
       - name: Build and Push Backend Image
         run: |
-          docker build -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/proposalgen-backend:$IMAGE_TAG \
+          docker build -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/proposalgen-backend:${{ env.IMAGE_TAG }} \
             -f backend/Dockerfile ./backend
-          docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/proposalgen-backend:$IMAGE_TAG
+          docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/proposalgen-backend:${{ env.IMAGE_TAG }}
 
       - name: Deploy to Azure Web App (Multi-Container)
         uses: azure/webapps-deploy@v2
