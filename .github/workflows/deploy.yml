@@ -41,7 +41,9 @@ jobs:
           login-server: ${{ env.REGISTRY_LOGIN_SERVER }}
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
-
+      - name: Verify Docker Registry Login
+        run: docker login ${{ secrets.REGISTRY_LOGIN_SERVER }} -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }}
+        
       - name: Build and Push Images
         run: |
           docker compose -f docker-compose.yml build
