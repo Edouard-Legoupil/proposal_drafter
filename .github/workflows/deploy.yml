@@ -30,18 +30,10 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
-      - name: Build and Push Frontend Image
+      - name: Build and Push Images
         run: |
-          docker build -t ${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-frontend:${{ env.IMAGE_TAG }} \
-            --build-arg VITE_BACKEND_URL=http://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net:8502/api \
-            -f frontend/Dockerfile ./frontend
-          docker push ${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-frontend:${{ env.IMAGE_TAG }}
-
-      - name: Build and Push Backend Image
-        run: |
-          docker build -t ${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-backend:${{ env.IMAGE_TAG }} \
-            -f backend/Dockerfile ./backend
-          docker push ${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-backend:${{ env.IMAGE_TAG }}
+          docker-compose -f docker-compose.yml build
+          docker-compose -f docker-compose.yml push
 
       - name: Deploy to Azure Web App (Multi-Container)
         uses: azure/webapps-deploy@v2
