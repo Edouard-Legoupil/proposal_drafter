@@ -32,8 +32,8 @@ jobs:
 
       - name: Build and Push Images
         run: |
-          docker-compose -f docker-compose.yml build
-          docker-compose -f docker-compose.yml push
+          docker compose -f docker-compose.yml build
+          docker compose -f docker-compose.yml push
 
       - name: Deploy to Azure Web App (Multi-Container)
         uses: azure/webapps-deploy@v2
