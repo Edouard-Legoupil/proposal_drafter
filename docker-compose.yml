@@ -6,8 +6,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - VITE_BACKEND_URL=http://proposalgen-app.azurewebsites.net:8502/api
-    image: ${DOCKER_REGISTRY_SERVER_URL}/proposalgen-frontend:${TAG:-latest}
+        - VITE_BACKEND_URL=http://${AZURE_WEBAPP_PUBLISH_PROFILE}.azurewebsites.net:8502/api
+    image: ${REGISTRY_LOGIN_SERVER}/proposalgen-frontend:${TAG:-latest}
     restart: always
     ports:
       - "8503:80"
@@ -18,7 +18,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    image: ${DOCKER_REGISTRY_SERVER_URL}/proposalgen-backend:${TAG:-latest}
+    image: ${REGISTRY_LOGIN_SERVER}/proposalgen-backend:${TAG:-latest}
     restart: always
     ports:
       - "8502:8502"
