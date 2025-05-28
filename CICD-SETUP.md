@@ -278,11 +278,13 @@ git push -u origin main
 In your GitHub repo, go to **Settings > Secrets and Variables > Actions**, and add the elemnts defining the target Azure Infrastructure::
 
 - `AZURE_CREDENTIALS` (from `az ad sp create-for-rbac`)
-- `REGISTRY_USERNAME`
-- `REGISTRY_PASSWORD`
-- `AZURE_WEBAPP_PUBLISH_PROFILE`
-- `AZURE_WEBAPP_NAME`
-- `REGISTRY_LOGIN_SERVER`
+- `REGISTRY_LOGIN_SERVER` -- # Must end with .azurecr.io
+- `REGISTRY_USERNAME` -- az acr credential show --name <your-acr-name> --query "{username: username, password: passwords[0].value}"
+- `REGISTRY_PASSWORD` -- same as above
+- `AZURE_WEBAPP_PUBLISH_PROFILE`  -- you can get this from the Azure Portal > App Service > Get Publish Profile
+- `AZURE_WEBAPP_NAME` -- the name of your Azure Web App
+
+
 
 ### Step 3: Application Settings (Environment Variables)
 
