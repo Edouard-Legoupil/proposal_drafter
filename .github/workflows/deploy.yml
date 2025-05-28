@@ -67,3 +67,4 @@ jobs:
           images: |
             ${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-frontend:${{ env.IMAGE_TAG }}
             ${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-backend:${{ env.IMAGE_TAG }}
+          configuration-file: docker-compose.yml
