@@ -42,21 +42,18 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
-      - name: Verify DNS resolution
-        run: |
-          nslookup ${{ secrets.REGISTRY_LOGIN_SERVER }}
-          ping -c 3 ${{ secrets.REGISTRY_LOGIN_SERVER }}          
 
-      - name: Test ACR Connectivity
+      - name: Debug ACR Access
         run: |
-          echo "Logging in to ACR..."
+          echo "ACR Host: ${{ secrets.REGISTRY_LOGIN_SERVER }}"
+          echo "DNS Lookup:"
+          nslookup ${{ secrets.REGISTRY_LOGIN_SERVER }}
+          echo "HTTPS Test:"
+          curl -m 5 -vk https://${{ secrets.REGISTRY_LOGIN_SERVER }}/v2/ || echo "Curl failed"
+          echo "Docker Login Test:"
           docker login ${{ secrets.REGISTRY_LOGIN_SERVER }} \
             -u ${{ secrets.REGISTRY_USERNAME }} \
-            -p ${{ secrets.REGISTRY_PASSWORD }}
-          echo "Pulling a test image..."
-          docker pull ${{ secrets.REGISTRY_LOGIN_SERVER }}/hello-world          
-      - name: Verify Docker Registry Login
-        run: docker login ${{ secrets.REGISTRY_LOGIN_SERVER }} -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }}
+            -p ${{ secrets.REGISTRY_PASSWORD }}      
         
       - name: Build and Push Images
         run: |
