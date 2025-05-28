@@ -85,7 +85,10 @@ npm run dev
 
 ### Step 5: Start a PostgreSQL database
 
-You can use a local PostgreSQL or a Docker image with the follwing command:
+You can use a local PostgreSQL.
+
+An alternative is to use a Docker image with the follwing command:
+Note this assumes you have Docker installed and running. On windos, You can use [Docker Destop](https://docs.docker.com/desktop/setup/install/windows-install/) for that
 
 ```bash
 docker run --name pg-local -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres
@@ -101,7 +104,12 @@ psql postgresql://postgres:postgres@localhost:5432/proposalgen -f database-setup
 
 # 2️⃣ Local Docker Development
 
+
+
 ### Step 1: Start Docker containers
+
+A specific `docker-compose-local.yml` file is provided to run the application locally with Docker. This file includes services for the frontend, backend, PostgreSQL database, and Redis.
+Make sure you have Docker and Docker Compose installed. Then, run the following command in the root directory of the project:
 
 ```bash
 docker-compose -f docker-compose-local.yml up --build
@@ -219,6 +227,10 @@ echo "👉 Add this file content to GitHub Secrets as AZURE_CREDENTIALS"
 echo ""
 ```
 
+
+
+
+
 ## Step 2: Build & Push Docker Images
 
 ```bash
@@ -306,8 +318,24 @@ and the internal environment variables used in the app:
 
 The script `.github/workflows/deploy.yml` orchestrates the CI/CD pipeline.
 
+Note that you main need to verify that the `docker-compose.yml` file is correctly set up to use the environment variables defined in the Azure App Service and check that you container registry can be accessed by Github Actions.
+az acr update --name <your-acr-name> --public-network-enabled true  
 
----
+
+If the workflow is set up correctly, it will automatically build and deploy the application to Azure whenever you push changes to the `main` branch.
+
+If the target application in azure does not start correctly, you can check the logs in the Azure Portal > App Service > Log Stream.
+
+
+```bash
+## check the log of the app service using the Azure CLI:
+az webapp log tail --name <your-app-name> --resource-group <your-resource-group>
+## Check if it is actually deployed
+az webapp config container show \
+  --name <your-app-name> \
+  --resource-group <your-resource-group> \
+  --query "[name, image]"
+```
 
 ## 🧪 Verification Checklist
 
