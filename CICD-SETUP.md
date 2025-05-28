@@ -38,7 +38,7 @@ Install these tools before you begin:
 ### Step 1: Clone the repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/iom/proposal_drafter.git
 cd proposal_drafter
 ```
 
@@ -287,15 +287,7 @@ bash azure-db-setup.sh
 
 This section sets up a CI/CD pipeline using GitHub Actions to automate deployments to Azure whenever you push changes to the repository.
 
-
-### Step 1: Push to GitHub
-
-```bash
-git remote add origin https://github.com/<your-org>/<your-repo>.git
-git push -u origin main
-```
-
-### Step 2: Set up GitHub Secrets
+### Step 1: Set up GitHub Secrets
 
 In your GitHub repo, go to **Settings > Secrets and Variables > Actions**, and add the elemnts defining the target Azure Infrastructure::
 
@@ -308,7 +300,7 @@ In your GitHub repo, go to **Settings > Secrets and Variables > Actions**, and a
 
 
 
-### Step 3: Application Settings (Environment Variables)
+### Step 2: Application Settings (Environment Variables)
 
 In the Azure Portal > App Service > Configuration, add the same environment variables you have in your Docker Compose file:
 and the internal environment variables used in the app:
@@ -324,12 +316,19 @@ and the internal environment variables used in the app:
 - `DB_HOST`
 - `DB_PORT`
 
-### Step 4: GitHub Actions workflow file
+### Step 3: GitHub Actions workflow file
 
 The script `.github/workflows/deploy.yml` orchestrates the CI/CD pipeline.
 
 Note that you main need to verify that the `docker-compose.yml` file is correctly set up to use the environment variables defined in the Azure App Service and check that you container registry can be accessed by Github Actions.
 az acr update --name <your-acr-name> --public-network-enabled true  
+
+### Step 4: Push to GitHub
+
+```bash
+git remote add origin https://github.com/iom/proposal_drafter.git
+git push -u origin main
+```
 
 
 If the workflow is set up correctly, it will automatically build and deploy the application to Azure whenever you push changes to the `main` branch.
