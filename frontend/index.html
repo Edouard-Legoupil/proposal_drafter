@@ -4,11 +4,39 @@
                 <meta charset="UTF-8" />
                 <link rel="icon" type="image/svg+xml" href="/proposalgen.svg" />
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-                <title>Proposal Generator</title>
+                <title>AI-Enhanced Project Proposal Generator</title>
+                <style>
+                        footer {
+                                position: fixed;
+                                bottom: 0;
+                                width: 100%;
+                                text-align: center;
+                                padding: 10px 0;
+                                background-color: #f8f9fa;
+                                border-top: 1px solid #dee2e6;
+                                font-family: Arial, sans-serif;
+                                font-size: 14px;
+                        }
+                        footer a {
+                                color: #0366d6;
+                                text-decoration: none;
+                        }
+                        footer a:hover {
+                                text-decoration: underline;
+                        }
+                </style>
         </head>
 
         <body>
                 <div id="root"></div>
                 <script type="module" src="/src/main.jsx"></script>
+
+                <footer>
+                        This application is an <a href="https://github.com/iom/proposal_drafter/" target="_blank" rel="noopener noreferrer">open source project</a>. With your help, we can make it even better!
+                        <br /> 
+                        If you detect an issue or a bug of if you have ideas for improvement, <a href="https://github.com/iom/proposal_drafter/issues/new" target="_blank" rel="noopener noreferrer">
+                                report them here
+                        </a>
+                </footer>
         </body>
 </html>

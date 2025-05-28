@@ -25,7 +25,7 @@ WORKDIR /app
 COPY package.json ./
 
 # Install dependencies
-RUN npm install
+#RUN npm install
 
 # 3. Install with error handling and fallbacks
 RUN npm install || \
