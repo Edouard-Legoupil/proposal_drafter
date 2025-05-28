@@ -44,7 +44,9 @@ cd proposal_drafter
 
 ### Step 2: Set environment variables
 
-Create a `.env` file in the root directory:
+Create a `.env` file in the `backend` directory - see `.env.example` for reference:
+
+```bash
 
 ```env
 # OpenAI settings
@@ -66,6 +68,8 @@ SECRET_KEY=<your-secret-key>
 
 ### Step 3: Start the backend
 
+Open a terminal to launch the first part of the application.
+
 ```bash
 cd backend
 python -m venv venv && source venv/bin/activate
@@ -76,6 +80,8 @@ uvicorn main:app --host 0.0.0.0 --port 8502 --reload
 You can go to http://localhost:8502/api/health_check to verify the service is running.
 
 ### Step 4: Start the frontend
+
+Open a new terminal to launch the second part of the application.
 
 ```bash
 cd frontend
@@ -104,15 +110,19 @@ psql postgresql://postgres:postgres@localhost:5432/proposalgen -f database-setup
 
 # 2️⃣ Local Docker Development
 
-
+Before getting here, stop the backend and frontend servers you started in the previous step. (ctrl + c)
 
 ### Step 1: Start Docker containers
 
 A specific `docker-compose-local.yml` file is provided to run the application locally with Docker. This file includes services for the frontend, backend, PostgreSQL database, and Redis.
-Make sure you have Docker and Docker Compose installed. Then, run the following command in the root directory of the project:
+Make sure you have Docker and Docker Compose installed. 
+
+Create a `.env` file in the `root` directory - see `.env.example` for reference:
+
+Then, run the following command, that use this env in the root directory of the project:
 
 ```bash
-docker-compose -f docker-compose-local.yml up --build
+docker-compose  --env-file .env -f docker-compose-local.yml up --build
 ```
 
 Services:
