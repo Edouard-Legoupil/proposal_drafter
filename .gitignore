@@ -3,3 +3,5 @@ frontend/.gitignore
 backend/.venv/*
 frontend/.env
 backend/.azure
+backend/.env2.yml
+.env
