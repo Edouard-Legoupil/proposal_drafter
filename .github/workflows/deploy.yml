@@ -57,7 +57,7 @@ jobs:
         
       - name: Build and Push Images    
         # Convert registry login server to lowercase
-        LOWERCASE_REGISTRY=$(echo "${{ env.REGISTRY_LOGIN_SERVER }}" | tr '[:upper:]' '[:lower:]')
+        #LOWERCASE_REGISTRY=$(echo "${{ env.REGISTRY_LOGIN_SERVER }}" | tr '[:upper:]' '[:lower:]')
     
         # Build with proper tagging
         run: |
@@ -65,8 +65,8 @@ jobs:
           docker compose -f docker-compose.yml push
 
         # Verify images were pushed
-          docker pull ${LOWERCASE_REGISTRY}/proposalgen-frontend:${{ env.IMAGE_TAG }}
-          docker pull ${LOWERCASE_REGISTRY}/proposalgen-backend:${{ env.IMAGE_TAG }}
+          docker pull ${env.REGISTRY_LOGIN_SERVER}/proposalgen-frontend:${{ env.IMAGE_TAG }}
+          docker pull ${env.REGISTRY_LOGIN_SERVER}/proposalgen-backend:${{ env.IMAGE_TAG }}
 
 
       - name: Deploy to Azure Web App (Multi-Container)
