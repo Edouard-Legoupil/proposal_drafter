@@ -8,6 +8,9 @@ on:
 env:
   IMAGE_TAG: ${{ github.sha }}
   REGISTRY_LOGIN_SERVER: ${{ secrets.REGISTRY_LOGIN_SERVER }}
+  RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
+  REGISTRY_NAME: ${{ secrets.REGISTRY_NAME }}
+
   AZURE_WEBAPP_NAME: ${{ secrets.AZURE_WEBAPP_NAME }}
 
   # Backend environment variables
@@ -53,8 +56,13 @@ jobs:
           echo "Docker Login Test:"
           docker login ${{ secrets.REGISTRY_LOGIN_SERVER }} \
             -u ${{ secrets.REGISTRY_USERNAME }} \
-            -p ${{ secrets.REGISTRY_PASSWORD }}      
-        
+            -p ${{ secrets.REGISTRY_PASSWORD }}  
+
+      # Alternative method using Docker login
+      - name: Docker Login to ACR (Alternative)
+        run: |
+          echo ${{ secrets.REGISTRY_PASSWORD }} | docker login ${{ env.REGISTRY_NAME }}.azurecr.io -u ${{ secrets.REGISTRY_USERNAME }} --password-stdin   
+               
       - name: Build and Push Images
         run: |
           docker compose -f azure-docker-compose.yml build
