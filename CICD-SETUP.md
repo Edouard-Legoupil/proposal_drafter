@@ -42,7 +42,18 @@ git clone https://github.com/iom/proposal_drafter.git
 cd proposal_drafter
 ```
 
-### Step 2: Set environment variables
+### Step 2: Start a PostgreSQL database
+
+You can use a local [PostgreSQL](https://www.postgresql.org/download/).
+
+Once installed, Run setup script:
+
+```bash
+psql postgresql://postgres:postgres@localhost:5432/proposalgen -f database-setup.sql
+```
+
+
+### Step 3: Set environment variables
 
 Create a `.env` file in the `backend` directory - see `.env.example` for reference:
 
@@ -66,7 +77,7 @@ DB_PORT=5432
 SECRET_KEY=<your-secret-key>
 ```
 
-### Step 3: Start the backend
+### Step 4: Start the backend
 
 Open a terminal to launch the first part of the application.
 
@@ -79,7 +90,7 @@ uvicorn main:app --host 0.0.0.0 --port 8502 --reload
 
 You can go to http://localhost:8502/api/health_check to verify the service is running.
 
-### Step 4: Start the frontend
+### Step 5: Start the frontend
 
 Open a new terminal to launch the second part of the application.
 
@@ -89,28 +100,15 @@ npm install
 npm run dev
 ```
 
-### Step 5: Start a PostgreSQL database
-
-You can use a local PostgreSQL.
-
-An alternative is to use a Docker image with the follwing command:
-Note this assumes you have Docker installed and running. On windos, You can use [Docker Destop](https://docs.docker.com/desktop/setup/install/windows-install/) for that
-
-```bash
-docker run --name pg-local -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres
-```
-
-Run setup script:
-
-```bash
-psql postgresql://postgres:postgres@localhost:5432/proposalgen -f database-setup.sql
-```
+The application should now be running at http://localhost:8503 
 
 ---
 
 # 2️⃣ Local Docker Development
 
-Before getting here, stop the backend and frontend servers you started in the previous step. (ctrl + c)
+Before getting here, stop the backend and frontend servers you started in the previous step. (ctrl + c).
+
+On windows, You can use [Docker Destop](https://docs.docker.com/desktop/setup/install/windows-install/) for this step, or use the [Docker CLI](https://docs.docker.com/engine/install/) if you prefer.
 
 ### Step 1: Start Docker containers
 
