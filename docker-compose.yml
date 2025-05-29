@@ -1,14 +1,28 @@
 version: '3.8'
 
 services:
+
+  nginx-proxy:
+    build:
+      context: ./nginx-proxy
+    image: ${REGISTRY_LOGIN_SERVER}/proposalgen-nginx:${IMAGE_TAG}
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - frontend
+      - backend
+
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
         - VITE_BACKEND_URL=http://${AZURE_WEBAPP_NAME}.azurewebsites.net:8502/api
-    image: ${REGISTRY_LOGIN_SERVER}/proposalgen-frontend:${TAG:-latest}
+    image: ${REGISTRY_LOGIN_SERVER}/proposalgen-frontend:${IMAGE_TAG}
     restart: always
+    environment:
+      - VITE_BACKEND_URL=/api
     ports:
       - "8503:80"
     depends_on:
@@ -18,7 +32,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    image: ${REGISTRY_LOGIN_SERVER}/proposalgen-backend:${TAG:-latest}
+    image: ${REGISTRY_LOGIN_SERVER}/proposalgen-backend:${IMAGE_TAG}
     restart: always
     ports:
       - "8502:8502"

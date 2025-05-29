@@ -72,8 +72,8 @@ jobs:
 
       - name: Build and Push Images
         run: |
-          docker compose -f azure-docker-compose.yml build
-          docker compose -f azure-docker-compose.yml push
+          docker compose -f docker-compose.yml build
+          docker compose -f docker-compose.yml push
 
       - name: Verify Image Names
         run: |
@@ -88,4 +88,4 @@ jobs:
           images: |
             ${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-frontend:${{ env.IMAGE_TAG }}
             ${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-backend:${{ env.IMAGE_TAG }}
-          configuration-file: azure-docker-compose.yml
+          configuration-file: docker-compose.yml
