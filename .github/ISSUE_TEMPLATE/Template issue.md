@@ -1,5 +1,5 @@
 ---
-name: Standard Issue EN
+name: Standard Issue
 about: Use this template to create a new issue.
 title: "As <user/dev/...>, I would like to ... in order to ..."
 ---
