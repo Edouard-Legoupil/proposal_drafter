@@ -57,8 +57,8 @@ jobs:
         
       - name: Build and Push Images
         run: |
-          docker compose -f docker-compose.yml build
-          docker compose -f docker-compose.yml push
+          docker compose -f azure-docker-compose.yml build
+          docker compose -f azure-docker-compose.yml push
 
       - name: Deploy to Azure Web App (Multi-Container)
         uses: azure/webapps-deploy@v2
@@ -67,4 +67,4 @@ jobs:
           images: |
             ${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-frontend:${{ env.IMAGE_TAG }}
             ${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-backend:${{ env.IMAGE_TAG }}
-          configuration-file: docker-compose.yml
+          configuration-file: azure-docker-compose.yml
