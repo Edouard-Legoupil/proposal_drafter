@@ -4,7 +4,7 @@ services:
   nginx-proxy:
     build:
       context: ./nginx-proxy
-    image: ${REGISTRY_LOGIN_SERVER}/proposalgen-nginx:latest
+    image: ${REGISTRY_LOGIN_SERVER}/proposalgen-nginx:${IMAGE_TAG}
     restart: always
     ports:
       - "80:80"
@@ -13,15 +13,17 @@ services:
       - backend
 
   frontend:
-    image: ${REGISTRY_LOGIN_SERVER}/proposalgen-frontend:latest
+    image: ${REGISTRY_LOGIN_SERVER}/proposalgen-frontend:${IMAGE_TAG}
     restart: always
     environment:
       - VITE_BACKEND_URL=/api
+    expose:
+      - "80"
     depends_on:
       - backend
 
   backend:
-    image: ${REGISTRY_LOGIN_SERVER}/proposalgen-backend:latest
+    image: ${REGISTRY_LOGIN_SERVER}/proposalgen-backend:${IMAGE_TAG}
     restart: always
     environment:
       - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
@@ -34,9 +36,13 @@ services:
       - DB_HOST=${DB_HOST}
       - DB_PORT=${DB_PORT}
       - SECRET_KEY=${SECRET_KEY}
+      - REDIS_HOST=${REDIS_HOST}  # Using Azure Redis Cache instead of container
+    expose:
+      - "8502"
     depends_on:
       - redis
-  
+
+
   redis:
     image: redis:alpine
     restart: always

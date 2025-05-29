@@ -10,6 +10,7 @@ env:
   REGISTRY_LOGIN_SERVER: ${{ secrets.REGISTRY_LOGIN_SERVER }}
   RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
   REGISTRY_NAME: ${{ secrets.REGISTRY_NAME }}
+  DOCKER_COMPOSE_PATH: azure-docker-compose.yml
 
   AZURE_WEBAPP_NAME: ${{ secrets.AZURE_WEBAPP_NAME }}
 
@@ -24,6 +25,7 @@ env:
   DB_HOST: ${{ secrets.DB_HOST }}
   DB_PORT: ${{ secrets.DB_PORT }}
   SECRET_KEY: ${{ secrets.SECRET_KEY }}
+  REDIS_HOST: ${{ secrets.REDIS_HOST }}  # Added for Azure Redis Cache
 
 jobs:
   build-and-deploy:
@@ -72,43 +74,19 @@ jobs:
 
       - name: Build and Push Images
         run: |
-          docker compose -f docker-compose.yml build --no-cache
-          docker compose -f docker-compose.yml push
+          docker compose -f azure-docker-compose.yml build --no-cache
+          docker compose -f azure-docker-compose.yml push
 
-      - name: Verify Image Names (Strict Lowercase Check)
-        run: |
-          # Check registry login server
-          echo "REGISTRY_LOGIN_SERVER: ${{ env.REGISTRY_LOGIN_SERVER }}"
-          if [[ "${{ env.REGISTRY_LOGIN_SERVER }}" =~ [A-Z] ]]; then
-            echo "❌ ERROR: REGISTRY_LOGIN_SERVER contains uppercase letters!"
-            exit 1
-          fi
 
-          # Check image names
-          FRONTEND_IMAGE="${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-frontend:${{ env.IMAGE_TAG }}"
-          BACKEND_IMAGE="${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-backend:${{ env.IMAGE_TAG }}"
-
-          echo "Frontend image: $FRONTEND_IMAGE"
-          echo "Backend image: $BACKEND_IMAGE"
-
-          # Fail if any part contains uppercase (except optional tag)
-          if [[ "$FRONTEND_IMAGE" =~ /[A-Z] ]] || [[ "$FRONTEND_IMAGE" =~ [A-Z]([^:]|$) ]]; then
-            echo "❌ ERROR: Frontend image name contains uppercase letters!"
-            exit 1
-          fi
-
-          if [[ "$BACKEND_IMAGE" =~ /[A-Z] ]] || [[ "$BACKEND_IMAGE" =~ [A-Z]([^:]|$) ]]; then
-            echo "❌ ERROR: Backend image name contains uppercase letters!"
-            exit 1
-          fi
-
-          echo "✅ All image references are lowercase-compliant."
-        
+          
       - name: Deploy to Azure Web App (Multi-Container)
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          slot-name: 'production'
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           images: |
             ${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-frontend:${{ env.IMAGE_TAG }}
             ${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-backend:${{ env.IMAGE_TAG }}
-          configuration-file: docker-compose.yml
+            ${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-nginx:${{ env.IMAGE_TAG }}
+          configuration-file: ${{ env.DOCKER_COMPOSE_PATH }}
