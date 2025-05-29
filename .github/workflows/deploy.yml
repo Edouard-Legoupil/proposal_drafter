@@ -72,14 +72,37 @@ jobs:
 
       - name: Build and Push Images
         run: |
-          docker compose -f docker-compose.yml build
+          docker compose -f docker-compose.yml build --no-cache
           docker compose -f docker-compose.yml push
 
-      - name: Verify Image Names
+      - name: Verify Image Names (Strict Lowercase Check)
         run: |
-          echo "Frontend image: ${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-frontend:${{ env.IMAGE_TAG }}"
-          echo "Backend image: ${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-backend:${{ env.IMAGE_TAG }}" 
-          
+          # Check registry login server
+          echo "REGISTRY_LOGIN_SERVER: ${{ env.REGISTRY_LOGIN_SERVER }}"
+          if [[ "${{ env.REGISTRY_LOGIN_SERVER }}" =~ [A-Z] ]]; then
+            echo "❌ ERROR: REGISTRY_LOGIN_SERVER contains uppercase letters!"
+            exit 1
+          fi
+
+          # Check image names
+          FRONTEND_IMAGE="${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-frontend:${{ env.IMAGE_TAG }}"
+          BACKEND_IMAGE="${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-backend:${{ env.IMAGE_TAG }}"
+
+          echo "Frontend image: $FRONTEND_IMAGE"
+          echo "Backend image: $BACKEND_IMAGE"
+
+          # Fail if any part contains uppercase (except optional tag)
+          if [[ "$FRONTEND_IMAGE" =~ /[A-Z] ]] || [[ "$FRONTEND_IMAGE" =~ [A-Z]([^:]|$) ]]; then
+            echo "❌ ERROR: Frontend image name contains uppercase letters!"
+            exit 1
+          fi
+
+          if [[ "$BACKEND_IMAGE" =~ /[A-Z] ]] || [[ "$BACKEND_IMAGE" =~ [A-Z]([^:]|$) ]]; then
+            echo "❌ ERROR: Backend image name contains uppercase letters!"
+            exit 1
+          fi
+
+          echo "✅ All image references are lowercase-compliant."
         
       - name: Deploy to Azure Web App (Multi-Container)
         uses: azure/webapps-deploy@v2
