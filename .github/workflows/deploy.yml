@@ -79,8 +79,8 @@ jobs:
 
 
           
-      - name: Deploy to Azure Web App (Multi-Container)
-        uses: azure/webapps-deploy@v2
+#      - name: Deploy to Azure Web App (Multi-Container)
+#        uses: azure/webapps-deploy@v2
 #        with:
 #          app-name: ${{ env.AZURE_WEBAPP_NAME }}
 #          slot-name: 'production'
@@ -91,9 +91,10 @@ jobs:
 #            ${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-nginx:${{ env.IMAGE_TAG }}
 #          configuration-file: ${{ env.DOCKER_COMPOSE_PATH }}
 
-          run: |
-            az webapp config container set \
-              --resource-group ${{ env.RESOURCE_GROUP }} \
-              --name $ ${{ env.AZURE_WEBAPP_NAME }} \
-              --multicontainer-config-type compose \
-              --multicontainer-config-file ${{ env.DOCKER_COMPOSE_PATH }}         
+      - name: Deploy using Azure CLI
+        run: |
+          az webapp config container set \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --multicontainer-config-type compose \
+            --multicontainer-config-file ${{ env.DOCKER_COMPOSE_PATH }}
