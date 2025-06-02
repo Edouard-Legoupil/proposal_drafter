@@ -74,19 +74,26 @@ jobs:
 
       - name: Build and Push Images
         run: |
-          docker compose -f azure-docker-compose.yml build --no-cache
-          docker compose -f azure-docker-compose.yml push
+          docker compose -f docker-compose.yml build --no-cache
+          docker compose -f docker-compose.yml push
 
 
           
       - name: Deploy to Azure Web App (Multi-Container)
         uses: azure/webapps-deploy@v2
-        with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          slot-name: 'production'
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          images: |
-            ${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-frontend:${{ env.IMAGE_TAG }}
-            ${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-backend:${{ env.IMAGE_TAG }}
-            ${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-nginx:${{ env.IMAGE_TAG }}
-          configuration-file: ${{ env.DOCKER_COMPOSE_PATH }}
+#        with:
+#          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+#          slot-name: 'production'
+#          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+#          images: |
+#            ${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-frontend:${{ env.IMAGE_TAG }}
+#            ${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-backend:${{ env.IMAGE_TAG }}
+#            ${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-nginx:${{ env.IMAGE_TAG }}
+#          configuration-file: ${{ env.DOCKER_COMPOSE_PATH }}
+
+          run: |
+            az webapp config container set \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --name $ ${{ env.AZURE_WEBAPP_NAME }} \
+              --multicontainer-config-type compose \
+              --multicontainer-config-file ${{ env.DOCKER_COMPOSE_PATH }}         
