@@ -8,7 +8,7 @@ on:
 
 env:
   IMAGE_TAG: ${{ github.sha }}
-  REGISTRY_LOGIN_SERVER: ${{ secrets.REGISTRY_LOGIN_SERVER }}
+  REGISTRY_LOGIN_SERVER: proposalgen2acr.azurecr.io
   RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
   REGISTRY_NAME: ${{ secrets.REGISTRY_NAME }}
   DOCKER_COMPOSE_PATH: azure-docker-compose.yml
@@ -74,8 +74,21 @@ jobs:
 
       - name: Build and Push Docker Images
         run: |
-          docker compose -f ${{ env.DOCKER_COMPOSE_PATH }} build --no-cache
-          docker compose -f ${{ env.DOCKER_COMPOSE_PATH }} push
+          echo "→ Substituting placeholders in $DOCKER_COMPOSE_PATH..."
+          # Replace ${REGISTRY_LOGIN_SERVER} and ${IMAGE_TAG} in compose file with actual values
+          sed -i \
+            -e "s|\${REGISTRY_LOGIN_SERVER}|${REGISTRY_LOGIN_SERVER}|g" \
+            -e "s|\${IMAGE_TAG}|${IMAGE_TAG}|g" \
+            "$DOCKER_COMPOSE_PATH"
+
+          echo "→ Final compose file (for debugging):"
+          cat "$DOCKER_COMPOSE_PATH"
+
+          echo "→ Building Docker images..."
+          docker compose -f "$DOCKER_COMPOSE_PATH" build --no-cache
+
+          echo "→ Pushing Docker images to ACR..."
+          docker compose -f "$DOCKER_COMPOSE_PATH" push
 
       - name: Deploy using Azure CLI
         run: |
