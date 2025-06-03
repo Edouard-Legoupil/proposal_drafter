@@ -52,7 +52,6 @@ jobs:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
-
       - name: Debug ACR Access
         run: |
           echo "ACR Host: ${{ secrets.REGISTRY_LOGIN_SERVER }}"
