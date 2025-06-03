@@ -65,6 +65,17 @@ jobs:
             -u ${{ secrets.REGISTRY_USERNAME }} \
             -p ${{ secrets.REGISTRY_PASSWORD }}  
 
+
+        - name: Validate REGISTRY_LOGIN_SERVER is lowercase
+          run: |
+            if [[ "${REGISTRY_LOGIN_SERVER}" =~ [A-Z] ]]; then
+              echo "❌ REGISTRY_LOGIN_SERVER must be lowercase. Current value: ${REGISTRY_LOGIN_SERVER}"
+              exit 1
+            else
+              echo "✅ REGISTRY_LOGIN_SERVER is lowercase: ${REGISTRY_LOGIN_SERVER}"
+            fi
+
+
       - name: Verify Image Names
         run: |
           echo "Checking azure-docker-compose.yml for lowercase compliance..."
@@ -79,25 +90,25 @@ jobs:
 
 
           
-      - name: Deploy to Azure Web App (Multi-Container)
-        uses: azure/webapps-deploy@v2
-        with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          slot-name: 'production'
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+#      - name: Deploy to Azure Web App (Multi-Container)
+#        uses: azure/webapps-deploy@v2
+#        with:
+#          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+#          slot-name: 'production'
+#         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
 #          images: |
 #            ${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-frontend:${{ env.IMAGE_TAG }}
 #            ${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-backend:${{ env.IMAGE_TAG }}
 #            ${{ env.REGISTRY_LOGIN_SERVER }}/proposalgen-nginx:${{ env.IMAGE_TAG }}
-          configuration-file: ${{ env.DOCKER_COMPOSE_PATH }}
+#          configuration-file: ${{ env.DOCKER_COMPOSE_PATH }}
 
-#      - name: Deploy using Azure CLI
-#        run: |
-#          az webapp config container set \
-#            --resource-group ${{ env.RESOURCE_GROUP }} \
-#            --name ${{ env.AZURE_WEBAPP_NAME }} \
-#            --multicontainer-config-type compose \
-#            --multicontainer-config-file ${{ env.DOCKER_COMPOSE_PATH }}
+      - name: Deploy using Azure CLI
+        run: |
+          az webapp config container set \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --multicontainer-config-type compose \
+            --multicontainer-config-file ${{ env.DOCKER_COMPOSE_PATH }}
 
       - name: Post-Deployment Verification
         run: |
