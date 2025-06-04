@@ -15,7 +15,7 @@ env:
   RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
   REGISTRY_NAME: ${{ secrets.REGISTRY_NAME }}
   DOCKER_COMPOSE_PATH: azure-docker-compose.yml
-  AZURE_WEBAPP_NAME: ${{ secrets.AZURE_WEBAPP_NAME }}
+  AZURE_WEBAPP_NAME: proposal-drafter
 
   # Backend environment variables
   AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
@@ -28,7 +28,7 @@ env:
   DB_HOST: ${{ secrets.DB_HOST }}
   DB_PORT: ${{ secrets.DB_PORT }}
   SECRET_KEY: ${{ secrets.SECRET_KEY }}
-  REDIS_HOST: ${{ secrets.REDIS_HOST }}
+  REDIS_HOST: iom-d-we-datallmpoc-redis-cach01
   REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}  # Add this if your Redis Cache requires auth
 
 jobs:
