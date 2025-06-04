@@ -8,7 +8,10 @@ on:
 
 env:
   IMAGE_TAG: ${{ github.sha }}
-  REGISTRY_LOGIN_SERVER: proposalgen2acr.azurecr.io
+  REGISTRY_LOGIN_SERVER: iomdwedatallmpocacr01.azurecr.io
+  REGISTRY_USERNAME: proposalgen2acr
+  REGISTRY_PASSWORD: DV8ru2RXxg70kf79CTaQNbhqdgbyXzWPSp7fe5n/sV+ACRCwE5cf
+  
   RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
   REGISTRY_NAME: ${{ secrets.REGISTRY_NAME }}
   DOCKER_COMPOSE_PATH: azure-docker-compose.yml
@@ -26,6 +29,7 @@ env:
   DB_PORT: ${{ secrets.DB_PORT }}
   SECRET_KEY: ${{ secrets.SECRET_KEY }}
   REDIS_HOST: ${{ secrets.REDIS_HOST }}
+  REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}  # Add this if your Redis Cache requires auth
 
 jobs:
   build-and-deploy:
@@ -44,8 +48,8 @@ jobs:
         uses: azure/docker-login@v1
         with:
           login-server: ${{ env.REGISTRY_LOGIN_SERVER }}
-          username: ${{ secrets.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_PASSWORD }}
+          username: ${{ env.REGISTRY_USERNAME }}
+          password: ${{ env.REGISTRY_PASSWORD }}
 
       - name: Debug ACR Access
         run: |
@@ -53,8 +57,8 @@ jobs:
           nslookup ${{ env.REGISTRY_LOGIN_SERVER }}
           curl -m 5 -vk https://${{ env.REGISTRY_LOGIN_SERVER }}/v2/ || echo "Curl failed"
           docker login ${{ env.REGISTRY_LOGIN_SERVER }} \
-            -u ${{ secrets.REGISTRY_USERNAME }} \
-            -p ${{ secrets.REGISTRY_PASSWORD }}
+            -u ${{ env.REGISTRY_USERNAME }} \
+            -p ${{ env.REGISTRY_PASSWORD }}
 
       - name: Validate REGISTRY_LOGIN_SERVER is lowercase
         run: |
@@ -75,12 +79,23 @@ jobs:
       - name: Build and Push Docker Images
         run: |
           echo "→ Substituting placeholders in $DOCKER_COMPOSE_PATH..."
-          # Replace ${REGISTRY_LOGIN_SERVER} and ${IMAGE_TAG} in compose file with actual values
           sed -i \
             -e "s|\${REGISTRY_LOGIN_SERVER}|${REGISTRY_LOGIN_SERVER}|g" \
             -e "s|\${IMAGE_TAG}|${IMAGE_TAG}|g" \
+            -e "s|\${AZURE_OPENAI_ENDPOINT}|${AZURE_OPENAI_ENDPOINT}|g" \
+            -e "s|\${AZURE_OPENAI_API_KEY}|${AZURE_OPENAI_API_KEY}|g" \
+            -e "s|\${OPENAI_API_VERSION}|${OPENAI_API_VERSION}|g" \
+            -e "s|\${AZURE_DEPLOYMENT_NAME}|${AZURE_DEPLOYMENT_NAME}|g" \
+            -e "s|\${DB_USERNAME}|${DB_USERNAME}|g" \
+            -e "s|\${DB_PASSWORD}|${DB_PASSWORD}|g" \
+            -e "s|\${DB_NAME}|${DB_NAME}|g" \
+            -e "s|\${DB_HOST}|${DB_HOST}|g" \
+            -e "s|\${DB_PORT}|${DB_PORT}|g" \
+            -e "s|\${SECRET_KEY}|${SECRET_KEY}|g" \
+            -e "s|\${REDIS_HOST}|${REDIS_HOST}|g" \
+            -e "s|\${REDIS_PASSWORD}|${REDIS_PASSWORD}|g" \
             "$DOCKER_COMPOSE_PATH"
-
+    
           echo "→ Final compose file (for debugging):"
           cat "$DOCKER_COMPOSE_PATH"
 
@@ -89,6 +104,26 @@ jobs:
 
           echo "→ Pushing Docker images to ACR..."
           docker compose -f "$DOCKER_COMPOSE_PATH" push
+
+      - name: Set App Service Environment Variables
+        run: |
+          echo "→ Setting environment variables for App Service..."
+          az webapp config appsettings set \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --settings \
+              AZURE_OPENAI_ENDPOINT="${{ env.AZURE_OPENAI_ENDPOINT }}" \
+              AZURE_OPENAI_API_KEY="${{ env.AZURE_OPENAI_API_KEY }}" \
+              OPENAI_API_VERSION="${{ env.OPENAI_API_VERSION }}" \
+              AZURE_DEPLOYMENT_NAME="${{ env.AZURE_DEPLOYMENT_NAME }}" \
+              DB_USERNAME="${{ env.DB_USERNAME }}" \
+              DB_PASSWORD="${{ env.DB_PASSWORD }}" \
+              DB_NAME="${{ env.DB_NAME }}" \
+              DB_HOST="${{ env.DB_HOST }}" \
+              DB_PORT="${{ env.DB_PORT }}" \
+              SECRET_KEY="${{ env.SECRET_KEY }}" \
+              REDIS_HOST="${{ env.REDIS_HOST }}" \
+              REDIS_PASSWORD="${{ env.REDIS_PASSWORD }}"
 
       - name: Deploy using Azure CLI
         run: |
