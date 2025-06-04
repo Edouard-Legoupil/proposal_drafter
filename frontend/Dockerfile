@@ -13,7 +13,7 @@ COPY . .
 
 # Build the application with environment variables
 ARG VITE_BACKEND_URL
-ENV VITE_BACKEND_URL=${VITE_BACKEND_URL}
+ENV VITE_BACKEND_URL=/api
 RUN npm run build
 
 # Production stage with Nginx
