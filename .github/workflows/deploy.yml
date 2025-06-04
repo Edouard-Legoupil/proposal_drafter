@@ -21,13 +21,13 @@ env:
   AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
   OPENAI_API_VERSION: ${{ secrets.OPENAI_API_VERSION }}
   AZURE_DEPLOYMENT_NAME: ${{ secrets.AZURE_DEPLOYMENT_NAME }}
-  DB_USERNAME: iom_uc1_user
-  DB_PASSWORD: IomUC1@20250604
+  DB_USERNAME: postgresadmin
+  DB_PASSWORD: dtpgpropgen@20250604
   DB_NAME: postgres
   DB_HOST: proposalgen3-db.postgres.database.azure.com
   DB_PORT: 5432
   SECRET_KEY: hjsd78hdhd$$sjsjs###23y2h
-  REDIS_HOST: ${{ secrets.REDIS_HOST }}
+  REDIS_HOST: iom-d-we-datallmpoc-redis-cach01
   REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}  # Add this if your Redis Cache requires auth
 
 jobs:
