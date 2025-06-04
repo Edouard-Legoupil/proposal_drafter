@@ -37,3 +37,4 @@ services:
       - DB_PORT=${DB_PORT}
       - SECRET_KEY=${SECRET_KEY}
       - REDIS_HOST=${REDIS_HOST}  # Using Azure Redis Cache instead of container
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
