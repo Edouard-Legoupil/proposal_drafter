@@ -73,7 +73,6 @@ jobs:
           echo "→ Substituting placeholders in $DOCKER_COMPOSE_PATH..."
           sed -i \
             -e "s|\${REGISTRY_LOGIN_SERVER}|${REGISTRY_LOGIN_SERVER}|g" \
-            -e "s|\${IMAGE_TAG}|${IMAGE_TAG}|g" \
             -e "s|\${AZURE_OPENAI_ENDPOINT}|${AZURE_OPENAI_ENDPOINT}|g" \
             -e "s|\${AZURE_OPENAI_API_KEY}|${AZURE_OPENAI_API_KEY}|g" \
             -e "s|\${OPENAI_API_VERSION}|${OPENAI_API_VERSION}|g" \
