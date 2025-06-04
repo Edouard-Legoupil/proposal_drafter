@@ -12,23 +12,22 @@ env:
   REGISTRY_USERNAME: proposalgen2acr
   REGISTRY_PASSWORD: DV8ru2RXxg70kf79CTaQNbhqdgbyXzWPSp7fe5n/sV+ACRCwE5cf
   
-  RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
-  REGISTRY_NAME: ${{ secrets.REGISTRY_NAME }}
+  RESOURCE_GROUP: iom-d-we-rgp-datallmpoc-001
   DOCKER_COMPOSE_PATH: azure-docker-compose.yml
-  AZURE_WEBAPP_NAME: proposal-drafter
+  AZURE_WEBAPP_NAME: proposal-drafter-app
 
   # Backend environment variables
   AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
   AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
   OPENAI_API_VERSION: ${{ secrets.OPENAI_API_VERSION }}
   AZURE_DEPLOYMENT_NAME: ${{ secrets.AZURE_DEPLOYMENT_NAME }}
-  DB_USERNAME: ${{ secrets.DB_USERNAME }}
-  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-  DB_NAME: ${{ secrets.DB_NAME }}
-  DB_HOST: ${{ secrets.DB_HOST }}
-  DB_PORT: ${{ secrets.DB_PORT }}
-  SECRET_KEY: ${{ secrets.SECRET_KEY }}
-  REDIS_HOST: iom-d-we-datallmpoc-redis-cach01
+  DB_USERNAME: iom_uc1_user
+  DB_PASSWORD: IomUC1@20250604
+  DB_NAME: postgres
+  DB_HOST: proposalgen3-db.postgres.database.azure.com
+  DB_PORT: 5432
+  SECRET_KEY: hjsd78hdhd$$sjsjs###23y2h
+  REDIS_HOST: ${{ secrets.REDIS_HOST }}
   REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}  # Add this if your Redis Cache requires auth
 
 jobs:
@@ -59,7 +58,7 @@ jobs:
           docker login ${{ env.REGISTRY_LOGIN_SERVER }} \
             -u ${{ env.REGISTRY_USERNAME }} \
             -p ${{ env.REGISTRY_PASSWORD }}
-
+      
       - name: Validate REGISTRY_LOGIN_SERVER is lowercase
         run: |
           if [[ "${REGISTRY_LOGIN_SERVER}" =~ [A-Z] ]]; then
@@ -68,14 +67,7 @@ jobs:
           else
             echo "✅ REGISTRY_LOGIN_SERVER is lowercase: ${REGISTRY_LOGIN_SERVER}"
           fi
-
-      - name: Verify Image Names
-        run: |
-          echo "Checking azure-docker-compose.yml for image references..."
-          grep "image:" ${{ env.DOCKER_COMPOSE_PATH }}
-          echo "Built images:"
-          docker images 
-
+        
       - name: Build and Push Docker Images
         run: |
           echo "→ Substituting placeholders in $DOCKER_COMPOSE_PATH..."
@@ -105,6 +97,25 @@ jobs:
           echo "→ Pushing Docker images to ACR..."
           docker compose -f "$DOCKER_COMPOSE_PATH" push
 
+      - name: Verify Image Names
+        run: |
+          echo "Checking azure-docker-compose.yml for image references..."
+          grep "image:" ${{ env.DOCKER_COMPOSE_PATH }}
+          echo "Built images:"
+          docker images 
+
+      - name: Set Docker Registry Credentials for App Service
+        run: |
+          echo "→ Setting Docker registry credentials..."
+          az webapp config appsettings set \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --settings \
+              DOCKER_REGISTRY_SERVER_URL="https://${{ env.REGISTRY_LOGIN_SERVER }}" \
+              DOCKER_REGISTRY_SERVER_USERNAME="${{ env.REGISTRY_USERNAME }}" \
+              DOCKER_REGISTRY_SERVER_PASSWORD="${{ env.REGISTRY_PASSWORD }}" \
+              WEBSITES_ENABLE_APP_SERVICE_STORAGE="false"
+
       - name: Set App Service Environment Variables
         run: |
           echo "→ Setting environment variables for App Service..."
@@ -125,10 +136,38 @@ jobs:
               REDIS_HOST="${{ env.REDIS_HOST }}" \
               REDIS_PASSWORD="${{ env.REDIS_PASSWORD }}"
 
-      - name: Deploy using Azure CLI
+      - name: Deploy Multi-Container App to Azure App Service
         run: |
+          echo "→ Deploying multi-container configuration..."
           az webapp config container set \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --name ${{ env.AZURE_WEBAPP_NAME }} \
             --multicontainer-config-type compose \
             --multicontainer-config-file ${{ env.DOCKER_COMPOSE_PATH }}
+
+      - name: Restart App Service
+        run: |
+          echo "→ Restarting App Service to pick up new containers..."
+          az webapp restart \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.AZURE_WEBAPP_NAME }}
+
+      - name: Wait for Deployment
+        run: |
+          echo "→ Waiting 30 seconds for deployment to complete..."
+          sleep 30
+
+      - name: Check App Service Status
+        run: |
+          echo "→ Checking App Service status..."
+          az webapp show \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --query "state" -o tsv
+          
+          echo "→ Getting App Service URL..."
+          APP_URL=$(az webapp show \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.AZURE_WEBAPP_NAME }} \
+            --query "defaultHostName" -o tsv)
+          echo "App deployed at: https://$APP_URL"
