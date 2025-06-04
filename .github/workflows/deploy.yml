@@ -7,7 +7,7 @@ on:
   workflow_dispatch:       
 
 env:
-  IMAGE_TAG: ${{ github.sha }}
+  IMAGE_TAG: latest #${{ github.sha }}
   REGISTRY_LOGIN_SERVER: proposalgen2acr.azurecr.io
   REGISTRY_USERNAME: proposalgen2acr
   REGISTRY_PASSWORD: DV8ru2RXxg70kf79CTaQNbhqdgbyXzWPSp7fe5n/sV+ACRCwE5cf
