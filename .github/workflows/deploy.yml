@@ -14,7 +14,7 @@ env:
   
   RESOURCE_GROUP: iom-d-we-rgp-datallmpoc-001
   DOCKER_COMPOSE_PATH: azure-docker-compose.yml
-  AZURE_WEBAPP_NAME: proposal-drafter-app
+  AZURE_WEBAPP_NAME: proposal-drafter
 
   # Backend environment variables
   AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
