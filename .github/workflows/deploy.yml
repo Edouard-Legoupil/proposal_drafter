@@ -21,10 +21,10 @@ env:
   AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
   OPENAI_API_VERSION: ${{ secrets.OPENAI_API_VERSION }}
   AZURE_DEPLOYMENT_NAME: ${{ secrets.AZURE_DEPLOYMENT_NAME }}
-  DB_USERNAME: postgresadmin
-  DB_PASSWORD: dtpgpropgen@20250604
+  DB_USERNAME: elegoupil
+  DB_PASSWORD: eyJ0eXAiOiJKV1QiLCJhbGcioiJSUZI1NiIsIng1dCI6IkNodjBPSTNSd3FSSEZF
   DB_NAME: postgres
-  DB_HOST: proposalgen3-db.postgres.database.azure.com
+  DB_HOST: postgres4agenticai.postgres.database.azure.com
   DB_PORT: 5432
   SECRET_KEY: hjsd78hdhd$$sjsjs###23y2h
   REDIS_HOST: iom-d-we-datallmpoc-redis-cach01
