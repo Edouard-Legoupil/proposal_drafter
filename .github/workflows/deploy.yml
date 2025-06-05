@@ -137,7 +137,7 @@ jobs:
               AZURE_OPENAI_ENDPOINT_EMBED="${{ env.AZURE_OPENAI_ENDPOINT_EMBED }}" \
               AZURE_OPENAI_API_KEY_EMBED="${{ env.AZURE_OPENAI_API_KEY_EMBED }}" \
               AZURE_OPENAI_API_VERSION_EMBED="${{ env.AZURE_OPENAI_API_VERSION_EMBED }}" \
-              AZURE_EMBEDDING_DEPLOYMENT_NAME="${{ env.AZURE_EMBEDDING_DEPLOYMENT_NAME }}" \              
+              AZURE_EMBEDDING_DEPLOYMENT_NAME="${{ env.AZURE_EMBEDDING_DEPLOYMENT_NAME }}" \
               DB_USERNAME="${{ env.DB_USERNAME }}" \
               DB_PASSWORD="${{ env.DB_PASSWORD }}" \
               DB_NAME="${{ env.DB_NAME }}" \
