@@ -1,17 +1,17 @@
 @description('Base name for all resources')
-param baseName string = 'proposalgen'
+param baseName string
+
+@description('Database name')
+param databaseName string = 'postgres' 
 
 @description('Location for all resources')
 param location string = resourceGroup().location
 
-@description('App Service Plan SKU')
-param appServicePlanSku object = {
-  name: 'P1v3'
-  tier: 'PremiumV3'
-  size: 'P1v3'
-  family: 'Pv3'
-  capacity: 1
-}
+@description('Existing App Service Plan name')
+param existingAppServicePlanName string
+
+@description('Existing PostgreSQL server name')
+param existingPostgresServerName string
 
 @description('Docker registry server URL')
 param dockerRegistryServerUrl string
@@ -37,6 +37,19 @@ param openAiApiVersion string
 @description('Azure OpenAI Deployment Name')
 param azureDeploymentName string
 
+@description('Azure OpenAI Endpoint for Embeddings')
+param azureOpenAiEndpointEmbed string
+
+@description('Azure OpenAI API Key for Embeddings')
+@secure()
+param azureOpenAiApiKeyEmbed string
+
+@description('Azure OpenAI API Version for Embeddings')
+param azureOpenAiApiVersionEmbed string
+
+@description('Azure Embedding Deployment Name')
+param azureEmbeddingDeploymentName string
+
 @description('Secret Key for JWT Authentication')
 @secure()
 param secretKey string
@@ -48,57 +61,78 @@ param postgresAdminLogin string = 'postgresadmin'
 @secure()
 param postgresAdminPassword string
 
-// App Service Plan
-resource appServicePlan 'Microsoft.Web/serverfarms@2021-03-01' = {
-  name: '${baseName}-plan'
-  location: location
-  sku: appServicePlanSku
-  kind: 'linux'
-  properties: {
-    reserved: true
-  }
-}
+@description('Redis Host')
+param redisHost string
 
-// Azure Database for PostgreSQL
-resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2021-06-01' = {
-  name: '${baseName}-db'
-  location: location
-  sku: {
-    name: 'Standard_B1ms'
-    tier: 'Burstable'
-  }
-  properties: {
-    version: '15'
-    administratorLogin: postgresAdminLogin
-    administratorLoginPassword: postgresAdminPassword
-    storage: {
-      storageSizeGB: 32
-    }
-  }
-}
+@description('Redis Password')
+@secure()
+param redisPassword string
 
-// Create a database in PostgreSQL server
-resource database 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2021-06-01' = {
-  name: 'proposalgen'
-  parent: postgresServer
-}
-
-// Firewall rule to allow Azure services
-resource firewallRule 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2021-06-01' = {
-  name: 'AllowAllAzureIPs'
-  parent: postgresServer
-  properties: {
-    startIpAddress: '0.0.0.0'
-    endIpAddress: '255.255.255.255'
-  }
-}
+// ============================================================================
+// NEW: Process Docker Compose file and replace ALL variables with actual values
+// ============================================================================
+var dockerComposeContent = replace(
+  replace(
+    replace(
+      replace(
+        replace(
+          replace(
+            replace(
+              replace(
+                replace(
+                  replace(
+                    replace(
+                      replace(
+                        replace(
+                          replace(
+                            replace(
+                              replace(
+                                replace(
+                                  loadTextContent('azure-docker-compose.yml'),
+                                  '\${ACR_REGISTRY_URL}', dockerRegistryServerUrl
+                                ),  // 1st replace
+                                '\${AZURE_OPENAI_ENDPOINT}', azureOpenAiEndpoint
+                              ),  // 2nd replace
+                              '\${AZURE_OPENAI_API_KEY}', azureOpenAiApiKey
+                            ),  // 3rd replace
+                            '\${OPENAI_API_VERSION}', openAiApiVersion
+                          ),  // 4th replace
+                          '\${AZURE_DEPLOYMENT_NAME}', azureDeploymentName
+                        ),  // 5th replace
+                        '\${AZURE_OPENAI_ENDPOINT_EMBED}', azureOpenAiEndpointEmbed
+                      ),  // 6th replace
+                      '\${AZURE_OPENAI_API_KEY_EMBED}', azureOpenAiApiKeyEmbed
+                    ),  // 7th replace
+                    '\${AZURE_OPENAI_API_VERSION_EMBED}', azureOpenAiApiVersionEmbed
+                  ),  // 8th replace
+                  '\${AZURE_EMBEDDING_DEPLOYMENT_NAME}', azureEmbeddingDeploymentName
+                ),  // 9th replace
+                '\${DB_USERNAME}', 'iom_uc1_user'
+              ),  // 10th replace
+              '\${DB_PASSWORD}', 'IomUC1@20250604$'
+            ),  // 11th replace
+            '\${DB_NAME}', databaseName
+          ),  // 12th replace
+          '\${DB_HOST}', reference(
+            resourceId('Microsoft.DBforPostgreSQL/flexibleServers', existingPostgresServerName),
+            '2025-01-01-preview'
+          ).fullyQualifiedDomainName
+        ),  // 13th replace
+        '\${DB_PORT}', '5432'
+      ),  // 14th replace
+      '\${SECRET_KEY}', secretKey
+    ),  // 15th replace
+    '\${REDIS_HOST}', redisHost
+  ),  // 16th replace
+  '\${REDIS_PASSWORD}', redisPassword  // 17th replace
+)
 
 // Web App for Containers (Multi-container)
-resource webApp 'Microsoft.Web/sites@2021-03-01' = {
+resource webApp 'Microsoft.Web/sites@2023-12-01' = {
   name: '${baseName}-app'
   location: location
   properties: {
-    serverFarmId: appServicePlan.id
+    serverFarmId: resourceId('Microsoft.Web/serverfarms', existingAppServicePlanName)
     siteConfig: {
       appSettings: [
         {
@@ -118,6 +152,10 @@ resource webApp 'Microsoft.Web/sites@2021-03-01' = {
           value: 'false'
         }
         {
+          name: 'ACR_REGISTRY_URL'
+          value: dockerRegistryServerUrl
+        }
+        {
           name: 'AZURE_OPENAI_ENDPOINT'
           value: azureOpenAiEndpoint
         }
@@ -134,6 +172,22 @@ resource webApp 'Microsoft.Web/sites@2021-03-01' = {
           value: azureDeploymentName
         }
         {
+          name: 'AZURE_OPENAI_ENDPOINT_EMBED'
+          value: azureOpenAiEndpointEmbed
+        }
+        {
+          name: 'AZURE_OPENAI_API_KEY_EMBED'
+          value: azureOpenAiApiKeyEmbed
+        }
+        {
+          name: 'AZURE_OPENAI_API_VERSION_EMBED'
+          value: azureOpenAiApiVersionEmbed
+        }
+        {
+          name: 'AZURE_EMBEDDING_DEPLOYMENT_NAME'
+          value: azureEmbeddingDeploymentName
+        }
+        {
           name: 'SECRET_KEY'
           value: secretKey
         }
@@ -147,11 +201,11 @@ resource webApp 'Microsoft.Web/sites@2021-03-01' = {
         }
         {
           name: 'POSTGRES_DB'
-          value: 'proposalgen'
+          value: databaseName
         }
         {
           name: 'POSTGRES_HOST'
-          value: postgresServer.properties.fullyQualifiedDomainName
+          value: reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', existingPostgresServerName), '2025-01-01-preview').fullyQualifiedDomainName
         }
         {
           name: 'POSTGRES_PORT'
@@ -163,30 +217,38 @@ resource webApp 'Microsoft.Web/sites@2021-03-01' = {
         }
         {
           name: 'DB_PASSWORD'
-          value: 'IomUC1@20250523$'
+          value: 'IomUC1@20250604'
         }
         {
           name: 'DB_NAME'
-          value: 'proposalgen'
+          value: databaseName
         }
         {
           name: 'DB_HOST'
-          value: postgresServer.properties.fullyQualifiedDomainName
+          value: reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', existingPostgresServerName), '2025-01-01-preview').fullyQualifiedDomainName
         }
         {
           name: 'DB_PORT'
           value: '5432'
         }
         {
+          name: 'REDIS_HOST'
+          value: redisHost
+        }
+        {
+          name: 'REDIS_PASSWORD'
+          value: redisPassword
+        }
+        {
           name: 'VITE_BACKEND_URL'
           value: 'https://${baseName}-app.azurewebsites.net/api'
         }
       ]
-      linuxFxVersion: 'COMPOSE|${base64(loadTextContent('azure-docker-compose.yml'))}'
+      linuxFxVersion: 'COMPOSE|${base64(dockerComposeContent)}'
     }
   }
 }
 
 output appServiceUrl string = 'https://${webApp.properties.defaultHostName}'
-output postgresServerName string = postgresServer.name
-output postgresServerFqdn string = postgresServer.properties.fullyQualifiedDomainName
+output postgresServerName string = existingPostgresServerName
+output postgresServerFqdn string = reference(resourceId('Microsoft.DBforPostgreSQL/flexibleServers', existingPostgresServerName), '2025-01-01-preview').fullyQualifiedDomainName
