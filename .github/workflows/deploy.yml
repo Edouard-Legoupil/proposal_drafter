@@ -8,27 +8,27 @@ on:
 
 env:
   IMAGE_TAG: latest #${{ github.sha }}
-  REGISTRY_LOGIN_SERVER: proposalgen2acr.azurecr.io
-  REGISTRY_USERNAME: proposalgen2acr
-  REGISTRY_PASSWORD: DV8ru2RXxg70kf79CTaQNbhqdgbyXzWPSp7fe5n/sV+ACRCwE5cf
+  REGISTRY_LOGIN_SERVER: ${{ secrets.REGISTRY_LOGIN_SERVER }}
+  REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+  REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
   
-  RESOURCE_GROUP: iom-d-we-rgp-datallmpoc-001
+  RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
   DOCKER_COMPOSE_PATH: azure-docker-compose.yml
-  AZURE_WEBAPP_NAME: proposal-drafter
+  AZURE_WEBAPP_NAME: ${{ secrets.AZURE_WEBAPP_NAME }}
 
   # Backend environment variables
   AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
   AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
   OPENAI_API_VERSION: ${{ secrets.OPENAI_API_VERSION }}
   AZURE_DEPLOYMENT_NAME: ${{ secrets.AZURE_DEPLOYMENT_NAME }}
-  DB_USERNAME: elegoupil
-  DB_PASSWORD: eyJ0eXAiOiJKV1QiLCJhbGcioiJSUZI1NiIsIng1dCI6IkNodjBPSTNSd3FSSEZF
-  DB_NAME: postgres
-  DB_HOST: postgres4agenticai.postgres.database.azure.com
-  DB_PORT: 5432
-  SECRET_KEY: hjsd78hdhd$$sjsjs###23y2h
-  REDIS_HOST: iom-d-we-datallmpoc-redis-cach01
-  REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}  # Add this if your Redis Cache requires auth
+  DB_USERNAME: ${{ secrets.DB_USERNAME }}
+  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+  DB_NAME: ${{ secrets.DB_NAME }}
+  DB_HOST: ${{ secrets.DB_HOST }}
+  DB_PORT: ${{ secrets.DB_PORT }}
+  SECRET_KEY: ${{ secrets.SECRET_KEY }}
+  REDIS_HOST: ${{ secrets.REDIS_HOST }}
+  REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }} # Add this if your Redis Cache requires auth
 
 jobs:
   build-and-deploy:
