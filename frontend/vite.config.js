@@ -8,7 +8,7 @@ export default defineConfig({
     host: '0.0.0.0',
     allowedHosts: [
       'localhost',
-      'http://proposal-drafter.azurewebsites.net/'
+      'https://proposal-drafter.azurewebsites.net/'
     ],
     proxy: {
       '/api': {

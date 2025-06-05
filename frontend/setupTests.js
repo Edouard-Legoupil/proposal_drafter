@@ -9,7 +9,8 @@ beforeAll(() => {
 })
 
 beforeEach(() => {
-        localStorage.setItem('session_id', 'test-session-123')
+        sessionStorage.clear()
+        sessionStorage.setItem('session_id', 'test-session-123')
 })
 
 beforeAll(() => {
@@ -19,7 +20,7 @@ beforeAll(() => {
 afterEach(() => {
         server.resetHandlers()
         cleanup()
-        localStorage.clear()
+        sessionStorage.clear()
 })
 
 afterAll(() => {

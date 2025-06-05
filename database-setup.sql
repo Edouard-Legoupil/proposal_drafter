@@ -4,12 +4,12 @@
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'iom_uc1_user') THEN
-        CREATE USER iom_uc1_user WITH PASSWORD 'IomUC1@20250523$';
+        CREATE USER iom_uc1_user WITH PASSWORD 'IomUC1@20250605$';
     END IF;
 END $$;
 
 -- Grant necessary privileges to the application user
-GRANT CONNECT ON DATABASE proposalgen TO iom_uc1_user;
+GRANT CONNECT ON DATABASE postgres TO iom_uc1_user;
 GRANT USAGE ON SCHEMA public TO iom_uc1_user;
 
 -- Create Users table

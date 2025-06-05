@@ -53,7 +53,7 @@
 }
 
 .Login-logo {
-        height: 65px;
+        height: 60px;
 }
 
 .Login-form {
@@ -62,7 +62,7 @@
         width: 100%; /* Trigger it to grow in width */
         max-width: 390px; /* Then stop it at our required limit, thus making it responsive */
         padding: 0 50px;
-        margin-top: 36px;
+        margin-top: 24px;
 
         display: flex;
         flex-direction: column;
@@ -73,15 +73,15 @@
 
 .Login_form-header {
         font-family: "Noto";
-        font-weight: 350;
-        font-size: 24px;
+        font-weight: 400;
+        font-size: 20px;
 
         margin-bottom: 5px;
         /* text-align: center; */
 }
 
 .Login-label {
-        margin-top: 24px;
+        margin-top: 16px;
 
         font-family: "Noto";
         font-weight: 350;
@@ -89,7 +89,8 @@
         /* color: #414141; */
 }
 
-.Login-form > input {
+.Login-form > input,
+.Login-form > select {
         border: 1px solid #D4D7E3;
         border-radius: 5px;
 
@@ -113,6 +114,19 @@ input.Login_inputPassword {
         padding-right: 47.5px;
 }
 
+.Login-form > select {
+        outline: 1px solid #D4D7E3;
+        border: none;
+        border-right: 15px solid transparent;
+        cursor: pointer;
+}
+.Login-form > select > option:disabled {
+        color: rgb(117, 117, 117);
+}
+.Login-form > select > option {
+        color: #000;
+}
+
 .Login_showPasswordToggleContainer {
         display: flex;
         justify-content: flex-end;
@@ -127,8 +141,22 @@ input.Login_inputPassword {
         cursor: pointer;
 }
 
+.Login-forgotpw {
+        font-family: "Noto";
+        font-size: 12px;
+        font-weight: 400;
+        color: #0033AE;
+
+        display: block;
+        margin-top: 12px;
+        text-align: right;
+        text-decoration: none;
+
+        cursor: pointer;
+}
+
 .Login-submit {
-        margin-top: 45px;
+        margin-top: 20px;
 
         width: 100%;
         outline: none;
@@ -209,7 +237,7 @@ input.Login_inputPassword {
         font-size: 14px;
         font-weight: 350;
 
-        margin-top: 30px;
+        margin-top: 24px;
         text-align: center;
 }
 

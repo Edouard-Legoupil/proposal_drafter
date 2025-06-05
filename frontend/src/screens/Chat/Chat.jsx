@@ -577,7 +577,7 @@ export default function Chat (props)
                                                                 <div className="Chat_sectionHeader">
                                                                         <div className="Chat_sectionTitle">{sectionObj[0]}</div>
 
-                                                                        {!generateLoading && sectionObj[1].content && sectionObj[1].open && !isApproved ? <div className="Chat_sectionOptions">
+                                                                        {!generateLoading && sectionObj[1].content && sectionObj[1].open && !isApproved ? <div className="Chat_sectionOptions" data-testid={`section-options-${i}`}>
                                                                                 {!isEdit || (selectedSection === i && isEdit) ? <button type="button" onClick={() => handleEditClick(i)} style={(selectedSection === i && isEdit && regenerateSectionLoading) ? {pointerEvents: "none"} : {}} aria-label={`edit-section-${i}`}>
                                                                                         <img src={(selectedSection === i && isEdit) ? save : edit} />
                                                                                         <span>{(selectedSection === i && isEdit) ? "Save" : "Edit"}</span>
