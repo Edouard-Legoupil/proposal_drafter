@@ -32,9 +32,8 @@ CREATE TABLE IF NOT EXISTS proposals (
     project_description TEXT NOT NULL,
     generated_sections JSONB,
     is_accepted BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT proposals_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id)
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create index for faster user lookup
