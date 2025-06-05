@@ -56,8 +56,7 @@ class ProposalCrew():
         # Path to knowledge files 
     json_knowledge = JSONKnowledgeSource(
         file_paths=[
-            "good_example.json",
-            "bad_example.json"
+            "combine_example.json"
         ]
     )
 
@@ -121,13 +120,16 @@ class ProposalCrew():
             verbose=True,
             output_log_file = self.generate_proposal_log,
             knowledge_sources=[self.json_knowledge],           
-            # embedder={
-            #     "provider": "openai",
-            #     "config": {
-            #         "model": os.getenv("EMBEDDING_MODEL", "embedding-ada"),
-            #         "api_key": os.getenv("OPENAI_API_KEY")
-            #     }
-            # }
+            embedder={
+                "provider": "azure",
+                "config": {
+                    "model": os.getenv("AZURE_EMBEDDING_MODEL", "text-embedding-ada-002"),
+                    "deployment_id": os.getenv("AZURE_EMBEDDING_DEPLOYMENT_NAME"),
+                    "api_key": os.getenv("AZURE_OPENAI_API_KEY"),
+                    "api_base": os.getenv("AZURE_OPENAI_ENDPOINT"),
+                    "api_version": os.getenv("OPENAI_API_VERSION")
+                }
+            }
         )
        
     #Introducing a new agent- regenerator agent - [NEED TO DISCUSS ON THIS WITH NISHANT]
@@ -141,13 +143,16 @@ class ProposalCrew():
             verbose=True,
             output_log_file = self.regenerate_proposal_log,
             knowledge_sources=[self.json_knowledge],
-            # embedder={
-            #     "provider": "openai",
-            #     "config": {
-            #         "model": os.getenv("EMBEDDING_MODEL", "embedding-ada"),
-            #         "api_key": os.getenv("OPENAI_API_KEY")
-            #     }
-            # }
+            embedder={
+                "provider": "azure",
+                "config": {
+                    "model": os.getenv("AZURE_EMBEDDING_MODEL", "text-embedding-ada-002"),
+                    "deployment_id": os.getenv("AZURE_EMBEDDING_DEPLOYMENT_NAME"),
+                    "api_key": os.getenv("AZURE_OPENAI_API_KEY"),
+                    "api_base": os.getenv("AZURE_OPENAI_ENDPOINT"),
+                    "api_version": os.getenv("OPENAI_API_VERSION")
+                }
+            }
         )
    
     #Introducing a new agent- regenerator agent - [NEED TO DISCUSS ON THIS WITH NISHANT]

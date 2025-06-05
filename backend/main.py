@@ -70,12 +70,8 @@ app = FastAPI()
 
 # Allow CORS from specific frontend origin(s)
 origins = [
-    "http://192.168.29.172:8503",
-    "http://192.168.1.107:8503",
-    "http://localhost:8503",
-    "https://proposalgen-app.azurewebsites.net",
-    "https://proposalgen-app.azurewebsites.net:8503",
-    "*"  # Allow all origins for development - remove in production
+    "https://proposal-drafter.azurewebsites.net/",
+     "http://localhost:8503" # here the frontend url will be there
 ]
 
 app.add_middleware(
@@ -159,7 +155,7 @@ except redis.ConnectionError:
         def get(self, key):
             return self.storage.get(key)
         
-        def delete(self, key):   #just this and it will get solved, tested it 
+        def delete(self, key):
             self.storage.pop(key, None)
     
     redis_client = DictStorage()
@@ -582,126 +578,105 @@ async def regenerate_section(session_id: str,request: RegenerateRequest, current
     }
 
 
-# @app.post("/api/generate-document/{session_id}")
-# async def generate_document(session_id: str):
-#     """Generates final document in Word format after all sections are processed"""
+# @app.post("/api/signup")
+# async def signup(request: Request):
+#     data = await request.json()
+#     name = data.get('username')
+#     email = data.get('email')
+#     password = data.get('password')
 
-#     session_data = redis_client.get(session_id)
-#     if not session_data:
-#         raise HTTPException(status_code=400, detail="Session data not found.")
+#     if not name or not email or not password:
+#         return JSONResponse(status_code=400, content={"error": "Username, Email, and Password are required."})
 
-#     session_data = json.loads(session_data)
+#     hashed_password = generate_password_hash(password)
 
-#     generated_sections = session_data.get("generated_sections", {})
-#     if len(generated_sections) != len(SECTIONS):
-#         missing_sections = [s for s in SECTIONS if s not in generated_sections]
-#         raise HTTPException(
-#             status_code=400,
-#             detail=f"Not all sections processed yet. Missing: {missing_sections}"
+#     try:
+#         with engine.begin() as connection:
+#             # Check if user exists by email
+#             result = connection.execute(
+#                 text("SELECT id FROM users WHERE email = :email"),
+#                 {'email': email}
+#             )
+#             existing_user = result.fetchone()
+
+#             if existing_user:
+#                 return JSONResponse(status_code=400, content={"error": "User with this email already exists. Please log in."})
+
+#             # Insert user into the table
+#             connection.execute(
+#             text("INSERT INTO users (id, email, name, password) VALUES (:id, :email, :name, :password)"),
+#             {
+#                 'id': str(uuid.uuid4()),
+#                 'email': email,
+#                 'name': name,
+#                 'password': hashed_password  
+#             }
 #         )
+#         connection.commit()
 
-#     # ✅ Create a Word document
-#     doc = Document()
-#     doc.add_heading("Project Proposal", level=1)
+#         return JSONResponse(status_code=201, content={"message": "Signup successful! Please log in."})
 
-#     # ✅ Add form data in table format
-#     form_data = session_data["form_data"]
-#     table = doc.add_table(rows=1, cols=2)
-#     table.style = 'Table Grid'
-#     hdr_cells = table.rows[0].cells
-#     hdr_cells[0].text = 'Field'
-#     hdr_cells[1].text = 'Value'
+#     except Exception as e:
+#         print(f"[SIGNUP ERROR] {e}")
+#         return JSONResponse(status_code=500, content={"error": "Signup failed. Please try again later."})
 
-#     for key, value in form_data.items():
-#         row_cells = table.add_row().cells
-#         row_cells[0].text = key
-#         row_cells[1].text = value
-
-#     doc.add_paragraph("\n")  # Adding a line break
-
-#     # ✅ Add section-wise content (with markdown beautification)
-#     for section, content in generated_sections.items():
-#         doc.add_heading(section, level=2)
-
-#         # Clean markdown syntax
-#         cleaned_content = re.sub(r'^#{1,6}\s*', '', content, flags=re.MULTILINE)  # Headers
-#         cleaned_content = re.sub(r'(\*\*|__)(.*?)\1', r'\2', cleaned_content)     # Bold
-#         cleaned_content = re.sub(r'(\*|_)(.*?)\1', r'\2', cleaned_content)        # Italic
-#         cleaned_content = re.sub(r'`{1,3}(.*?)`{1,3}', r'\1', cleaned_content)    # Inline code
-
-#         # Separate bullet points and regular lines
-#         bullet_lines = []
-#         normal_lines = []
-#         for line in cleaned_content.splitlines():
-#             if re.match(r'^\s*[-*]\s+', line):
-#                 bullet_lines.append(re.sub(r'^\s*[-*]\s+', '', line))
-#             else:
-#                 normal_lines.append(line)
-
-#         if normal_lines:
-#             paragraph = doc.add_paragraph("\n".join(normal_lines).strip())
-#             paragraph.paragraph_format.space_after = Pt(12)
-#             paragraph.paragraph_format.line_spacing = 1.5
-
-#         for bullet in bullet_lines:
-#             doc.add_paragraph(bullet.strip(), style='List Bullet')
-
-#     # ✅ Save the document
-#     folder_name = "proposal-documents"
-#     os.makedirs(folder_name, exist_ok=True)
-#     unique_id = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:6]}"
-#     file_path = os.path.join(folder_name, f"proposal_document_{unique_id}.docx")
-
-#     doc.save(file_path)
-
-#     return {
-#         "message": "Proposal document generated successfully",
-#         "file_path": file_path
-#     }
-
-
+#new signup api with security questions for forgot password functionality
 @app.post("/api/signup")
 async def signup(request: Request):
     data = await request.json()
     name = data.get('username')
     email = data.get('email')
     password = data.get('password')
+    security_question = data.get('security_question')
+    security_answer = data.get('security_answer')
 
-    if not name or not email or not password:
-        return JSONResponse(status_code=400, content={"error": "Username, Email, and Password are required."})
+    # Validate all required fields
+    if not name or not email or not password or not security_question or not security_answer:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "All fields are required."}
+        )
 
+    # Hash password and security answer
     hashed_password = generate_password_hash(password)
+    hashed_questions = {
+        security_question: generate_password_hash(security_answer.strip().lower())
+    }
 
     try:
         with engine.begin() as connection:
-            # Check if user exists by email
+            # Check if user already exists
             result = connection.execute(
                 text("SELECT id FROM users WHERE email = :email"),
                 {'email': email}
             )
-            existing_user = result.fetchone()
+            if result.fetchone():
+                return JSONResponse(
+                    status_code=400,
+                    content={"error": "User with this email already exists. Please log in."}
+                )
 
-            if existing_user:
-                return JSONResponse(status_code=400, content={"error": "User with this email already exists. Please log in."})
-
-            # Insert user into the table
+            # Insert user into the database
             connection.execute(
-            text("INSERT INTO users (id, email, name, password) VALUES (:id, :email, :name, :password)"),
-            {
-                'id': str(uuid.uuid4()),
-                'email': email,
-                'name': name,
-                'password': hashed_password  
-            }
-        )
-        connection.commit()
+                text("""
+                    INSERT INTO users (id, email, name, password, security_questions)
+                    VALUES (:id, :email, :name, :password, :security_questions)
+                """),
+                {
+                    'id': str(uuid.uuid4()),
+                    'email': email,
+                    'name': name,
+                    'password': hashed_password,
+                    'security_questions': json.dumps(hashed_questions)
+                }
+            )
 
         return JSONResponse(status_code=201, content={"message": "Signup successful! Please log in."})
 
     except Exception as e:
         print(f"[SIGNUP ERROR] {e}")
         return JSONResponse(status_code=500, content={"error": "Signup failed. Please try again later."})
-    
+
 
 @app.post("/api/login")
 async def login(request: Request):
@@ -801,6 +776,152 @@ async def logout(current_user: dict = Depends(get_current_user)):
 
     return response
 
+@app.post("/api/get-security-question")
+async def get_security_question(request: Request):
+    try:
+        data = await request.json()
+        email = data.get("email")
+
+        if not email:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Email is required."}
+            )
+
+        with engine.connect() as connection:
+            result = connection.execute(
+                text("SELECT security_questions FROM users WHERE email = :email"),
+                {"email": email}
+            )
+            user = result.fetchone()
+
+        if not user:
+            return JSONResponse(status_code=404, content={"error": "User not found."})
+
+        stored_questions_json = user[0]
+        if not stored_questions_json:
+            return JSONResponse(status_code=400, content={"error": "Security question not set."})
+
+        # Handle possible JSON format
+        if isinstance(stored_questions_json, str):
+            stored_questions = json.loads(stored_questions_json)
+        elif isinstance(stored_questions_json, dict):
+            stored_questions = stored_questions_json
+        else:
+            return JSONResponse(status_code=500, content={"error": "Invalid format of stored security questions."})
+
+        # Extract the only question
+        if len(stored_questions) != 1:
+            return JSONResponse(status_code=500, content={"error": "Invalid number of stored security questions."})
+
+        question = list(stored_questions.keys())[0]
+        return JSONResponse(status_code=200, content={"question": question})
+
+    except Exception as e:
+        print(f"[GET SECURITY QUESTION ERROR] {e}")
+        return JSONResponse(status_code=500, content={"error": "Something went wrong. Please try again later."})
+
+
+@app.post("/api/verify-security-answer")
+async def verify_security_answer(request: Request):
+    try:
+        data = await request.json()
+        email = data.get("email")
+        security_question = data.get("security_question")
+        security_answer = data.get("security_answer")
+
+        if not email or not security_question or not security_answer:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "All fields are required."}
+            )
+
+        with engine.connect() as connection:
+            result = connection.execute(
+                text("SELECT security_questions FROM users WHERE email = :email"),
+                {"email": email}
+            )
+            user = result.fetchone()
+
+            if not user:
+                return JSONResponse(status_code=404, content={"error": "User not found."})
+
+            stored_questions_json = user[0]
+            if isinstance(stored_questions_json, str):
+                stored_questions = json.loads(stored_questions_json)
+            elif isinstance(stored_questions_json, dict):
+                stored_questions = stored_questions_json
+            else:
+                return JSONResponse(status_code=500, content={"error": "Invalid format of stored security questions."})
+
+            hashed_answer = stored_questions.get(security_question)
+            if not hashed_answer:
+                return JSONResponse(status_code=403, content={"error": "Security question mismatch."})
+
+            if not check_password_hash(hashed_answer, security_answer.strip().lower()):
+                return JSONResponse(status_code=403, content={"error": "Incorrect security answer."})
+
+        # Security answer verified successfully
+        return JSONResponse(status_code=200, content={"message": "Security answer verified successfully."})
+
+    except Exception as e:
+        print(f"[VERIFY SECURITY ANSWER ERROR] {e}")
+        return JSONResponse(status_code=500, content={"error": "Failed to verify security answer. Please try again later."})
+
+
+@app.post("/api/update-password")
+async def update_password(request: Request):
+    try:
+        data = await request.json()
+        email = data.get("email")
+        security_question = data.get("security_question")
+        security_answer = data.get("security_answer")
+        new_password = data.get("new_password")
+
+        if not email or not security_question or not security_answer or not new_password:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "All fields are required."}
+            )
+
+        with engine.begin() as connection:
+            # Verify security answer again for security
+            result = connection.execute(
+                text("SELECT security_questions FROM users WHERE email = :email"),
+                {"email": email}
+            )
+            user = result.fetchone()
+
+            if not user:
+                return JSONResponse(status_code=404, content={"error": "User not found."})
+
+            stored_questions_json = user[0]
+            if isinstance(stored_questions_json, str):
+                stored_questions = json.loads(stored_questions_json)
+            elif isinstance(stored_questions_json, dict):
+                stored_questions = stored_questions_json
+            else:
+                return JSONResponse(status_code=500, content={"error": "Invalid format of stored security questions."})
+
+            hashed_answer = stored_questions.get(security_question)
+            if not hashed_answer:
+                return JSONResponse(status_code=403, content={"error": "Security question mismatch."})
+
+            if not check_password_hash(hashed_answer, security_answer.strip().lower()):
+                return JSONResponse(status_code=403, content={"error": "Incorrect security answer."})
+
+            # All good — update password
+            hashed_password = generate_password_hash(new_password)
+            connection.execute(
+                text("UPDATE users SET password = :password WHERE email = :email"),
+                {"password": hashed_password, "email": email}
+            )
+
+        return JSONResponse(status_code=200, content={"message": "Password updated successfully. Please log in."})
+
+    except Exception as e:
+        print(f"[UPDATE PASSWORD ERROR] {e}")
+        return JSONResponse(status_code=500, content={"error": "Failed to update password. Please try again later."})
 
 @app.post("/api/save-draft")
 async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get_current_user)):
