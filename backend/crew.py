@@ -124,10 +124,10 @@ class ProposalCrew():
                 "provider": "azure",
                 "config": {
                     "model": os.getenv("AZURE_EMBEDDING_MODEL", "text-embedding-ada-002"),
-                    "deployment_id": os.getenv("AZURE_EMBEDDING_DEPLOYMENT_NAME"),
+                    "deployment_id": os.getenv("AZURE_EMBEDDING_DEPLOYMENT_NAME", "text-embedding-ada-002"),
                     "api_key": os.getenv("AZURE_OPENAI_API_KEY"),
                     "api_base": os.getenv("AZURE_OPENAI_ENDPOINT"),
-                    "api_version": os.getenv("OPENAI_API_VERSION")
+                    "api_version": os.getenv("AZURE_OPENAI_API_VERSION_EMBED", "2023-05-15")
                 }
             }
         )
@@ -150,7 +150,7 @@ class ProposalCrew():
                     "deployment_id": os.getenv("AZURE_EMBEDDING_DEPLOYMENT_NAME", "text-embedding-ada-002"),
                     "api_key": os.getenv("AZURE_OPENAI_API_KEY"),
                     "api_base": os.getenv("AZURE_OPENAI_ENDPOINT"),
-                    "api_version": os.getenv("OPENAI_API_VERSION")
+                    "api_version": os.getenv("AZURE_OPENAI_API_VERSION_EMBED", "2023-05-15")
                 }
             }
         )
