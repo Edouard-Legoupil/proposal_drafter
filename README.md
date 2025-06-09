@@ -43,24 +43,8 @@ This system leverages the agent-based framework of ** [CrewAI](https://docs.crew
 Each agent is powered by an LLM and follows a role-specific prompt and toolset.
 
 The key configuration files are in `backend/config/agents.yaml` and `backend/config/tasks.yaml`, which define the agents' roles, prompts, and tasks.
-
-```
-+--------------------------+
-|     User Input Prompt    |
-+--------------------------+
-            ↓
-+--------------------------+
-|      CrewAI Manager      |
-+--------------------------+
-     ↓        ↓        ↓
-+--------+ +--------+ +--------+
-| Agent  | | Agent  | | Agent  |  ← e.g., Context Analyst,  etc.
-|  1     | |  2     | |  3     |
-+--------+ +--------+ +--------+
-            ↓
-     Final Proposal Draft
-```
-
+ 
+![AI Agent Crew Description](https://raw.githubusercontent.com/iom/proposal_drafter/refs/heads/main/img/crew.png) 
 
 
 ## 🧑‍💼 Example Use Case
