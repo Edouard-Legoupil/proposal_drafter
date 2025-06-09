@@ -1,18 +1,28 @@
 
 # Project Proposal Generator
 
-An open source **agentic AI system** powered by [CrewAI](https://docs.crewai.com/introduction) to assist in generating high-quality, structured project proposals tailored to specific requirement. 
-
-This tool is designed to enhance efficiency, consistency, and strategic alignment with the organisation standards and priorities.
-
-The open source nature of this project allows for community contributions and adaptations, making it a versatile solution for various UN agencies and NGOs.
+__Empowering change-makers with AI-enhanced Proposal Drafting__
 
 
-## 🚀 Overview
+## Introduction
 
-This system leverages the agent-based framework of **CrewAI** to orchestrate multiple collaborative AI agents—each specialized in a core aspect of proposal writing such as context analysis, objectives formulation, and budgeting.
+The Project Proposal Generator is an open-source, agentic AI system, designed to automate and enhance the creation of high-quality, structured project proposals. Tailored for UN agencies, NGOs, and mission-driven organizations, it ensures strategic alignment, compliance, and efficiency—turning complex requirements into compelling, submission-ready drafts.
 
-### Key Features
+### ✨ Why This Tool?
+
+- __AI-Powered Collaboration__: Simulates a real proposal team with specialized agents handling research, budgeting, and drafting.
+
+- __Strategic Precision__: Aligns proposals with organizational priorities, findings from previous evaluations, donor guidelines, and thematic frameworks.
+
+- __Adaptable & Open-Source__: Customizable for diverse sectors and editable by the community.
+
+- __Seamless Export__: Generate, refine, and export proposals in Word/PDF with validation tracking.
+
+#### 🌍 Impact
+
+By streamlining proposal development, this tool accelerates funding opportunities, reduces manual effort, and ensures consistency—helping changemakers focus on impact, not paperwork.
+
+### Key Features:
 
 - 🤖 **Agentic Workflow**: Modular agents simulate a real project development team.
 - 📝 **Proposal Structuring**: Outputs fully-structured, ready-to-submit project proposals.
@@ -20,7 +30,19 @@ This system leverages the agent-based framework of **CrewAI** to orchestrate mul
 - 🧩 **Contextual Adaptation**: Accepts input on target countries, population groups, and sectors of intervention.
 - 📂 **Validation & Export**: Projects can be edit and refined, then exported to word and pdf and marked as validated.
 
+The open source nature of this project allows for community contributions and adaptations, making it a versatile solution for various UN agencies and NGOs.
+
+## 🚀 Overview
+
+This system leverages the agent-based framework of ** [CrewAI](https://docs.crewai.com/introduction) ** to orchestrate multiple collaborative AI agents—each specialized in a core aspect of proposal writing such as context analysis, objectives formulation, and budgeting.
+
+
 ## 🧱 System Architecture
+
+
+Each agent is powered by an LLM and follows a role-specific prompt and toolset.
+
+The key configuration files are in `backend/config/agents.yaml` and `backend/config/tasks.yaml`, which define the agents' roles, prompts, and tasks.
 
 ```
 +--------------------------+
@@ -39,9 +61,7 @@ This system leverages the agent-based framework of **CrewAI** to orchestrate mul
      Final Proposal Draft
 ```
 
-Each agent is powered by an LLM and follows a role-specific prompt and toolset.
 
-The key configuration files are in `backend/config/agents.yaml` and `backend/config/tasks.yaml`, which define the agents' roles, prompts, and tasks.
 
 ## 🧑‍💼 Example Use Case
 
