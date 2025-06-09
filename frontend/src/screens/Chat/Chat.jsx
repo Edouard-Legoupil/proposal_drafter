@@ -533,10 +533,56 @@ export default function Chat (props)
                                                         </span>
 
                                                         {form_expanded ? <form className='Chat_form'>
-                                                                {Object.entries(formData).map((fieldObj, i) => <div key={i} className='Chat_form_inputContainer'>
-                                                                        <label className='Chat_form_inputLabel' htmlFor={`Chat_form_input_${fieldObj[0].replaceAll(' ', '')}`}>{fieldObj[0]} <span className={`Chat_form_input_mandatoryAsterisk ${!fieldObj[1].mandatory ? "hidden" : ""}`}>*</span></label>
-                                                                        <input type="text" className='Chat_form_input' id={`Chat_form_input_${fieldObj[0].replaceAll(' ', '')}`} placeholder={`Enter ${fieldObj[0]}`} value={fieldObj[1].value} onChange={e => handleFormInput(e, fieldObj[0])} />
-                                                                </div>)}
+
+
+                                                                {Object.entries(formData).map((fieldObj, i) => {
+                                                                const label = fieldObj[0];
+                                                                const isDropdown = label === "Project type" || label === "Secondary project type";
+                                                                const datalistId = `datalist_${label.replaceAll(' ', '_')}`;
+                                                                const options = label === "Project type"
+                                                                        ? ["Research", "Development", "Training", "Outreach"]
+                                                                        : label === "Secondary project type"
+                                                                        ? ["Climate", "Agriculture", "Water", "Education"]
+                                                                        : [];
+
+                                                                return (
+                                                                        <div key={i} className='Chat_form_inputContainer'>
+                                                                        <label className='Chat_form_inputLabel' htmlFor={`Chat_form_input_${label.replaceAll(' ', '')}`}>
+                                                                                {label}
+                                                                                <span className={`Chat_form_input_mandatoryAsterisk ${!fieldObj[1].mandatory ? "hidden" : ""}`}>*</span>
+                                                                        </label>
+
+                                                                        {isDropdown ? (
+                                                                                <>
+                                                                                <input
+                                                                                        list={datalistId}
+                                                                                        className='Chat_form_input'
+                                                                                        id={`Chat_form_input_${label.replaceAll(' ', '')}`}
+                                                                                        placeholder={`Enter or select ${label}`}
+                                                                                        value={fieldObj[1].value}
+                                                                                        onChange={e => handleFormInput(e, label)}
+                                                                                />
+                                                                                <datalist id={datalistId}>
+                                                                                        {options.map((option, idx) => (
+                                                                                        <option key={idx} value={option} />
+                                                                                        ))}
+                                                                                </datalist>
+                                                                                </>
+                                                                        ) : (
+                                                                                <input
+                                                                                type="text"
+                                                                                className='Chat_form_input'
+                                                                                id={`Chat_form_input_${label.replaceAll(' ', '')}`}
+                                                                                placeholder={`Enter ${label}`}
+                                                                                value={fieldObj[1].value}
+                                                                                onChange={e => handleFormInput(e, label)}
+                                                                                />
+                                                                        )}
+                                                                        </div>
+                                                                );
+                                                                })}
+
+
                                                         </form> : ""}
 
                                                         <div className="Chat_inputArea_buttonContainer">
