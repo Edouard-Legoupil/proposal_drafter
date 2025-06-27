@@ -999,86 +999,86 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
 
 
 
-@app.get("/api/list-drafts")
-async def list_drafts(current_user: dict = Depends(get_current_user)):
-    user_id = current_user["user_id"]
+# @app.get("/api/list-drafts")
+# async def list_drafts(current_user: dict = Depends(get_current_user)):
+#     user_id = current_user["user_id"]
 
-    try:
-        with engine.connect() as connection:
-            # ✅ Include form_data in the query itself
-            result = connection.execute(
-                text("""
-                    SELECT id, form_data, generated_sections, created_at, updated_at, is_accepted
-                    FROM proposals
-                    WHERE user_id = :user_id
-                    ORDER BY updated_at DESC
-                """),
-                {"user_id": user_id}
-            )
-            drafts = result.fetchall()
+#     try:
+#         with engine.connect() as connection:
+#             # ✅ Include form_data in the query itself
+#             result = connection.execute(
+#                 text("""
+#                     SELECT id, form_data, generated_sections, created_at, updated_at, is_accepted
+#                     FROM proposals
+#                     WHERE user_id = :user_id
+#                     ORDER BY updated_at DESC
+#                 """),
+#                 {"user_id": user_id}
+#             )
+#             drafts = result.fetchall()
 
-        if not drafts:
-            return {
-                "message": "No drafts found.",
-                "drafts": []
-            }
+#         if not drafts:
+#             return {
+#                 "message": "No drafts found.",
+#                 "drafts": []
+#             }
 
-        draft_list = []
+#         draft_list = []
 
-        for row in drafts:
-            proposal_id = row[0]
-            form_data_raw = row[1]
-            generated_sections_raw = row[2]
-            created_at = row[3]
-            updated_at = row[4]
-            is_accepted = row[5] if len(row) > 5 else False
+#         for row in drafts:
+#             proposal_id = row[0]
+#             form_data_raw = row[1]
+#             generated_sections_raw = row[2]
+#             created_at = row[3]
+#             updated_at = row[4]
+#             is_accepted = row[5] if len(row) > 5 else False
 
 
-            # ✅ Parse form_data
-            try:
-                if isinstance(form_data_raw, str):
-                    form_data = json.loads(form_data_raw)
-                elif isinstance(form_data_raw, dict):
-                    form_data = form_data_raw
-                else:
-                    form_data = {}
-            except Exception as e:
-                print(f"[FORM_DATA PARSE ERROR for {proposal_id}] {e}")
-                form_data = {}
+#             # ✅ Parse form_data
+#             try:
+#                 if isinstance(form_data_raw, str):
+#                     form_data = json.loads(form_data_raw)
+#                 elif isinstance(form_data_raw, dict):
+#                     form_data = form_data_raw
+#                 else:
+#                     form_data = {}
+#             except Exception as e:
+#                 print(f"[FORM_DATA PARSE ERROR for {proposal_id}] {e}")
+#                 form_data = {}
 
-            project_title = form_data.get("Project title", "Untitled Proposal")
+#             project_title = form_data.get("Project title", "Untitled Proposal")
 
-            # ✅ Parse generated_sections
-            try:
-                if isinstance(generated_sections_raw, str):
-                    generated_sections = json.loads(generated_sections_raw)
-                elif isinstance(generated_sections_raw, dict):
-                    generated_sections = generated_sections_raw
-                else:
-                    generated_sections = {}
-            except Exception as e:
-                print(f"[PARSE ERROR] Could not parse generated_sections for {proposal_id}: {e}")
-                generated_sections = {}
+#             # ✅ Parse generated_sections
+#             try:
+#                 if isinstance(generated_sections_raw, str):
+#                     generated_sections = json.loads(generated_sections_raw)
+#                 elif isinstance(generated_sections_raw, dict):
+#                     generated_sections = generated_sections_raw
+#                 else:
+#                     generated_sections = {}
+#             except Exception as e:
+#                 print(f"[PARSE ERROR] Could not parse generated_sections for {proposal_id}: {e}")
+#                 generated_sections = {}
 
-            summary = generated_sections.get("Summary")
+#             summary = generated_sections.get("Summary")
 
-            draft_list.append({
-                "proposal_id": proposal_id,
-                "project_title": project_title,
-                "summary": summary,
-                "is_accepted": is_accepted,
-                "created_at": created_at.isoformat() if created_at else None,
-                "updated_at": updated_at.isoformat() if updated_at else None
-            })
+#             draft_list.append({
+#                 "proposal_id": proposal_id,
+#                 "project_title": project_title,
+#                 "summary": summary,
+#                 "is_accepted": is_accepted,
+#                 "created_at": created_at.isoformat() if created_at else None,
+#                 "updated_at": updated_at.isoformat() if updated_at else None
+#             })
 
-        return {
-            "message": "Drafts fetched successfully.",
-            "drafts": draft_list
-        }
+#         return {
+#             "message": "Drafts fetched successfully.",
+#             "drafts": draft_list
+#         }
 
-    except Exception as e:
-        print(f"[LIST DRAFTS ERROR] {e}")
-        raise HTTPException(status_code=500, detail="Failed to fetch drafts")
+#     except Exception as e:
+#         print(f"[LIST DRAFTS ERROR] {e}")
+#         raise HTTPException(status_code=500, detail="Failed to fetch drafts")
 
 
 # @app.get("/api/load-draft/{proposal_id}")
@@ -1173,13 +1173,229 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
 #         print(f"[LOAD DRAFT ERROR] {e}")
 #         raise HTTPException(status_code=404, detail="Draft not found")
 
+# @app.get("/api/load-draft/{proposal_id}")
+# async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_user)):
+#     user_id = current_user["user_id"]
+
+#     try:
+#         with engine.connect() as connection:
+#             # ✅ Always load latest data directly from DB (not Redis)
+#             result = connection.execute(
+#                 text("""
+#                     SELECT form_data, project_description, generated_sections, is_accepted, created_at, updated_at
+#                     FROM proposals
+#                     WHERE id = :proposal_id AND user_id = :user_id
+#                 """),
+#                 {"proposal_id": proposal_id, "user_id": user_id}
+#             )
+#             draft = result.fetchone()
+
+#         if not draft:
+#             raise HTTPException(status_code=404, detail="Draft not found for this proposal_id")
+
+#         form_data_raw, project_description, generated_sections_raw, is_accepted, created_at, updated_at = draft
+
+#         # ✅ Parse form_data
+#         try:
+#             if isinstance(form_data_raw, str):
+#                 form_data = json.loads(form_data_raw)
+#             elif isinstance(form_data_raw, dict):
+#                 form_data = form_data_raw
+#             else:
+#                 form_data = {}
+#         except Exception as e:
+#             print(f"[FORM_DATA PARSE ERROR] {e}")
+#             form_data = {}
+
+#         # ✅ Parse generated_sections
+#         try:
+#             if isinstance(generated_sections_raw, str):
+#                 generated_sections = json.loads(generated_sections_raw)
+#             elif isinstance(generated_sections_raw, dict):
+#                 generated_sections = generated_sections_raw
+#             else:
+#                 generated_sections = {}
+#         except Exception as e:
+#             print(f"[GENERATED SECTIONS PARSE ERROR] {e}")
+#             generated_sections = {}
+
+#         # ✅ Ensure all expected sections are present (as per SECTIONS list)
+#         ordered_sections = {section: generated_sections.get(section) for section in SECTIONS}
+
+#         # ✅ Create new session and store in Redis (optional, for continuity)
+#         session_id = str(uuid.uuid4())
+#         redis_client.setex(
+#             session_id,
+#             3600,  # 1 hour expiry
+#             json.dumps({
+#                 "form_data": form_data,
+#                 "project_description": project_description,
+#                 "generated_sections": ordered_sections,
+#                 "project_title": form_data.get("Project title", "Untitled Proposal"),
+#                 "user_id": user_id,
+#                 "proposal_id": proposal_id,
+#                 "is_accepted": is_accepted,
+#             })
+#         )
+#         print(f"[LOAD DRAFT] Redis session created: {session_id}")
+
+#         # ✅ Return final payload (no dependency on Redis for loading)
+#         return {
+#             "form_data": form_data,
+#             "project_description": project_description,
+#             "generated_sections": ordered_sections,
+#             "session_id": session_id,
+#             "proposal_id": proposal_id,
+#             "is_accepted": is_accepted,
+#             "created_at": created_at.isoformat() if created_at else None,
+#             "updated_at": updated_at.isoformat() if updated_at else None
+#         }
+
+#     except Exception as e:
+#         print(f"[LOAD DRAFT ERROR] {e}")
+#         raise HTTPException(status_code=500, detail="Failed to load draft")
+
+@app.get("/api/list-drafts")
+async def list_drafts(current_user: dict = Depends(get_current_user)):
+    user_id = current_user["user_id"]
+
+    draft_list = []
+
+    #  Load sample templates first
+    try:
+        with open("config/templates/sample_templates.json", "r", encoding="utf-8") as f:
+            sample_templates = json.load(f)
+    except Exception as e:
+        print(f"[TEMPLATE LOAD ERROR] Failed to load sample templates: {e}")
+        sample_templates = []
+
+    # Normalize sample templates to match frontend format
+    for sample in sample_templates:
+        form_data = sample.get("form_data", {})
+        sections = sample.get("generated_sections", {})
+
+        sample["project_title"] = form_data.get("Project title", "Untitled Proposal")
+        sample["summary"] = sections.get("Summary", "")
+        sample["is_accepted"] = sample.get("is_accepted", True)
+        sample["created_at"] = sample.get("created_at", datetime.utcnow().isoformat())
+        sample["updated_at"] = sample.get("updated_at", datetime.utcnow().isoformat())
+        sample["is_sample"] = True  # ensure flag is explicitly set
+
+    draft_list.extend(sample_templates)
+
+    try:
+        with engine.connect() as connection:
+            result = connection.execute(
+                text("""
+                    SELECT id, form_data, generated_sections, created_at, updated_at, is_accepted
+                    FROM proposals
+                    WHERE user_id = :user_id
+                    ORDER BY updated_at DESC
+                """),
+                {"user_id": user_id}
+            )
+            drafts = result.fetchall()
+
+        for row in drafts:
+            proposal_id = row[0]
+            form_data_raw = row[1]
+            generated_sections_raw = row[2]
+            created_at = row[3]
+            updated_at = row[4]
+            is_accepted = row[5] if len(row) > 5 else False
+
+            # Parse form_data
+            try:
+                form_data = json.loads(form_data_raw) if isinstance(form_data_raw, str) else form_data_raw or {}
+            except Exception as e:
+                print(f"[FORM_DATA PARSE ERROR for {proposal_id}] {e}")
+                form_data = {}
+
+            # Parse generated_sections
+            try:
+                generated_sections = json.loads(generated_sections_raw) if isinstance(generated_sections_raw, str) else generated_sections_raw or {}
+            except Exception as e:
+                print(f"[PARSE ERROR] Could not parse generated_sections for {proposal_id}: {e}")
+                generated_sections = {}
+
+            project_title = form_data.get("Project title", "Untitled Proposal")
+            summary = generated_sections.get("Summary", "")
+
+            draft_list.append({
+                "proposal_id": proposal_id,
+                "form_data": form_data,
+                "generated_sections": generated_sections,
+                "project_title": project_title,
+                "summary": summary,
+                "is_accepted": is_accepted,
+                "created_at": created_at.isoformat() if created_at else None,
+                "updated_at": updated_at.isoformat() if updated_at else None,
+                "is_sample": False
+            })
+
+        return {
+            "message": "Drafts fetched successfully.",
+            "drafts": draft_list
+        }
+
+    except Exception as e:
+        print(f"[LIST DRAFTS ERROR] {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch drafts")
+
 @app.get("/api/load-draft/{proposal_id}")
 async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_user)):
     user_id = current_user["user_id"]
 
+    # Check if it's a sample draft
+    if proposal_id.startswith("sample-"):
+        try:
+            with open("config/templates/sample_templates.json", "r", encoding="utf-8") as f:
+                sample_templates = json.load(f)
+
+            sample = next((item for item in sample_templates if item.get("proposal_id") == proposal_id), None)
+
+            if not sample:
+                raise HTTPException(status_code=404, detail="Sample draft not found.")
+
+            form_data = sample.get("form_data", {})
+            generated_sections = sample.get("generated_sections", {})
+            project_description = generated_sections.get("Project Description", "")
+
+            session_id = str(uuid.uuid4())
+            redis_client.setex(
+                session_id,
+                3600,
+                json.dumps({
+                    "form_data": form_data,
+                    "project_description": project_description,
+                    "generated_sections": generated_sections,
+                    "project_title": form_data.get("Project title", "Untitled Proposal"),
+                    "user_id": user_id,
+                    "proposal_id": proposal_id,
+                    "is_accepted": sample.get("is_accepted", True),
+                    "is_sample": True
+                })
+            )
+
+            return {
+                "form_data": form_data,
+                "project_description": project_description,
+                "generated_sections": generated_sections,
+                "session_id": session_id,
+                "proposal_id": proposal_id,
+                "is_accepted": sample.get("is_accepted", True),
+                "is_sample": True,
+                "created_at": sample.get("created_at"),
+                "updated_at": sample.get("updated_at")
+            }
+
+        except Exception as e:
+            print(f"[SAMPLE LOAD ERROR] {e}")
+            raise HTTPException(status_code=500, detail="Failed to load sample draft")
+
+    # Fallback: regular draft from DB
     try:
         with engine.connect() as connection:
-            # ✅ Always load latest data directly from DB (not Redis)
             result = connection.execute(
                 text("""
                     SELECT form_data, project_description, generated_sections, is_accepted, created_at, updated_at
@@ -1195,38 +1411,24 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
 
         form_data_raw, project_description, generated_sections_raw, is_accepted, created_at, updated_at = draft
 
-        # ✅ Parse form_data
         try:
-            if isinstance(form_data_raw, str):
-                form_data = json.loads(form_data_raw)
-            elif isinstance(form_data_raw, dict):
-                form_data = form_data_raw
-            else:
-                form_data = {}
+            form_data = json.loads(form_data_raw) if isinstance(form_data_raw, str) else form_data_raw or {}
         except Exception as e:
             print(f"[FORM_DATA PARSE ERROR] {e}")
             form_data = {}
 
-        # ✅ Parse generated_sections
         try:
-            if isinstance(generated_sections_raw, str):
-                generated_sections = json.loads(generated_sections_raw)
-            elif isinstance(generated_sections_raw, dict):
-                generated_sections = generated_sections_raw
-            else:
-                generated_sections = {}
+            generated_sections = json.loads(generated_sections_raw) if isinstance(generated_sections_raw, str) else generated_sections_raw or {}
         except Exception as e:
             print(f"[GENERATED SECTIONS PARSE ERROR] {e}")
             generated_sections = {}
 
-        # ✅ Ensure all expected sections are present (as per SECTIONS list)
         ordered_sections = {section: generated_sections.get(section) for section in SECTIONS}
 
-        # ✅ Create new session and store in Redis (optional, for continuity)
         session_id = str(uuid.uuid4())
         redis_client.setex(
             session_id,
-            3600,  # 1 hour expiry
+            3600,
             json.dumps({
                 "form_data": form_data,
                 "project_description": project_description,
@@ -1235,11 +1437,10 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
                 "user_id": user_id,
                 "proposal_id": proposal_id,
                 "is_accepted": is_accepted,
+                "is_sample": False
             })
         )
-        print(f"[LOAD DRAFT] Redis session created: {session_id}")
 
-        # ✅ Return final payload (no dependency on Redis for loading)
         return {
             "form_data": form_data,
             "project_description": project_description,
@@ -1247,14 +1448,14 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
             "session_id": session_id,
             "proposal_id": proposal_id,
             "is_accepted": is_accepted,
+            "is_sample": False,
             "created_at": created_at.isoformat() if created_at else None,
             "updated_at": updated_at.isoformat() if updated_at else None
         }
 
     except Exception as e:
-        print(f"[LOAD DRAFT ERROR] {e}")
-        raise HTTPException(status_code=500, detail="Failed to load draft")
-
+        raise HTTPException(status_code=500, detail="Failed to load draft: {str(e)}")
+ 
 
 def add_markdown_paragraph(doc, text):
     paragraph = doc.add_paragraph()

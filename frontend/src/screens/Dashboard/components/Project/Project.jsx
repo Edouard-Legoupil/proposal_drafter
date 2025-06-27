@@ -37,9 +37,13 @@ export default function Project (props)
         return  <div className='Dashboard_project' onClick={e => props?.onClick(e, props?.proposal_id)}>
                 <div className='Dashboard_project_title'>
                         {props?.project_title}
-                        <button className='Dashboard_project_tripleDotsContainer' popoverTarget={`popover-${props?.projectIndex+1}`} popoverTargetAction="toggle">
-                                <img className='Dashboard_project_tripleDots' src={tripleDots} />
-                        </button>
+                        {!props?.sample ?
+                                <button className='Dashboard_project_tripleDotsContainer' popoverTarget={`popover-${props?.projectIndex+1}`} popoverTargetAction="toggle">
+                                        <img className='Dashboard_project_tripleDots' src={tripleDots} />
+                                </button>
+                                :
+                                ""
+                        }
                 </div>
 
                 <div popover="auto" className='Project_optionsPopover' id={`popover-${props?.projectIndex+1}`} >
@@ -71,7 +75,7 @@ export default function Project (props)
                                 className='Dashboard_project_label'
                                 style={{background: props?.status ? "#01A89A" : "#FF671F"}}
                         >
-                                {props?.status ? "Approved" : "Pending approval"}
+                                {props?.status ? "Shared" : "Draft"}
                         </div>
                 </div>
         </div>

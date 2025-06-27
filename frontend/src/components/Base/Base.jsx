@@ -3,10 +3,11 @@ import './Base.css'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+import OSSFooter from '../OSSFooter/OSSFooter'
+
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
 
 import masterlogo from '../../assets/images/App_invertedLogo.svg'
-
 import downarrow from "../../assets/images/downarrow.svg"
 import logout_icon from "../../assets/images/Header_logout.svg"
 
@@ -99,5 +100,7 @@ export default function Base (props)
                 <main className='Main'>
                         {props?.children}
                 </main>
+
+                <OSSFooter />
         </div>
 }

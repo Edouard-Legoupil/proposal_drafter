@@ -1,6 +1,13 @@
-.Login {
-        height: 100%;
+.Login_container {
+        height: 100svh;
         display: flex;
+        flex-direction: column;
+        overflow: hidden;
+}
+
+.Login {
+        display: flex;
+        max-height: calc(100svh - 65px);
 }
 
 .Login-errorPopover:popover-open {

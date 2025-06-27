@@ -39,6 +39,15 @@
         height: 22px;
 }
 
+.Dashboard_sectionHeading {
+        margin-left: 30px;
+        margin-top: 15px;
+
+        font-family: "Noto";
+        font-size: 18px;
+        font-weight: 550;
+}
+
 .Dashboard_search {
         margin-left: 30px;
         margin-bottom: 10px;

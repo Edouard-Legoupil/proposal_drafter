@@ -1,16 +1,9 @@
 -- Database setup for Proposal Drafter application
-
--- Create application user (if it doesn't exist)
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'iom_uc1_user') THEN
-        CREATE USER iom_uc1_user WITH PASSWORD 'IomUC1@20250605$';
-    END IF;
-END $$;
+-- IMORTANT ! REPLACE <DB_USERNAME> with ACTUAL DB_USERNAME
 
 -- Grant necessary privileges to the application user
-GRANT CONNECT ON DATABASE postgres TO iom_uc1_user;
-GRANT USAGE ON SCHEMA public TO iom_uc1_user;
+GRANT CONNECT ON DATABASE postgres TO <DB_USERNAME>;
+GRANT USAGE ON SCHEMA public TO <DB_USERNAME>;
 
 -- Create Users table
 CREATE TABLE IF NOT EXISTS users (
@@ -41,14 +34,5 @@ CREATE INDEX IF NOT EXISTS idx_proposals_user_id ON proposals(user_id);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 
 -- Grant table permissions to application user
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO iom_uc1_user;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO iom_uc1_user;
-
--- Create sample user for testing (password: password123)
-INSERT INTO users (id, email, name, password) 
-VALUES (
-    '550e8400-e29b-41d4-a716-446655440000', 
-    'test@example.com', 
-    'Test User', 
-    'pbkdf2:sha256:150000$KkCqT4Mj$7ca33681db68f809b46e9ac6187248f9f20b8895b15dfd29522c51b884306250'
-) ON CONFLICT (email) DO NOTHING;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO <DB_USERNAME>;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO <DB_USERNAME>;

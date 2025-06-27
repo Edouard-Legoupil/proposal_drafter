@@ -1,0 +1,83 @@
+[
+  {
+    "proposal_id": "sample-1",
+    "form_data": {
+      "Project title": "Understanding Human Mobility in Crisis and Citizen-Driven Assistance",
+      "Project type": "Migration and Crisis Response",
+      "Secondary project type": "Data Management and Analysis",
+      "Geographical Coverage": "Global – with case studies in Nepal, Serbia, Tunisia",
+      "Executing agency": "International Organization for Migration (IOM)",
+      "Beneficiaries": "Displaced populations, local civil society actors, citizen-led response groups, national authorities. Disaggregated by sex, age, and vulnerability (e.g., unaccompanied minors, persons with disabilities).",
+      "Partner(s)": "IDMC, local NGOs, municipal governments, private sector data platforms",
+      "Management site": "IOM Headquarters, Geneva",
+      "Duration": "18 months",
+      "Budget": "USD 3,000,000"
+    },
+    "generated_sections": {
+      "Summary": "This project seeks to enhance understanding of human mobility in crises and integrate citizen-driven assistance into humanitarian frameworks. Leveraging data-driven platforms and predictive models, the initiative aims to address the growing displacement needs by amplifying the role of local actors. Key outputs include an expanded displacement data platform, improved coordination between civil society and formal responders, and ethical guidelines for data use. These efforts are expected to enhance rapid response capability, community ownership, and humanitarian accountability.",
+      "Rationale": "Displacement continues to rise globally, yet existing humanitarian frameworks often overlook the informal yet critical role of citizen-driven aid. Local actors contribute substantially—offering shelter, food, and transport—yet lack systematic inclusion in planning and information sharing. This gap weakens humanitarian efficiency and underutilizes local resilience. By supporting local capacities, promoting ethical data use, and enhancing platform interoperability, this project addresses both operational and ethical dimensions of crisis response. It aligns with IOM’s strategy for inclusive and accountable displacement management and global calls for local actor integration.",
+      "Project Description": "The project aims to strengthen community-inclusive humanitarian response by integrating citizen-led assistance into formal systems. Activities include enhancing IDMC’s open displacement data platform, creating mobile-compatible dashboards, and piloting citizen feedback mechanisms. IOM will lead multi-stakeholder workshops to build consensus on ethical data use and train local responders in digital tools. The project’s theory of change posits that equipping communities with actionable data and validating their contributions leads to better resource allocation and faster recovery. IOM brings expertise in data governance and coordination, ensuring alignment with existing humanitarian mechanisms and data standards.",
+      "Partnerships and Coordination": "IDMC and local government partners will co-lead data platform integration and ethical oversight. Civil society groups will assist in field-level validation and reporting. IOM will coordinate activities and convene multi-level dialogues to ensure policy inclusion. Technical support will be provided by private sector partners. Coordination will be overseen via a monthly multi-stakeholder steering group.",
+      "Monitoring": "Monitoring will be conducted by IOM’s data team using digital dashboards that track platform usage, data contributions, and stakeholder engagement. Surveys and interviews will be conducted quarterly to capture qualitative outcomes. Local partners will provide monthly progress logs and feedback forms. All data collection tools will comply with IOM’s Data Protection Principles. Remote monitoring strategies will be used in inaccessible regions.",
+      "Evaluation": "An external mid-term and end-line evaluation will assess effectiveness, efficiency, and sustainability. Evaluation will apply OECD-DAC criteria using mixed methods (quantitative platform metrics and qualitative interviews). Findings will be used to inform scalability and adaptation in future IOM-led displacement platforms."
+    },
+    "is_accepted": true,
+    "created_at": "2025-06-05T14:16:44.097674",
+    "updated_at": "2025-06-05T14:17:14.380806",
+    "is_sample": true
+  },
+  {
+    "proposal_id": "sample-2",
+    "is_accepted":  true,
+    "form_data": {
+      "Project title": "Rehabilitation and Reintegration Support for Disengaging Combatants",
+      "Project type": "Transition and Recovery",
+      "Secondary project type": "Conflict Prevention and Community Stabilization",
+      "Geographical Coverage": "Baidoa, Kismayo, and Xudur, Somalia",
+      "Executing agency": "International Organization for Migration (IOM)",
+      "Beneficiaries": "Disengaged combatants (male and female), host communities, at-risk youth. Disaggregated by age and gender.",
+      "Partner(s)": "Federal Government of Somalia (FGoS), South West State DDR Ministry, local youth centers",
+      "Management site": "IOM Somalia Country Office",
+      "Duration": "24 months",
+      "Budget": "USD 4,500,000"
+    },
+    "generated_sections": {
+      "Summary": "The project supports Somalia’s transition by rehabilitating disengaged combatants through psychosocial care, vocational training, and reintegration pathways. It enhances DDR infrastructure and builds community cohesion via youth centers and dialogue initiatives. Stakeholder coordination and capacity-building will reduce re-engagement in conflict and support sustainable peace. Project outputs—established centers, trained facilitators, and community reintegration plans—will contribute to the long-term stabilization of conflict-prone regions.",
+      "Rationale": "Decades of instability in Somalia have left thousands vulnerable to recruitment by armed groups. Al-Shabaab continues to exploit socioeconomic grievances, particularly among marginalized clans. While efforts have improved security, gaps in reintegration infrastructure persist. This project directly supports the National Programme on combatant reintegration, addressing a critical need. The initiative is aligned with Somalia’s peacebuilding agenda and IOM’s strategic objective to reduce irregular migration drivers. Gender-sensitive programming ensures both male and female combatants are equitably supported.",
+      "Project Description": "The project will support up to 5,000 disengaging combatants through a comprehensive DDR approach. Reception centers in Baidoa and Kismayo will provide health screenings, counselling, education, and vocational training. Transitional housing and reintegration grants will support return to civilian life. IOM will provide technical assistance to the DDR Ministries, establish satellite coordination offices, and facilitate community engagement activities through youth centers. Key assumptions include political support from FGoS, safe access to sites, and acceptance by host communities. Outputs include improved DDR infrastructure, strengthened government capacity, and reduced recidivism. IOM’s comparative advantage lies in its proven track record in complex post-conflict stabilization efforts and community dialogue.",
+      "Partnerships and Coordination": "The DDR Departments of FGoS and SWS will co-manage Transition Centers. Local NGOs will deliver psychosocial support and skills training. Community leaders and youth workers will facilitate reintegration activities. A DDR steering committee chaired by IOM will oversee coordination, reporting quarterly progress and resolving operational challenges.",
+      "Monitoring": "Monitoring will involve monthly field visits, center-level tracking of attendance and service uptake, and reintegration outcome assessments. An M&E officer will collect disaggregated data on gender, age, and reintegration progress. Mobile data tools and secure cloud dashboards will be used for real-time monitoring. In conflict-affected zones, third-party monitors will be deployed to ensure data reliability.",
+      "Evaluation": "An internal midterm evaluation will assess progress toward results. An independent final evaluation will be conducted in month 22, using surveys, interviews, and reintegration case studies. The evaluation will inform future DDR programming and assess impact on conflict reduction and community cohesion."
+    },
+    "created_at": "2025-06-05T14:16:44.097674",
+    "updated_at": "2025-06-05T14:17:14.380806",
+    "is_sample": true
+  },
+  {
+    "proposal_id": "sample-3",
+    "form_data": {
+      "Project title": "AVRR Support for Trafficking Victims and Exploited Dancers",
+      "Project type": "Assisted Voluntary Return and Reintegration (AVRR)",
+      "Secondary project type": "Counter-Trafficking",
+      "Geographical Coverage": "Switzerland and SADC Region (Botswana, Malawi, Mozambique, South Africa, Zambia, Zimbabwe)",
+      "Executing agency": "International Organization for Migration (IOM)",
+      "Beneficiaries": "Victims of trafficking, undocumented migrants, unaccompanied children. Disaggregated by gender, age, and risk profile.",
+      "Partner(s)": "Save the Children, UNHCR, UNODC, national governments, civil society partners",
+      "Management site": "IOM South Africa Regional Office",
+      "Duration": "12 months",
+      "Budget": "USD 2,800,000"
+    },
+    "generated_sections": {
+      "Summary": "This project provides voluntary return and reintegration assistance to vulnerable migrants, including victims of trafficking and exploited dancers in Switzerland. By enhancing protective mechanisms, strengthening institutional capacity, and facilitating safe return, the project aims to restore dignity and reduce exploitation risks. Direct support will include shelter, psychosocial care, and reintegration packages tailored by vulnerability profile. Regional policy dialogue and cross-border coordination will improve long-term outcomes and prevent re-trafficking.",
+      "Rationale": "Southern Africa is a migration hub where many move in mixed flows and fall prey to exploitation. Women and UMCs are particularly vulnerable. Despite prior AVRR initiatives, gaps persist in identifying and supporting trafficking victims. This project addresses systemic weaknesses in return processes and post-return follow-up. It is critical to national and regional strategies on human trafficking and migrant protection. IOM’s leadership in SADC dialogues and technical expertise in AVRR programming make it ideally positioned to lead this initiative.",
+      "Project Description": "The project will establish referral and screening mechanisms in Switzerland, deliver tailored AVRR support, and ensure post-return case management across six SADC countries. Activities include legal counselling, temporary accommodation, return flight facilitation, and community-based reintegration planning. IOM will work with national governments to train border officials and social workers on trafficking identification and victim support. The project assumes stable cooperation from host and origin countries, and that local partners can provide necessary services. Outputs include return kits, referral protocols, and institutional capacity building. Cross-cutting priorities include gender-sensitive protection and ethical data handling.",
+      "Partnerships and Coordination": "IOM will work with UNHCR, UNICEF, Save the Children, and SADC to align reintegration efforts and ensure shared protection standards. Civil society actors will co-develop return plans and track reintegration indicators. Governments will co-host workshops and joint monitoring missions. A regional coordination body led by IOM will ensure harmonized implementation.",
+      "Monitoring": "Monitoring will involve individual case tracking, site visits to reintegration communities, and quarterly data reports. A digital case management system will be used across countries. Protection officers will conduct follow-ups via in-person and remote interviews. Annual outcome surveys will evaluate economic and social reintegration. Feedback mechanisms will be in place for beneficiaries to report service gaps or risks.",
+      "Evaluation": "A final external evaluation will apply DAC criteria, focusing on reintegration sustainability and cross-border coordination. Tools include in-depth interviews, satisfaction surveys, and comparative analysis with previous AVRR phases. Recommendations will inform regional anti-trafficking frameworks."
+    },
+    "is_accepted": true,
+    "created_at": "2025-06-05T14:16:44.097674",
+    "updated_at": "2025-06-05T14:17:14.380806",
+    "is_sample": true
+  }
+]

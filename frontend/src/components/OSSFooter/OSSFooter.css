@@ -1,0 +1,27 @@
+.OSSFooter {
+        border-top: 1px solid #dee2e6;
+
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+        gap: 2.5px;
+
+        height: 65px;
+        width: 100%;
+
+        background-color: #f8f9fa;
+
+        font-family: "Noto";
+        font-weight: 400;
+        font-size: 14px;
+}
+
+.OSSFooter a {
+        color: #0366d6;
+        text-decoration: none;
+}
+.OSSFooter a:hover {
+        text-decoration: underline;
+}

@@ -74,18 +74,18 @@ export default function Dashboard ()
                                 <CommonButton icon={createNew} label="Create New Proposal" onClick={() => navigate("/chat")} />
                         </div>
 
-                        {projects && projects.length ?
+                        {projects && projects.filter(project => !project.is_sample).length ?
                                 <div className='Dashboard_search'>
                                         <img src={search} />
                                         <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className='Dashboard_search_input' placeholder='Search' />
                                 </div>
                                 :
-                                ""
+                                <h3 className='Dashboard_sectionHeading'>Sample proposals</h3>
                         }
 
                         <div className='Dashboard_projects'>
-                                {displayProjects && displayProjects.length ?
-                                        displayProjects.map((project, i) =>
+                                {displayProjects && displayProjects.filter(project => !project.is_sample).length ?
+                                        displayProjects.filter(project => !project.is_sample).map((project, i) =>
                                                 <Project
                                                         key={i}
                                                         projectIndex={i}
@@ -99,7 +99,20 @@ export default function Dashboard ()
                                                 </Project>
                                         )
                                         :
-                                        <h2 className='Dashboard_noDraftsNotice'>No drafts found.</h2>
+                                        displayProjects.filter(project => project.is_sample).map((project, i) =>
+                                                <Project
+                                                        key={i}
+                                                        projectIndex={i}
+                                                        project_title={project.project_title}
+                                                        proposal_id={project.proposal_id}
+                                                        date={cleanedDate(project.updated_at)}
+                                                        onClick={handleProjectClick}
+                                                        status={project.is_accepted}
+                                                        sample
+                                                >
+                                                        {project.summary}
+                                                </Project>
+                                        )
                                 }
                         </div>
                 </div>
