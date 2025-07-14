@@ -30,7 +30,7 @@ export default function Chat (props)
 
         const [sidebarOpen, setSidebarOpen] = useState(false)
 
-        const [titleName, setTitleName] = useState(props?.title ?? "Create Proposal")
+        const [titleName, setTitleName] = useState(props?.title ?? "Generate Draft Proposal")
 
         const [userPrompt, setUserPrompt] = useState("")
 
@@ -124,6 +124,22 @@ export default function Chat (props)
                 "Evaluation": {
                         content: "",
                         open: true
+                },
+                "Results Matrix": {
+                        content: "",
+                        open: true
+                },
+                "Work Plan": {
+                        content: "",
+                        open: true
+                },
+                "Budget": {
+                        content: "",
+                        open: true
+                },
+                "Annex 1. Risk Assessment Plan": {
+                        content: "",
+                        open: true
                 }
         })
 
@@ -175,8 +191,8 @@ export default function Chat (props)
         useEffect(() => {
                 if(sidebarOpen)
                 {
-                        if(titleName === "Create Proposal")
-                                setTitleName("Generate Proposal")
+                        if(titleName === "Generate Draft Proposal")
+                                setTitleName("Generate Draft Proposal")
                 }
         // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [sidebarOpen])
@@ -525,10 +541,10 @@ export default function Chat (props)
                                                 </div>
 
                                                 <div className="Chat_inputArea">
-                                                        <textarea value={userPrompt} onChange={e => setUserPrompt(e.target.value)} placeholder='Enter your project requirements' className='Chat_inputArea_prompt' />
+                                                        <textarea value={userPrompt} onChange={e => setUserPrompt(e.target.value)} placeholder='Provide as much details as possible on your initial project idea!' className='Chat_inputArea_prompt' />
 
                                                         <span onClick={() => setFormExpanded(p => !p)} className={`Chat_inputArea_additionalDetails ${form_expanded && "expanded"}`}>
-                                                                Additional Details
+                                                                Specify Parameters
                                                                 <img src={arrow} alt="Arrow" />
                                                         </span>
 
@@ -543,9 +559,9 @@ export default function Chat (props)
                                                                         label === "Duration";
                                                                 const datalistId = `datalist_${label.replaceAll(' ', '_')}`;
                                                                 const options = label === "Project type"
-                                                                        ? ["Addressing Violent Extremism (PE)", "Administrative Budget (AD)", "Capacity Building through Qualified Human Resources (RQ)", "CCCM (CC)", "Community and Economic Development (CE)", "Community Stablisation (CS)", "Counter Trafficking (CT)", "Disarmament, Demobilization and Reintegration", "Disaster Risk Reduction (DR)", "Displacement Tracking (DX)", "Durable Solutions (DS)", "Election Observation Missions (EM)", "Electoral Assistance (EA)", "Emergency Preparedness (EP)", "Emergency Response and Assistance to Displaced Persons (DP)", "Emergency Shelter and NFI (SN)", "Emerging Resettlement Countries Joint Support", "Health Promotion and Assistance for Migrants (MA)", "Humanitarian Assistance to Stranded Migrants (SM)", "Humanitarian Assistance to Victims (HA)", "Immigration and Borders (IB)", "Immigration and Visas (IV)", "International Migration Law (IM)", "Labour Migration (LM)", "Land and Property (LP)", "Media and Communications (PM)", "Migrant Health Assessments and Travel Assistance (MH)", "Migrant Training and Integration (FM)", "Migration Health Assistance for Crisis Affected Populations (MP)", "Migration Policy Activities (PO)", "Migration Research and Publications (PR)", "Migration, Environment and Climate Change (NC)", "Miscellaneous Admin Activities Funded by Voluntary Contributions (MI)", "Miscellaneous Internal Service Fee Administration (MJ)", "Miscellaneous Staff and Office Expenses (MI)", "Miscellaneous Sublease, Lease and Sales (ML)", "Operational Support Income - Core Staff (OS)", "Operational Support Income - Security (OS)", "Out of Country Voting (OC)", "Overseas Processing Entity - OPE (OP)", "Peacebuilding and Peace Preservation (PB)", "Remittances (RM)", "Reparations (RP)", "Repatriation Assistance (RA)", "Resettlement Assistance (RE)", "Return Assistance to Migrants and Governments (RT)", "Seconded Staff (SS)"]
+                                                                        ? ["Camp Coordination and Camp Management (CCCM)","Education","Health","Nutrition","Water, Sanitation and Hygiene (WASH)","Protection","Shelter and Non-Food Items (NFI)","Food Security","Logistics","Emergency Telecommunications", "Coordination, Safety and Security", "Cross-sector Activities"]
                                                                         : label === "Secondary project type"
-                                                                        ? ["Addressing Violent Extremism (PE)", "Administrative Budget (AD)", "Capacity Building through Qualified Human Resources (RQ)", "CCCM (CC)", "Community and Economic Development (CE)", "Community Stablisation (CS)", "Counter Trafficking (CT)", "Disarmament, Demobilization and Reintegration", "Disaster Risk Reduction (DR)", "Displacement Tracking (DX)", "Durable Solutions (DS)", "Election Observation Missions (EM)", "Electoral Assistance (EA)", "Emergency Preparedness (EP)", "Emergency Response and Assistance to Displaced Persons (DP)", "Emergency Shelter and NFI (SN)", "Emerging Resettlement Countries Joint Support", "Health Promotion and Assistance for Migrants (MA)", "Humanitarian Assistance to Stranded Migrants (SM)", "Humanitarian Assistance to Victims (HA)", "Immigration and Borders (IB)", "Immigration and Visas (IV)", "International Migration Law (IM)", "Labour Migration (LM)", "Land and Property (LP)", "Media and Communications (PM)", "Migrant Health Assessments and Travel Assistance (MH)", "Migrant Training and Integration (FM)", "Migration Health Assistance for Crisis Affected Populations (MP)", "Migration Policy Activities (PO)", "Migration Research and Publications (PR)", "Migration, Environment and Climate Change (NC)", "Miscellaneous Admin Activities Funded by Voluntary Contributions (MI)", "Miscellaneous Internal Service Fee Administration (MJ)", "Miscellaneous Staff and Office Expenses (MI)", "Miscellaneous Sublease, Lease and Sales (ML)", "Operational Support Income - Core Staff (OS)", "Operational Support Income - Security (OS)", "Out of Country Voting (OC)", "Overseas Processing Entity - OPE (OP)", "Peacebuilding and Peace Preservation (PB)", "Remittances (RM)", "Reparations (RP)", "Repatriation Assistance (RA)", "Resettlement Assistance (RE)", "Return Assistance to Migrants and Governments (RT)", "Seconded Staff (SS)"]
+                                                                        ? ["Camp Coordination and Camp Management (CCCM)","Education","Health","Nutrition","Water, Sanitation and Hygiene (WASH)","Protection","Shelter and Non-Food Items (NFI)","Food Security","Logistics","Emergency Telecommunications", "Coordination, Safety and Security", "Cross-sector Activities"]
                                                                         : label === "Duration"
                                                                         ? ["1 month", "3 months", "6 months", "12 months", "18 months", "24 months", "30 months", "36 months",]
                                                                         : [];

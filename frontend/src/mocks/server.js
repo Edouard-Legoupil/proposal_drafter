@@ -117,7 +117,11 @@ export const server = setupServer(
                                 'Project Description': '',
                                 'Partnerships and Coordination': '',
                                 Monitoring: '',
-                                Evaluation: ''
+                                Evaluation: '',
+                                'Results Matrix': '',
+                                'Work Plan': '',
+                                Budget: '',
+                                'Annex 1. Risk Assessment Plan': ''
                         },
                         is_accepted: isAccepted
                 })

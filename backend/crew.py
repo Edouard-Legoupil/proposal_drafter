@@ -40,7 +40,9 @@ llm = AzureChatOpenAI(
 )
 
 # Load JSON instructions from the config folder
-CONFIG_PATH = "config/templates/iom_proposal_template.json"
+#CONFIG_PATH = "config/templates/iom_proposal_template.json"
+CONFIG_PATH = "config/templates/unhcr_cerf_proposal_template.json"
+
 with open(CONFIG_PATH, "r", encoding="utf-8") as file:
     proposal_data = json.load(file)
 
@@ -53,13 +55,14 @@ class ProposalCrew():
     generate_proposal_log = 'crew_logs/generate_proposal_log.txt'
     regenerate_proposal_log = 'crew_logs/regenerate_proposal_log.txt'
 
-        # Path to knowledge files 
+    # Path to knowledge files 
     json_knowledge = JSONKnowledgeSource(
         file_paths=[
             "combine_example.json"
         ]
     )
 
+## List of agents ##########
     @agent
     def content_generator(self) -> Agent:
         return Agent(
@@ -75,7 +78,7 @@ class ProposalCrew():
             llm= llm,
             verbose=True
         )
-    #Introducing a new agent- regenerator agent - [NEED TO DISCUSS ON THIS WITH NISHANT]
+
     @agent
     def regenerator(self) -> Agent:  # ✅ New agent for regeneration
         return Agent(
@@ -83,8 +86,8 @@ class ProposalCrew():
             llm= llm,
             verbose=True
         )
-    #Introducing a new agent- regenerator agent - [NEED TO DISCUSS ON THIS WITH NISHANT]
 
+## List of Tasks ##########
     # Task: Generate content for a section
     @task
     def content_generation_task(self) -> Task:
@@ -101,15 +104,14 @@ class ProposalCrew():
             # inputs={"section": section, "instructions": proposal_data["sections"]}
         )
     
-    #Introducing a new agent- regenerator agent - [NEED TO DISCUSS ON THIS WITH NISHANT]
     # Task: Regenerate content with concise input
     @task
     def regeneration_task(self) -> Task:  # ✅ New task for regeneration
         return Task(
             config=self.tasks_config['regeneration_task']
         )
-    #Introducing a new agent- regenerator agent - [NEED TO DISCUSS ON THIS WITH NISHANT]
 
+## Crew orchestration ####
     @crew
     def generate_proposal_crew(self) -> Crew:  # Ensure method name is correct
         """Creates the ProposalCrew with sequential processing"""
@@ -132,7 +134,7 @@ class ProposalCrew():
             }
         )
        
-    #Introducing a new agent- regenerator agent - [NEED TO DISCUSS ON THIS WITH NISHANT]
+
     @crew
     def regenerate_proposal_crew(self) -> Crew:  # ✅ New crew for regeneration
         """Creates the ProposalCrew for regenerating a section"""
@@ -155,7 +157,6 @@ class ProposalCrew():
             }
         )
    
-    #Introducing a new agent- regenerator agent - [NEED TO DISCUSS ON THIS WITH NISHANT]
 
     # Move this function to Tools folder
     def generate_final_markdown(self, generated_sections):

@@ -5,6 +5,9 @@ proposal-documents/
 # Ignore environment variable files
 .env
 
+# Ignore python virtual environment 
+.venv
+
 # Ignore Python cache files
 __pycache__/
 *.py[cod]

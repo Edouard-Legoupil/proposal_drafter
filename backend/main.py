@@ -23,7 +23,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
 from functools import wraps
+
+## DB connection 
+import logging
 from sqlalchemy import create_engine, text
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+
+# Configure logging for debugging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 import urllib.parse
 from fastapi import Depends
 
@@ -66,9 +76,11 @@ from datetime import timedelta, datetime, timezone
 # import pypandoc
 # from docx2pdf import convert
 
+# Initialize FastAPI app instance
 app = FastAPI()
 
 # Allow CORS from specific frontend origin(s)
+# Enable CORS to allow frontend (e.g., localhost or Azure) to access this API
 origins = [
     "https://proposal-drafter.azurewebsites.net/",
      "http://localhost:8503" # here the frontend url will be there
@@ -95,11 +107,40 @@ db_password = os.getenv('DB_PASSWORD')
 db_host = os.getenv('DB_HOST')
 db_port = os.getenv('DB_PORT')
 db_name = os.getenv('DB_NAME')
+
+logger.info(f"GAE_ENV: {os.getenv('GAE_ENV')}")
+logger.info(f"K_SERVICE: {os.getenv('K_SERVICE')}")
                 
 encoded_password = urllib.parse.quote_plus(db_password)
-    
-connection_string = f"postgresql://{db_username}:{encoded_password}@{db_host}:{db_port}/{db_name}"
-engine = create_engine(connection_string)
+
+
+# Determine connection string based on environment - if run on google cloud 
+if os.getenv("GAE_ENV") == "standard" or os.getenv("K_SERVICE"): # Running on Cloud Run/App Engine
+    # Cloud SQL Proxy provides a Unix socket
+    if not db_host :
+        logger.error("db_host environment variable is missing. Cannot connect to Cloud SQL.")
+        raise ValueError("db_host  environment variable is missing.")
+    UNIX_SOCKET_PATH = f"/cloudsql/{db_host }"
+    connection_string = f"postgresql+psycopg2://{db_username}:{encoded_password}@/{db_name}?host={UNIX_SOCKET_PATH}"
+    logger.info(f"Cloud Run connection_string: {connection_string}")
+else:
+    # Local development connection
+    connection_string = f"postgresql://{db_username}:{encoded_password}@{db_host}:{db_port}/{db_name}"
+
+try:
+    engine = create_engine(connection_string)
+    # Attempt a connection to catch issues early
+    with engine.connect() as connection:
+        logger.info("Successfully connected to the database engine.")
+except Exception as e:
+    logger.error(f"Failed to create database engine or connect: {e}")
+    raise # Re-raise the exception to make it visible in logs
+
+
+
+
+# Helper function to retrieve and validate user from JWT token stored in cookies
+# Fetches user info from PostgreSQL based on decoded email
 
 def get_current_user(request: Request):
     token = request.cookies.get("auth_token")
@@ -134,6 +175,8 @@ def get_current_user(request: Request):
 
 
 # Initialize Redis with error handling
+# Attempts to connect to Redis. If unavailable, falls back to in-memory DictStorage
+# Used for session caching (temporary user-generated data)
 try:
     redis_client = redis.Redis(host="redis", port=6379, db=0, decode_responses=True)
     # Test connection
@@ -161,9 +204,13 @@ except redis.ConnectionError:
     redis_client = DictStorage()
 
 
+# Load section definitions and instructions from a predefined JSON template
+# Used to guide proposal drafting and validation
+#CONFIG_PATH = "config/templates/iom_proposal_template.json"
+#SECTIONS = ["Summary", "Rationale", "Project Description", "Partnerships and Coordination", "Monitoring", "Evaluation"]
 
-CONFIG_PATH = "config/templates/iom_proposal_template.json"
-SECTIONS = ["Summary", "Rationale", "Project Description", "Partnerships and Coordination", "Monitoring", "Evaluation"]
+CONFIG_PATH = "config/templates/unhcr_cerf_proposal_template.json"
+SECTIONS = ["Summary", "Rationale", "Project Description", "Partnerships and Coordination", "Monitoring", "Evaluation", "Results Matrix", "Work Plan", "Budget", "Annex 1. Risk Assessment Plan"]
 
 # Load JSON configuration
 with open(CONFIG_PATH, "r", encoding="utf-8") as file:
@@ -207,8 +254,8 @@ async def store_base_data(request: BaseDataRequest,current_user: dict = Depends(
         "project_description": request.project_description,
         "user_id": current_user["user_id"] 
     }
-    # Store in Redis with a 1-hour expiration (3600 seconds)
-    redis_client.setex(session_id, 3600, json.dumps(data))
+    # Store in Redis with a 1-hour expiration (3600 seconds) -- rev to 5 min
+    redis_client.setex(session_id, 300, json.dumps(data))
     
     return {"message": "Base data stored successfully", "session_id": session_id}
 
@@ -706,12 +753,12 @@ async def login(request: Request):
             return JSONResponse(status_code=401, content={"error": "Invalid password!"})
 
         # ✅ Check if user already has an active session
-        existing_session_token = redis_client.get(f"user_session:{user_id}")
-        if existing_session_token:
-            return JSONResponse(
-                status_code=403,
-                content={"error": "You are already logged in from another session."}
-            )
+  #      existing_session_token = redis_client.get(f"user_session:{user_id}")
+  #      if existing_session_token:
+  #          return JSONResponse(
+  #              status_code=403,
+  #              content={"error": "You are already logged in from another session."}
+  #          )
         
         # ✅ Create JWT token
         token = jwt.encode(

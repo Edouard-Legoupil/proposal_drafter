@@ -5,3 +5,4 @@ frontend/.env
 backend/.azure
 backend/.env2.yml
 .env
+backend/venv/*

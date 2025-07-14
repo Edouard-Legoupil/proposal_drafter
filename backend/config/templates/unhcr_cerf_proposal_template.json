@@ -1,0 +1,276 @@
+{
+  "project_info": {
+    "section_name": "Project Information",
+    "fields": [
+      {
+        "field": "Project title",
+        "instructions": "Enter a concise title (max 200 characters) that clearly reflects the purpose and scope of the project."
+      },
+      {
+        "field": "Project type",
+        "instructions": "Select the primary sector/cluster relevant to this project, aligned with CERF sector classifications."
+      },
+      {
+        "field": "Secondary project type",
+        "instructions": "Indicate any secondary sector/cluster addressed by the project, if applicable."
+      },
+      {
+        "field": "Geographical Coverage",
+        "instructions": "Specify country and subnational locations (regions, districts, cities) where activities will be implemented."
+      },
+      {
+        "field": "Executing agency",
+        "instructions": "Indicate UNHCR as the executing agency unless otherwise coordinated."
+      },
+      {
+        "field": "Beneficiaries",
+        "instructions": "Provide total number of direct beneficiaries disaggregated by sex (men, women), age (boys, girls), and persons with disabilities. Avoid household or percentage-based figures."
+      },
+      {
+        "field": "Partner(s)",
+        "instructions": "List implementing sub-partners (e.g. NGOs, national/local actors) and describe their role where relevant."
+      },
+      {
+        "field": "Management site",
+        "instructions": "Identify the UNHCR Field or Sub-Office responsible for implementation oversight."
+      },
+      {
+        "field": "Duration",
+        "instructions": "Specify project duration: either 6 months for Rapid Response (RR) or 12 months for Underfunded Emergencies (UFE)."
+      },
+      {
+        "field": "Budget",
+        "instructions": "Indicate total amount requested from CERF and breakdown by sector(s). Budget must match Excel template."
+      }
+    ]
+  },
+  "sections": [
+    {
+      "section_name": "Summary",
+      "word_limit": 4000,
+      "instructions": "Summarize the crisis/emergency context, humanitarian needs, target population (who, where, how many), and key activities grouped by sector (protection, shelter/NFIs, etc.). Do not duplicate text from the allocation strategy. Explain how the project will be catalytic/transformational and how it will be sustainable beyond the CERF allocation"
+    },
+    {
+      "section_name": "Rationale",
+      "word_limit": 1000,
+      "instructions": "Justify the project: What is the crisis/emergency? Why is this response necessary now? Explain the emergency or gap being addressed. Who is affected, and why is CERF funding urgently needed now? Explain how the proposed project will impact the lives of affected people."
+    },
+    {
+      "section_name": "Project Description",
+      "word_limit": 1000,
+      "instructions": "Describe proposed interventions per sector. Define expected outputs, activities, outcomes, geographic coverage, delivery modality (in-kind, CVA, services), and any special focus (e.g., disabilities, GBV, AAP). Explain what is the pursued impact for each proposed activity."
+    },
+    {
+      "section_name": "Implementation and Coordination Arrangements",
+      "word_limit": 1000,
+      "instructions": "Describe coordination arrangements with government, with relevant clusters/sectors, local authorities, and humanitarian actors. Indicate roles of sub-partners and how their actions complement UNHCR’s efforts. Make sure that any software or digital solutions developed using the CERF are available to the entire community by releasing it as a Digital Public Good"
+    },
+    {
+      "section_name": "Monitoring",
+      "word_limit": 1000,
+      "instructions": "Explain how results will be monitored. Include data sources (e.g. partner reports, post-distribution monitoring), roles of partners, and  means of verification. Describe how data for the project indicators will be collected, what data collection tools will be used, and how often data will be collected and analysed. If working through implementing partners, mention how they will be monitored and their reporting requirements, and in particular if working in a remote management situation with difficult access due to security.",
+      "reference": "Refer to IASC guidance and standards, such as the Collective AAP Framework, the CBCM guidance, the PSEA referral procedures, the Gender Age Marker, Guidelines on the Inclusion of Persons with Disabilities in Humanitarian Action, and Guidelines on Data Responsibility"
+    },
+    {
+      "section_name": "Evaluation",
+      "word_limit": 350,
+      "instructions": "Specify whether an internal or external evaluation is planned. State its objective, scope, and when it will occur (during or after implementation). Briefly describe the expected methodology to be employed in realizing the evaluation purpose."
+    },
+    {
+      "section_name": "Results Matrix",
+      "instructions": "Provide a results framework with outcomes, outputs, SMART indicators, sex- and age-disaggregated targets, means of verification, and linkage to the activities in the project description. Use at least 1 output (with corresponding indicators/activities) per sector and a maximum of 5 output. Ensure clear link between indicator targets and beneficiary table. Ensure clear link between indicator targets and beneficiary table. CERF encourages the use of cash & vouchers where feasible/appropriate",
+      "reference": "Use CERF Logical Framework and  standard indicators where possible.",
+      "table": {
+        "columns": [
+          "Indicator",
+          "Target (Men/Women/Boys/Girls)",
+          "Means of Verification",
+          "Comments"
+        ],
+        "rows": [
+          {
+            "row_title": "Outcome 1",
+            "row_description": "The intended changes in institutional performance, individual or group behaviour or attitudes, or the political, economic, or social position of the beneficiaries. Example: Conflict-affected population accesses integrated protection services",
+            "cells": {
+              "Indicator": "Quantitative or qualitative factors or variables to measure achievement or to reflect expected changes. Example: # of people receiving protection assistance",
+              "Target (Men/Women/Boys/Girls)": "XX/XX/XX/XX",
+              "Means of Verification": "Partner reports, UNHCR reports, post-distribution monitoring",
+              "Comments": ""
+            }
+          },
+          {
+            "row_title": "Output 1.1",
+            "row_description": "The intended changes in the skills or abilities of the beneficiaries, or the availability of new products or services as a result of project activities. Example: Provision of MPCA and protection referrals",
+            "cells": {
+              "Indicator": "Quantitative or qualitative factors or variables to measure achievement or to reflect expected changes. Example: # of individuals receiving MPCA",
+              "Target (Men/Women/Boys/Girls)": "XX/XX/XX/XX",
+              "Means of Verification": "Distribution records, partner reports",
+              "Comments": ""
+            }
+          }
+        ]
+      }
+    },
+    {
+      "section_name": "Work Plan",
+      "instructions": "Indicate the timing and responsible partners for each key activity. Use activity codes and mark the expected duration across the project period. Mark the start and end of each activity across months using a visual cue (e.g., X or ✓). The reference sector in the workplan should corresponds to the sector used in the Result Matrix",
+      "reference": "Use as muchas possible CERF list of activities.",
+      "table": {
+        "columns": [
+          "Activity Description",
+          "Responsible Partner",
+          "Month 1",
+          "Month 2",
+          "Month 3",
+          "Month 4",
+          "Month 5",
+          "Month 6"
+        ]
+      }
+    },
+    {
+      "section_name": "Budget",
+      "instructions": "Provide a budget breakdown formatted as a table. Categorize costs under: Staffing, Supplies/Commodities, Equipment, Services, Travel, Sub-grants, Operating Costs, and Project Support Costs. Match narrative activities with budget lines. Provide % breakdown of total project cost per sector. Use maximum 2 decimal places for quantity & unit cost. Ensure the budget line description explains the quantity and unit cost and consistency between budget line description vs Quantity/Unit cost. Explain how large unit costs calculated",
+      "table": {
+        "columns": [
+          "Budget Line Description",
+          "Remarks (max. 1,500 characters)",
+          "Unit description",
+          "Unit Quantity",
+          "Unit Cost",
+          "Duration",
+          "% Charged to CERF",
+          "Total cost (USD)"
+        ],
+        "rows": [
+          {
+            "row_title": "A. Staff and Other Personnel Costs",
+            "row_description": "Please itemize staff positions and associated costs. Where breakdown is impractical, provide total amount with sufficient description of cost elements. Typically cash-transfers go here. % charged to CERF can vary between 0-100%. If this category subtotal is <6% of direct costs, use ONLY 1 lump sum budget line, if not use separate budget line per staff grade (P4, P3, P2, NOB, NOA, etc.).",
+            "cells": {
+              "Budget Line Description": "",
+              "Remarks (max. 1,500 characters)": "",
+              "Unit description": "",
+              "Unit Quantity": "",
+              "Unit Cost": "",
+              "Duration": "",
+              "% Charged to CERF": "",
+              "Total cost (USD)": ""
+            }
+          },
+          {
+            "row_title": "B. Supplies, Commodities, Materials",
+            "row_description": "Please itemize supplies and materials. Provide total amount if breakdown is impractical. % charged to CERF must always be “n/a” as it is assumed that CERF covers 100%",
+            "cells": {
+              "Budget Line Description": "",
+              "Remarks (max. 1,500 characters)": "",
+              "Unit description": "",
+              "Unit Quantity": "",
+              "Unit Cost": "",
+              "Duration": "",
+              "% Charged to CERF": "",
+              "Total cost (USD)": ""
+            }
+          },
+          {
+            "row_title": "C. Equipment",
+            "row_description": "List any equipment needed. Provide total cost with sufficient description. % charged to CERF must always be “n/a” as it is assumed that CERF covers 100%. If this category subtotal is <2% of direct costs, use ONLY 1 lump sum budget line, if not use separate budget line per type of equipment (Computers, Telephones, Tablets, etc.",
+            "cells": {
+              "Budget Line Description": "",
+              "Remarks (max. 1,500 characters)": "",
+              "Unit description": "",
+              "Unit Quantity": "",
+              "Unit Cost": "",
+              "Duration": "",
+              "% Charged to CERF": "",
+              "Total cost (USD)": ""
+            }
+          },
+          {
+            "row_title": "D. Contractual Services",
+            "row_description": "Provide details of contractual services, consultancies, etc.  Typically cash-transfer fees go here. % charged to CERF must always be “n/a” as it is assumed that CERF covers 100%",
+            "cells": {
+              "Budget Line Description": "",
+              "Remarks (max. 1,500 characters)": "",
+              "Unit description": "",
+              "Unit Quantity": "",
+              "Unit Cost": "",
+              "Duration": "",
+              "% Charged to CERF": "",
+              "Total cost (USD)": ""
+            }
+          },
+          {
+            "row_title": "E. Travel",
+            "row_description": "Itemize travel costs including transportation and per diem. % charged to CERF must always be “n/a” as it is assumed that CERF covers 100%. If this category subtotal is <1.5% of direct costs, use ONLY 1 lump sum budget line, if not use separate budget line per subcategory( DSA-Daily Subsistance Allowance, Airfare, Vehicle Hire, Fuel ",
+            "cells": {
+              "Budget Line Description": "",
+              "Remarks (max. 1,500 characters)": "",
+              "Unit description": "",
+              "Unit Quantity": "",
+              "Unit Cost": "",
+              "Duration": "",
+              "% Charged to CERF": "",
+              "Total cost (USD)": ""
+            }
+          },
+          {
+            "row_title": "F. Transfers and Grants to Counterparts",
+            "row_description": "Include grants or transfers to implementing partners. Indicate partner type: government, NNGOs, Red Cross/Crescent, INGOs. % charged to CERF must always be “n/a” as it is assumed that CERF covers 100%",
+            "cells": {
+              "Budget Line Description": "",
+              "Remarks (max. 1,500 characters)": "",
+              "Unit description": "",
+              "Unit Quantity": "",
+              "Unit Cost": "",
+              "Duration": "",
+              "% Charged to CERF": "",
+              "Total cost (USD)": ""
+            }
+          },
+          {
+            "row_title": "G. General Operating and Other Direct Costs",
+            "row_description": "Include utilities, communications, rent, and other direct costs. The maximum  for this type should not exceed 6.5% of the total buudget. % charged to CERF must always be “n/a” as it is assumed that CERF covers 100%. If this category subtotal is <1.5% of direct costs, use ONLY 1 lump sum budget line, if not use separate budget line per subcategory (Office Rent, Communincation, Office Utilities",
+            "cells": {
+              "Budget Line Description": "",
+              "Remarks (max. 1,500 characters)": "",
+              "Unit description": "",
+              "Unit Quantity": "",
+              "Unit Cost": "",
+              "Duration": "",
+              "% Charged to CERF": "",
+              "Total cost (USD)": ""
+            }
+          }
+        ]
+      }
+    },
+    {
+      "section_name": "Annex 1. Risk Assessment Plan",
+      "instructions": "List key contextual or operational risks (e.g., access, security, supply chain). Assess their impact and likelihood, and describe mitigation strategies.",
+      "table": {
+        "columns": [
+          "Risk Factor",
+          "Consequence (Rank 1 to 6)",
+          "Likelihood & Timeline",
+          "Risk Treatment Plan"
+        ],
+        "rows": [
+          {
+            "Risk Factor": "E.g. Access restrictions due to insecurity",
+            "Consequence (Rank 1 to 6)": "4",
+            "Likelihood & Timeline": "High, during first 2 months",
+            "Risk Treatment Plan": {
+              "Option": "Reduce likelihood of the risk",
+              "Action": "Deploy mobile teams, partner with local NGOs that have better access"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "headquarters_info": {
+    "note": "UNHCR Headquarters Contact (for official correspondence)",
+    "address": "Case Postale 2500, CH-1211 Genève 2 Dépôt, Switzerland",
+    "contact": "Tel: +41 22 739 81 11 • Fax: +41 22 739 73 23 • E-mail: hq@unhcr.org • Internet: http://www.unhcr.org"
+  }
+}

@@ -71,7 +71,7 @@ export default function Dashboard ()
                                         <img className='Dashboard_label_fileIcon' src={fileIcon} />
                                         Proposals
                                 </div>
-                                <CommonButton icon={createNew} label="Create New Proposal" onClick={() => navigate("/chat")} />
+                                <CommonButton icon={createNew} label="Generate New Proposal" onClick={() => navigate("/chat")} />
                         </div>
 
                         {projects && projects.filter(project => !project.is_sample).length ?
