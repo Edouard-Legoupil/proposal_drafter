@@ -1,4 +1,4 @@
-### Deploying 'proposal_drafter' on Google Cloud Platform
+# Deploying 'proposal_drafter' on Google Cloud Platform
 
 This tutorial provides a step-by-step guide to deploying the proposal_drafter application, consisting of a PostgreSQL database, FastAPI backend, React frontend, and Nginx, to Google Cloud Platform (GCP):
 
@@ -6,9 +6,9 @@ This tutorial provides a step-by-step guide to deploying the proposal_drafter ap
 
  * Backend: Running as a serverless container on Cloud Run.
 
- * Frontend: Served as static files from Cloud Storage, optionally accelerated by Cloud CDN.
+ * Frontend: Served as static files from github pages or Cloud Storage, optionally accelerated by Cloud CDN.
 
-### 1. Prerequisites
+## 1. Prerequisites
 
 Before you begin, ensure you have the following:
 
@@ -22,7 +22,7 @@ Before you begin, ensure you have the following:
 
  * Node.js and npm/yarn: For building the React frontend.
 
-### 2. Clone the Repository
+## 2. Clone the Repository
 
 First, clone your application's source code from GitHub:
 
@@ -31,7 +31,7 @@ git clone https://github.com/Edouard-Legoupil/proposal_drafter.git
 cd proposal_drafter
 ```
 
-### 3. Set Up Google Cloud Project
+## 3. Set Up Google Cloud Project
 
 If you don't have a project, create one:
 
@@ -64,11 +64,11 @@ gcloud services enable sqladmin.googleapis.com \
 
 https://console.cloud.google.com/flows/enableapi?apiid=sqladmin&redirect=https://console.cloud.google.com
 
-### 4. Deploy PostgreSQL Database (Cloud SQL)
+## 4. Deploy PostgreSQL Database (Cloud SQL)
 
 We'll use Cloud SQL to host your PostgreSQL database.
 
-#### 4.1 Create a Cloud SQL Instance
+### 4.1 Create a Cloud SQL Instance
 
 ```bash
 gcloud sql instances create proposal-drafter-db \
@@ -105,7 +105,7 @@ gcloud auth application-default login
 
 
 
-#### 4.2 Create a Database and User
+### 4.2 Create a Database and User
 
 Connect to your Cloud SQL instance using the gcloud sql connect command or the Cloud SQL Proxy (recommended for local development/testing).
 
@@ -131,11 +131,11 @@ Note that the connection string is slightly different if using cloudd SQl than l
 
 `if os.getenv("GAE_ENV") == "standard" or os.getenv("K_SERVICE"): # Running on Cloud Run/App Engine`
 
-### 5. Deploy FastAPI Backend (Cloud Run)
+## 5. Deploy FastAPI Backend (Cloud Run)
 
 We'll containerize your FastAPI application and deploy it to Cloud Run.
 
-#### 5.1 Prepare the FastAPI Application
+### 5.1 Prepare the FastAPI Application
 
 Navigate to your backend directory:
 
@@ -176,7 +176,7 @@ docker build -t $AR_REGION-docker.pkg.dev/YOUR_PROJECT_ID/proposal-drafter-backe
 docker push $AR_REGION-docker.pkg.dev/YOUR_PROJECT_ID/proposal-drafter-backend/api:latest
 ```
 
-#### 5.3 Deploy to Cloud Run
+### 5.3 Deploy to Cloud Run
 
 Deploy the container image to Cloud Run, connecting it to your Cloud SQL instance.
 
@@ -201,7 +201,7 @@ gcloud secrets add-iam-policy-binding DB_USER_PASSWORD \
     --project=YOUR_PROJECT_ID # Explicitly specify the project where the secret is.
 ```
 
-# 3. Now, proceed with the Cloud Run deployment command.
+Now, proceed with the Cloud Run deployment command.
 
 ```bash
 gcloud run deploy proposal-drafter-backend \
@@ -246,11 +246,11 @@ After deployment, Cloud Run will provide a URL for your backend service (e.g., h
 
 
 
-### 6. Deploy React Frontend 
+## 6. Deploy React Frontend 
 
 We'll build your React application and serve the static files from a Cloud Storage bucket, optionally using Cloud CDN for performance.
 
-#### 6.1 Build the React Application
+### 6.1 Build the React Application
 
 Navigate to your frontend directory:
 
@@ -264,7 +264,7 @@ npm run build
 This will create a build/ directory containing your static HTML, CSS, and JavaScript files.
 
 
-#### 6.2 Use github page for front end (simpple)
+### 6.2 Use github page for front end (simpple)
 
 
 * Install `gh-pages`: Run `npm install gh-pages --save-dev`.
@@ -277,7 +277,7 @@ This will create a build/ directory containing your static HTML, CSS, and JavaSc
 
 Configure GitHub Pages: Go to your repository settings on GitHub, navigate to "Pages," and ensure the source is set to "Deploy from a branch" and `pages` branch.
 
-#### 6.3 Alternative - Create a Cloud Storage Bucket & CDN (more complex)
+### 6.3 Alternative - Create a Cloud Storage Bucket & CDN (more complex)
 
 Create a bucket to host your static files. The bucket name must be globally unique.
 
@@ -364,10 +364,10 @@ gcloud dns record-sets create frontend.yourdomain.com. \
 ```
 Replace LOAD_BALANCER_IP_ADDRESS with the IP address you obtained earlier for the frontend load balancer.
 
-### 7. Connect Frontend to Backend
+## 7. Connect Frontend to Backend
 
 
-#### 7.1 Update Frontend Environment Variables
+### 7.1 Update Frontend Environment Variables
 
 Your React frontend needs to know the URL of your FastAPI backend.
 In your React project, you likely use environment variables (e.g., .env files or REACT_APP_ variables) to configure the backend API URL.
@@ -392,7 +392,7 @@ cd ../frontend # if you're not already there
 npm run build  
 gsutil -m cp -r dist/* gs://your-proposal-drafter-frontend-bucket/
 ```
-#### 7.2 CORS Configuration
+### 7.2 CORS Configuration
 
 Ensure your FastAPI backend has appropriate CORS (Cross-Origin Resource Sharing) headers configured to allow requests from your frontend domain.
 
@@ -417,7 +417,7 @@ origins = [
 
 Important: Be specific with your allow_origins in production to only include your actual frontend domains.
 
-### Next Steps
+# Next Steps
 
 * Monitoring & Logging: Explore Cloud Monitoring and Cloud Logging for insights into your application's performance and issues.
 
