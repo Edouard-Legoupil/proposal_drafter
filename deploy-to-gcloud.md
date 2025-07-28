@@ -62,6 +62,7 @@ gcloud services enable sqladmin.googleapis.com \
 
 ```
 
+https://console.cloud.google.com/flows/enableapi?apiid=sqladmin&redirect=https://console.cloud.google.com
 
 ### 4. Deploy PostgreSQL Database (Cloud SQL)
 
@@ -140,6 +141,9 @@ Navigate to your backend directory:
 
 ```bash
 cd backend
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --host 0.0.0.0 --port 8502 --reload
 ```
 
 
@@ -177,8 +181,6 @@ docker push $AR_REGION-docker.pkg.dev/YOUR_PROJECT_ID/proposal-drafter-backend/a
 Deploy the container image to Cloud Run, connecting it to your Cloud SQL instance.
 
 ```bash
-
-
 # IMPORTANT: Before deploying, ensure the Cloud Run service account has Secret Manager permissions.
 # The error "Permission denied on secret" means the service account needs the 'Secret Manager Secret Accessor' role.
 # Follow these steps to grant the necessary permissions:
@@ -197,8 +199,11 @@ gcloud secrets add-iam-policy-binding DB_USER_PASSWORD \
     --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
     --role="roles/secretmanager.secretAccessor" \
     --project=YOUR_PROJECT_ID # Explicitly specify the project where the secret is.
+```
 
 # 3. Now, proceed with the Cloud Run deployment command.
+
+```bash
 gcloud run deploy proposal-drafter-backend \
     --image $AR_REGION-docker.pkg.dev/YOUR_PROJECT_ID/proposal-drafter-backend/api:latest \
     --platform managed \
@@ -239,6 +244,8 @@ Then, in your gcloud run deploy command, use --update-secrets DB_PASSWORD=DB_USE
 
 After deployment, Cloud Run will provide a URL for your backend service (e.g., https://proposal-drafter-backend-xxxxxx-ew.a.run.app). Note this URL.
 
+
+
 ### 6. Deploy React Frontend 
 
 We'll build your React application and serve the static files from a Cloud Storage bucket, optionally using Cloud CDN for performance.
@@ -257,10 +264,20 @@ npm run build
 This will create a build/ directory containing your static HTML, CSS, and JavaScript files.
 
 
-#### 6.2 Use github page for front end
+#### 6.2 Use github page for front end (simpple)
 
 
-#### 6.3 Alternative - Create a Cloud Storage Bucket (Option - Cloud Storage & Cloud CDN)
+* Install `gh-pages`: Run `npm install gh-pages --save-dev`.
+
+*in your `package.json`, add the following script - `"predeploy": "npm run build",  "deploy": "gh-pages -d dist -b pages"` and `"homepage": "https://edouard-legoupil.github.io/proposal_drafter/"` .
+
+* Update `vite.config.js`: Add `base: '/proposal_drafter/'` to your defineConfig object.
+
+* Deploy: Run `npm run deploy`.
+
+Configure GitHub Pages: Go to your repository settings on GitHub, navigate to "Pages," and ensure the source is set to "Deploy from a branch" and `pages` branch.
+
+#### 6.3 Alternative - Create a Cloud Storage Bucket & CDN (more complex)
 
 Create a bucket to host your static files. The bucket name must be globally unique.
 
@@ -275,8 +292,6 @@ Upload the contents of your dist/ directory to the bucket:
 ```bash
 gsutil -m cp -r dist/* gs://your-proposal-drafter-frontend-bucket/
 ```
-
-
 
 Set the bucket as a static website host and make its contents publicly readable:
 
@@ -321,35 +336,24 @@ gcloud compute forwarding-rules create proposal-drafter-http-rule \
     --ports=80
 ```
 
-For HTTPS, you'd also need a gcloud compute ssl-certificates create and gcloud compute target-https-proxies.
+For HTTPS, you'd also need a gcloud compute ssl-certificates create and gcloud compute target-https-proxies. Your frontend will now be accessible via the IP address of the load balancer.
 
-Your frontend will now be accessible via the IP address of the load balancer.
-
-
-To use your own domain (e.g., app.yourdomain.com), you'll need to configure DNS.
-
-
-If you don't already manage your domain in Cloud DNS:
+To use your own domain (e.g., app.yourdomain.com), you'll need to configure DNS. If you don't already manage your domain in Cloud DNS:
 
 ```bash
 gcloud dns managed-zones create your-domain-zone \
     --dns-name="yourdomain.com." \
     --description="Managed zone for yourdomain.com"
 ```
-Note the Name Servers provided by Cloud DNS and update your domain registrar's settings to use them.
+Note the Name Servers provided by Cloud DNS and update your domain registrar's settings to use them. For the Cloud Run backend, you can map a custom domain directly:
 
-
-For the Cloud Run backend, you can map a custom domain directly:
 ```bash
 gcloud run domain-mappings create --service proposal-drafter-backend \
     --domain app.yourdomain.com \
     --platform managed \
     --region europe-west1
 ```
-Follow the instructions provided by the command to create the necessary DNS records (CNAME or A/AAAA) in Cloud DNS.
-
-
-If you set up Cloud CDN for your frontend, create an A record pointing to your Load Balancer's IP address:
+Follow the instructions provided by the command to create the necessary DNS records (CNAME or A/AAAA) in Cloud DNS. If you set up Cloud CDN for your frontend, create an A record pointing to your Load Balancer's IP address:
 
 ```bash
 gcloud dns record-sets create frontend.yourdomain.com. \
@@ -362,37 +366,37 @@ Replace LOAD_BALANCER_IP_ADDRESS with the IP address you obtained earlier for th
 
 ### 7. Connect Frontend to Backend
 
-Your React frontend needs to know the URL of your FastAPI backend.
 
 #### 7.1 Update Frontend Environment Variables
 
+Your React frontend needs to know the URL of your FastAPI backend.
 In your React project, you likely use environment variables (e.g., .env files or REACT_APP_ variables) to configure the backend API URL.
 
 Edit your frontend's configuration (e.g., frontend/.env.production or similar) to point to your Cloud Run backend URL:
 
 ```bash
 # frontend/.env.production (example)
-REACT_APP_API_URL=https://proposal-drafter-backend-xxxxxx-ew.a.run.app
+VITE_BACKEND_URL=https://proposal-drafter-backend-xxxxxx-ew.a.run.app
 ```
 
 Or, if you configured a custom domain:
 
 ```bash
-REACT_APP_API_URL=https://api.yourdomain.com
+VITE_BACKEND_URL=https://api.yourdomain.com
 ```
 
 Then, rebuild your frontend and re-upload the files to Cloud Storage as described in section 6.1 and 6.3.
 
 ```bash
 cd ../frontend # if you're not already there
-npm run build # or yarn build
+npm run build  
 gsutil -m cp -r dist/* gs://your-proposal-drafter-frontend-bucket/
 ```
 #### 7.2 CORS Configuration
 
 Ensure your FastAPI backend has appropriate CORS (Cross-Origin Resource Sharing) headers configured to allow requests from your frontend domain.
 
-In your FastAPI main.py (or where you configure CORS):
+In `main.py`:
 
 ```bash
 from fastapi import FastAPI
@@ -401,21 +405,14 @@ from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI()
 
 origins = [
-    "http://localhost:3000", # For local development
+     "http://localhost:8503", # For local development
+     "https://edouard-legoupil.github.io/proposal_drafter/", ## if using frontend hosted on github page
     "https://storage.googleapis.com", # Default Cloud Storage domain (if not using CDN/custom domain)
     "https://your-proposal-drafter-frontend-bucket.appspot.com", # If using App Engine standard for static files
     "https://frontend.yourdomain.com", # Your custom frontend domain
     # Add the Cloud CDN IP if you're accessing via IP directly for testing
 ]
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-# ... your other FastAPI routes
 ```
 
 Important: Be specific with your allow_origins in production to only include your actual frontend domains.
