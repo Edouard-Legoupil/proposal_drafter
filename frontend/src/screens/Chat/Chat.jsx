@@ -36,44 +36,45 @@ export default function Chat (props)
 
         const [form_expanded, setFormExpanded] = useState(true)
         const [formData, setFormData] = useState({
+
                 "Project title": {
                         mandatory: true,
                         value: ""
                 },
-                "Project type": {
+                "Main Outcome": {
                         mandatory: true,
                         value: ""
                 },
-                "Secondary project type": {
+                "Secondary Outcome": {
                         mandatory: false,
                         value: ""
                 },
-                "Geographical Coverage": {
+                "Geographical Scope": {
                         mandatory: true,
                         value: ""
                 },
-                "Executing agency": {
+                "Country / Location(s)": {
                         mandatory: true,
                         value: ""
                 },
-                "Beneficiaries": {
-                        mandatory: true,
-                        value: ""
-                },
-                "Partner(s)": {
-                        mandatory: true,
-                        value: ""
-                },
-                "Management site": {
+                "Beneficiaries Profile": {
                         mandatory: true,
                         value: ""
                 },
                 "Duration": {
                         mandatory: true,
                         value: ""
-                },
-                "Budget": {
+                },            
+                "Budget Range": {
                         mandatory: true,
+                        value: ""
+                },
+                "Targeted Donor": {
+                        mandatory: true,
+                        value: ""
+                },
+                "Potential Implementing Partner": {
+                        mandatory: false,
                         value: ""
                 }
         })
@@ -93,7 +94,7 @@ export default function Chat (props)
                         setButtonEnable(true)
 
                         for (const property in formData)
-                                if(!formData[property].value && !(property === "Secondary project type"))
+                                if(!formData[property].value && !(property === "Secondary Outcome"))
                                         setButtonEnable(false)
                 }
                 else
@@ -554,16 +555,56 @@ export default function Chat (props)
                                                                 {Object.entries(formData).map((fieldObj, i) => {
                                                                 const label = fieldObj[0];
                                                                     const isDropdown =
-                                                                        label === "Project type" ||
-                                                                        label === "Secondary project type" ||
+                                                                        label === "Main Outcome" ||
+                                                                        label === "Secondary Outcome" ||
+                                                                        label === "Duration" ||
+                                                                        label === "Targeted Donor" ||
+                                                                        label === "Budget Range" ||
+                                                                        label === "Geographical Scope" ||
                                                                         label === "Duration";
                                                                 const datalistId = `datalist_${label.replaceAll(' ', '_')}`;
-                                                                const options = label === "Project type"
-                                                                        ? ["Camp Coordination and Camp Management (CCCM)","Education","Health","Nutrition","Water, Sanitation and Hygiene (WASH)","Protection","Shelter and Non-Food Items (NFI)","Food Security","Logistics","Emergency Telecommunications", "Coordination, Safety and Security", "Cross-sector Activities"]
-                                                                        : label === "Secondary project type"
-                                                                        ? ["Camp Coordination and Camp Management (CCCM)","Education","Health","Nutrition","Water, Sanitation and Hygiene (WASH)","Protection","Shelter and Non-Food Items (NFI)","Food Security","Logistics","Emergency Telecommunications", "Coordination, Safety and Security", "Cross-sector Activities"]
+                                                                const options = label === "Main Outcome"
+                                                                        ? [    "OA1-Access/Documentation",
+                                                                               "OA2-Status",
+                                                                                "OA3-Protection Policy",
+                                                                                "OA4-GBV",
+                                                                                "OA5-Child protection",
+                                                                                "OA6-Justice",
+                                                                                "OA7-Community",
+                                                                                "OA8-Well-Being",
+                                                                                "OA9-Housing",
+                                                                                "OA10-Health",
+                                                                                "OA11-Education",
+                                                                                "OA12-WASH",
+                                                                                "OA13-Livelihoods",
+                                                                                "OA14-Return",
+                                                                                "OA15-Resettlement",
+                                                                                "OA16-Integrate"  ]
+                                                                        : label === "Secondary Outcome"
+                                                                        ? [    "OA1-Access/Documentation",
+                                                                               "OA2-Status",
+                                                                                "OA3-Protection Policy",
+                                                                                "OA4-GBV",
+                                                                                "OA5-Child protection",
+                                                                                "OA6-Justice",
+                                                                                "OA7-Community",
+                                                                                "OA8-Well-Being",
+                                                                                "OA9-Housing",
+                                                                                "OA10-Health",
+                                                                                "OA11-Education",
+                                                                                "OA12-WASH",
+                                                                                "OA13-Livelihoods",
+                                                                                "OA14-Return",
+                                                                                "OA15-Resettlement",
+                                                                                "OA16-Integrate"  ]
                                                                         : label === "Duration"
-                                                                        ? ["1 month", "3 months", "6 months", "12 months", "18 months", "24 months", "30 months", "36 months",]
+                                                                        ? ["1 month", "3 months", "6 months", "12 months", "18 months", "24 months", "30 months", "36 months"]
+                                                                        : label === "Targeted Donor"
+                                                                        ? ["CERF", "ECHO"]
+                                                                        : label === "Budget Range"
+                                                                        ? ["50k$", "100k$","250k$","500k$","1M$","2M$","5M$","10M$","15M$","25M$"]         
+                                                                        : label === "Geographical Scope"
+                                                                        ? ["One Area", "One Country Operation", "Multiple Country","One Region","Route-Based-Approach","Global"]         
                                                                         : [];
 
                                                                 return (

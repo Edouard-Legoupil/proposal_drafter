@@ -102,9 +102,6 @@ gcloud auth application-default login
 ./cloud-sql-proxy --port 5431 YOUR_PROJECT_ID:europe-west1:proposal-drafter-db 
 ```
 
-
-
-
 ### 4.2 Create a Database and User
 
 Connect to your Cloud SQL instance using the gcloud sql connect command or the Cloud SQL Proxy (recommended for local development/testing).
@@ -131,9 +128,76 @@ Note that the connection string is slightly different if using cloudd SQl than l
 
 `if os.getenv("GAE_ENV") == "standard" or os.getenv("K_SERVICE"): # Running on Cloud Run/App Engine`
 
+
+### 4.3 Set up  IAM Authentication
+
+* Go to the [Cloud SQL Instances page](https://console.cloud.google.com/sql/) in the GCP Console.
+
+* Click on your instance ID.
+
+* In the left navigation, click on Authentication.
+
+* Under "IAM authentication", ensure Allow IAM authentication for all connections is checked. If not, check it and save.
+
+you should see --  
+Database flags and parameters 
+cloudsql.iam_authentication on -
+
+ 
+
+Next create a service account that your containerized application will use to authenticate with Cloud SQL and grant it access.
+
+```bash
+gcloud iam service-accounts create cloud-sql-connector-sa     --display-name "Service Account for Cloud SQL Connector"
+
+## give permission
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+    --member "serviceAccount:cloud-sql-connector-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+    --role "roles/cloudsql.client"
+
+## Check
+gcloud iam service-accounts list --project YOUR_PROJECT_ID
+```
+From the last step, take note of the email of your newly created user
+
+Now, you need to add this service account as an IAM user to your Cloud SQL database.
+
+* On the the Cloud SQL Instances page , in the left navigation, click on Users.
+
+* Click Add user account.
+
+* Select Cloud IAM.
+
+*   For "Principal type", select Service account.
+
+* For "Principal", enter the full service account email: `cloud-sql-connector-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com` and  Click Add.
+
+Before deploying, ensure the Cloud Run service account has Secret Manager permissions. The error "Permission denied on secret" means the service account needs the 'Secret Manager Secret Accessor' role.
+
+```bash
+gcloud secrets add-iam-policy-binding DB_USER_PASSWORD \
+    --member="serviceAccount:cloud-sql-connector-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com"  \
+    --role="roles/secretmanager.secretAccessor" \
+    --project=YOUR_PROJECT_ID  
+```
+
+
+Now you need to give access to this user to the specific database created in the previous step 
+
+```sql
+GRANT CONNECT ON DATABASE proposal TO "cloud-sql-connector-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com";
+GRANT USAGE ON SCHEMA public TO "cloud-sql-connector-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com";
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO "cloud-sql-connector-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com";
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO "cloud-sql-connector-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com";
+
+```
+
+
 ## 5. Deploy FastAPI Backend (Cloud Run)
 
 We'll containerize your FastAPI application and deploy it to Cloud Run.
+
+
 
 ### 5.1 Prepare the FastAPI Application
 
@@ -143,11 +207,45 @@ Navigate to your backend directory:
 cd backend
 python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
+```
+
+You can test that it is working with
+```bash
 uvicorn main:app --host 0.0.0.0 --port 8502 --reload
 ```
 
+### 5.2 Deploy to Cloud Run with Docker Registry
 
-First, configure Docker to authenticate with Google Cloud's Artifact Registry (or Container Registry if you prefer). Artifact Registry is the newer, recommended service.
+Loging to your docker desktop and configure Docker to authenticate with Container Registry 
+
+```bash
+gcloud auth configure-docker
+```
+
+Now build and push your container
+
+```bash
+docker build -t gcr.io/YOUR_PROJECT_ID/proposal_drafter-app:v1 .
+docker push gcr.io/YOUR_PROJECT_ID/proposal_drafter-app:v1
+```
+
+Finally deploy  your container to Cloud Run, ensuring it uses the service account created earlie and with your environment variables
+
+```bash
+gcloud run deploy proposal_drafter-service \
+    --image gcr.io/YOUR_PROJECT_ID/proposal_drafter-app:v1 \
+    --platform managed \
+    --region YOUR_GCP_REGION \
+    --no-allow-unauthenticated \
+    --service-account cloud-sql-connector-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com \
+    --set-env-vars INSTANCE_CONNECTION_NAME="YOUR_PROJECT_ID:YOUR_GCP_REGION:YOUR_CLOUD_SQL_INSTANCE_NAME" \
+    --set-env-vars DB_USER="cloud-sql-connector-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+    --set-env-vars DB_NAME="YOUR_DATABASE_NAME" # etc.
+```
+
+### 5.3 Deploy to Cloud Run with Artifact Registry
+ 
+Alternatively, you can have Docker to authenticate with **Google Cloud's Artifact Registry**. Artifact Registry is the newer, recommended service.
 
 ```bash
 # Set your preferred region for Artifact Registry (e.g., europe-west1)
@@ -176,30 +274,12 @@ docker build -t $AR_REGION-docker.pkg.dev/YOUR_PROJECT_ID/proposal-drafter-backe
 docker push $AR_REGION-docker.pkg.dev/YOUR_PROJECT_ID/proposal-drafter-backend/api:latest
 ```
 
-### 5.3 Deploy to Cloud Run
+You can see you artefact registry here: https://console.cloud.google.com/artifacts
+
 
 Deploy the container image to Cloud Run, connecting it to your Cloud SQL instance.
 
-```bash
-# IMPORTANT: Before deploying, ensure the Cloud Run service account has Secret Manager permissions.
-# The error "Permission denied on secret" means the service account needs the 'Secret Manager Secret Accessor' role.
-# Follow these steps to grant the necessary permissions:
 
-# 1. Get the Cloud Run service account email. This service account is automatically created.
-#    Note: The service account name is usually in the format YOUR_PROJECT_NUMBER-compute@developer.gserviceaccount.com
-#    or sometimes default service account for Cloud Run, which is YOUR_PROJECT_NUMBER@cloudbuild.gserviceaccount.com.
-#    To be sure, you can run:
-SERVICE_ACCOUNT_EMAIL=$(gcloud projects describe YOUR_PROJECT_ID --format="value(projectNumber)")-compute@developer.gserviceaccount.com
-# Alternatively, if you've already attempted a deployment, you can get it from the failed revision's details:
-# SERVICE_ACCOUNT_EMAIL=$(gcloud run services describe proposal-drafter-backend --platform managed --region europe-west1 --format="value(spec.template.spec.serviceAccountName)")
-
-# 2. Grant the 'Secret Manager Secret Accessor' role to this service account on your secret.
-#    Replace 'YOUR_PROJECT_ID' with your actual project ID.
-gcloud secrets add-iam-policy-binding DB_USER_PASSWORD \
-    --member="serviceAccount:${SERVICE_ACCOUNT_EMAIL}" \
-    --role="roles/secretmanager.secretAccessor" \
-    --project=YOUR_PROJECT_ID # Explicitly specify the project where the secret is.
-```
 
 Now, proceed with the Cloud Run deployment command.
 

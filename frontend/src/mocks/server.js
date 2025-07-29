@@ -7,8 +7,8 @@ export const server = setupServer(
         http.get(`${API_BASE_URL}/profile`, () =>
                 HttpResponse.json({
                         user: {
-                                name: "Karan",
-                                email: "karan@gmail.com"
+                                name: "Edouard",
+                                email: "edouard.legoupil@gmail.com"
                         }
                 })
         ),
@@ -16,7 +16,7 @@ export const server = setupServer(
         http.post(`${API_BASE_URL}/login`, async ({ request }) => {
                 const { email, password } = await request.json()
 
-                if (email === 'karan@gmail.com' && password === 'Karan123')
+                if (email === 'edouard.legoupil@gmail.com' && password === 'edouard123')
                 {
                         return new HttpResponse(null, {
                                 status: 200,

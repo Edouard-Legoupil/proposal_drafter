@@ -39,6 +39,22 @@ llm = AzureChatOpenAI(
     timeout=30
 )
 
+
+## Atlernative with Google 
+#from langchain_google_genai import ChatGoogleGenerativeAI
+#llm2 = ChatGoogleGenerativeAI(
+#    model="gemini-1.5-flash",  # Or "gemini-1.5-pro", or #other available Gemini models
+#    verbose=True, # For seeing more detailed output from #the LLM
+#    temperature=0.7, # Adjust as needed
+#    google_api_key=os.getenv("GEMINI_API_KEY") # Or #GOOGLE_API_KEY
+#)
+#from crewai import LLM
+#llm3 = LLM(
+#     model="gemini/gemini-1.5-flash", # Or "gemini/#gemini-1.5-pro"
+#     temperature=0.7,
+#     api_key=os.getenv("GEMINI_API_KEY") # 
+# )
+
 # Load JSON instructions from the config folder
 #CONFIG_PATH = "config/templates/iom_proposal_template.json"
 CONFIG_PATH = "config/templates/unhcr_cerf_proposal_template.json"
@@ -131,6 +147,17 @@ class ProposalCrew():
                     "api_base": os.getenv("AZURE_OPENAI_ENDPOINT_EMBED"),
                     "api_version": os.getenv("AZURE_OPENAI_API_VERSION_EMBED", "2023-05-15")
                 }
+# # Specify "google" as the provider
+#                "provider": "google",  
+#                "config": {
+#  # Use the Gemini #embedding model
+#                    "model": "models/embedding-001", 
+# # Optional: #Specify task type for optimized embeddings
+#                    "task_type": "retrieval_document", 
+#                    "api_key": os.getenv("GEMINI_API_KEY") 
+# # Ensure API #key is passed for embedding as well
+#                }
+
             }
         )
        

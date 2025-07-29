@@ -15,4 +15,4 @@ RUN mkdir -p crew_logs proposal-documents && \
 EXPOSE 80
 
 # Run the FastAPI app
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
