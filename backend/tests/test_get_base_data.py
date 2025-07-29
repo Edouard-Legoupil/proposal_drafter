@@ -1,9 +1,8 @@
 import pytest
 from httpx import AsyncClient
-from main import app
+from backend.main import app
 from httpx import AsyncClient
 from httpx import ASGITransport
-from main import app
 
 @pytest.mark.asyncio
 async def test_get_base_data():

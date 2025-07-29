@@ -1,10 +1,9 @@
 import pytest
 from httpx import AsyncClient
-from main import app
+from backend.main import app
 from unittest.mock import patch, MagicMock
 from httpx import AsyncClient
 from httpx import ASGITransport
-from main import app
 
 @pytest.mark.asyncio
 async def test_process_section(mocker):
