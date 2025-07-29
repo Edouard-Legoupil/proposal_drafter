@@ -14,6 +14,7 @@ import traceback
 from fastapi import FastAPI, HTTPException, File, UploadFile, Form
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi import Request
+from fastapi import Header
 from fastapi.responses import Response
 from fastapi import Query
 from pydantic import BaseModel
@@ -30,8 +31,13 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
+## DB connection if on GCP
+from google.cloud.sql.connector import Connector, IPTypes
+import pg8000.dbapi # Import the pg8000 driver
+import google.auth
+
 # Configure logging for debugging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 import urllib.parse
@@ -79,20 +85,109 @@ from datetime import timedelta, datetime, timezone
 # Initialize FastAPI app instance
 app = FastAPI()
 
-# Allow CORS from specific frontend origin(s)
-# Enable CORS to allow frontend (e.g., localhost or Azure) to access this API
+# Allow CORS from specific frontend origins
+# Enable CORS to allow frontend (e.g., localhost, github or Azure) to access this API
+# Make origins a global variable so the middleware can access it
+
 origins = [
-    "https://proposal-drafter.azurewebsites.net/",
-     "http://localhost:8503" # here the frontend url will be there
+    #"https://proposal-drafter.azurewebsites.net",  ## client in Azure
+    "https://edouard-legoupil.github.io", ## Client in github page
+    "http://localhost:8503"               ## Client for local dev
+
 ]
 
+## Test to debug
+from fastapi import FastAPI, Response, Request, status 
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import PlainTextResponse
+from starlette.types import ASGIApp
+
+
+# --- START: Debugging Middleware (placed BEFORE CORSMiddleware) ---
+# class OriginLoggerMiddleware(BaseHTTPMiddleware):
+#     async def dispatch(self, request: Request, call_next):
+#         origin = request.headers.get("origin")
+#         print(f"\n--- Origin Logger Debug ---")
+#         print(f"Request Path: {request.url.path}")
+#         print(f"Incoming Origin: {origin}")
+#         # Access the global origins list here
+#         if origin and origin in origins: # <--- Accessing global 'origins'
+#             print(f"Origin '{origin}' IS IN allowed origins list.")
+#         else:
+#             print(f"Origin '{origin}' IS NOT IN allowed origins list.")
+#             if origin:
+#                 print(f"Potential mismatch: Origin header does not exactly match any allowed origin.")
+#         print(f"--- End Origin Logger Debug ---\n")
+
+#         response = await call_next(request)
+#         return response
+
+# app.add_middleware(OriginLoggerMiddleware)
+# --- END: Debugging Middleware ---
+
+
+
+# --- START: Your actual CORS Middleware ---
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+   CORSMiddleware,
+   allow_origins=origins,  
+   expose_headers=["*"],
+   allow_credentials=True,
+   allow_methods=["*"],
+   allow_headers=["*"],
+   #allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 )
+
+
+
+# # Define the allowed frontend origins
+# ALLOWED_ORIGINS = [
+#     "https://edouard-legoupil.github.io",
+#     "http://localhost:8503"
+# ]
+
+# @app.middleware("http")
+# async def static_origin_cors_middleware(request: Request, call_next):
+#     origin = request.headers.get("origin")
+
+#     # Handle preflight request early
+#     if request.method == "OPTIONS":
+#         headers = {}
+#         if origin in ALLOWED_ORIGINS:
+#             headers = {
+#                 "Access-Control-Allow-Origin": origin,
+#                 "Access-Control-Allow-Credentials": "true",
+#                 "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+#                 "Access-Control-Allow-Headers": "Authorization, Content-Type"
+#             }
+#         return Response(status_code=204, headers=headers)
+
+#     # Continue to next middleware/route
+#     response = await call_next(request)
+
+#     if origin in ALLOWED_ORIGINS:
+#         response.headers["Access-Control-Allow-Origin"] = origin
+#         response.headers["Access-Control-Allow-Credentials"] = "true"
+#         response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+#         response.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type"
+
+#     return response
+
+#@app.options("/{rest_of_path:path}")
+#async def preflight_handler(request: Request):
+#    origin = request.headers.get("origin")
+
+#    headers = {}
+#    if origin in ALLOWED_ORIGINS:
+#        headers = {
+#            "Access-Control-Allow-Origin": origin,
+#            "Access-Control-Allow-Credentials": "true",
+#            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, #OPTIONS",
+#            "Access-Control-Allow-Headers": "Authorization, Content-Type"
+#        }
+
+#    return Response(status_code=204, headers=headers)    
+# --- END: Your actual CORS Middleware ---
 
 
 
@@ -100,41 +195,127 @@ session_data = {}
 
 redis_client = redis.Redis(host="redis", port=6379, db=0, decode_responses=True)
 
+
+
 SECRET_KEY = os.getenv("SECRET_KEY", "your_default_dev_secret")
 
+
+# Read environment variables
 db_username = os.getenv('DB_USERNAME')
 db_password = os.getenv('DB_PASSWORD')
-db_host = os.getenv('DB_HOST')
-db_port = os.getenv('DB_PORT')
+db_host = os.getenv('DB_HOST')  
+db_port = os.getenv('DB_PORT', '5432')  # Default to 5432 if not set
 db_name = os.getenv('DB_NAME')
+
+enable_iam_auth = os.getenv('ENABLE_IAM_AUTH', 'true').lower() == 'true'
+logger.info(f"DEBUG: enable_iam_auth: {enable_iam_auth}")
 
 logger.info(f"GAE_ENV: {os.getenv('GAE_ENV')}")
 logger.info(f"K_SERVICE: {os.getenv('K_SERVICE')}")
-                
-encoded_password = urllib.parse.quote_plus(db_password)
+logger.info(f"DEBUG: db_username from env: {db_username}")
+logger.info(f"DEBUG: db_password (first 3 chars): {db_password[:3] if db_password else 'None'}")
+logger.info(f"DEBUG: db_host from env: {db_host}")
 
+# --- Critical checks for environment variables ---
+if not db_username:
+    logger.error("db_username environment variable is missing or empty.")
+    raise ValueError("db_username environment variable is missing or empty.")
+if not db_password:
+    logger.error("db_password environment variable is missing or empty. Cannot authenticate with database.")
+    raise ValueError("db_password environment variable is missing or empty.")
+if not db_host:
+    logger.error("db_host environment variable is missing. Cannot connect to database.")
+    raise ValueError("db_host environment variable is missing.")
+if not db_name:
+    logger.error("db_name environment variable is missing. Cannot select database.")
+    raise ValueError("db_name environment variable is missing.")
+if not db_password and not enable_iam_auth:
+    logger.warning("DB_PASSWORD is missing but ENABLE_IAM_AUTH is false. Connection may fail without credentials.")
+# --- End Critical checks ---
+ 
+    
+ 
 
-# Determine connection string based on environment - if run on google cloud 
-if os.getenv("GAE_ENV") == "standard" or os.getenv("K_SERVICE"): # Running on Cloud Run/App Engine
-    # Cloud SQL Proxy provides a Unix socket
-    if not db_host :
-        logger.error("db_host environment variable is missing. Cannot connect to Cloud SQL.")
-        raise ValueError("db_host  environment variable is missing.")
-    UNIX_SOCKET_PATH = f"/cloudsql/{db_host }"
-    connection_string = f"postgresql+psycopg2://{db_username}:{encoded_password}@/{db_name}?host={UNIX_SOCKET_PATH}"
-    logger.info(f"Cloud Run connection_string: {connection_string}")
+# --- Pick driver based on environment ---
+# Decide environment
+# on_gcp = os.getenv("GAE_ENV") == "standard" or os.getenv("K_SERVICE")
+on_gcp = os.getenv('DB_HOST') != 'localhost'
+logger.info(f"Running on GCP: {on_gcp}")
+
+# --- Initialize Cloud SQL Connector only for GCP ---
+if on_gcp:
+    logger.info("Using Cloud SQL Connector for GCP environment")
+    from google.cloud.sql.connector import Connector, IPTypes
+    connector = Connector()
 else:
-    # Local development connection
-    connection_string = f"postgresql://{db_username}:{encoded_password}@{db_host}:{db_port}/{db_name}"
+    logger.info("Using local PostgreSQL connection")
+    connector = None
 
+# --- Connection creator function ---
+def getconn():
+    logger.info("Creating database connection...")
+    
+    if on_gcp:
+        # GCP: Use Cloud SQL Connector
+        logger.debug(f"Connecting to Cloud SQL: {db_host}")
+        
+        # Parameters for connector.connect()
+        conn_params = {
+            "driver": "pg8000", # Explicitly specify the driver
+            "user": db_username,
+            "db": db_name,      # Use 'db' for pg8000
+        }
+
+        conn_params["password"] = db_password
+        logger.debug("Using password authentication.")
+
+        conn: pg8000.dbapi.Connection = connector.connect(
+            db_host, # This should be the INSTANCE_CONNECTION_NAME
+            **conn_params
+        )
+        return conn
+
+    else:
+        # Local: Direct connection
+        logger.debug(f"Connecting to local DB: {db_host}:5432")
+        import psycopg2
+        return psycopg2.connect(
+            host=db_host,
+            port=5432,
+            user=db_username,
+            password=db_password,
+            database=db_name
+        )
+
+# --- SQLAlchemy Engine ---
+if on_gcp:
+    # GCP: Use creator-based engine
+    engine = create_engine(
+        "postgresql+pg8000://",
+        creator=getconn,
+        pool_pre_ping=True,
+        pool_recycle=300,
+    )
+else:
+    # Local: Use connection string engine
+    encoded_password = urllib.parse.quote_plus(db_password) if db_password else ""
+    connection_string = f"postgresql+psycopg2://{db_username}:{encoded_password}@{db_host}:5432/{db_name}"
+    logger.debug(f"Local connection string: {connection_string.split(':')[0]}...")  # Log safely
+    engine = create_engine(
+        connection_string,
+        pool_pre_ping=True,
+        pool_recycle=300
+    )
+
+# --- Test connection ---
 try:
-    engine = create_engine(connection_string)
-    # Attempt a connection to catch issues early
     with engine.connect() as connection:
-        logger.info("Successfully connected to the database engine.")
+        result = connection.execute(text("SELECT NOW()"))
+        logger.info(f"✅ Database connection successful. Current time: {result.scalar()}")
 except Exception as e:
-    logger.error(f"Failed to create database engine or connect: {e}")
-    raise # Re-raise the exception to make it visible in logs
+    logger.error(f"❌ Failed to connect to database: {e}")
+    raise
+ 
 
 
 
@@ -258,6 +439,8 @@ async def store_base_data(request: BaseDataRequest,current_user: dict = Depends(
     redis_client.setex(session_id, 300, json.dumps(data))
     
     return {"message": "Base data stored successfully", "session_id": session_id}
+
+
 
 
 @app.get("/api/get_base_data/{session_id}")
@@ -725,6 +908,75 @@ async def signup(request: Request):
         return JSONResponse(status_code=500, content={"error": "Signup failed. Please try again later."})
 
 
+## Removing abuse cookies - Removes Cloudflare bot-related cookies (__cf_bm, abuse_interstitial) during localhost dev.
+#from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
+
+#@app.middleware("http")
+#async def remove_abuse_cookie(request: Request, call_next):
+#    response = await call_next(request)
+    
+    # Strip security cookies in development
+#    if "localhost" in request.headers.get("host", ""):
+#        response.delete_cookie("abuse_interstitial")
+#        response.delete_cookie("__cf_bm")  # Cloudflare bot management
+        
+#    return response
+
+#if os.getenv("ENV") == "development":
+#    app.middleware("http")(remove_abuse_cookie)
+
+#@app.middleware("http")
+#async def configure_cookies(request: Request, call_next):
+#    response = await call_next(request)  
+    # Get the requesting origin
+#    origin = request.headers.get("origin")
+    # Ensure dynamic ACAO header matches the request origin exactly
+#    if origin in origins:
+#        response.headers["Access-Control-Allow-Origin"] = origin
+#        response.headers["Access-Control-Allow-Credentials"] = "true"
+#    return response
+
+
+## handle dynamic backend URLs while maintaining secure cookies across all environments 
+def get_cookie_settings(request: Request):
+    """Dynamically configure cookies with enhanced localhost detection"""
+    host = request.headers.get("host", "")
+    origin = request.headers.get("origin", "")
+
+    
+    # Debug: Print incoming headers
+    print(f"\n🔧 [Cookie Debug] Host: {host} | Origin: {origin}")
+
+    # Strict localhost detection (both sides must be localhost)
+    is_strict_localhost = all([
+        any(["localhost" in host, "127.0.0.1" in host, ":8502" in host]),  # Backend
+        any(["localhost" in (origin or ""), "127.0.0.1" in (origin or ""), ":8503" in (origin or "")])  # Frontend
+    ])
+
+    # Domain logic
+    domain = None
+    if "ngrok-free.app" in host:
+        domain = ".ngrok-free.app"
+    elif "run.app" in host:
+        domain = ".run.app"
+
+    settings = {
+        "secure": not is_strict_localhost,  # False ONLY when both are localhost
+        "samesite": "lax" if is_strict_localhost else "none",
+        "domain": None
+        #"domain": domain if not is_strict_localhost else None
+    }
+    
+    # Debug output
+    env_type = "STRICT_LOCALHOST" if is_strict_localhost else "PROD/CROSS-ORIGIN"
+    print(f"⚙️ [Cookie Settings] Environment: {env_type}")
+    print(f"   - Secure: {settings['secure']}")
+    print(f"   - SameSite: {settings['samesite'].upper()}")
+    print(f"   - Domain: {settings['domain'] or 'None (localhost)'}")
+    print("----------------------------------")
+    
+    return settings
+
 @app.post("/api/login")
 async def login(request: Request):
     try:
@@ -770,6 +1022,7 @@ async def login(request: Request):
             algorithm="HS256"
         )
         
+
         # ✅ Store token in Redis for this user
         redis_client.setex(
             f"user_session:{user_id}",
@@ -779,14 +1032,27 @@ async def login(request: Request):
 
         # ✅ Set token in HttpOnly cookie
         response = JSONResponse(content={"message": "Login successful!"})
+
+        ## Dynamic cooky settings.... 
+        cookie_settings = get_cookie_settings(request)
+
         response.set_cookie(
             key="auth_token",
             value=token,
-            httponly=True,
-            samesite="Lax",
-            max_age=1800  # 30 minutes
+          #  samesite="Lax",
+
+            httponly=True,  # Recommended: Makes cookie inaccessible to client-side scripts
+
+            #samesite="None", #  Allow cross-site sending            
+            #secure=True,    #   Required when SameSite is None (HTTPS only) 
+            path="/",       # Cookie available across all paths on the domain
+            max_age=1800,  # cookie expires in 30 minutes,
+            
+            # Unpacks the dynamic settings set by function get_cookie_settings
+            **cookie_settings  
         )
 
+        print(f"   - Cookie is set to: {response.headers['set-cookie']}")
         return response
 
     except Exception as e:
@@ -795,7 +1061,11 @@ async def login(request: Request):
 
 
 @app.get("/api/profile")
-async def profile(current_user: dict = Depends(get_current_user)):
+async def profile(
+        current_user: dict = Depends(get_current_user),
+        # Capture Origin header
+        #origin: str = Header(None)
+    ):
     return {
         "message": "Profile fetched successfully",
         "user": {
@@ -1788,6 +2058,54 @@ async def delete_draft(
 def health_check():
     return {"status": "API is running"}
 
+# ---- Temporary debug endpoint
+#@app.get("/test-version")
+#async def test_version():
+#    return {"version": "CORS_FIX_V1.1_SUCCESS", "message": "This endpoint confirms the new very very latest backend code is running!"}
+
+# Temporary debug endpoint
+#@app.get("/debug/cookies")
+#async def debug_cookies(request: Request):
+#    return {"cookies": request.cookies}
+
+
+@app.get("/debug/headers")
+async def debug_headers(request: Request):
+    return {
+        "origin": request.headers.get("origin"),
+        "host": request.headers.get("host"),
+        "headers": dict(request.headers)
+    }
+
+@app.get("/debug/origin")
+async def debug_origin(request: Request):
+    return {
+        "origin": request.headers.get("origin"),
+        "cookies": request.cookies
+    }
+# ---- Temporary debug endpoint
+
+
+from starlette.middleware.cors import CORSMiddleware as StarletteCORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.exception_handlers import http_exception_handler
+from fastapi.exceptions import RequestValidationError
+from fastapi import HTTPException
+from starlette.status import HTTP_401_UNAUTHORIZED
+
+@app.exception_handler(HTTPException)
+async def custom_http_exception_handler(request: Request, exc: HTTPException):
+    origin = request.headers.get("origin")
+
+    response = JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
+    if origin in origins:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+
+    return response
+
+
 def delete_old_proposals():
     try:
         # ⏱ For testing: delete proposals older than 5 minutes
@@ -1804,10 +2122,10 @@ def delete_old_proposals():
 
 # 🗓 Start the background scheduler
 scheduler = BackgroundScheduler()
-scheduler.add_job(delete_old_proposals, 'interval', minutes=1)  # Runs every 1 minute
+scheduler.add_job(delete_old_proposals, 'interval', minutes=1000)  # Runs every 1 minute
 scheduler.start()
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8502)
+    uvicorn.run(app, host="0.0.0.0", port=8080)
