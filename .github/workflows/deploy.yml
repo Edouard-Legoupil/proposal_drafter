@@ -55,7 +55,7 @@ jobs:
         with:
           workload_identity_provider: 'projects/${{ env.PROJECT_ID }}/locations/global/workloadIdentityPools/github-pool/providers/github-provider' # Replace with your WIF provider name
           service_account: '${{ env.SERVICE_ACCOUNT }}' # Replace with your SA email (e.g., github-actions-sa@your-project-id.iam.gserviceaccount.com)
-          audience: 'projects/290826171799/locations/global/workloadIdentityPools/github-pool/providers/github-provider' 
+          audience: 'projects/${{ env.PROJECT_NUM }}/locations/global/workloadIdentityPools/github-pool/providers/github-provider' 
           
 
       - name: Set up Cloud SDK
