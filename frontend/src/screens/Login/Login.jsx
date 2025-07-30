@@ -169,6 +169,7 @@ export default function Login (props)
                                                         value={password}
                                                         placeholder={props?.register ? 'At least 8 characters' : 'Enter your password here'}
                                                         onChange={e => setPassword(e.target.value)}
+                                                        autoComplete="current-password"
                                                 />
                                                 {password ? <div className="Login_showPasswordToggleContainer">
                                                         <img className='Login_passwordShowToggle' src={showPassword ? hide : show} onClick={() => setShowPassword(p => !p)}/>
