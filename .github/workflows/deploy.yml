@@ -53,9 +53,9 @@ jobs:
         id: 'auth'
         uses: 'google-github-actions/auth@v2'
         with:
-          workload_identity_provider: 'projects/${{ env.PROJECT_ID }}/locations/global/workloadIdentityPools/github-pool/providers/github-provider' # Replace with your WIF provider name
-          service_account: '${{ env.SERVICE_ACCOUNT }}' # Replace with your SA email (e.g., github-actions-sa@your-project-id.iam.gserviceaccount.com)
-          audience: 'projects/${{ env.PROJECT_NUM }}/locations/global/workloadIdentityPools/github-pool/providers/github-provider' 
+          workload_identity_provider: 'projects/${{ env.PROJECT_NUM }}/locations/global/workloadIdentityPools/github-pool/providers/github-provider'  
+          service_account: '${{ env.SERVICE_ACCOUNT }}'  
+       
           
       - name: Set up Cloud SDK
         uses: 'google-github-actions/setup-gcloud@v2'
