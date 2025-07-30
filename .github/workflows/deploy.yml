@@ -43,12 +43,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # --- Backend Deployment to Google Cloud Run ---
-      # DEBUG STEP: Print PROJECT_NUM to verify its value
-      - name: Debug Project Number
-        run: echo "The PROJECT_NUM being used is: ${{ env.PROJECT_NUM }}"        
+        
 
       # --- Backend Deployment to Google Cloud Run ---
+      - name: Debug Project Number
+        run: echo "The PROJECT_NUM being used is ${{ env.PROJECT_NUM }}"
+
       - name: Authenticate to Google Cloud
         id: 'auth'
         uses: 'google-github-actions/auth@v2'
