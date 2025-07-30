@@ -4,7 +4,8 @@ import uuid
 from datetime import datetime, timedelta
 
 #  Third-Party Libraries
-from fastapi import APIRouter, Request, Depends, JSONResponse
+from fastapi import APIRouter, Request, Depends
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 #  Internal Modules

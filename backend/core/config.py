@@ -70,8 +70,11 @@ origins = [
 
 # --- Proposal Configuration ---
 
-# Path to the JSON file containing the proposal structure and section definitions.
-CONFIG_PATH = "config/templates/unhcr_cerf_proposal_template.json"
+# Construct an absolute path to the configuration file.
+# This makes the path robust, regardless of the current working directory.
+BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CONFIG_PATH = os.path.join(BACKEND_DIR, "config/templates/unhcr_cerf_proposal_template.json")
+
 
 # List of section names, defining the structure of a proposal.
 SECTIONS = [

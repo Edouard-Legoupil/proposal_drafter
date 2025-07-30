@@ -1,6 +1,9 @@
 #  Third-Party Libraries
 from fastapi import FastAPI, HTTPException
 import uvicorn
+from dotenv import load_dotenv
+
+load_dotenv()
 
 #  Internal Modules
 from backend.api import auth, proposals, session, documents, health

@@ -55,12 +55,7 @@ llm = AzureChatOpenAI(
 #     api_key=os.getenv("GEMINI_API_KEY") # 
 # )
 
-# Load JSON instructions from the config folder
-#CONFIG_PATH = "config/templates/iom_proposal_template.json"
-CONFIG_PATH = "config/templates/unhcr_cerf_proposal_template.json"
-
-with open(CONFIG_PATH, "r", encoding="utf-8") as file:
-    proposal_data = json.load(file)
+# The proposal data is now loaded in backend.core.config
 
 @CrewBase
 class ProposalCrew():
@@ -71,10 +66,10 @@ class ProposalCrew():
     generate_proposal_log = 'crew_logs/generate_proposal_log.txt'
     regenerate_proposal_log = 'crew_logs/regenerate_proposal_log.txt'
 
-    # Path to knowledge files 
+    # Path to knowledge files
     json_knowledge = JSONKnowledgeSource(
         file_paths=[
-            "combine_example.json"
+            "backend/knowledge/combine_example.json"
         ]
     )
 
@@ -137,7 +132,6 @@ class ProposalCrew():
             process=Process.sequential,
             verbose=True,
             output_log_file = self.generate_proposal_log,
-            knowledge_sources=[self.json_knowledge],           
             embedder={
                 "provider": "azure",
                 "config": {
@@ -171,7 +165,6 @@ class ProposalCrew():
             process=Process.sequential,
             verbose=True,
             output_log_file = self.regenerate_proposal_log,
-            knowledge_sources=[self.json_knowledge],
             embedder={
                 "provider": "azure",
                 "config": {

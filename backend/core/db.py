@@ -57,33 +57,39 @@ def getconn():
 
 # --- SQLAlchemy Engine Creation ---
 # The engine is the central point for an application to communicate with the database.
-if on_gcp:
-    # For GCP, the engine is created with a `creator` function (`getconn`).
-    engine = create_engine(
-        "postgresql+pg8000://",
-        creator=getconn,
-        pool_pre_ping=True,  # Check connection validity before use.
-        pool_recycle=300,   # Recycle connections after 300 seconds.
-    )
-else:
-    # For local development, the engine is created using a standard connection string.
-    encoded_password = urllib.parse.quote_plus(db_password) if db_password else ""
-    connection_string = f"postgresql+psycopg2://{db_username}:{encoded_password}@{db_host}:5432/{db_name}"
-    logger.debug(f"Local connection string: {connection_string.split(':')[0]}...")
-    engine = create_engine(
-        connection_string,
-        pool_pre_ping=True,
-        pool_recycle=300
-    )
+import os
+from unittest.mock import MagicMock
 
-# --- Database Connection Test ---
-# Verify that the database connection is successful upon application startup.
-try:
-    with engine.connect() as connection:
-        result = connection.execute(text("SELECT NOW()"))
-        logger.info(f"✅ Database connection successful. Current time: {result.scalar()}")
-except Exception as e:
-    logger.error(f"❌ Failed to connect to database: {e}")
-    # Re-raising the exception to prevent the application from starting
-    # with a faulty database connection.
-    raise
+if os.getenv("TESTING"):
+    engine = MagicMock()
+else:
+    if on_gcp:
+        # For GCP, the engine is created with a `creator` function (`getconn`).
+        engine = create_engine(
+            "postgresql+pg8000://",
+            creator=getconn,
+            pool_pre_ping=True,  # Check connection validity before use.
+            pool_recycle=300,   # Recycle connections after 300 seconds.
+        )
+    else:
+        # For local development, the engine is created using a standard connection string.
+        encoded_password = urllib.parse.quote_plus(db_password) if db_password else ""
+        connection_string = f"postgresql+psycopg2://{db_username}:{encoded_password}@{db_host}:5432/{db_name}"
+        logger.debug(f"Local connection string: {connection_string.split(':')[0]}...")
+        engine = create_engine(
+            connection_string,
+            pool_pre_ping=True,
+            pool_recycle=300
+        )
+
+    # --- Database Connection Test ---
+    # Verify that the database connection is successful upon application startup.
+    try:
+        with engine.connect() as connection:
+            result = connection.execute(text("SELECT NOW()"))
+            logger.info(f"✅ Database connection successful. Current time: {result.scalar()}")
+    except Exception as e:
+        logger.error(f"❌ Failed to connect to database: {e}")
+        # Re-raising the exception to prevent the application from starting
+        # with a faulty database connection.
+        raise
