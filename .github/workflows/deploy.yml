@@ -3,7 +3,7 @@ name: Deploy backend to Google Cloud Run and frontend to github page
 on:
   push:
     branches:
-      - main # Or your main branch name, e.g., master
+      - main 
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
