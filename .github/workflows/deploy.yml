@@ -1,20 +1,17 @@
-name: Deploy to Azure App Service
+name: Deploy backend to Google Cloud Run and frontend to github page
 
 on:
   push:
     branches:
-      - main
-  workflow_dispatch:       
+      - main # Or your main branch name, e.g., master
 
 env:
-  IMAGE_TAG: latest #${{ github.sha }}
-  REGISTRY_LOGIN_SERVER: ${{ secrets.REGISTRY_LOGIN_SERVER }}
-  REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
-  REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
-  
-  RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
-  DOCKER_COMPOSE_PATH: azure-docker-compose.yml
-  AZURE_WEBAPP_NAME: ${{ secrets.AZURE_WEBAPP_NAME }}
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GAR_LOCATION: ${{ secrets.GCP_PROJECT_LOCATION }} # Or your desired Artifact Registry location (e.g., europe-west1)
+  CLOUD_RUN_REGION: ${{ secrets.GCP_PROJECT_LOCATION }} # Or your desired Cloud Run region (e.g., europe-west1)
+  BACKEND_SERVICE_NAME: ${{ secrets.GCP_SERVICE }} # proposalgen-backend
+
+  SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
   # Backend environment variables
   AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
@@ -31,154 +28,90 @@ env:
   DB_HOST: ${{ secrets.DB_HOST }}
   DB_PORT: ${{ secrets.DB_PORT }}
   SECRET_KEY: ${{ secrets.SECRET_KEY }}
-  REDIS_HOST: ${{ secrets.REDIS_HOST }}
-  REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }} # Add this if your Redis Cache requires auth
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: 'write' # Required for checkout and gh-pages deployment
+      id-token: 'write' # Required for Workload Identity Federation with GCP
+      pages: 'write'    # Required to deploy to GitHub Pages
+      pull-requests: 'write' # Generally good to have for PR comments if you expand later
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Log in to Azure
-        uses: azure/login@v1
+      # --- Backend Deployment to Google Cloud Run ---
+      - name: Authenticate to Google Cloud
+        id: 'auth'
+        uses: 'google-github-actions/auth@v2'
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          workload_identity_provider: 'projects/${{ env.PROJECT_ID }}/locations/global/workloadIdentityPools/github-pool/providers/github-provider' # Replace with your WIF provider name
+          service_account: '${{ env.SERVICE_ACCOUNT }}' # Replace with your SA email (e.g., github-actions-sa@your-project-id.iam.gserviceaccount.com)
 
-      - name: Docker Login to ACR
-        uses: azure/docker-login@v1
+      - name: Set up Cloud SDK
+        uses: 'google-github-actions/setup-gcloud@v2'
+
+      - name: Configure Docker to use gcloud as a credential helper
+        run: gcloud auth configure-docker "${{ env.GAR_LOCATION }}-docker.pkg.dev"
+
+      - name: Build and Push Backend Image
+        run: |
+          docker build ./backend -t "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.BACKEND_SERVICE_NAME }}:${{ github.sha }}"
+          docker push "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.BACKEND_SERVICE_NAME }}:${{ github.sha }}"
+
+      - name: Deploy Backend to Cloud Run
+        id: deploy-backend
+        uses: google-github-actions/deploy-cloudrun@v2
         with:
-          login-server: ${{ env.REGISTRY_LOGIN_SERVER }}
-          username: ${{ env.REGISTRY_USERNAME }}
-          password: ${{ env.REGISTRY_PASSWORD }}
+          service: ${{ env.BACKEND_SERVICE_NAME }}
+          region: ${{ env.CLOUD_RUN_REGION }}
+          image: ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.BACKEND_SERVICE_NAME }}:${{ github.sha }}
+          # Uncomment and configure if needed:
+          # flags: --allow-unauthenticated --service-account ${{ env.SERVICE_ACCOUNT }}
+          env_vars: |
+            AZURE_OPENAI_ENDPOINT=${{ env.AZURE_OPENAI_ENDPOINT }}
+            AZURE_OPENAI_API_KEY=${{ env.AZURE_OPENAI_API_KEY }}
+            OPENAI_API_VERSION=${{ env.OPENAI_API_VERSION }}
+            AZURE_DEPLOYMENT_NAME=${{ env.AZURE_DEPLOYMENT_NAME }}
+            AZURE_OPENAI_ENDPOINT_EMBED=${{ env.AZURE_OPENAI_ENDPOINT_EMBED }}
+            AZURE_OPENAI_API_KEY_EMBED=${{ env.AZURE_OPENAI_API_KEY_EMBED }}
+            AZURE_OPENAI_API_VERSION_EMBED=${{ env.AZURE_OPENAI_API_VERSION_EMBED }}
+            AZURE_EMBEDDING_DEPLOYMENT_NAME=${{ env.AZURE_EMBEDDING_DEPLOYMENT_NAME }}
+            DB_USERNAME=${{ env.DB_USERNAME }}
+            DB_PASSWORD=${{ env.DB_PASSWORD }}
+            DB_NAME=${{ env.DB_NAME }}
+            DB_HOST=${{ env.DB_HOST }}
+            DB_PORT=${{ env.DB_PORT }}
+            SECRET_KEY=${{ env.SECRET_KEY }}
 
-      - name: Debug ACR Access
-        run: |
-          echo "ACR Host: ${{ env.REGISTRY_LOGIN_SERVER }}"
-          nslookup ${{ env.REGISTRY_LOGIN_SERVER }}
-          curl -m 5 -vk https://${{ env.REGISTRY_LOGIN_SERVER }}/v2/ || echo "Curl failed"
-          docker login ${{ env.REGISTRY_LOGIN_SERVER }} \
-            -u ${{ env.REGISTRY_USERNAME }} \
-            -p ${{ env.REGISTRY_PASSWORD }}
-      
-      - name: Validate REGISTRY_LOGIN_SERVER is lowercase
-        run: |
-          if [[ "${REGISTRY_LOGIN_SERVER}" =~ [A-Z] ]]; then
-            echo "❌ REGISTRY_LOGIN_SERVER must be lowercase. Current value: ${REGISTRY_LOGIN_SERVER}"
-            exit 1
-          else
-            echo "✅ REGISTRY_LOGIN_SERVER is lowercase: ${REGISTRY_LOGIN_SERVER}"
-          fi
-        
-      - name: Build and Push Docker Images
-        run: |
-          echo "→ Substituting placeholders in $DOCKER_COMPOSE_PATH..."
-          sed -i \
-            -e "s|\${REGISTRY_LOGIN_SERVER}|${REGISTRY_LOGIN_SERVER}|g" \
-            -e "s|\${AZURE_OPENAI_ENDPOINT}|${AZURE_OPENAI_ENDPOINT}|g" \
-            -e "s|\${AZURE_OPENAI_API_KEY}|${AZURE_OPENAI_API_KEY}|g" \
-            -e "s|\${OPENAI_API_VERSION}|${OPENAI_API_VERSION}|g" \
-            -e "s|\${AZURE_DEPLOYMENT_NAME}|${AZURE_DEPLOYMENT_NAME}|g" \
-            -e "s|\${AZURE_OPENAI_ENDPOINT_EMBED}|${AZURE_OPENAI_ENDPOINT_EMBED}|g" \
-            -e "s|\${AZURE_OPENAI_API_KEY_EMBED}|${AZURE_OPENAI_API_KEY_EMBED}|g" \
-            -e "s|\${AZURE_OPENAI_API_VERSION_EMBED}|${AZURE_OPENAI_API_VERSION_EMBED}|g" \
-            -e "s|\${AZURE_EMBEDDING_DEPLOYMENT_NAME}|${AZURE_EMBEDDING_DEPLOYMENT_NAME}|g" \
-            -e "s|\${DB_USERNAME}|${DB_USERNAME}|g" \
-            -e "s|\${DB_PASSWORD}|${DB_PASSWORD}|g" \
-            -e "s|\${DB_NAME}|${DB_NAME}|g" \
-            -e "s|\${DB_HOST}|${DB_HOST}|g" \
-            -e "s|\${DB_PORT}|${DB_PORT}|g" \
-            -e "s|\${SECRET_KEY}|${SECRET_KEY}|g" \
-            -e "s|\${REDIS_HOST}|${REDIS_HOST}|g" \
-            -e "s|\${REDIS_PASSWORD}|${REDIS_PASSWORD}|g" \
-            "$DOCKER_COMPOSE_PATH"
-    
-          echo "→ Final compose file (for debugging):"
-          cat "$DOCKER_COMPOSE_PATH"
 
-          echo "→ Building Docker images..."
-          docker compose -f "$DOCKER_COMPOSE_PATH" build --no-cache
+      # Set the Cloud Run service URL as an output for the frontend
+      - name: Get Cloud Run service URL
+        run: echo "CLOUD_RUN_URL=${{ steps.deploy-backend.outputs.url }}" >> $GITHUB_ENV
 
-          echo "→ Pushing Docker images to ACR..."
-          docker compose -f "$DOCKER_COMPOSE_PATH" push
+      # --- Frontend Deployment to GitHub Pages ---
+      - name: Set up Node.js for frontend
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Or your desired Node.js version
 
-      - name: Verify Image Names
-        run: |
-          echo "Checking azure-docker-compose.yml for image references..."
-          grep "image:" ${{ env.DOCKER_COMPOSE_PATH }}
-          echo "Built images:"
-          docker images 
+      - name: Install Frontend Dependencies
+        working-directory: ./frontend 
+        run: npm install
 
-      - name: Set Docker Registry Credentials for App Service
-        run: |
-          echo "→ Setting Docker registry credentials..."
-          az webapp config appsettings set \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --settings \
-              DOCKER_REGISTRY_SERVER_URL="https://${{ env.REGISTRY_LOGIN_SERVER }}" \
-              DOCKER_REGISTRY_SERVER_USERNAME="${{ env.REGISTRY_USERNAME }}" \
-              DOCKER_REGISTRY_SERVER_PASSWORD="${{ env.REGISTRY_PASSWORD }}" \
-              WEBSITES_ENABLE_APP_SERVICE_STORAGE="false"
+      - name: Build REACT Frontend
+        working-directory: ./frontend
+        run: npm run build
+        env:
+          # Pass the deployed backend URL to the frontend build process
+          # Make sure your React app uses VITE_BACKEND_URL or REACT_APP_BACKEND_URL (depending on Vite/CRA)
+          VITE_BACKEND_URL: ${{ env.CLOUD_RUN_URL }} # For Vite, use VITE_ prefix
+          # REACT_APP_BACKEND_URL: ${{ env.CLOUD_RUN_URL }} # For Create React App (CRA), use REACT_APP_ prefix
 
-      - name: Set App Service Environment Variables
-        run: |
-          echo "→ Setting environment variables for App Service..."
-          az webapp config appsettings set \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --settings \
-              AZURE_OPENAI_ENDPOINT="${{ env.AZURE_OPENAI_ENDPOINT }}" \
-              AZURE_OPENAI_API_KEY="${{ env.AZURE_OPENAI_API_KEY }}" \
-              OPENAI_API_VERSION="${{ env.OPENAI_API_VERSION }}" \
-              AZURE_DEPLOYMENT_NAME="${{ env.AZURE_DEPLOYMENT_NAME }}" \
-              AZURE_OPENAI_ENDPOINT_EMBED="${{ env.AZURE_OPENAI_ENDPOINT_EMBED }}" \
-              AZURE_OPENAI_API_KEY_EMBED="${{ env.AZURE_OPENAI_API_KEY_EMBED }}" \
-              AZURE_OPENAI_API_VERSION_EMBED="${{ env.AZURE_OPENAI_API_VERSION_EMBED }}" \
-              AZURE_EMBEDDING_DEPLOYMENT_NAME="${{ env.AZURE_EMBEDDING_DEPLOYMENT_NAME }}" \
-              DB_USERNAME="${{ env.DB_USERNAME }}" \
-              DB_PASSWORD="${{ env.DB_PASSWORD }}" \
-              DB_NAME="${{ env.DB_NAME }}" \
-              DB_HOST="${{ env.DB_HOST }}" \
-              DB_PORT="${{ env.DB_PORT }}" \
-              SECRET_KEY="${{ env.SECRET_KEY }}" \
-              REDIS_HOST="${{ env.REDIS_HOST }}" \
-              REDIS_PASSWORD="${{ env.REDIS_PASSWORD }}"
-
-      - name: Deploy Multi-Container App to Azure App Service
-        run: |
-          echo "→ Deploying multi-container configuration..."
-          az webapp config container set \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --multicontainer-config-type compose \
-            --multicontainer-config-file ${{ env.DOCKER_COMPOSE_PATH }}
-
-      - name: Restart App Service
-        run: |
-          echo "→ Restarting App Service to pick up new containers..."
-          az webapp restart \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --name ${{ env.AZURE_WEBAPP_NAME }}
-
-      - name: Wait for Deployment
-        run: |
-          echo "→ Waiting 30 seconds for deployment to complete..."
-          sleep 30
-
-      - name: Check App Service Status
-        run: |
-          echo "→ Checking App Service status..."
-          az webapp show \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --query "state" -o tsv
-          
-          echo "→ Getting App Service URL..."
-          APP_URL=$(az webapp show \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --name ${{ env.AZURE_WEBAPP_NAME }} \
-            --query "defaultHostName" -o tsv)
-          echo "App deployed at: https://$APP_URL"
+      - name: Deploy Frontend to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./frontend/dist 

@@ -11,12 +11,7 @@ import pprint
 import traceback
 
 #  Third-Party Libraries
-from fastapi import FastAPI, HTTPException, File, UploadFile, Form
-from fastapi.responses import FileResponse, JSONResponse
-from fastapi import Request
-from fastapi import Header
-from fastapi.responses import Response
-from fastapi import Query
+
 from pydantic import BaseModel
 from typing import Dict, Optional
 import redis
@@ -41,7 +36,6 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 import urllib.parse
-from fastapi import Depends
 
 #  Internal Modules
 from crew import ProposalCrew
@@ -53,7 +47,6 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 
-from fastapi.responses import FileResponse
 from docx import Document
 from docx.shared import Pt
 # from docx2pdf import convert
@@ -83,25 +76,37 @@ from datetime import timedelta, datetime, timezone
 # from docx2pdf import convert
 
 # Initialize FastAPI app instance
-app = FastAPI()
+from fastapi import FastAPI, HTTPException, File, UploadFile, Form
+
+from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi import Request
+from fastapi import Header
+from fastapi import Depends
+from fastapi import Query
+from fastapi import status 
+
+
+
+
+from fastapi import APIRouter
+router = APIRouter()
+@router.options("/api/{path:path}")
+async def options_handler():
+    return JSONResponse(content={"status": "ok"}, status_code=200)
+
+app = FastAPI(title="Proposal Drafter API", version="0.0.1")
+app.include_router(router)
 
 # Allow CORS from specific frontend origins
 # Enable CORS to allow frontend (e.g., localhost, github or Azure) to access this API
 # Make origins a global variable so the middleware can access it
 
-origins = [
-    #"https://proposal-drafter.azurewebsites.net",  ## client in Azure
-    "https://edouard-legoupil.github.io", ## Client in github page
-    "http://localhost:8503"               ## Client for local dev
 
-]
 
 ## Test to debug
-from fastapi import FastAPI, Response, Request, status 
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import PlainTextResponse
-from starlette.types import ASGIApp
-
+#from starlette.middleware.base import BaseHTTPMiddleware
+#from starlette.responses import PlainTextResponse
+#from starlette.types import ASGIApp
 
 # --- START: Debugging Middleware (placed BEFORE CORSMiddleware) ---
 # class OriginLoggerMiddleware(BaseHTTPMiddleware):
@@ -125,7 +130,12 @@ from starlette.types import ASGIApp
 # app.add_middleware(OriginLoggerMiddleware)
 # --- END: Debugging Middleware ---
 
+origins = [
+    #"https://proposal-drafter.azurewebsites.net",  ## client in Azure
+    "https://edouard-legoupil.github.io", ## Client in github page
+    "http://localhost:8503"               ## Client for local dev
 
+    ]
 
 # --- START: Your actual CORS Middleware ---
 app.add_middleware(
@@ -134,17 +144,37 @@ app.add_middleware(
    expose_headers=["*"],
    allow_credentials=True,
    allow_methods=["*"],
-   allow_headers=["*"],
+   allow_headers=["*"]#,
    #allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 )
 
 
+# --- BEGIN: CORS Middleware check ---
+# Fix Preflight Requests
+@app.middleware("http")
+async def handle_preflight(request: Request, call_next):
+    if request.method == "OPTIONS":
+        origin = request.headers.get("origin")
+        if origin in origins:
+            return Response(status_code=204, headers={
+                "Access-Control-Allow-Origin": origin,
+                "Access-Control-Allow-Credentials": "true",
+                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+                "Access-Control-Allow-Headers": "Authorization, Content-Type"
+            })
+        else:
+            return Response(status_code=403)
+    return await call_next(request)
 
-# # Define the allowed frontend origins
-# ALLOWED_ORIGINS = [
-#     "https://edouard-legoupil.github.io",
-#     "http://localhost:8503"
-# ]
+# Force Access-Control-Allow-Origin in response
+@app.middleware("http")
+async def add_cors_headers(request: Request, call_next):
+    origin = request.headers.get("origin")
+    response = await call_next(request)
+    if origin in origins:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
 
 # @app.middleware("http")
 # async def static_origin_cors_middleware(request: Request, call_next):
@@ -153,7 +183,7 @@ app.add_middleware(
 #     # Handle preflight request early
 #     if request.method == "OPTIONS":
 #         headers = {}
-#         if origin in ALLOWED_ORIGINS:
+#         if origin in origins:
 #             headers = {
 #                 "Access-Control-Allow-Origin": origin,
 #                 "Access-Control-Allow-Credentials": "true",
@@ -165,7 +195,7 @@ app.add_middleware(
 #     # Continue to next middleware/route
 #     response = await call_next(request)
 
-#     if origin in ALLOWED_ORIGINS:
+#     if origin in origins:
 #         response.headers["Access-Control-Allow-Origin"] = origin
 #         response.headers["Access-Control-Allow-Credentials"] = "true"
 #         response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
@@ -178,7 +208,7 @@ app.add_middleware(
 #    origin = request.headers.get("origin")
 
 #    headers = {}
-#    if origin in ALLOWED_ORIGINS:
+#    if origin in origins:
 #        headers = {
 #            "Access-Control-Allow-Origin": origin,
 #            "Access-Control-Allow-Credentials": "true",
@@ -187,6 +217,9 @@ app.add_middleware(
 #        }
 
 #    return Response(status_code=204, headers=headers)    
+
+
+
 # --- END: Your actual CORS Middleware ---
 
 
@@ -324,6 +357,16 @@ except Exception as e:
 # Fetches user info from PostgreSQL based on decoded email
 
 def get_current_user(request: Request):
+
+
+    # --- IMPORTANT: Bypass authentication for OPTIONS requests ---
+    if request.method == "OPTIONS":
+        # For OPTIONS requests, we don't need to authenticate.
+        # The CORSMiddleware handles the response headers for preflight.
+        # We can simply return a dummy value or None, as this function's
+        # return value won't be used by the actual route handler for OPTIONS.
+        return None # Or {} or any other value that doesn't cause errors
+
     token = request.cookies.get("auth_token")
     if not token:
         raise HTTPException(status_code=401, detail="Authentication token missing.")
@@ -955,16 +998,16 @@ def get_cookie_settings(request: Request):
 
     # Domain logic
     domain = None
-    if "ngrok-free.app" in host:
-        domain = ".ngrok-free.app"
-    elif "run.app" in host:
-        domain = ".run.app"
+    if "run.app" in host:
+        domain = "proposaldrafter-service-290826171799.europe-west1.run.app"
 
     settings = {
         "secure": not is_strict_localhost,  # False ONLY when both are localhost
-        "samesite": "lax" if is_strict_localhost else "none",
-        "domain": None
-        #"domain": domain if not is_strict_localhost else None
+        "samesite": "lax" if is_strict_localhost else "None",
+       # "domain": "None" 
+         
+
+        "domain": domain if not is_strict_localhost else None
     }
     
     # Debug output
