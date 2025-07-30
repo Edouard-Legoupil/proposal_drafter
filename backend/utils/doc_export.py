@@ -107,3 +107,19 @@ def create_pdf_from_sections(output_path: str, form_data: Dict, ordered_sections
 
     # Build the PDF document.
     doc.build(story)
+
+
+def generate_final_markdown(generated_sections: Dict) -> str:
+    """
+    Compiles all generated sections into a single Markdown string.
+
+    Args:
+        generated_sections: A dictionary of the proposal sections and their content.
+
+    Returns:
+        A string containing the full proposal in Markdown format.
+    """
+    markdown_content = ""
+    for section, content in generated_sections.items():
+        markdown_content += f"## {section}\n\n{content.strip()}\n\n"
+    return markdown_content
