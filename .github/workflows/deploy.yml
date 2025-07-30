@@ -7,6 +7,7 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  PROJECT_NUM: ${{ secrets.GCP_PROJECT_NUM }}
   GAR_LOCATION: ${{ secrets.GCP_PROJECT_LOCATION }} # Or your desired Artifact Registry location (e.g., europe-west1)
   CLOUD_RUN_REGION: ${{ secrets.GCP_PROJECT_LOCATION }} # Or your desired Cloud Run region (e.g., europe-west1)
   BACKEND_SERVICE_NAME: ${{ secrets.GCP_SERVICE }} # proposalgen-backend
@@ -49,6 +50,7 @@ jobs:
         with:
           workload_identity_provider: 'projects/${{ env.PROJECT_ID }}/locations/global/workloadIdentityPools/github-pool/providers/github-provider' # Replace with your WIF provider name
           service_account: '${{ env.SERVICE_ACCOUNT }}' # Replace with your SA email (e.g., github-actions-sa@your-project-id.iam.gserviceaccount.com)
+          audience: 'projects/${{ env.PROJECT_NUM }}/locations/global/workloadIdentityPools/github-pool/providers/github-provider' 
 
       - name: Set up Cloud SDK
         uses: 'google-github-actions/setup-gcloud@v2'
