@@ -53,8 +53,8 @@ jobs:
         id: 'auth'
         uses: 'google-github-actions/auth@v2'
         with:
-          workload_identity_provider: 'projects/${{ env.PROJECT_NUM }}/locations/global/workloadIdentityPools/github-pool/providers/github-provider'  
-          service_account: '${{ env.SERVICE_ACCOUNT }}'  
+          project_id: ${{ env.PROJECT_ID}}
+          workload_identity_provider: 'projects/290826171799/locations/global/workloadIdentityPools/github/providers/my-repo'    
        
           
       - name: Set up Cloud SDK
