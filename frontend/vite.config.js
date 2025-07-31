@@ -29,7 +29,12 @@ export default defineConfig(({ mode }) => {
     },
 
     plugins: [react()],
-    base: base
+    base: base,
+
+    // ✅ Force Vite to output to /app/dist
+    build: {
+      outDir: 'dist'
+    }
 
 
   }

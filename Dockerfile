@@ -1,63 +1,40 @@
-# ========================
-# Backend build stage
-# ========================
-FROM python:3.11-slim AS backend-builder
-
-WORKDIR /app
-
-
-COPY backend/requirements.txt .
-
-RUN python -m venv /venv && \
-    . /venv/bin/activate && \
-    pip install --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt && \
-    echo "✅ Python dependencies installed"
-
-COPY backend/ .
-
-# ========================
-# Frontend build stage
-# ========================
+# ============================================
+# Stage 1: Frontend builder (Vite/React)
+# ============================================
 FROM node:20-alpine AS frontend-builder
 
 WORKDIR /app
-
-# Install frontend dependencies
 COPY frontend/package*.json ./
-
-RUN npm install && echo "✅ NPM dependencies installed"
-
-# Build Vite frontend
-ARG VITE_BACKEND_URL
-ENV VITE_BACKEND_URL=/api
+RUN npm install && echo "✅ NPM modules installed"
 
 COPY frontend/ .
-
-RUN npm run build && echo "✅ Frontend build completed" && ls -l dist/
-
+RUN npm run build && echo "✅ Frontend build complete" && ls -l dist/
 
 
-# ========================
-# Final image: Nginx + backend + frontend
-# ========================
-FROM nginx:alpine
+# ============================================
+# Stage 2: Final image with backend + Nginx
+# ============================================
+FROM python:3.11-slim AS final
 
-# Install Python and dependencies
-RUN apk add --no-cache python3 py3-pip bash
+# Install OS dependencies
+RUN apt-get update && apt-get install -y nginx curl && apt-get clean
 
-# Copy Python virtual environment and backend app
-COPY --from=backend-builder /venv /venv
-COPY --from=backend-builder /app /app
-
-# Activate the venv path
-ENV PATH="/venv/bin:$PATH"
+# Create a working directory
 WORKDIR /app
 
-# Copy frontend build to Nginx root
+# Create a virtual environment
+RUN python -m venv /venv
+ENV PATH="/venv/bin:$PATH"
+
+# Copy backend code and install dependencies inside the venv
+COPY backend/requirements.txt .
+RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt && echo "✅ Python packages installed"
+
+# Copy backend source
+COPY backend/ .
+
+# Copy frontend build
 COPY --from=frontend-builder /app/dist /usr/share/nginx/html
-
-
 # Create folders for data
 RUN mkdir -p crew_logs proposal-documents && chmod -R 755 crew_logs proposal-documents
 
@@ -71,6 +48,8 @@ EXPOSE 80
 COPY backend/start.sh /start.sh
 RUN chmod +x /start.sh
 
+# Expose Cloud Run default port
+ENV PORT=8080
 EXPOSE 8080
 
 # Start FastAPI + Nginx in parallel

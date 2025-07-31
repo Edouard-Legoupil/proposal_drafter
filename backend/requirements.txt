@@ -13,6 +13,7 @@ PyJWT
 werkzeug
 reportlab
 apscheduler
+uvicorn[standard]
 cloud-sql-python-connector[asyncpg]
 cloud-sql-python-connector[pg8000]
 google-cloud-secret-manager

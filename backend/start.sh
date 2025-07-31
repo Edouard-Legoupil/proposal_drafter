@@ -1,22 +1,16 @@
 #!/bin/sh
 # start.sh
 
-# Use Cloud Run PORT env var, default to 8502 if not set
-PORT="${PORT:-8502}"
-
-
 set -e
 
-echo "📦 Python path: $(which python)"
-echo "🚀 Starting FastAPI on port ${PORT:-8080}"
-
-/venv/bin/uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080} &
-
-# Wait a bit to ensure FastAPI is started before nginx
-sleep 1
-
-echo "🌐 Starting Nginx"
-/usr/sbin/nginx -g "daemon off;"
-
+echo "🔍 START.SH executing"
+echo "📂 Current dir: $(pwd)"
+echo "📦 Uvicorn path: $(which uvicorn || echo 'Not found')"
+echo "🐍 Python version: $(python3 --version)"
 
 echo "🚀 Starting FastAPI on port $PORT"
+/venv/bin/uvicorn main:app --host 0.0.0.0 --port $PORT &
+
+sleep 1
+echo "🌐 Starting Nginx"
+/usr/sbin/nginx -g "daemon off;"
