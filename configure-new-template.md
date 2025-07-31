@@ -28,3 +28,11 @@ SECTIONS = ["Summary", "Rationale", "Project Description", "Partnerships and Coo
 2. Adjust the intake form in `frontend/src/screens/chat/chat.jsx` l117
 
 Adjust the predefined list of activities - line 562 & 564
+
+
+
+## Adjust Prompting parameters
+
+The formData is collected from end use to be included as part of the context for content generation - 
+
+It is defined within `frontend/src/screens/chat/chat.jsx`

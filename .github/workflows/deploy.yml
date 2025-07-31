@@ -1,124 +1,54 @@
-name: Deploy backend to Google Cloud Run and frontend to github page
+name: 🚀 Deploy to Cloud Run
 
 on:
   push:
-    branches:
-      - main 
-
-env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  PROJECT_NUM: ${{ secrets.GCP_PROJECT_NUM }}
-  GAR_LOCATION: ${{ secrets.GCP_PROJECT_LOCATION }} # Or your desired Artifact Registry location (e.g., europe-west1)
-  CLOUD_RUN_REGION: ${{ secrets.GCP_PROJECT_LOCATION }} # Or your desired Cloud Run region (e.g., europe-west1)
-  BACKEND_SERVICE_NAME: ${{ secrets.GCP_SERVICE }} # proposalgen-backend
-
-  SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-
-  # Backend environment variables
-  AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
-  AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
-  OPENAI_API_VERSION: ${{ secrets.OPENAI_API_VERSION }}
-  AZURE_DEPLOYMENT_NAME: ${{ secrets.AZURE_DEPLOYMENT_NAME }}
-  AZURE_OPENAI_ENDPOINT_EMBED: ${{ secrets.AZURE_OPENAI_ENDPOINT_EMBED }}
-  AZURE_OPENAI_API_KEY_EMBED: ${{ secrets.AZURE_OPENAI_API_KEY_EMBED }}
-  AZURE_OPENAI_API_VERSION_EMBED: ${{ secrets.AZURE_OPENAI_API_VERSION_EMBED }}
-  AZURE_EMBEDDING_DEPLOYMENT_NAME: ${{ secrets.AZURE_EMBEDDING_DEPLOYMENT_NAME }}
-  DB_USERNAME: ${{ secrets.DB_USERNAME }}
-  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-  DB_NAME: ${{ secrets.DB_NAME }}
-  DB_HOST: ${{ secrets.DB_HOST }}
-  DB_PORT: ${{ secrets.DB_PORT }}
-  SECRET_KEY: ${{ secrets.SECRET_KEY }}
+    branches: [main]
 
 jobs:
-  build-and-deploy:
+  deploy:
+    name: Build & Deploy to Cloud Run
     runs-on: ubuntu-latest
-    permissions:
-      contents: 'write' # Required for checkout and gh-pages deployment
-      id-token: 'write' # Required for Workload Identity Federation with GCP
-      pages: 'write'    # Required to deploy to GitHub Pages
-      pull-requests: 'write' # Generally good to have for PR comments if you expand later
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: 📥 Checkout code
+        uses: actions/checkout@v3
 
-        
-
-      # --- Backend Deployment to Google Cloud Run ---
-      - name: Debug Project Number
-        run: echo "The PROJECT_NUM being used is ${{ env.PROJECT_NUM }}"
-
-      - name: Authenticate to Google Cloud
-        id: 'auth'
-        uses: 'google-github-actions/auth@v2'
+      - name: 🔐 Set up GCP credentials
+        id: auth
+        uses: google-github-actions/auth@v2
         with:
-          project_id: ${{ env.PROJECT_ID}}
-          workload_identity_provider: 'projects/290826171799/locations/global/workloadIdentityPools/github/providers/proposaldrafter1'    
-       
-          
-      - name: Set up Cloud SDK
-        uses: 'google-github-actions/setup-gcloud@v2'
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Configure Docker to use gcloud as a credential helper
-        run: gcloud auth configure-docker "${{ env.GAR_LOCATION }}-docker.pkg.dev"
+      - name: ☁️ Set up Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      - name: Build and Push Backend Image
+      - name: 🏗️ Build & Push Docker image
         run: |
-          docker build ./backend -t "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.BACKEND_SERVICE_NAME }}:${{ github.sha }}"
-          docker push "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.BACKEND_SERVICE_NAME }}:${{ github.sha }}"
+          IMAGE=gcr.io/${{ secrets.GCP_PROJECT_ID }}/proposalgen-full
+          gcloud builds submit --tag $IMAGE
 
-      - name: Deploy Backend to Cloud Run
-        id: deploy-backend
-        uses: google-github-actions/deploy-cloudrun@v2
-        with:
-          service: ${{ env.BACKEND_SERVICE_NAME }}
-          region: ${{ env.CLOUD_RUN_REGION }}
-          image: ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.BACKEND_SERVICE_NAME }}:${{ github.sha }}
-          # Uncomment and configure if needed:
-          # flags: --allow-unauthenticated --service-account ${{ env.SERVICE_ACCOUNT }}
-          env_vars: |
-            AZURE_OPENAI_ENDPOINT=${{ env.AZURE_OPENAI_ENDPOINT }}
-            AZURE_OPENAI_API_KEY=${{ env.AZURE_OPENAI_API_KEY }}
-            OPENAI_API_VERSION=${{ env.OPENAI_API_VERSION }}
-            AZURE_DEPLOYMENT_NAME=${{ env.AZURE_DEPLOYMENT_NAME }}
-            AZURE_OPENAI_ENDPOINT_EMBED=${{ env.AZURE_OPENAI_ENDPOINT_EMBED }}
-            AZURE_OPENAI_API_KEY_EMBED=${{ env.AZURE_OPENAI_API_KEY_EMBED }}
-            AZURE_OPENAI_API_VERSION_EMBED=${{ env.AZURE_OPENAI_API_VERSION_EMBED }}
-            AZURE_EMBEDDING_DEPLOYMENT_NAME=${{ env.AZURE_EMBEDDING_DEPLOYMENT_NAME }}
-            DB_USERNAME=${{ env.DB_USERNAME }}
-            DB_PASSWORD=${{ env.DB_PASSWORD }}
-            DB_NAME=${{ env.DB_NAME }}
-            DB_HOST=${{ env.DB_HOST }}
-            DB_PORT=${{ env.DB_PORT }}
-            SECRET_KEY=${{ env.SECRET_KEY }}
-
-
-      # Set the Cloud Run service URL as an output for the frontend
-      - name: Get Cloud Run service URL
-        run: echo "CLOUD_RUN_URL=${{ steps.deploy-backend.outputs.url }}" >> $GITHUB_ENV
-
-      # --- Frontend Deployment to GitHub Pages ---
-      - name: Set up Node.js for frontend
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20' # Or your desired Node.js version
-
-      - name: Install Frontend Dependencies
-        working-directory: ./frontend 
-        run: npm install
-
-      - name: Build REACT Frontend
-        working-directory: ./frontend
-        run: npm run build
-        env:
-          # Pass the deployed backend URL to the frontend build process
-          # Make sure your React app uses VITE_BACKEND_URL or REACT_APP_BACKEND_URL (depending on Vite/CRA)
-          VITE_BACKEND_URL: ${{ env.CLOUD_RUN_URL }} # For Vite, use VITE_ prefix
-          # REACT_APP_BACKEND_URL: ${{ env.CLOUD_RUN_URL }} # For Create React App (CRA), use REACT_APP_ prefix
-
-      - name: Deploy Frontend to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./frontend/dist 
+      - name: 🚀 Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ secrets.GCP_SERVICE }} \
+            --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/proposalgen-full \
+            --region ${{ secrets.GCP_PROJECT_LOCATION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --service-account cloud-sql-connector-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
+            --add-cloudsql-instances=${{ secrets.CLOUD_SQL_INSTANCE_CONNECTION_NAME }} \
+            --set-env-vars AZURE_OPENAI_ENDPOINT=${{ secrets.AZURE_OPENAI_ENDPOINT }},\
+                AZURE_OPENAI_API_KEY=${{ secrets.AZURE_OPENAI_API_KEY }},\
+                OPENAI_API_VERSION=${{ secrets.OPENAI_API_VERSION }},\
+                AZURE_DEPLOYMENT_NAME=${{ secrets.AZURE_DEPLOYMENT_NAME }},\
+                AZURE_OPENAI_ENDPOINT_EMBED=${{ secrets.AZURE_OPENAI_ENDPOINT_EMBED }},\
+                AZURE_OPENAI_API_KEY_EMBED=${{ secrets.AZURE_OPENAI_API_KEY_EMBED }},\
+                AZURE_OPENAI_API_VERSION_EMBED=${{ secrets.AZURE_OPENAI_API_VERSION_EMBED }},\
+                AZURE_EMBEDDING_DEPLOYMENT_NAME=${{ secrets.AZURE_EMBEDDING_DEPLOYMENT_NAME }},\
+                DB_USERNAME=${{ secrets.DB_USERNAME }},\
+                DB_PASSWORD=${{ secrets.DB_PASSWORD }},\
+                DB_NAME=${{ secrets.DB_NAME }},\
+                DB_HOST=127.0.0.1,\
+                DB_PORT=5432,\
+                SECRET_KEY=${{ secrets.SECRET_KEY }}

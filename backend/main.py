@@ -14,7 +14,7 @@ import traceback
 
 from pydantic import BaseModel
 from typing import Dict, Optional
-import redis
+#import redis
 from fastapi.middleware.cors import CORSMiddleware
 from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
@@ -226,7 +226,7 @@ async def add_cors_headers(request: Request, call_next):
 
 session_data = {}
 
-redis_client = redis.Redis(host="redis", port=6379, db=0, decode_responses=True)
+#redis_client = redis.Redis(host="redis", port=6379, db=0, decode_responses=True)
 
 
 
@@ -401,31 +401,62 @@ def get_current_user(request: Request):
 # Initialize Redis with error handling
 # Attempts to connect to Redis. If unavailable, falls back to in-memory DictStorage
 # Used for session caching (temporary user-generated data)
-try:
-    redis_client = redis.Redis(host="redis", port=6379, db=0, decode_responses=True)
-    # Test connection
-    redis_client.ping()
-    print("Successfully connected to Redis")
-except redis.ConnectionError:
-    print("Warning: Could not connect to Redis. Using in-memory storage as fallback.")
-    # Use a simple dict as fallback if Redis is not available
-    class DictStorage:
-        def __init__(self):
-            self.storage = {}
+# try:
+#     redis_client = redis.Redis(host="redis", port=6379, db=0, decode_responses=True)
+#     # Test connection
+#     redis_client.ping()
+#     print("Successfully connected to Redis")
+# except redis.ConnectionError:
+#     print("Warning: Could not connect to Redis. Using in-memory storage as fallback.")
+#     # Use a simple dict as fallback if Redis is not available
+#     class DictStorage:
+#         def __init__(self):
+#             self.storage = {}
             
-        def setex(self, key, ttl, value):
-            self.storage[key] = value
+#         def setex(self, key, ttl, value):
+#             self.storage[key] = value
             
-        def set(self, key, value):
-            self.storage[key] = value
+#         def set(self, key, value):
+#             self.storage[key] = value
             
-        def get(self, key):
-            return self.storage.get(key)
+#         def get(self, key):
+#             return self.storage.get(key)
         
-        def delete(self, key):
-            self.storage.pop(key, None)
+#         def delete(self, key):
+#             self.storage.pop(key, None)
     
-    redis_client = DictStorage()
+#     redis_client = DictStorage()
+
+# --- Removed Redis dependency: using in-memory session store only ---
+
+# In-memory fallback for session and data storage (replaces Redis)
+class InMemoryStore:
+    def __init__(self):
+        self.storage = {}
+        self.expiry = {}
+
+    def setex(self, key, ttl, value):
+        self.storage[key] = value
+        self.expiry[key] = datetime.utcnow() + timedelta(seconds=ttl)
+
+    def set(self, key, value):
+        self.storage[key] = value
+
+    def get(self, key):
+        expiry = self.expiry.get(key)
+        if expiry and datetime.utcnow() > expiry:
+            self.delete(key)
+            return None
+        return self.storage.get(key)
+
+    def delete(self, key):
+        self.storage.pop(key, None)
+        self.expiry.pop(key, None)
+
+# Instantiate globally
+redis_client = InMemoryStore()
+
+print("✅ Running in-memory storage (Redis disabled)")
 
 
 # Load section definitions and instructions from a predefined JSON template
@@ -1048,12 +1079,12 @@ async def login(request: Request):
             return JSONResponse(status_code=401, content={"error": "Invalid password!"})
 
         # ✅ Check if user already has an active session
-  #      existing_session_token = redis_client.get(f"user_session:{user_id}")
-  #      if existing_session_token:
-  #          return JSONResponse(
-  #              status_code=403,
-  #              content={"error": "You are already logged in from another session."}
-  #          )
+    #    existing_session_token = redis_client.get(f"user_session:{user_id}")
+    #    if existing_session_token:
+    #        return JSONResponse(
+    #            status_code=403,
+    #            content={"error": "You are already logged in from another session."}
+    #        )
         
         # ✅ Create JWT token
         token = jwt.encode(
@@ -1067,11 +1098,11 @@ async def login(request: Request):
         
 
         # ✅ Store token in Redis for this user
-        redis_client.setex(
-            f"user_session:{user_id}",
-            1800,  # 30 minutes
-            token
-        )
+     #   redis_client.setex(
+     #       f"user_session:{user_id}",
+     #       1800,  # 30 minutes
+     #       token
+     #   )
 
         # ✅ Set token in HttpOnly cookie
         response = JSONResponse(content={"message": "Login successful!"})
@@ -1095,7 +1126,7 @@ async def login(request: Request):
             **cookie_settings  
         )
 
-        print(f"   - Cookie is set to: {response.headers['set-cookie']}")
+       # print(f"   - Cookie is set to: {response.headers['set-cookie']}")
         return response
 
     except Exception as e:
@@ -1124,7 +1155,7 @@ async def logout(current_user: dict = Depends(get_current_user)):
 
     try:
         # ✅ Delete active session token from Redis
-        redis_client.delete(f"user_session:{user_id}")
+       # redis_client.delete(f"user_session:{user_id}")
         print(f"[LOGOUT] Removed session for user_id: {user_id}")
 
     except Exception as e:
@@ -1335,18 +1366,18 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
 
                 )
                 message = "Draft created successfully"
-        if request.session_id:
-            try:
-                redis_data_raw = redis_client.get(request.session_id)
-                if redis_data_raw:
-                    if isinstance(redis_data_raw, bytes):
-                        redis_data_raw = redis_data_raw.decode("utf-8")
-                    redis_data = json.loads(redis_data_raw)
-                    redis_data["proposal_id"] = proposal_id
-                    redis_client.setex(request.session_id, 3600, json.dumps(redis_data))
-                    print(f"[SAVE-DRAFT] Updated Redis session {request.session_id} with proposal_id: {proposal_id}")
-            except Exception as e:
-                print(f"[SAVE-DRAFT REDIS UPDATE ERROR] {e}")
+        # if request.session_id:
+        #     try:
+        #         redis_data_raw = redis_client.get(request.session_id)
+        #         if redis_data_raw:
+        #             if isinstance(redis_data_raw, bytes):
+        #                 redis_data_raw = redis_data_raw.decode("utf-8")
+        #             redis_data = json.loads(redis_data_raw)
+        #             redis_data["proposal_id"] = proposal_id
+        #             redis_client.setex(request.session_id, 3600, json.dumps(redis_data))
+        #             print(f"[SAVE-DRAFT] Updated Redis session {request.session_id} with proposal_id: {proposal_id}")
+        #     except Exception as e:
+        #         print(f"[SAVE-DRAFT REDIS UPDATE ERROR] {e}")
 
         return {
             "message": message,
