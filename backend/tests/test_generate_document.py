@@ -1,42 +1,40 @@
 import pytest
 from httpx import AsyncClient
 from backend.main import app
-from backend.core.redis import redis_client
+from backend.core.storage import storage_client
 from backend.core.config import SECTIONS
 from httpx import ASGITransport
 import os
 import json
-from httpx import AsyncClient
+from unittest.mock import MagicMock
 
 @pytest.mark.asyncio
-async def test_generate_document():
-    # Step 1: Store base data to get a session ID
-    # transport = ASGITransport(app=app)
+async def test_generate_document(mocker):
+    # Step 1: Create a mock proposal in the database
+    proposal_id = "test-proposal-id"
+    user_id = "test-user-id"
+    form_data = {"Project title": "Disaster Relief"}
+    project_description = "Testing document generation."
+    generated_sections = {section: f"Sample content for {section}" for section in SECTIONS}
+
+    # Mock the database query
+    mock_connection = MagicMock()
+    mock_result = MagicMock()
+    mock_result.fetchone.return_value = (
+        json.dumps(form_data),
+        project_description,
+        json.dumps(generated_sections),
+    )
+    mock_connection.execute.return_value = mock_result
+    mocker.patch("backend.api.documents.engine.connect").return_value.__enter__.return_value = mock_connection
+
+    # Step 2: Call generate-document endpoint
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        payload = {
-            "form_data": {"Project title": "Disaster Relief"},
-            "project_description": "Testing document generation."
-        }
-        post_response = await ac.post("/api/store_base_data", json=payload)
-        session_id = post_response.json()["session_id"]
+        response = await ac.get(f"/api/generate-document/{proposal_id}")
 
-    # Step 2: Add dummy generated_sections data into Redis
-    session_data = {
-        "form_data": {"Project title": "Disaster Relief"},
-        "project_description": "Testing document generation.",
-        "generated_sections": {section: f"Sample content for {section}" for section in SECTIONS}
-    }
-    redis_client.set(session_id, json.dumps(session_data))
-
-    # Step 3: Call generate-document endpoint
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        response = await ac.post(f"/api/generate-document/{session_id}")
-        data = response.json()
-
-    # Step 4: Assertions
+    # Step 3: Assertions
     assert response.status_code == 200
-    assert "file_path" in data
-    assert os.path.exists(data["file_path"])
+    assert response.headers["content-type"] == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
-    # ✅ Clean up generated file after test
-    os.remove(data["file_path"])
+    # The test doesn't check the file content, so we don't need to save and remove it.
+    # The FileResponse will be cleaned up automatically.

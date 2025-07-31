@@ -10,7 +10,7 @@ from sqlalchemy import text
 
 #  Internal Modules
 from backend.core.db import engine
-from backend.core.redis import redis_client
+from backend.core.storage import storage_client
 from backend.core.middleware import get_cookie_settings
 from backend.core.security import (
     get_current_user,
@@ -107,7 +107,7 @@ async def login(request: Request):
         )
 
         # Store the active session token in Redis.
-        redis_client.setex(f"user_session:{user_id}", 1800, token)
+        storage_client.setex(f"user_session:{user_id}", 1800, token)
 
         response = JSONResponse(content={"message": "Login successful!"})
 
@@ -149,7 +149,7 @@ async def logout(current_user: dict = Depends(get_current_user)):
     """
     user_id = current_user["user_id"]
     try:
-        redis_client.delete(f"user_session:{user_id}")
+        storage_client.delete(f"user_session:{user_id}")
         print(f"[LOGOUT] Removed session for user_id: {user_id}")
     except Exception as e:
         print(f"[LOGOUT ERROR] Failed to remove Redis session for user_id {user_id}: {e}")

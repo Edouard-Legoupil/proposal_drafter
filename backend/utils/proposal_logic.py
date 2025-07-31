@@ -9,7 +9,7 @@ from sqlalchemy import text
 
 #  Internal Modules
 from backend.utils.crew import ProposalCrew
-from backend.core.redis import redis_client
+from backend.core.storage import storage_client
 from backend.core.db import engine
 from backend.core.config import proposal_data
 
@@ -35,7 +35,7 @@ def regenerate_section_logic(session_id: str, section: str, concise_input: str, 
     Raises:
         HTTPException: If session data is missing or the section is invalid.
     """
-    session_data_str = redis_client.get(session_id)
+    session_data_str = storage_client.get(session_id)
     if not session_data_str:
         raise HTTPException(status_code=400, detail="Base data not found in session. Please store it first.")
 
@@ -81,7 +81,7 @@ def regenerate_section_logic(session_id: str, section: str, concise_input: str, 
 
     # Update the section in the session data.
     session_data.setdefault("generated_sections", {})[section] = generated_text
-    redis_client.set(session_id, json.dumps(session_data))
+    storage_client.set(session_id, json.dumps(session_data))
 
     # Persist the updated section to the database.
     user_id = session_data.get("user_id")

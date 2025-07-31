@@ -6,7 +6,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 
 #  Internal Modules
-from backend.core.redis import redis_client
+from backend.core.storage import storage_client
 from backend.core.security import get_current_user
 from backend.models.schemas import BaseDataRequest
 
@@ -32,7 +32,7 @@ async def store_base_data(request: BaseDataRequest, current_user: dict = Depends
         "user_id": current_user["user_id"]
     }
     # Store in Redis with a 1-hour expiration (3600 seconds).
-    redis_client.setex(session_id, 3600, json.dumps(data))
+    storage_client.setex(session_id, 3600, json.dumps(data))
 
     return {"message": "Base data stored successfully", "session_id": session_id}
 
@@ -41,7 +41,7 @@ async def get_base_data(session_id: str):
     """
     Retrieves the base proposal data from the specified Redis session.
     """
-    data = redis_client.get(session_id)
+    data = storage_client.get(session_id)
     if data is None:
         raise HTTPException(status_code=404, detail="Session data not found or expired.")
 

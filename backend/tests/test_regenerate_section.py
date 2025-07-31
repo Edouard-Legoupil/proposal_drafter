@@ -17,19 +17,31 @@ async def test_regenerate_section(mocker):
         post_response = await ac.post("/api/store_base_data", json=payload)
         session_id = post_response.json()["session_id"]
 
-    # Step 2: Mock regenerate_proposal_crew kickoff
+    # Step 2: Mock the database query to return a non-finalized proposal
+    mock_connection = MagicMock()
     mock_result = MagicMock()
-    mock_result.raw = '{"generated_content": "Regenerated content", "evaluation_status": "Approved", "feedback": ""}'
-    mocker.patch("crew.ProposalCrew.regenerate_proposal_crew", return_value=MagicMock(kickoff=MagicMock(return_value=mock_result)))
+    mock_result.scalar.return_value = False  # Not finalized
+    mock_connection.execute.return_value = mock_result
+    mocker.patch("backend.api.proposals.engine.connect").return_value.__enter__.return_value = mock_connection
+
+    # Step 2: Mock the proposal_data
+    mocker.patch("backend.utils.proposal_logic.proposal_data", {"sections": [{"section_name": "Summary"}]})
+
+    # Step 3: Mock regenerate_proposal_crew kickoff
+    mock_crew_result = MagicMock()
+    mock_crew_result.raw = '{"generated_content": "Regenerated content", "evaluation_status": "Approved", "feedback": ""}'
+    mocker.patch("backend.utils.crew.ProposalCrew.regenerate_proposal_crew", return_value=MagicMock(kickoff=MagicMock(return_value=mock_crew_result)))
 
     # Step 3: Call regenerate_section
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         section_payload = {
             "section": "Summary",
-            "concise_input": "Simplify wording."
+            "concise_input": "Simplify wording.",
+            "proposal_id": "test-proposal-id"
         }
         response = await ac.post(f"/api/regenerate_section/{session_id}", json=section_payload)
         data = response.json()
+        print(data)
 
     # Step 4: Assertions
     assert response.status_code == 200

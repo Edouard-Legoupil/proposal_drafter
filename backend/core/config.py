@@ -84,9 +84,11 @@ SECTIONS = [
 ]
 
 # Load the proposal template data from the JSON file.
+print(f"CONFIG_PATH: {CONFIG_PATH}")
 try:
     with open(CONFIG_PATH, "r", encoding="utf-8") as file:
         proposal_data = json.load(file)
+        print(f"PROPOSAL_DATA: {proposal_data}")
 except FileNotFoundError:
     logger.error(f"Proposal template file not found at: {CONFIG_PATH}")
     proposal_data = {"sections": []}

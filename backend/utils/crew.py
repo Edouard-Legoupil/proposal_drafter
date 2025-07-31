@@ -13,17 +13,18 @@ from backend.core.llm import llm, get_embedder_config
 class ProposalCrew():
     """ProposalCrew for generating project proposal"""
 
-    agents_config = 'utils/config/agents.yaml'
-    tasks_config = 'utils/config/tasks.yaml'
+    agents_config = 'backend/utils/config/agents.yaml'
+    tasks_config = 'backend/utils/config/tasks.yaml'
     generate_proposal_log = 'utils/crew_logs/generate_proposal_log.txt'
     regenerate_proposal_log = 'utils/crew_logs/regenerate_proposal_log.txt'
 
-    # Path to knowledge files
-    json_knowledge = JSONKnowledgeSource(
-        file_paths=[
-            "utils/knowledge/combine_example.json"
-        ]
-    )
+    def __init__(self):
+        # Path to knowledge files
+        self.json_knowledge = JSONKnowledgeSource(
+            file_paths=[
+                os.path.join(os.path.dirname(__file__), "knowledge/combine_example.json")
+            ]
+        )
 
 ## List of agents ##########
     @agent

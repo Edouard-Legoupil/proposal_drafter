@@ -10,7 +10,7 @@ from sqlalchemy import text
 
 #  Internal Modules
 from backend.core.db import engine
-from backend.core.redis import redis_client
+from backend.core.storage import storage_client
 from backend.core.security import get_current_user
 from backend.core.config import proposal_data, SECTIONS
 from backend.models.schemas import (
@@ -20,7 +20,7 @@ from backend.models.schemas import (
     FinalizeProposalRequest
 )
 from backend.utils.proposal_logic import regenerate_section_logic
-from backend.crew import ProposalCrew
+from backend.utils.crew import ProposalCrew
 
 # This router handles all endpoints related to the lifecycle of a proposal,
 # from creation and editing to listing and deletion.
@@ -33,7 +33,7 @@ async def process_section(session_id: str, request: SectionRequest, current_user
     Processes a single section of a proposal by running the generation crew.
     If the initial output is flagged, it automatically triggers a regeneration.
     """
-    session_data_str = redis_client.get(session_id)
+    session_data_str = storage_client.get(session_id)
     if not session_data_str:
         raise HTTPException(status_code=400, detail="Session data not found.")
 
@@ -266,7 +266,7 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
         "proposal_id": proposal_id,
         **data_to_load
     }
-    redis_client.setex(session_id, 3600, json.dumps(redis_payload))
+    storage_client.setex(session_id, 3600, json.dumps(redis_payload))
 
     return {"session_id": session_id, **data_to_load}
 

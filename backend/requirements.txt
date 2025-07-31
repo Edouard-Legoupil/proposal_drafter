@@ -1,6 +1,5 @@
 python-dotenv
 fastapi
-redis
 crewai
 python-docx 
 langchain
