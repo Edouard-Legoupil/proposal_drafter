@@ -47,10 +47,6 @@ RUN mkdir -p crew_logs proposal-documents && chmod -R 755 crew_logs proposal-doc
 # Copy custom nginx config
 COPY nginx-proxy/nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy supervisor config
-COPY supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
-
 ## ensure logs can be written
 RUN chmod 777 /dev/stdout /dev/stderr
 
@@ -59,15 +55,17 @@ ENV PORT=8080
 EXPOSE 8080
 
 
-# Copy the startup script
+# ============================================
+# Stage 3: Start FastAPI + Nginx in parallel 
+# ============================================
+
+## using a dedicated script..
+# Copy the startup script and make it executable
 COPY supervisor/start.sh /usr/local/bin/start.sh
-
-# Make the script executable
 RUN chmod +x /usr/local/bin/start.sh
+#CMD ["/usr/local/bin/start.sh"]
 
-# ============================================
-# Stage 3: Start FastAPI + Nginx in parallel using supervisord
-# ============================================
-
-CMD ["/usr/local/bin/start.sh"]
-
+# trying an alternative using supervisord
+# Copy supervisor config
+COPY supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

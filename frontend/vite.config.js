@@ -7,7 +7,8 @@ import react from '@vitejs/plugin-react-swc'
 export default defineConfig(({ mode }) => {
   const isProduction = mode === 'production'
 // 👈 dynamic base if the front end is on github page
-  const base = isProduction ? '/proposal_drafter/' : '/'
+// const base = isProduction ? '/proposal_drafter/' : '/'
+  const base = isProduction ? '/' : '/'
   return {
 
   server: {
@@ -16,8 +17,9 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       allowedHosts: [
         'localhost',
-        'https://8c1aa6b4f54e.ngrok-free.app/',
-        'https://proposaldrafter-service-290826171799.europe-west1.run.app/'
+       // 'https://8c1aa6b4f54e.ngrok-free.app/',
+       // 'https://proposaldrafter-service-290826171799.europe-west1.run.app/',
+        'https://proposaldrafterservice2-290826171799.europe-west1.run.app/'
       ],
       proxy: {
         '/api': {

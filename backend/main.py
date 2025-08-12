@@ -132,8 +132,9 @@ app.include_router(router)
 
 origins = [
     #"https://proposal-drafter.azurewebsites.net",  ## client in Azure
-    "https://edouard-legoupil.github.io", ## Client in github page
-    "http://localhost:8503"               ## Client for local dev
+    #"https://edouard-legoupil.github.io", ## Client in github page
+    "http://localhost:8503".               ## Client for local dev
+    "https://proposaldrafterservice2-290826171799.europe-west1.run.app"
 
     ]
 
@@ -2128,8 +2129,10 @@ async def delete_draft(
         print(f"[DELETE DRAFT ERROR] {e}")
         raise HTTPException(status_code=500, detail="Failed to delete draft")
 
-@app.get("/api/health_check")
-def health_check():
+
+## standard API health check
+@app.get("/api/health")
+def health():
     return {"status": "API is running"}
 
 # ---- Temporary debug endpoint
