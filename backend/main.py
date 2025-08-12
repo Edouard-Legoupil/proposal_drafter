@@ -94,7 +94,12 @@ router = APIRouter()
 async def options_handler():
     return JSONResponse(content={"status": "ok"}, status_code=200)
 
-app = FastAPI(title="Proposal Drafter API", version="0.0.1")
+app = FastAPI(
+    title="Proposal Drafter API", 
+    version="0.0.1", 
+    root_path="/api"
+    )
+
 app.include_router(router)
 
 # Allow CORS from specific frontend origins
@@ -518,7 +523,7 @@ async def store_base_data(request: BaseDataRequest,current_user: dict = Depends(
 
 
 
-@app.get("/api/get_base_data/{session_id}")
+@app.get("/get_base_data/{session_id}")
 async def get_base_data(session_id: str):
     data = redis_client.get(session_id)
     if data is None:
@@ -1135,7 +1140,7 @@ async def login(request: Request):
         return JSONResponse(status_code=500, content={"error": "Login failed. Please try again later."})
 
 
-@app.get("/api/profile")
+@app.get("/profile")
 async def profile(
         current_user: dict = Depends(get_current_user),
         # Capture Origin header
@@ -1391,7 +1396,7 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
 
 
 
-# @app.get("/api/list-drafts")
+# @app.get("/list-drafts")
 # async def list_drafts(current_user: dict = Depends(get_current_user)):
 #     user_id = current_user["user_id"]
 
@@ -1473,7 +1478,7 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
 #         raise HTTPException(status_code=500, detail="Failed to fetch drafts")
 
 
-# @app.get("/api/load-draft/{proposal_id}")
+# @app.get("/load-draft/{proposal_id}")
 # async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_user)):
 #     user_id = current_user["user_id"]
 
@@ -1565,7 +1570,7 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
 #         print(f"[LOAD DRAFT ERROR] {e}")
 #         raise HTTPException(status_code=404, detail="Draft not found")
 
-# @app.get("/api/load-draft/{proposal_id}")
+# @app.get("/load-draft/{proposal_id}")
 # async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_user)):
 #     user_id = current_user["user_id"]
 
@@ -1647,7 +1652,7 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
 #         print(f"[LOAD DRAFT ERROR] {e}")
 #         raise HTTPException(status_code=500, detail="Failed to load draft")
 
-@app.get("/api/list-drafts")
+@app.get("/list-drafts")
 async def list_drafts(current_user: dict = Depends(get_current_user)):
     user_id = current_user["user_id"]
 
@@ -1734,7 +1739,7 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
         print(f"[LIST DRAFTS ERROR] {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch drafts")
 
-@app.get("/api/load-draft/{proposal_id}")
+@app.get("/load-draft/{proposal_id}")
 async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_user)):
     user_id = current_user["user_id"]
 
@@ -1925,7 +1930,7 @@ def create_pdf_from_sections(output_path, form_data, ordered_sections):
 
 
 
-@app.get("/api/generate-document/{proposal_id}")
+@app.get("/generate-document/{proposal_id}")
 async def generate_and_download_document(
     proposal_id: str,
     format: str = "docx",  # either 'docx' or 'pdf'
@@ -2131,7 +2136,7 @@ async def delete_draft(
 
 
 ## standard API health check
-@app.get("/api/health")
+@app.get("/health")
 def health():
     return {"status": "API is running"}
 
