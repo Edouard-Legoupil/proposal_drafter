@@ -104,7 +104,7 @@ async def process_section(session_id: str, request: SectionRequest, current_user
                 {"sections": json.dumps(sections), "id": request.proposal_id}
             )
     except Exception as e:
-        print(f"[DB UPDATE ERROR - process_section] {e}")
+        logger.exception(f"[DB UPDATE ERROR - process_section] {e}")
         raise HTTPException(status_code=500, detail="Failed to save section to database.")
 
     return {"message": message, "generated_text": generated_text}
