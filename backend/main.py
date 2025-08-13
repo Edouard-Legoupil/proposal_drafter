@@ -8,7 +8,7 @@ load_dotenv()
 
 # --- Logging Configuration ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler = logging.FileHandler("app.log")
+handler = logging.FileHandler("log/app.log")
 handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 logging.getLogger().addHandler(handler)
 

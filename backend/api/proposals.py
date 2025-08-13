@@ -97,7 +97,13 @@ async def process_section(session_id: str, request: SectionRequest, current_user
     try:
         with engine.begin() as conn:
             db_res = conn.execute(text("SELECT generated_sections FROM proposals WHERE id = :id"), {"id": request.proposal_id}).scalar()
-            sections = json.loads(db_res) if db_res else {}
+
+            # The database driver is already converting JSON to a dict,
+            # so we can use db_res directly if it exists.
+            sections = db_res if db_res else {}
+
+           # sections = json.loads(db_res) if db_res else {}
+            
             sections[request.section] = generated_text
             conn.execute(
                 text("UPDATE proposals SET generated_sections = :sections, updated_at = NOW() WHERE id = :id"),
@@ -211,8 +217,11 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
                 {"uid": user_id}
             )
             for row in result.fetchall():
-                form_data = json.loads(row[1]) if row[1] else {}
-                sections = json.loads(row[2]) if row[2] else {}
+                #form_data = json.loads(row[1]) if row[1] else {}
+                #sections = json.loads(row[2]) if row[2] else {}
+                form_data = row[1] if row[1] else {}
+                sections = row[2] if row[2] else {}
+
                 draft_list.append({
                     "proposal_id": row[0],
                     "project_title": form_data.get("Project title", "Untitled Proposal"),
@@ -236,8 +245,35 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
     """
     user_id = current_user["user_id"]
 
-    # Handle sample drafts, which are loaded from a JSON file.
-    if proposal_id.startswith("sample-"):
+    # Handle user drafts, loaded from the database.
+    if not proposal_id.startswith("sample-"):
+        with engine.connect() as conn:
+            # === Corrected SELECT statement with specific columns ===
+            # The order of columns here is important and must match the indices below.
+            draft = conn.execute(
+                text("SELECT form_data, generated_sections, project_description, is_accepted, created_at, updated_at FROM proposals WHERE id = :id AND user_id = :uid"),
+                {"id": proposal_id, "uid": user_id}
+            ).fetchone()
+            if not draft:
+                raise HTTPException(status_code=404, detail="Draft not found.")
+
+            # === Corrected access using integer indices ===
+            # Access columns by their position (0-based) from the SELECT statement.
+            form_data = draft[0] if draft[0] else {}
+            sections = draft[1] if draft[1] else {}
+            project_description = draft[2]
+            
+            data_to_load = {
+                "form_data": form_data,
+                "project_description": project_description,
+                "generated_sections": {sec: sections.get(sec) for sec in SECTIONS},
+                "is_accepted": draft[3],
+                "created_at": draft[4].isoformat() if draft[4] else None,
+                "updated_at": draft[5].isoformat() if draft[5] else None,
+                "is_sample": False
+            }
+    else:
+        # Handle sample drafts, which are loaded from a JSON file.
         try:
             with open("templates/sample_templates.json", "r") as f:
                 samples = json.load(f)
@@ -249,27 +285,6 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
             data_to_load["is_sample"] = True
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to load sample: {e}")
-    else:
-        # Handle user drafts, loaded from the database.
-        with engine.connect() as conn:
-            draft = conn.execute(
-                text("SELECT * FROM proposals WHERE id = :id AND user_id = :uid"),
-                {"id": proposal_id, "uid": user_id}
-            ).fetchone()
-            if not draft:
-                raise HTTPException(status_code=404, detail="Draft not found.")
-
-            form_data = json.loads(draft['form_data']) if draft['form_data'] else {}
-            sections = json.loads(draft['generated_sections']) if draft['generated_sections'] else {}
-            data_to_load = {
-                "form_data": form_data,
-                "project_description": draft['project_description'],
-                "generated_sections": {sec: sections.get(sec) for sec in SECTIONS},
-                "is_accepted": draft['is_accepted'],
-                "created_at": draft['created_at'].isoformat() if draft['created_at'] else None,
-                "updated_at": draft['updated_at'].isoformat() if draft['updated_at'] else None,
-                "is_sample": False
-            }
 
     # Create a new Redis session for the loaded draft.
     session_id = str(uuid.uuid4())
@@ -281,7 +296,6 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
     redis_client.setex(session_id, 3600, json.dumps(redis_payload))
 
     return {"session_id": session_id, **data_to_load}
-
 
 @router.post("/finalize-proposal")
 async def finalize_proposal(request: FinalizeProposalRequest, current_user: dict = Depends(get_current_user)):
