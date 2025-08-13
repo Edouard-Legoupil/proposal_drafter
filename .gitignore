@@ -6,3 +6,5 @@ backend/.azure
 backend/.env2.yml
 .env
 backend/venv/*
+backend/app.log
+backend/log/generate_proposal_log.txt
