@@ -100,39 +100,4 @@ def regenerate_section_logic(session_id: str, section: str, concise_input: str, 
     session_data.setdefault("generated_sections", {})[section] = generated_text
     redis_client.set(session_id, json.dumps(session_data))
 
-    # Persist the updated section to the database.
-    user_id = session_data.get("user_id")
-    if not user_id:
-        print("[regenerate_section_logic] ❌ user_id missing in Redis. Skipping DB update.")
-        return generated_text
-
-    try:
-        with engine.begin() as connection:
-            # First, retrieve the existing sections from the database.
-            db_result = connection.execute(
-                text("SELECT generated_sections FROM proposals WHERE id = :proposal_id AND user_id = :user_id"),
-                {"proposal_id": proposal_id, "user_id": user_id}
-            )
-            draft = db_result.fetchone()
-
-            if draft:
-                # Update the specific section and write the entire JSON object back.
-                updated_sections = json.loads(draft[0]) if draft[0] else {}
-                updated_sections[section] = generated_text
-
-                connection.execute(
-                    text("""
-                        UPDATE proposals
-                        SET generated_sections = :sections, updated_at = NOW()
-                        WHERE id = :proposal_id AND user_id = :user_id
-                    """),
-                    {
-                        "sections": json.dumps(updated_sections),
-                        "proposal_id": proposal_id,
-                        "user_id": user_id
-                    }
-                )
-    except Exception as e:
-        print(f"[DB UPDATE ERROR in regenerate_section_logic] {e}")
-
     return generated_text

@@ -16,3 +16,6 @@ apscheduler
 cloud-sql-python-connector[asyncpg]
 cloud-sql-python-connector[pg8000]
 google-cloud-secret-manager
+pytest
+pytest-asyncio
+pytest-mock
