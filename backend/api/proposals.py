@@ -91,34 +91,21 @@ async def process_section(session_id: str, request: SectionRequest, current_user
         )
         message = f"Initial content flagged. Regenerated using evaluator feedback for {request.section}"
     else:
-        # Persist the generated text to the database.
-        try:
-            with engine.begin() as conn:
-                db_res = conn.execute(text("SELECT generated_sections FROM proposals WHERE id = :id"), {"id": request.proposal_id}).scalar()
-                sections = json.loads(db_res) if db_res else {}
-                sections[request.section] = generated_text
-
-                # === DEBUG STATEMENTS START HERE ===
-                print("--- DEBUG INFO ---")
-                logger.debug(f"Type of 'sections' before dumping: {type(sections)}")
-                logger.debug(f"Value of 'sections' dict: {sections}") 
-
-                json_to_save = json.dumps(sections)
-                logger.debug(f"Type of JSON string to save: {type(json_to_save)}")
-                logger.debug(f"Value of JSON string to save: {json_to_save}")
-                logger.debug("------------------")
-                # === DEBUG STATEMENTS END HERE ===
-
-
-
-                conn.execute(
-                    text("UPDATE proposals SET generated_sections = :sections, updated_at = NOW() WHERE id = :id"),
-                    {"sections": json.dumps(sections), "id": request.proposal_id}
-                )
-        except Exception as e:
-            print(f"[DB UPDATE ERROR - process_section] {e}")
-
         message = f"Content generated for {request.section}"
+
+    # Persist the generated text to the database.
+    try:
+        with engine.begin() as conn:
+            db_res = conn.execute(text("SELECT generated_sections FROM proposals WHERE id = :id"), {"id": request.proposal_id}).scalar()
+            sections = json.loads(db_res) if db_res else {}
+            sections[request.section] = generated_text
+            conn.execute(
+                text("UPDATE proposals SET generated_sections = :sections, updated_at = NOW() WHERE id = :id"),
+                {"sections": json.dumps(sections), "id": request.proposal_id}
+            )
+    except Exception as e:
+        print(f"[DB UPDATE ERROR - process_section] {e}")
+        raise HTTPException(status_code=500, detail="Failed to save section to database.")
 
     return {"message": message, "generated_text": generated_text}
 
