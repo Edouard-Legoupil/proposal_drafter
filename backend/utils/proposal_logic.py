@@ -67,8 +67,25 @@ def regenerate_section_logic(session_id: str, section: str, concise_input: str, 
     result = crew_instance.kickoff(inputs=section_input)
 
     # Clean and parse the raw output from the crew.
-    raw_output = result.raw.replace("`", "")
-    raw_output = re.sub(r'[\x00-\x1F\x7F]', '', raw_output)
+    #raw_output = result.raw.replace("`", "")
+    #raw_output = re.sub(r'[\x00-\x1F\x7F]', '', raw_output)
+
+    raw_output = result.raw if hasattr(result, 'raw') and result.raw else ""
+
+    # Use a regex to find and extract the JSON code block
+    json_match = re.search(r'```json\s*(\{.*\})\s*```', raw_output, re.DOTALL)
+
+    if json_match:
+        raw_output = json_match.group(1)
+    else:
+        # If a markdown code block isn't found, try to find a standalone JSON object
+        # This regex is less specific and might catch more non-JSON content
+        json_match = re.search(r'\{.*\}', raw_output, re.DOTALL)
+        if json_match:
+            raw_output = json_match.group(0)
+        else:
+            raise HTTPException(status_code=500, detail="No JSON object found in crew output.")
+
 
     try:
         parsed = json.loads(raw_output)

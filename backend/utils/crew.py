@@ -1,4 +1,4 @@
-#IOM
+
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 from crewai.knowledge.source.json_knowledge_source import JSONKnowledgeSource
@@ -13,15 +13,15 @@ from backend.core.llm import llm, get_embedder_config
 class ProposalCrew():
     """ProposalCrew for generating project proposal"""
 
-    agents_config = 'utils/config/agents.yaml'
-    tasks_config = 'utils/config/tasks.yaml'
-    generate_proposal_log = 'utils/crew_logs/generate_proposal_log.txt'
-    regenerate_proposal_log = 'utils/crew_logs/regenerate_proposal_log.txt'
+    agents_config = 'config/agents.yaml'
+    tasks_config = 'config/tasks.yaml'
+    generate_proposal_log = 'log/generate_proposal_log.txt'
+    regenerate_proposal_log = 'log/regenerate_proposal_log.txt'
 
     # Path to knowledge files
     json_knowledge = JSONKnowledgeSource(
         file_paths=[
-            "utils/knowledge/combine_example.json"
+            "combine_example.json"
         ]
     )
 

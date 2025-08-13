@@ -1,5 +1,5 @@
 #  Standard Library
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 
 #  Third-Party Libraries
 from pydantic import BaseModel
@@ -14,6 +14,7 @@ class BaseDataRequest(BaseModel):
     This includes form data and the main project description.
     """
     form_data: Dict[str, str]
+    #form_data: Dict[str, Any]
     project_description: str
 
 class SectionRequest(BaseModel):
@@ -32,6 +33,11 @@ class RegenerateRequest(BaseModel):
     concise_input: str
     proposal_id: str
 
+class GeneratedSection(BaseModel):
+    generated_content: Optional[str] = None
+    evaluation_status: Optional[str] = None
+    feedback: Optional[str] = None
+
 class SaveDraftRequest(BaseModel):
     """
     Schema for saving a draft of the proposal.
@@ -40,8 +46,11 @@ class SaveDraftRequest(BaseModel):
     session_id: Optional[str] = None
     proposal_id: Optional[str] = None
     form_data: Dict[str, str]
+    #form_data: Dict[str, Any]
     project_description: str
-    generated_sections: Optional[Dict[str, str]] = {}
+   # generated_sections: Optional[Dict[str, str]] = {}
+    generated_sections: Optional[Dict[str, GeneratedSection]] = {}
+   # generated_sections: Optional[Dict[str, Any]]
 
 class FinalizeProposalRequest(BaseModel):
     """

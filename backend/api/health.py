@@ -7,12 +7,12 @@ from fastapi import APIRouter, Request
 # Create a new router for health-related endpoints.
 router = APIRouter()
 
-@router.get("/health_check")
-def health_check():
+@router.get("/health")
+def health():
     """
     A simple endpoint to confirm that the API is running and responsive.
     """
-    return {"status": "API is running"}
+    return {"status": "لْحَمْدُ لِلَّٰهِ API is running"}
 
 # --- Debugging Endpoints ---
 # These endpoints are intended for development and debugging purposes only.

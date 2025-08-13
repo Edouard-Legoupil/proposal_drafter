@@ -5,6 +5,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 #  Internal Modules
 from backend.api import auth, proposals, session, documents, health
 from backend.core.middleware import (
@@ -19,8 +23,19 @@ from backend.core.middleware import (
 # --- FastAPI Application Initialization ---
 app = FastAPI(
     title="Proposal Drafting API",
-    description="An API for generating, managing, and exporting project proposals.",
-    version="1.0.0"
+    description="An API for generating, managing, and exporting project proposals.", 
+    version="0.0.1", 
+   # root_path="/api",
+    terms_of_service="http://www.unhcr.org",
+    contact={
+        "name": "Edouard Legoupil",
+        "url": "http://edouard-legoupil.github.io",
+        "email": "legoupil@unhcr.org",
+    },
+    license_info={
+        "name": "MIT",
+        "url": "https://opensource.org/licenses/MIT",
+    }
 )
 
 # --- Middleware Configuration ---

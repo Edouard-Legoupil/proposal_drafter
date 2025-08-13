@@ -2,7 +2,8 @@
 import json
 import re
 import uuid
-from datetime import datetime
+from datetime import datetime 
+import logging
 
 #  Third-Party Libraries
 from fastapi import APIRouter, Depends, HTTPException, Body
@@ -20,12 +21,14 @@ from backend.models.schemas import (
     FinalizeProposalRequest
 )
 from backend.utils.proposal_logic import regenerate_section_logic
-from backend.crew import ProposalCrew
+from backend.utils.crew import ProposalCrew
 
 # This router handles all endpoints related to the lifecycle of a proposal,
 # from creation and editing to listing and deletion.
 router = APIRouter()
 
+# Configure logging
+logger = logging.getLogger(__name__)
 
 @router.post("/process_section/{session_id}")
 async def process_section(session_id: str, request: SectionRequest, current_user: dict = Depends(get_current_user)):
@@ -65,9 +68,17 @@ async def process_section(session_id: str, request: SectionRequest, current_user
     })
 
     # Parse and handle crew output.
-    raw_output = result.raw.replace("`", "")
-    raw_output = re.sub(r'[\x00-\x1F\x7F]', '', raw_output)
-    parsed = json.loads(raw_output)
+    #raw_output = result.raw.replace("`", "")
+    #raw_output = re.sub(r'[\x00-\x1F\x7F]', '', raw_output)
+    #parsed = json.loads(raw_output)
+    try:
+        raw_output = result.raw if hasattr(result, 'raw') and result.raw else ""
+        clean_output = re.sub(r'[`\x00-\x1F\x7F]', '', raw_output)
+        parsed = json.loads(clean_output)
+    except (AttributeError, json.JSONDecodeError) as e:
+        print(f"[CREWAI PARSE ERROR] {e}")
+        raise HTTPException(status_code=500, detail="Failed to parse CrewAI output. It may not be valid JSON.")
+
 
     generated_text = parsed.get("generated_content", "").strip()
     evaluation_status = parsed.get("evaluation_status", "")
@@ -86,6 +97,20 @@ async def process_section(session_id: str, request: SectionRequest, current_user
                 db_res = conn.execute(text("SELECT generated_sections FROM proposals WHERE id = :id"), {"id": request.proposal_id}).scalar()
                 sections = json.loads(db_res) if db_res else {}
                 sections[request.section] = generated_text
+
+                # === DEBUG STATEMENTS START HERE ===
+                print("--- DEBUG INFO ---")
+                logger.debug(f"Type of 'sections' before dumping: {type(sections)}")
+                logger.debug(f"Value of 'sections' dict: {sections}") 
+
+                json_to_save = json.dumps(sections)
+                logger.debug(f"Type of JSON string to save: {type(json_to_save)}")
+                logger.debug(f"Value of JSON string to save: {json_to_save}")
+                logger.debug("------------------")
+                # === DEBUG STATEMENTS END HERE ===
+
+
+
                 conn.execute(
                     text("UPDATE proposals SET generated_sections = :sections, updated_at = NOW() WHERE id = :id"),
                     {"sections": json.dumps(sections), "id": request.proposal_id}
@@ -181,7 +206,7 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
 
     # Load sample templates from file.
     try:
-        with open("config/templates/sample_templates.json", "r", encoding="utf-8") as f:
+        with open("templates/sample_templates.json", "r", encoding="utf-8") as f:
             sample_templates = json.load(f)
         for sample in sample_templates:
             sample["project_title"] = sample.get("form_data", {}).get("Project title", "Untitled Sample")
@@ -227,7 +252,7 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
     # Handle sample drafts, which are loaded from a JSON file.
     if proposal_id.startswith("sample-"):
         try:
-            with open("config/templates/sample_templates.json", "r") as f:
+            with open("templates/sample_templates.json", "r") as f:
                 samples = json.load(f)
             sample = next((s for s in samples if s["proposal_id"] == proposal_id), None)
             if not sample:
