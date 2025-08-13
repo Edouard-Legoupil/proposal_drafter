@@ -1,9 +1,16 @@
 #  Third-Party Libraries
+import logging
 from fastapi import FastAPI, HTTPException
 import uvicorn
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# --- Logging Configuration ---
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler = logging.FileHandler("app.log")
+handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+logging.getLogger().addHandler(handler)
 
 import os
 import sys
