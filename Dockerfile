@@ -51,7 +51,6 @@ COPY nginx-proxy/nginx.conf /etc/nginx/conf.d/default.conf
 RUN chmod 777 /dev/stdout /dev/stderr
 
 # Expose Cloud Run default port
-ENV PORT=8080
 EXPOSE 8080
 
 
@@ -66,6 +65,7 @@ COPY supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 # Copy the startup script and make it executable
 COPY supervisor/start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
+
 CMD ["/usr/local/bin/start.sh"]
 
 

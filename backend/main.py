@@ -97,7 +97,18 @@ async def options_handler():
 app = FastAPI(
     title="Proposal Drafter API", 
     version="0.0.1", 
-    root_path="/api"
+    root_path="/api",
+    description="Draft Humanitarian Project Proposal.",
+    terms_of_service="http://www.unhcr.org",
+    contact={
+        "name": "Edouard Legoupil,
+        "url": "http://edouard-legoupil.github.io",
+        "email": "legoupil@unhcr.org",
+    },
+    license_info={
+        "name": "MIT",
+        "url": "https://opensource.org/licenses/MIT",
+    }
     )
 
 app.include_router(router)
@@ -138,9 +149,8 @@ app.include_router(router)
 origins = [
     #"https://proposal-drafter.azurewebsites.net",  ## client in Azure
     #"https://edouard-legoupil.github.io", ## Client in github page
-    "http://localhost:8503".               ## Client for local dev
+    "http://localhost:8503",              ## Client for local dev
     "https://proposaldrafterservice2-290826171799.europe-west1.run.app"
-
     ]
 
 # --- START: Your actual CORS Middleware ---
@@ -507,7 +517,7 @@ def get_session_id():
     """Generate a unique session ID (UUID) for each user session."""
     return str(uuid.uuid4())  # Later, replace with SSO session ID
 
-@app.post("/api/store_base_data")
+@app.post("/store_base_data")
 async def store_base_data(request: BaseDataRequest,current_user: dict = Depends(get_current_user) ):
     session_id = get_session_id()  
     data = {
@@ -626,7 +636,7 @@ def regenerate_section_logic(session_id: str, section: str, concise_input: str, 
     return generated_text
 
 
-@app.post("/api/process_section/{session_id}")
+@app.post("/process_section/{session_id}")
 async def process_section(session_id: str, request: SectionRequest,current_user: dict = Depends(get_current_user)):
     section = request.section
     proposal_id = request.proposal_id
@@ -759,7 +769,7 @@ async def process_section(session_id: str, request: SectionRequest,current_user:
     } 
 
 
-@app.post("/api/regenerate_section/{session_id}")
+@app.post("/regenerate_section/{session_id}")
 async def regenerate_section(session_id: str,request: RegenerateRequest, current_user: dict = Depends(get_current_user)):
     """Handles regeneration of a section using a concise input for refinement."""
 
@@ -888,7 +898,7 @@ async def regenerate_section(session_id: str,request: RegenerateRequest, current
     }
 
 
-# @app.post("/api/signup")
+# @app.post("/signup")
 # async def signup(request: Request):
 #     data = await request.json()
 #     name = data.get('username')
@@ -931,7 +941,7 @@ async def regenerate_section(session_id: str,request: RegenerateRequest, current
 #         return JSONResponse(status_code=500, content={"error": "Signup failed. Please try again later."})
 
 #new signup api with security questions for forgot password functionality
-@app.post("/api/signup")
+@app.post("/signup")
 async def signup(request: Request):
     data = await request.json()
     name = data.get('username')
@@ -1057,7 +1067,7 @@ def get_cookie_settings(request: Request):
     
     return settings
 
-@app.post("/api/login")
+@app.post("/login")
 async def login(request: Request):
     try:
         data = await request.json()
@@ -1154,7 +1164,7 @@ async def profile(
         }
     }
 
-@app.post("/api/logout")
+@app.post("/logout")
 async def logout(current_user: dict = Depends(get_current_user)):
     """Logs out the user by removing the auth_token cookie and Redis session."""
     user_id = current_user["user_id"]
@@ -1173,7 +1183,7 @@ async def logout(current_user: dict = Depends(get_current_user)):
 
     return response
 
-@app.post("/api/get-security-question")
+@app.post("/get-security-question")
 async def get_security_question(request: Request):
     try:
         data = await request.json()
@@ -1219,7 +1229,7 @@ async def get_security_question(request: Request):
         return JSONResponse(status_code=500, content={"error": "Something went wrong. Please try again later."})
 
 
-@app.post("/api/verify-security-answer")
+@app.post("/verify-security-answer")
 async def verify_security_answer(request: Request):
     try:
         data = await request.json()
@@ -1266,7 +1276,7 @@ async def verify_security_answer(request: Request):
         return JSONResponse(status_code=500, content={"error": "Failed to verify security answer. Please try again later."})
 
 
-@app.post("/api/update-password")
+@app.post("/update-password")
 async def update_password(request: Request):
     try:
         data = await request.json()
@@ -1320,7 +1330,7 @@ async def update_password(request: Request):
         print(f"[UPDATE PASSWORD ERROR] {e}")
         return JSONResponse(status_code=500, content={"error": "Failed to update password. Please try again later."})
 
-@app.post("/api/save-draft")
+@app.post("/save-draft")
 async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get_current_user)):
     try:
         user_id = current_user["user_id"]
@@ -2041,7 +2051,7 @@ async def generate_and_download_document(
 
 
 
-@app.post("/api/finalize-proposal")
+@app.post("/finalize-proposal")
 async def finalize_proposal(request: FinalizeProposalRequest, current_user: dict = Depends(get_current_user)):
     proposal_id = request.proposal_id
     user_id = current_user["user_id"]
@@ -2081,7 +2091,7 @@ async def finalize_proposal(request: FinalizeProposalRequest, current_user: dict
         raise HTTPException(status_code=500, detail="Failed to finalize proposal.")
 
 
-@app.delete("/api/delete-draft/{proposal_id}")
+@app.delete("/delete-draft/{proposal_id}")
 async def delete_draft(
     proposal_id: str,
     # session_id: Optional[str] = Query(None),  # 👈 optional query param for Redis session_id
