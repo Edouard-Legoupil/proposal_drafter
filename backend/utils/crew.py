@@ -9,19 +9,22 @@ from datetime import datetime
 
 from backend.core.llm import llm, get_embedder_config
 
+# Get the absolute path of the directory containing this file
+_dir_path = os.path.dirname(os.path.realpath(__file__))
+
 @CrewBase
 class ProposalCrew():
     """ProposalCrew for generating project proposal"""
 
-    agents_config = 'config/agents.yaml'
-    tasks_config = 'config/tasks.yaml'
-    generate_proposal_log = 'log/generate_proposal_log.txt'
-    regenerate_proposal_log = 'log/regenerate_proposal_log.txt'
+    agents_config = os.path.join(_dir_path, 'config/agents.yaml')
+    tasks_config = os.path.join(_dir_path, 'config/tasks.yaml')
+    generate_proposal_log = os.path.join(os.path.dirname(_dir_path), 'log/generate_proposal_log.txt')
+    regenerate_proposal_log = os.path.join(os.path.dirname(_dir_path), 'log/regenerate_proposal_log.txt')
 
     # Path to knowledge files
     json_knowledge = JSONKnowledgeSource(
         file_paths=[
-            "combine_example.json"
+            os.path.join(os.path.dirname(_dir_path), "knowledge/combine_example.json")
         ]
     )
 
