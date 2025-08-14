@@ -53,9 +53,9 @@ if not db_password and not enable_iam_auth:
 # --- Environment Detection ---
 
 # Determine if the application is running in a Google Cloud Platform environment.
-# This is used to decide whether to use the Cloud SQL Connector.
+# This is used to decide whether to use the Cloud SQL Connector that leverage the Cloud SQL socket .
 on_gcp = os.getenv('DB_HOST') != 'localhost'
-logger.info(f"Running on GCP: {on_gcp}")
+#logger.info(f"Running on GCP: {on_gcp}")
 
 
 # --- CORS Configuration ---

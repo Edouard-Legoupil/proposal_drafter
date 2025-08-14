@@ -49,8 +49,10 @@ async def generate_and_download_document(
         if not draft:
             raise HTTPException(status_code=404, detail="Proposal not found for this user.")
 
-        form_data = json.loads(draft[0]) if draft[0] else {}
-        generated_sections = json.loads(draft[2]) if draft[2] else {}
+        #form_data = json.loads(draft[0]) if draft[0] else {}
+        #generated_sections = json.loads(draft[2]) if draft[2] else {}
+        form_data = draft[0] if draft[0] else {}
+        generated_sections = draft[2] if draft[2] else {}
 
         # Ensure all required sections are present before generating.
         if len(generated_sections) != len(SECTIONS):
