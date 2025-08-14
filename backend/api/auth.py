@@ -180,7 +180,7 @@ async def get_security_question(request: Request):
     if not user or not user[0]:
         return JSONResponse(status_code=404, content={"error": "User or security question not found."})
 
-    stored_questions = json.loads(user[0])
+    stored_questions = user[0]
     question = list(stored_questions.keys())[0]
     return JSONResponse(status_code=200, content={"question": question})
 
@@ -208,7 +208,7 @@ async def verify_security_answer(request: Request):
     if not user or not user[0]:
         return JSONResponse(status_code=404, content={"error": "User or security question not found."})
 
-    stored_questions = json.loads(user[0])
+    stored_questions = user[0]
     hashed_answer = stored_questions.get(security_question)
 
     if not hashed_answer or not check_password_hash(hashed_answer, security_answer.strip().lower()):
@@ -243,7 +243,7 @@ async def update_password(request: Request):
             if not user or not user[0]:
                 raise HTTPException(status_code=404, detail="User not found.")
 
-            stored_questions = json.loads(user[0])
+            stored_questions = user[0]
             hashed_answer = stored_questions.get(security_question)
 
             if not hashed_answer or not check_password_hash(hashed_answer, security_answer.strip().lower()):

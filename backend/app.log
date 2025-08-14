@@ -1,0 +1,10 @@
+2025-08-13 22:31:48,196 - backend.core.config - INFO - DEBUG: enable_iam_auth: True
+2025-08-13 22:31:48,197 - backend.core.config - INFO - GAE_ENV: None
+2025-08-13 22:31:48,197 - backend.core.config - INFO - K_SERVICE: None
+2025-08-13 22:31:48,197 - backend.core.config - INFO - DEBUG: db_username from env: testuser
+2025-08-13 22:31:48,197 - backend.core.config - INFO - DEBUG: db_password (first 3 chars): tes
+2025-08-13 22:31:48,197 - backend.core.config - INFO - DEBUG: db_host from env: localhost
+2025-08-13 22:31:48,197 - backend.core.config - INFO - Running on GCP: False
+2025-08-13 22:31:48,198 - backend.core.db - INFO - Using local PostgreSQL connection
+2025-08-13 22:31:48,374 - backend.core.db - INFO - ✅ Database connection successful. Current time: 2025-08-13 22:31:48.372474+00:00
+2025-08-13 22:31:51,906 - httpx - INFO - HTTP Request: GET https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json "HTTP/1.1 200 OK"

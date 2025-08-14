@@ -97,7 +97,7 @@ async def process_section(session_id: str, request: SectionRequest, current_user
     try:
         with engine.begin() as conn:
             db_res = conn.execute(text("SELECT generated_sections FROM proposals WHERE id = :id"), {"id": request.proposal_id}).scalar()
-            sections = json.loads(db_res) if db_res else {}
+            sections = db_res if db_res else {}
             sections[request.section] = generated_text
             conn.execute(
                 text("UPDATE proposals SET generated_sections = :sections, updated_at = NOW() WHERE id = :id"),
@@ -211,8 +211,8 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
                 {"uid": user_id}
             )
             for row in result.fetchall():
-                form_data = json.loads(row[1]) if row[1] else {}
-                sections = json.loads(row[2]) if row[2] else {}
+                form_data = row[1] if row[1] else {}
+                sections = row[2] if row[2] else {}
                 draft_list.append({
                     "proposal_id": row[0],
                     "project_title": form_data.get("Project title", "Untitled Proposal"),
@@ -259,8 +259,8 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
             if not draft:
                 raise HTTPException(status_code=404, detail="Draft not found.")
 
-            form_data = json.loads(draft['form_data']) if draft['form_data'] else {}
-            sections = json.loads(draft['generated_sections']) if draft['generated_sections'] else {}
+            form_data = draft['form_data'] if draft['form_data'] else {}
+            sections = draft['generated_sections'] if draft['generated_sections'] else {}
             data_to_load = {
                 "form_data": form_data,
                 "project_description": draft['project_description'],
