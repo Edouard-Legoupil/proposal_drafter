@@ -21,6 +21,13 @@ RUN apt-get update && \
     apt-get install -y nginx curl supervisor dnsutils && \
     apt-get clean
 
+# Copy supervisor config
+COPY supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Copy the startup script and make it executable
+COPY supervisor/start.sh /usr/local/bin/start.sh
+RUN chmod +x /usr/local/bin/start.sh
+
 # Create a non-root user
 RUN useradd -m -u 1000 user
 USER user
@@ -75,13 +82,7 @@ EXPOSE 8080
 # ============================================
 # Stage 3: Start FastAPI + Nginx in parallel 
 # ============================================
-# Copy supervisor config
-COPY supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 # CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
 
 ## using a dedicated script..
-# Copy the startup script and make it executable
-COPY supervisor/start.sh /usr/local/bin/start.sh
-RUN chmod +x /usr/local/bin/start.sh
-
 CMD ["/usr/local/bin/start.sh"]
