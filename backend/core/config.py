@@ -63,8 +63,9 @@ logger.info(f"Running on GCP: {on_gcp}")
 # List of allowed origins for Cross-Origin Resource Sharing (CORS).
 # This controls which frontend URLs can make requests to the API.
 origins = [
-    "https://edouard-legoupil.github.io", # Client in github page
-    "http://localhost:8503"               # Client for local dev
+    #"https://edouard-legoupil.github.io", # Client in github page
+    "http://localhost:8503",               # Client for local dev
+    "https://proposalgenerator-290826171799.europe-west1.run.app/" ## GCP deployment
 ]
 
 

@@ -15,9 +15,9 @@ export default defineConfig(({ mode }) => {
       port: 8503,
       host: '0.0.0.0',
       allowedHosts: [
-        'localhost' //,
+        'localhost',
        // 'https://8c1aa6b4f54e.ngrok-free.app/',
-       // 'https://proposaldrafter-service-290826171799.europe-west1.run.app/'
+        'https://proposalgenerator-290826171799.europe-west1.run.app/'
       ],
       proxy: {
         '/api': {

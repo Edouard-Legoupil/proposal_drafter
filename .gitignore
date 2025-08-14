@@ -8,3 +8,4 @@ backend/.env2.yml
 backend/venv/*
 backend/app.log
 backend/log/generate_proposal_log.txt
+push.sh
