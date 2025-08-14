@@ -5,7 +5,7 @@ FROM node:20-alpine AS frontend-builder
 
 WORKDIR /app
 COPY frontend/package*.json ./
-RUN npm install && echo "✅ NPM modules installed"
+RUN npm ci && echo "✅ NPM modules installed"
 
 COPY frontend/ .
 RUN npm run build && echo "✅ Frontend build complete" && ls -l dist/
@@ -18,34 +18,38 @@ FROM python:3.11-slim AS final
 
 # Install OS dependencies including supervisor
 RUN apt-get update && \
-    apt-get install -y nginx curl supervisor dnsutils gettext-base  && \
+    apt-get install -y nginx curl supervisor dnsutils && \
     apt-get clean
 
+# Create a non-root user
+RUN useradd -m -u 1000 user
+USER user
+
 # Create a working directory
-WORKDIR /app
+WORKDIR /home/user/app
 
 # Create a virtual environment
-RUN python -m venv /venv
-ENV PATH="/venv/bin:$PATH"
+RUN python -m venv /home/user/venv
+ENV PATH="/home/user/venv/bin:$PATH"
 
 # Create the backend directory inside the container
 RUN mkdir backend
 
 # Copy the requirements file into the new backend directory
-COPY backend/requirements.txt backend/
+COPY --chown=user:user backend/requirements.txt backend/
 
 # Install dependencies from the requirements file
 RUN pip install --upgrade pip && pip install --no-cache-dir uvicorn fastapi gunicorn -r backend/requirements.txt && echo "✅ Python packages installed"
 
 # Copy all backend source code EXCEPT the knowledge folder into the backend folder
-COPY backend/ backend/
+COPY --chown=user:user backend/ backend/
 
 
 # Set the PYTHONPATH to include the /app directory
 # This allows Python to find the 'backend' module.
 # The `PYTHONPATH` will be set to `/app`
 # This allows Python to find the 'backend' module and prevents the warning.
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/home/user/app
 
 # confirm
 RUN which uvicorn && uvicorn --version
@@ -54,18 +58,15 @@ RUN which uvicorn && uvicorn --version
 COPY --from=frontend-builder /app/dist /usr/share/nginx/html
 
 # Create a logs directory for the application and data
-RUN mkdir -p /app/log /app/proposal-documents /app/knowledge && chmod -R 755 /app/log /app/proposal-documents /app/knowledge
+RUN mkdir -p /home/user/app/log /home/user/app/proposal-documents /home/user/app/knowledge && chmod -R 755 /home/user/app/log /home/user/app/proposal-documents /home/user/app/knowledge
 
 # Copy the knowledge files for crewai
-COPY ./backend/knowledge/combine_example.json /app/knowledge/
+COPY --chown=user:user ./backend/knowledge/*.json /home/user/app/knowledge/
 # Let's confirm the file exists in the right place
-RUN echo "Checking knowledge dir after copy:" && ls -la /app/knowledge
+RUN echo "Checking knowledge dir after copy:" && ls -la /home/user/app/knowledge
 
 # Copy custom nginx config
 COPY nginx-proxy/nginx.conf /etc/nginx/conf.d/default.conf
-
-## ensure logs can be written
-RUN chmod 777 /dev/stdout /dev/stderr
 
 # Expose Cloud Run default port
 EXPOSE 8080

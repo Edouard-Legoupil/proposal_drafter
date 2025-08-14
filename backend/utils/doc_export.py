@@ -46,16 +46,21 @@ def add_markdown_paragraph(doc: Document, text: str):
     paragraph.paragraph_format.line_spacing = 1.5
 
 
-def create_pdf_from_sections(output_path: str, form_data: Dict, ordered_sections: Dict):
+#  Standard Library
+import io
+def create_pdf_from_sections(form_data: Dict, ordered_sections: Dict) -> bytes:
     """
-    Generates a PDF document from proposal data using ReportLab.
+    Generates a PDF document from proposal data using ReportLab and returns it as a byte buffer.
 
     Args:
-        output_path: The file path to save the generated PDF.
         form_data: A dictionary containing the proposal's metadata.
         ordered_sections: A dictionary of the proposal sections and their content.
+
+    Returns:
+        A byte buffer containing the generated PDF.
     """
-    doc = SimpleDocTemplate(output_path, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=72)
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=72)
     styles = getSampleStyleSheet()
 
     # Define a custom style for justified body text.
@@ -75,7 +80,7 @@ def create_pdf_from_sections(output_path: str, form_data: Dict, ordered_sections
     # Create a table for the form data.
     table_data = [["Field", "Value"]]
     for key, value in form_data.items():
-        table_data.append([key, value])
+        table_data.append([key, str(value)])
 
     table = Table(table_data, colWidths=[2.5 * inch, 3.5 * inch])
     table.setStyle(TableStyle([
@@ -107,6 +112,9 @@ def create_pdf_from_sections(output_path: str, form_data: Dict, ordered_sections
 
     # Build the PDF document.
     doc.build(story)
+    pdf_bytes = buffer.getvalue()
+    buffer.close()
+    return pdf_bytes
 
 
 def generate_final_markdown(generated_sections: Dict) -> str:
