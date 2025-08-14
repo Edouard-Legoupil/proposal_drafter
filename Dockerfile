@@ -24,16 +24,33 @@ RUN apt-get update && \
 # Create a working directory
 WORKDIR /app
 
+
 # Create a virtual environment
 RUN python -m venv /venv
 ENV PATH="/venv/bin:$PATH"
 
-# Copy backend code and install dependencies inside the venv
-COPY backend/requirements.txt .
-RUN pip install --upgrade pip && pip install --no-cache-dir uvicorn fastapi gunicorn  -r requirements.txt && echo "✅ Python packages installed"
 
-# Copy backend source
-COPY backend/ .
+# Create the backend directory inside the container
+RUN mkdir backend
+
+# Copy the requirements file into the new backend directory
+COPY backend/requirements.txt backend/
+
+# Install dependencies from the requirements file
+RUN pip install --upgrade pip && pip install --no-cache-dir uvicorn fastapi gunicorn -r backend/requirements.txt && echo "✅ Python packages installed"
+
+# Copy all backend source code EXCEPT the knowledge folder into the backend folder
+COPY backend/ backend/
+
+
+
+
+
+# Set the PYTHONPATH to include the /app directory
+# This allows Python to find the 'backend' module.
+# The `PYTHONPATH` will be set to `/app`
+# This allows Python to find the 'backend' module and prevents the warning.
+ENV PYTHONPATH=/app
 
 # confirm
 RUN which uvicorn && uvicorn --version
@@ -41,8 +58,13 @@ RUN which uvicorn && uvicorn --version
 # Copy frontend build
 COPY --from=frontend-builder /app/dist /usr/share/nginx/html
 
-# Create folders for logs/data
-RUN mkdir -p crew_logs proposal-documents && chmod -R 755 crew_logs proposal-documents
+# Create a logs directory for the application and data
+RUN mkdir -p /app/log /app/proposal-documents /app/knowledge && chmod -R 755 /app/log /app/proposal-documents /app/knowledge
+
+
+COPY backend/knowledge/combine_example.json /app/knowledge/combine_example.json
+# Let's confirm the file exists in the right place
+RUN ls -la /app/knowledge/
 
 # Copy custom nginx config
 COPY nginx-proxy/nginx.conf /etc/nginx/conf.d/default.conf
