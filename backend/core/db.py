@@ -15,14 +15,17 @@ from backend.core.config import on_gcp, db_host, db_name, db_username, db_passwo
 logger = logging.getLogger(__name__)
 
 # --- Cloud SQL Connector Initialization ---
-# Initialize the connector only when running on GCP.
-if on_gcp:
-    logger.info("Using Cloud SQL Connector for GCP environment")
-    connector = Connector()
-else:
-    logger.info("Using local PostgreSQL connection")
-    connector = None
+# The Connector instance is not fork-safe, so we must initialize it
+# lazily in each worker process after Gunicorn forks.
+connector = None
 
+def get_connector() -> Connector:
+    """Initializes and returns a Cloud SQL Connector instance."""
+    global connector
+    if connector is None:
+        logger.info("Initializing Cloud SQL Connector for this process...")
+        connector = Connector()
+    return connector
 
 def getconn():
     """
@@ -36,7 +39,7 @@ def getconn():
     if on_gcp:
         # Use the Cloud SQL Connector to connect to the database on GCP.
         logger.debug(f"Connecting to Cloud SQL: {db_host}")
-        conn: pg8000.dbapi.Connection = connector.connect(
+        conn: pg8000.dbapi.Connection = get_connector().connect(
             db_host,  # Instance connection name
             "pg8000",
             user=db_username,

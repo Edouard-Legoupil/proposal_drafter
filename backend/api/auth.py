@@ -1,5 +1,6 @@
 #  Standard Library
 import json
+import logging
 import uuid
 from datetime import datetime, timedelta
 
@@ -67,7 +68,7 @@ async def signup(request: Request):
             )
         return JSONResponse(status_code=201, content={"message": "Signup successful! Please log in."})
     except Exception as e:
-        print(f"[SIGNUP ERROR] {e}")
+        logging.error(f"[SIGNUP ERROR] {e}")
         return JSONResponse(status_code=500, content={"error": "Signup failed. Please try again later."})
 
 
@@ -123,7 +124,7 @@ async def login(request: Request):
         )
         return response
     except Exception as e:
-        print(f"[LOGIN ERROR] {e}")
+        logging.error(f"[LOGIN ERROR] {e}")
         return JSONResponse(status_code=500, content={"error": "Login failed. Please try again later."})
 
 
@@ -150,9 +151,9 @@ async def logout(current_user: dict = Depends(get_current_user)):
     user_id = current_user["user_id"]
     try:
         redis_client.delete(f"user_session:{user_id}")
-        print(f"[LOGOUT] Removed session for user_id: {user_id}")
+        logging.info(f"[LOGOUT] Removed session for user_id: {user_id}")
     except Exception as e:
-        print(f"[LOGOUT ERROR] Failed to remove Redis session for user_id {user_id}: {e}")
+        logging.error(f"[LOGOUT ERROR] Failed to remove Redis session for user_id {user_id}: {e}")
 
     response = JSONResponse(content={"message": "Logout successful!"})
     response.delete_cookie(key="auth_token")
@@ -257,5 +258,5 @@ async def update_password(request: Request):
             )
         return JSONResponse(status_code=200, content={"message": "Password updated successfully."})
     except Exception as e:
-        print(f"[UPDATE PASSWORD ERROR] {e}")
+        logging.error(f"[UPDATE PASSWORD ERROR] {e}")
         return JSONResponse(status_code=500, content={"error": "Failed to update password."})
