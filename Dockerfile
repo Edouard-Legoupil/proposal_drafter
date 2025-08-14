@@ -28,6 +28,10 @@ COPY supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY supervisor/start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
+# Copy custom nginx config
+COPY nginx-proxy/nginx.conf /etc/nginx/conf.d/default.conf
+RUN chown user:user /etc/nginx/conf.d/default.conf
+
 # Create a non-root user
 RUN useradd -m -u 1000 user
 USER user
@@ -71,9 +75,6 @@ RUN mkdir -p /home/user/app/log /home/user/app/proposal-documents /home/user/app
 COPY --chown=user:user ./backend/knowledge/*.json /home/user/app/knowledge/
 # Let's confirm the file exists in the right place
 RUN echo "Checking knowledge dir after copy:" && ls -la /home/user/app/knowledge
-
-# Copy custom nginx config
-COPY nginx-proxy/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Expose Cloud Run default port
 EXPOSE 8080
