@@ -1,13 +1,12 @@
 #  Standard Library
-import os
-import uuid
+import io
 import json
-import traceback
-from datetime import datetime
+import logging
+from sqlalchemy.exc import SQLAlchemyError
 
 #  Third-Party Libraries
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import StreamingResponse
 from docx import Document
 from sqlalchemy import text
 
@@ -19,6 +18,7 @@ from backend.utils.doc_export import add_markdown_paragraph, create_pdf_from_sec
 
 # This router handles endpoints for generating and downloading final proposal documents.
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 @router.get("/generate-document/{proposal_id}")
 async def generate_and_download_document(
@@ -49,15 +49,13 @@ async def generate_and_download_document(
         if not draft:
             raise HTTPException(status_code=404, detail="Proposal not found for this user.")
 
-        #form_data = json.loads(draft[0]) if draft[0] else {}
-        #generated_sections = json.loads(draft[2]) if draft[2] else {}
         form_data = draft[0] if draft[0] else {}
         generated_sections = draft[2] if draft[2] else {}
 
         # Ensure all required sections are present before generating.
         if len(generated_sections) != len(SECTIONS):
             missing = [s for s in SECTIONS if s not in generated_sections]
-            raise HTTPException(status_code=400, detail=f"Cannot generate document. Missing sections: {missing}")
+            raise HTTPException(status_code=400, detail=f"Cannot generate document. Missing sections: {', '.join(missing)}")
 
         ordered_sections = {section: generated_sections.get(section, "") for section in SECTIONS}
 
@@ -84,34 +82,31 @@ async def generate_and_download_document(
                 add_markdown_paragraph(doc, para.strip())
 
         # --- Save and Return File ---
-        folder_name = "proposal-documents"
-        os.makedirs(folder_name, exist_ok=True)
-        unique_id = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:6]}"
-
-        docx_file_path = os.path.join(folder_name, f"proposal_{unique_id}.docx")
-        doc.save(docx_file_path)
-
         if format == "pdf":
-            pdf_file_path = docx_file_path.replace(".docx", ".pdf")
             try:
-                # Use the PDF creation utility.
-                create_pdf_from_sections(pdf_file_path, form_data, ordered_sections)
-                return FileResponse(
-                    path=pdf_file_path,
-                    filename=f"Proposal_{proposal_id}.pdf",
-                    media_type='application/pdf'
+                pdf_buffer = create_pdf_from_sections(form_data, ordered_sections)
+                return StreamingResponse(
+                    io.BytesIO(pdf_buffer),
+                    media_type='application/pdf',
+                    headers={"Content-Disposition": f"attachment; filename=Proposal_{proposal_id}.pdf"}
                 )
             except Exception as e:
-                print(f"[PDF Generation Error] {e}")
+                logger.error(f"[PDF Generation Error] {e}", exc_info=True)
                 raise HTTPException(status_code=500, detail="Failed to generate PDF document.")
         else:
             # Return the DOCX file by default.
-            return FileResponse(
-                path=docx_file_path,
-                filename=f"Proposal_{proposal_id}.docx",
-                media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            docx_buffer = io.BytesIO()
+            doc.save(docx_buffer)
+            docx_buffer.seek(0)
+            return StreamingResponse(
+                docx_buffer,
+                media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                headers={"Content-Disposition": f"attachment; filename=Proposal_{proposal_id}.docx"}
             )
 
+    except SQLAlchemyError as e:
+        logger.error(f"Database error during document generation: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="A database error occurred.")
     except Exception as e:
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Document generation failed: {str(e)}")
+        logger.error(f"An unexpected error occurred during document generation: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
