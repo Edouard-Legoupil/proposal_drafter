@@ -21,6 +21,9 @@ RUN apt-get update && \
     apt-get install -y nginx curl supervisor dnsutils && \
     apt-get clean
 
+# Create a non-root user
+RUN useradd -m -u 1000 user
+
 # Copy supervisor config
 COPY supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
@@ -32,8 +35,6 @@ RUN chmod +x /usr/local/bin/start.sh
 COPY nginx-proxy/nginx.conf /etc/nginx/conf.d/default.conf
 RUN chown user:user /etc/nginx/conf.d/default.conf
 
-# Create a non-root user
-RUN useradd -m -u 1000 user
 USER user
 
 # Create a working directory
