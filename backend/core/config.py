@@ -76,21 +76,22 @@ origins = [
 BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG_PATH = os.path.join(BACKEND_DIR, "templates/unhcr_cerf_proposal_template.json")
 
-
-# List of section names, defining the structure of a proposal.
-SECTIONS = [
-    "Summary", "Rationale", "Project Description", "Partnerships and Coordination",
-    "Monitoring", "Evaluation", "Results Matrix", "Work Plan", "Budget",
-    "Annex 1. Risk Assessment Plan"
-]
-
 # Load the proposal template data from the JSON file.
 try:
     with open(CONFIG_PATH, "r", encoding="utf-8") as file:
         proposal_data = json.load(file)
+        logger.info(f"Proposal template loaded successfully from {CONFIG_PATH}")
 except FileNotFoundError:
     logger.error(f"Proposal template file not found at: {CONFIG_PATH}")
     proposal_data = {"sections": []}
 except json.JSONDecodeError:
     logger.error(f"Error decoding JSON from proposal template file: {CONFIG_PATH}")
     proposal_data = {"sections": []}
+
+# Extract the list of section names from the loaded JSON.
+SECTIONS = [section.get("section_name") for section in proposal_data.get("sections", [])]
+
+if not SECTIONS:
+    logger.error("No sections were loaded from the proposal template JSON.")
+
+ 

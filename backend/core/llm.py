@@ -6,8 +6,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-# --- Azure OpenAI Configuration ---
-#  Third-Party Libraries
+#--- Azure OpenAI Configuration ---
+# Third-Party Libraries
 from langchain_openai import AzureChatOpenAI
 
 # Set environment variables required by the Azure OpenAI client.
@@ -58,7 +58,7 @@ def get_embedder_config():
     }
 
 
-# # --- Google Gemini Configuration ---
+# --- Google Gemini Configuration ---
 
 # #  Third-Party Libraries
 # from crewai import LLM
@@ -79,8 +79,8 @@ def get_embedder_config():
 # # Initialize Geminia language model.
 # # This object will be used by the CrewAI agents to interact with the Azure OpenAI service.
 # llm = LLM(
-#      model="gemini/gemini-1.5-flash", # Or "gemini/#gemini-1.5-pro"
-#      temperature=0.4,
+#      model='gemini/gemini-2.5-pro', # Or "gemini/#gemini-2.5-flash"
+#      temperature=0.0,
 #      api_key=os.getenv("GEMINI_API_KEY") # 
 # )
 

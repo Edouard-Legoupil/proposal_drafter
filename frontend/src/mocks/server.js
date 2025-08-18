@@ -93,6 +93,10 @@ export const server = setupServer(
 
                 const isAccepted = proposalId === 'approved-proposal-123'
 
+                const generated_sections = Object.fromEntries(
+                        proposalTemplate.sections.map(s => [s.section_name, ""])
+                      )
+
                 return HttpResponse.json({
                         proposal_id: 'fake-proposal-id',
                         session_id: 'fake-session-id',
@@ -111,18 +115,19 @@ export const server = setupServer(
                                 'Budget': ''
                                 }).map(([k]) => [k, ''])
                         ),
-                        generated_sections: {
-                                Summary: '',
-                                Rationale: '',
-                                'Project Description': '',
-                                'Partnerships and Coordination': '',
-                                Monitoring: '',
-                                Evaluation: '',
-                                'Results Matrix': '',
-                                'Work Plan': '',
-                                Budget: '',
-                                'Annex 1. Risk Assessment Plan': ''
-                        },
+                        generated_sections,
+                        // generated_sections: {
+                        //         Summary: '',
+                        //         Rationale: '',
+                        //         'Project Description': '',
+                        //         'Partnerships and Coordination': '',
+                        //         Monitoring: '',
+                        //         Evaluation: '',
+                        //         'Results Matrix': '',
+                        //         'Work Plan': '',
+                        //         Budget: '',
+                        //         'Annex 1. Risk Assessment Plan': ''
+                        // },
                         is_accepted: isAccepted
                 })
         }),

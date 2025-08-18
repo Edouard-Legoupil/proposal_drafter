@@ -101,48 +101,68 @@ export default function Chat (props)
                         setButtonEnable(false)
         }, [userPrompt, formData])
 
-        const [proposal, setProposal] = useState({
-                "Summary": {
+        // const [proposal, setProposal] = useState({
+        //         "Summary": {
+        //                 content: "",
+        //                 open: true
+        //         },
+        //         "Rationale": {
+        //                 content: "",
+        //                 open: true
+        //         },
+        //         "Project Description": {
+        //                 content: "",
+        //                 open: true
+        //         },
+        //         "Partnerships and Coordination": {
+        //                 content: "",
+        //                 open: true
+        //         },
+        //         "Monitoring": {
+        //                 content: "",
+        //                 open: true
+        //         },
+        //         "Evaluation": {
+        //                 content: "",
+        //                 open: true
+        //         },
+        //         "Results Matrix": {
+        //                 content: "",
+        //                 open: true
+        //         },
+        //         "Work Plan": {
+        //                 content: "",
+        //                 open: true
+        //         },
+        //         "Budget": {
+        //                 content: "",
+        //                 open: true
+        //         },
+        //         "Annex 1. Risk Assessment Plan": {
+        //                 content: "",
+        //                 open: true
+        //         }
+        // })
+
+        // Load proposal sections from the API...
+        const [proposal, setProposal] = useState({})
+
+        useEffect(() => {
+                fetch(`${API_BASE_URL}/sections`)
+                  .then(res => res.json())
+                  .then(data => {
+                    const sectionState = {}
+                    data.sections.forEach(section => {
+                      sectionState[section.section_name] = {
                         content: "",
                         open: true
-                },
-                "Rationale": {
-                        content: "",
-                        open: true
-                },
-                "Project Description": {
-                        content: "",
-                        open: true
-                },
-                "Partnerships and Coordination": {
-                        content: "",
-                        open: true
-                },
-                "Monitoring": {
-                        content: "",
-                        open: true
-                },
-                "Evaluation": {
-                        content: "",
-                        open: true
-                },
-                "Results Matrix": {
-                        content: "",
-                        open: true
-                },
-                "Work Plan": {
-                        content: "",
-                        open: true
-                },
-                "Budget": {
-                        content: "",
-                        open: true
-                },
-                "Annex 1. Risk Assessment Plan": {
-                        content: "",
-                        open: true
-                }
-        })
+                      }
+                    })
+                    setProposal(sectionState)
+                  })
+                  .catch(err => console.error("Failed to load sections:", err))
+              }, [])
+               
 
         async function getSections(latestSection = Object.keys(proposal)[0])
         {

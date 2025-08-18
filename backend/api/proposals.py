@@ -30,6 +30,9 @@ router = APIRouter()
 # Configure logging
 logger = logging.getLogger(__name__)
 
+
+
+
 @router.post("/process_section/{session_id}")
 async def process_section(session_id: str, request: SectionRequest, current_user: dict = Depends(get_current_user)):
     """
@@ -73,7 +76,15 @@ async def process_section(session_id: str, request: SectionRequest, current_user
     #parsed = json.loads(raw_output)
     try:
         raw_output = result.raw if hasattr(result, 'raw') and result.raw else ""
+        logger.debug(
+            f"[CREWAI RAW OUTPUT] Proposal {request.proposal_id}, "
+            f"Session {session_id}, Section {request.section} :: {raw_output[:1000]}..."
+        )
         clean_output = re.sub(r'[`\x00-\x1F\x7F]', '', raw_output)
+        logger.debug(
+            f"[CREWAI CLEANED OUTPUT] Proposal {request.proposal_id}, "
+            f"Session {session_id}, Section {request.section} :: {clean_output[:1000]}..."
+        )
         parsed = json.loads(clean_output)
     except (AttributeError, json.JSONDecodeError) as e:
         print(f"[CREWAI PARSE ERROR] {e}")
@@ -84,6 +95,12 @@ async def process_section(session_id: str, request: SectionRequest, current_user
     evaluation_status = parsed.get("evaluation_status", "")
     feedback = parsed.get("feedback", "")
 
+    if not generated_text:
+        logger.warning(
+            f"[CREWAI MISSING CONTENT] No 'generated_content' for Proposal {request.proposal_id}, "
+            f"Session {session_id}, Section {request.section} :: Parsed Keys: {list(parsed.keys())}"
+        )
+    
     if evaluation_status.lower() == "flagged" and feedback:
         # If flagged, automatically regenerate with feedback.
         generated_text = regenerate_section_logic(
@@ -101,6 +118,18 @@ async def process_section(session_id: str, request: SectionRequest, current_user
             # The database driver is already converting JSON to a dict,
             # so we can use db_res directly if it exists.
             sections = db_res if db_res else {}
+            if not isinstance(sections, dict):
+                logger.warning(
+                    f"[DB TYPE MISMATCH] Expected dict for generated_sections but got {type(sections)} "
+                    f"for Proposal {request.proposal_id}. Converting..."
+                )
+                try:
+                    sections = json.loads(sections)
+                except Exception:
+                    logger.error(
+                        f"[DB CONVERSION ERROR] Failed to load generated_sections JSON for Proposal {request.proposal_id}"
+                    )
+                    sections = {}
 
            # sections = json.loads(db_res) if db_res else {}
             
@@ -110,7 +139,10 @@ async def process_section(session_id: str, request: SectionRequest, current_user
                 {"sections": json.dumps(sections), "id": request.proposal_id}
             )
     except Exception as e:
-        logger.exception(f"[DB UPDATE ERROR - process_section] {e}")
+        logger.exception(
+            f"[DB UPDATE ERROR - process_section] Proposal {request.proposal_id}, "
+            f"Session {session_id}, Section {request.section} :: {e}"
+        )
         raise HTTPException(status_code=500, detail="Failed to save section to database.")
 
     return {"message": message, "generated_text": generated_text}
@@ -237,6 +269,13 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail="Failed to fetch drafts")
 
 
+@router.get("/sections")
+async def get_sections():
+    """
+    Returns the list of sections and their config (name, instructions, word_limit).
+    """
+    return {"sections": proposal_data.get("sections", [])}
+
 @router.get("/load-draft/{proposal_id}")
 async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_user)):
     """
@@ -244,6 +283,10 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
     It creates a new Redis session for the loaded draft.
     """
     user_id = current_user["user_id"]
+
+    # Extract section names from JSON template (dynamic structure).
+    section_names = [s.get("section_name") for s in proposal_data.get("sections", [])]
+    
 
     # Handle user drafts, loaded from the database.
     if not proposal_id.startswith("sample-"):
