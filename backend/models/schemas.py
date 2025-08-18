@@ -16,6 +16,7 @@ class BaseDataRequest(BaseModel):
     form_data: Dict[str, str]
     #form_data: Dict[str, Any]
     project_description: str
+    template_name: Optional[str] = 'unhcr_cerf_proposal_template.json'
 
 class SectionRequest(BaseModel):
     """
@@ -45,6 +46,7 @@ class SaveDraftRequest(BaseModel):
     """
     session_id: Optional[str] = None
     proposal_id: Optional[str] = None
+    template_name: Optional[str] = 'unhcr_cerf_proposal_template.json'
     form_data: Dict[str, str]
     #form_data: Dict[str, Any]
     project_description: str
