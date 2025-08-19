@@ -187,13 +187,20 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
                 # Update an existing draft.
                 connection.execute(
                     text("""
-                        UPDATE proposals SET form_data = :form, project_description = :desc,
-                        generated_sections = :sections, updated_at = NOW() WHERE id = :id
+                        UPDATE proposals
+                        SET form_data = :form, project_description = :desc,
+                        generated_sections = :sections, status = :status, donor = :donor,
+                        field_context = :field_context, outcome = :outcome, updated_at = NOW()
+                        WHERE id = :id
                     """),
                     {
                         "form": json.dumps(request.form_data),
                         "desc": request.project_description,
                         "sections": json.dumps(request.generated_sections),
+                        "status": request.status,
+                        "donor": request.donor,
+                        "field_context": request.field_context,
+                        "outcome": request.outcome,
                         "id": proposal_id
                     }
                 )
@@ -202,15 +209,19 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
                 # Insert a new draft.
                 connection.execute(
                     text("""
-                        INSERT INTO proposals (id, user_id, form_data, project_description, generated_sections)
-                        VALUES (:id, :uid, :form, :desc, :sections)
+                        INSERT INTO proposals (id, user_id, form_data, project_description, generated_sections, status, donor, field_context, outcome)
+                        VALUES (:id, :uid, :form, :desc, :sections, :status, :donor, :field_context, :outcome)
                     """),
                     {
                         "id": proposal_id,
                         "uid": user_id,
                         "form": json.dumps(request.form_data),
                         "desc": request.project_description,
-                        "sections": json.dumps(request.generated_sections)
+                        "sections": json.dumps(request.generated_sections),
+                        "status": request.status,
+                        "donor": request.donor,
+                        "field_context": request.field_context,
+                        "outcome": request.outcome,
                     }
                 )
                 message = "Draft created successfully"
@@ -245,12 +256,10 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
     try:
         with engine.connect() as connection:
             result = connection.execute(
-                text("SELECT id, form_data, generated_sections, created_at, updated_at, is_accepted FROM proposals WHERE user_id = :uid ORDER BY updated_at DESC"),
+                text("SELECT id, form_data, generated_sections, created_at, updated_at, is_accepted, status, donor, field_context, outcome FROM proposals WHERE user_id = :uid ORDER BY updated_at DESC"),
                 {"uid": user_id}
             )
             for row in result.fetchall():
-                #form_data = json.loads(row[1]) if row[1] else {}
-                #sections = json.loads(row[2]) if row[2] else {}
                 form_data = row[1] if row[1] else {}
                 sections = row[2] if row[2] else {}
 
@@ -261,6 +270,10 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
                     "created_at": row[3].isoformat() if row[3] else None,
                     "updated_at": row[4].isoformat() if row[4] else None,
                     "is_accepted": row[5],
+                    "status": row[6],
+                    "donor": row[7],
+                    "field_context": row[8],
+                    "outcome": row[9],
                     "is_sample": False
                 })
         return {"message": "Drafts fetched successfully.", "drafts": draft_list}
@@ -356,6 +369,71 @@ async def finalize_proposal(request: FinalizeProposalRequest, current_user: dict
         print(f"[FINALIZE ERROR] {e}")
         raise HTTPException(status_code=500, detail="Failed to finalize proposal.")
 
+
+@router.get("/proposals/reviews")
+async def get_reviews(current_user: dict = Depends(get_current_user)):
+    """
+    Fetches proposals that are in 'review' status.
+    In a real-world scenario, this would likely be more complex,
+    perhaps involving a separate 'reviewers' table.
+    For this implementation, we'll just fetch proposals with the 'review' status.
+    """
+    user_id = current_user["user_id"]
+    review_list = []
+    try:
+        with engine.connect() as connection:
+            result = connection.execute(
+                text("SELECT id, form_data, status, donor, field_context, outcome, updated_at FROM proposals WHERE status = 'review' ORDER BY updated_at DESC"),
+            )
+            for row in result.fetchall():
+                form_data = row[1] if row[1] else {}
+                review_list.append({
+                    "proposal_id": row[0],
+                    "project_title": form_data.get("Project title", "Untitled Proposal"),
+                    "status": row[2],
+                    "donor": row[3],
+                    "field_context": row[4],
+                    "outcome": row[5],
+                    "updated_at": row[6].isoformat() if row[6] else None,
+                })
+        return {"message": "Review proposals fetched successfully.", "reviews": review_list}
+    except Exception as e:
+        print(f"[GET REVIEWS ERROR] {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch reviews")
+
+@router.post("/proposals/{proposal_id}/submit-for-review")
+async def submit_for_review(proposal_id: str, current_user: dict = Depends(get_current_user)):
+    """
+    Updates a proposal's status to 'review'.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with engine.begin() as connection:
+            result = connection.execute(
+                text("UPDATE proposals SET status = 'review', updated_at = NOW() WHERE id = :id AND user_id = :uid RETURNING id"),
+                {"id": proposal_id, "uid": user_id}
+            )
+            if not result.fetchone():
+                raise HTTPException(status_code=404, detail="Proposal not found or you don't have permission to edit it.")
+        return {"message": "Proposal submitted for review.", "proposal_id": proposal_id}
+    except Exception as e:
+        print(f"[SUBMIT FOR REVIEW ERROR] {e}")
+        raise HTTPException(status_code=500, detail="Failed to submit for review.")
+
+@router.get("/knowledge")
+async def get_knowledge_cards(current_user: dict = Depends(get_current_user)):
+    """
+    Returns a static list of knowledge cards.
+    In a real application, this data would come from a database.
+    """
+    knowledge_cards = [
+        {"id": "kc-1", "category": "Donor Insights", "title": "ECHO", "summary": "Key compliance and funding priorities for this donor.", "last_updated": "2025-08-05"},
+        {"id": "kc-2", "category": "Donor Insights", "title": "CERF", "summary": "Key compliance and funding priorities for this donor.", "last_updated": "2025-08-05"},
+        {"id": "kc-3", "category": "Field Context", "title": "Country A", "summary": "Recent situational updates.", "last_updated": "2025-08-05"},
+        {"id": "kc-4", "category": "Field Context", "title": "Route Based Approach - West Africa", "summary": "Recent situational updates.", "last_updated": "2025-08-05"},
+        {"id": "kc-5", "category": "Outcome Lessons", "title": "Shelter", "summary": "Extracted insights from Policies, Guidance and related Past Evaluation Recommmandation.", "last_updated": "2025-08-05"},
+    ]
+    return {"message": "Knowledge cards fetched successfully.", "knowledge_cards": knowledge_cards}
 
 @router.delete("/delete-draft/{proposal_id}")
 async def delete_draft(proposal_id: str, current_user: dict = Depends(get_current_user)):

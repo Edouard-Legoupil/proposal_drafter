@@ -51,9 +51,23 @@ class SaveDraftRequest(BaseModel):
    # generated_sections: Optional[Dict[str, str]] = {}
     generated_sections: Optional[Dict[str, GeneratedSection]] = {}
    # generated_sections: Optional[Dict[str, Any]]
+    status: Optional[str] = None
+    donor: Optional[str] = None
+    field_context: Optional[str] = None
+    outcome: Optional[str] = None
 
 class FinalizeProposalRequest(BaseModel):
     """
     Schema for finalizing a proposal, which marks it as complete and read-only.
     """
     proposal_id: str
+
+class KnowledgeCard(BaseModel):
+    """
+    Schema for a knowledge card in the library.
+    """
+    id: str
+    category: str
+    title: str
+    summary: str
+    last_updated: str

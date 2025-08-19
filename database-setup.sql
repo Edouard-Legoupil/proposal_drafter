@@ -25,6 +25,10 @@ CREATE TABLE IF NOT EXISTS proposals (
     project_description TEXT NOT NULL,
     generated_sections JSONB,
     is_accepted BOOLEAN DEFAULT FALSE,
+    status VARCHAR(255) DEFAULT 'draft',
+    donor VARCHAR(255),
+    field_context VARCHAR(255),
+    outcome VARCHAR(255),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
