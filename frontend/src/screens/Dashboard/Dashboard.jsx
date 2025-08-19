@@ -14,50 +14,27 @@ export default function Dashboard() {
     const [proposals, setProposals] = useState([]);
     const [knowledgeCards, setKnowledgeCards] = useState([]);
     const [reviews, setReviews] = useState([]);
-
     const [searchTerm, setSearchTerm] = useState("");
 
-    async function getProposals() {
-        const response = await fetch(`${API_BASE_URL}/list-drafts`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include'
-        });
-        if (response.ok) {
-            const data = await response.json();
-            setProposals(data.drafts);
-        }
-    }
+    const fetchAllData = async () => {
+        try {
+            const [proposalsRes, knowledgeRes, reviewsRes] = await Promise.all([
+                fetch(`${API_BASE_URL}/list-drafts`, { credentials: 'include' }),
+                fetch(`${API_BASE_URL}/knowledge`, { credentials: 'include' }),
+                fetch(`${API_BASE_URL}/proposals/reviews`, { credentials: 'include' })
+            ]);
+            const proposalsData = await proposalsRes.json();
+            const knowledgeData = await knowledgeRes.json();
+            const reviewsData = await reviewsRes.json();
 
-    async function getKnowledgeCards() {
-        const response = await fetch(`${API_BASE_URL}/knowledge`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include'
-        });
-        if (response.ok) {
-            const data = await response.json();
-            setKnowledgeCards(data.knowledge_cards);
-        }
-    }
+            setProposals(Array.isArray(proposalsData) ? proposalsData : []);
+            setKnowledgeCards(Array.isArray(knowledgeData) ? knowledgeData : []);
+            setReviews(Array.isArray(reviewsData) ? reviewsData : []);
 
-    async function getReviews() {
-        const response = await fetch(`${API_BASE_URL}/proposals/reviews`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include'
-        });
-        if (response.ok) {
-            const data = await response.json();
-            setReviews(data.reviews);
+        } catch (error) {
+            console.error("Failed to fetch data:", error);
         }
-    }
-
-    const fetchAllData = () => {
-        getProposals();
-        getKnowledgeCards();
-        getReviews();
-    }
+    };
 
     useEffect(() => {
         fetchAllData();
@@ -78,28 +55,19 @@ export default function Dashboard() {
         };
     }, []);
 
-    const handleTabClick = (tabId) => {
-        setActiveTab(tabId);
-    };
-
+    const handleTabClick = (tabId) => setActiveTab(tabId);
     const openFilterModal = () => setIsFilterModalOpen(true);
     const closeFilterModal = () => setIsFilterModalOpen(false);
     const openNewProposalModal = () => setIsNewProposalModalOpen(true);
     const closeNewProposalModal = () => setIsNewProposalModalOpen(false);
 
-
-    function handleProjectClick(proposal_id) {
-        sessionStorage.setItem("proposal_id", proposal_id)
-        navigate("/chat")
-    }
-
-    async function handleCreateProposal(newProposalData) {
+    const handleCreateProposal = async (newProposalData) => {
         const response = await fetch(`${API_BASE_URL}/save-draft`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify({
-                form_data: { "Project title": "New Proposal" }, // Default title
+                form_data: { "Project title": "New Proposal" },
                 project_description: "",
                 generated_sections: {},
                 ...newProposalData
@@ -109,114 +77,52 @@ export default function Dashboard() {
             const data = await response.json();
             closeNewProposalModal();
             fetchAllData();
-            handleProjectClick(data.proposal_id);
+            navigate(`/chat?proposal_id=${data.proposal_id}`);
         } else {
             console.error("Failed to create proposal");
         }
-    }
+    };
 
-    async function handleSubmitForReview(proposal_id) {
-        const response = await fetch(`${API_BASE_URL}/proposals/${proposal_id}/submit-for-review`, {
+    const handleSubmitForReview = async (proposal_id) => {
+        await fetch(`${API_BASE_URL}/proposals/${proposal_id}/submit-for-review`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             credentials: 'include'
         });
-        if (response.ok) {
-            fetchAllData();
-        } else {
-            console.error("Failed to submit for review");
-        }
-    }
+        fetchAllData();
+    };
 
-
-    const filteredProposals = proposals.filter(p => p.project_title && p.project_title.toLowerCase().includes(searchTerm.toLowerCase()));
-    const filteredKnowledgeCards = knowledgeCards.filter(kc => kc.title && kc.title.toLowerCase().includes(searchTerm.toLowerCase()));
-    const filteredReviews = reviews.filter(r => r.project_title && r.project_title.toLowerCase().includes(searchTerm.toLowerCase()));
-
+    const filteredProposals = proposals.filter(p => p.project_title.toLowerCase().includes(searchTerm.toLowerCase()));
+    const filteredKnowledgeCards = knowledgeCards.filter(kc => kc.title.toLowerCase().includes(searchTerm.toLowerCase()));
+    const filteredReviews = reviews.filter(r => r.project_title.toLowerCase().includes(searchTerm.toLowerCase()));
 
     return (
         <Base>
             <div className="Dashboard">
                 <header className="Dashboard_top">
-                    <div className="Dashboard_label" aria-label="Workspace name">Project Proposals Workspace -- 'Draft Wireframe'</div>
+                    <div className="Dashboard_label">Project Proposals Workspace</div>
                     <p>Build Smart proposals with AI based on curated knowledge and organised peer review.</p>
                 </header>
 
                 <nav className="tabs" aria-label="Dashboard sections">
                     <div role="tablist" aria-orientation="horizontal" className="tablist">
-                        <button id="proposals-tab" role="tab" aria-selected={activeTab === 'proposals'} aria-controls="proposals-panel" className="tab" onClick={() => handleTabClick('proposals')}>My Proposals</button>
-                        <button id="library-tab" role="tab" aria-selected={activeTab === 'library'} aria-controls="library-panel" className="tab" onClick={() => handleTabClick('library')}>Knowledge Library</button>
-                        <button id="reviews-tab" role="tab" aria-selected={activeTab === 'reviews'} aria-controls="reviews-panel" className="tab" onClick={() => handleTabClick('reviews')}>Pending Reviews</button>
+                        <button id="proposals-tab" role="tab" aria-selected={activeTab === 'proposals'} onClick={() => handleTabClick('proposals')} className="tab">My Proposals</button>
+                        <button id="library-tab" role="tab" aria-selected={activeTab === 'library'} onClick={() => handleTabClick('library')} className="tab">Knowledge Library</button>
+                        <button id="reviews-tab" role="tab" aria-selected={activeTab === 'reviews'} onClick={() => handleTabClick('reviews')} className="tab">Pending Reviews</button>
                     </div>
                 </nav>
 
                 <div className="Dashboard_search" role="search">
-                    <i className="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-                    <label htmlFor="quick-search" className="sr-only">Quick search</label>
-                    <input id="quick-search" type="text" placeholder="Quick search..." className="Dashboard_search_input" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                    <button className="filter-btn" id="filter-btn" aria-label="Open filters" onClick={openFilterModal}>
+                    <i className="fa-solid fa-magnifying-glass"></i>
+                    <input id="quick-search" type="text" placeholder="Quick search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="Dashboard_search_input" />
+                    <button className="filter-btn" aria-label="Open filters" onClick={openFilterModal}>
                         <i className="fa-solid fa-sliders"></i>
                     </button>
                 </div>
 
                 <div className="tab-content">
-                    {activeTab === 'proposals' && (
-                        <section id="proposals-panel" role="tabpanel" aria-labelledby="proposals-tab" className="tab-panel active">
-                            <div className="Dashboard_projects" id="proposals-grid">
-                                <div className="card card--cta">
-                                    <button className="btn" type="button" aria-label="Start a new proposal" onClick={openNewProposalModal}>Start New Proposal</button>
-                                </div>
-                                {filteredProposals.map(p => (
-                                    <ProposalCard
-                                        key={p.proposal_id}
-                                        proposal={p}
-                                        onClick={() => handleProjectClick(p.proposal_id)}
-                                        onSubmitForReview={() => handleSubmitForReview(p.proposal_id)}
-                                    />
-                                ))}
-                            </div>
-                        </section>
-                    )}
-                    {activeTab === 'library' && (
-                        <section id="library-panel" role="tabpanel" aria-labelledby="library-tab" className="tab-panel active">
-                             <div className="Dashboard_projects" id="library-grid">
-                                <div className="card card--cta">
-                                    <button className="btn" type="button" aria-label="Create new knowledge card">Create new knowledge card</button>
-                                </div>
-                                {filteredKnowledgeCards.map(kc => (
-                                    <KnowledgeCard
-                                        key={kc.id}
-                                        category={kc.category}
-                                        title={kc.title}
-                                        summary={kc.summary}
-                                        lastUpdated={kc.last_updated}
-                                        icon={
-                                            kc.category === 'Donor Insights' ? "fa-solid fa-money-bill-wave donor" :
-                                            kc.category === 'Field Context' ? "fa-solid fa-earth-americas field-context" :
-                                            "fa-solid fa-bullseye outcome"
-                                        }
-                                    />
-                                ))}
-                            </div>
-                        </section>
-                    )}
-                    {activeTab === 'reviews' && (
-                        <section id="reviews-panel" role="tabpanel" aria-labelledby="reviews-tab" className="tab-panel active">
-                            <div className="Dashboard_projects" id="reviews-grid">
-                            {filteredReviews.map(r => (
-                                    <ReviewCard
-                                        key={r.proposal_id}
-                                        title={r.project_title}
-                                        requester="Unknown"
-                                        deadline="N/A"
-                                        country={r.field_context}
-                                        donor={r.donor}
-                                        outcome={r.outcome}
-                                    />
-                            ))}
-                            </div>
-                        </section>
-                    )}
+                    {activeTab === 'proposals' && <ProposalsTab proposals={filteredProposals} openNewProposalModal={openNewProposalModal} onSubmitForReview={handleSubmitForReview} />}
+                    {activeTab === 'library' && <LibraryTab knowledgeCards={filteredKnowledgeCards} />}
+                    {activeTab === 'reviews' && <ReviewsTab reviews={filteredReviews} />}
                 </div>
 
                 {isFilterModalOpen && <FilterModal closeModal={closeFilterModal} activeTab={activeTab} />}
@@ -226,124 +132,132 @@ export default function Dashboard() {
     );
 }
 
-function ProposalCard({ proposal, onClick, onSubmitForReview }) {
-    const { proposal_id, project_title, summary, status, field_context, donor, outcome, updated_at } = proposal;
-    const statusClass = `status-${status ? status.toLowerCase().replace(/ /g, '-') : 'draft'}`;
-    const date = updated_at ? new Date(updated_at).toLocaleDateString() : 'N/A';
-
+function ProposalsTab({ proposals, openNewProposalModal, onSubmitForReview }) {
+    const navigate = useNavigate();
     return (
-        <article className="card" aria-labelledby={`proposal-${proposal_id}`}>
+        <section className="tab-panel active">
+            <div className="Dashboard_projects">
+                <div className="card card--cta">
+                    <button className="btn" onClick={openNewProposalModal}>Start New Proposal</button>
+                </div>
+                {proposals.map(p => <ProposalCard key={p.proposal_id} proposal={p} onClick={() => navigate(`/chat?proposal_id=${p.proposal_id}`)} onSubmitForReview={() => onSubmitForReview(p.proposal_id)} />)}
+            </div>
+        </section>
+    );
+}
+
+function LibraryTab({ knowledgeCards }) {
+    return (
+        <section className="tab-panel active">
+            <div className="Dashboard_projects">
+                <div className="card card--cta">
+                    <button className="btn">Create new knowledge card</button>
+                </div>
+                {knowledgeCards.map(kc => <KnowledgeCard key={kc.id} {...kc} />)}
+            </div>
+        </section>
+    );
+}
+
+function ReviewsTab({ reviews }) {
+    return (
+        <section className="tab-panel active">
+            <div className="Dashboard_projects">
+                {reviews.map(r => <ReviewCard key={r.proposal_id} {...r} />)}
+            </div>
+        </section>
+    );
+}
+
+function ProposalCard({ proposal, onClick, onSubmitForReview }) {
+    const { proposal_id, project_title, summary, status, field_contexts, donors, outcomes, updated_at } = proposal;
+    const statusClass = `status-${status?.toLowerCase().replace(/ /g, '-') || 'draft'}`;
+    return (
+        <article className="card">
             <div onClick={onClick} style={{cursor: 'pointer'}}>
-                <h3 id={`proposal-${proposal_id}`}>{project_title}</h3>
+                <h3>{project_title}</h3>
                 <p>{summary}</p>
                 <p><span className={`status-badge ${statusClass}`}>{status}</span></p>
-                <p><i className="fa-solid fa-earth-americas field-context" aria-hidden="true"></i> {field_context || 'N/A'}</p>
-                <p><i className="fa-solid fa-money-bill-wave donor" aria-hidden="true"></i> {donor || 'N/A'}</p>
-                <p><i className="fa-solid fa-bullseye outcome" aria-hidden="true"></i> {outcome || 'N/A'}</p>
-                <p><small>Last Updated: <time dateTime={updated_at}>{date}</time></small></p>
+                <p><i className="fa-solid fa-earth-americas field-context"></i> {field_contexts?.join(', ') || 'N/A'}</p>
+                <p><i className="fa-solid fa-money-bill-wave donor"></i> {donors?.join(', ') || 'N/A'}</p>
+                <p><i className="fa-solid fa-bullseye outcome"></i> {outcomes?.join(', ') || 'N/A'}</p>
+                <p><small>Last Updated: <time>{new Date(updated_at).toLocaleDateString()}</time></small></p>
             </div>
-            {status === 'draft' && (
-                <button className="btn" style={{marginTop: "1rem"}} onClick={onSubmitForReview}>Submit for Review</button>
-            )}
+            {status === 'draft' && <button className="btn" style={{marginTop: "1rem"}} onClick={onSubmitForReview}>Submit for Review</button>}
         </article>
     );
 }
 
-function KnowledgeCard({ category, title, summary, lastUpdated, icon }) {
+function KnowledgeCard({ category, title, summary, last_updated }) {
+    const icon = category === 'Donor Insights' ? "fa-solid fa-money-bill-wave donor" :
+                 category === 'Field Context' ? "fa-solid fa-earth-americas field-context" :
+                 "fa-solid fa-bullseye outcome";
     return (
-        <article className="card" aria-labelledby={`kc-${title.replace(/\s+/g, '-').toLowerCase()}`}>
-            <h3><i className={icon} aria-hidden="true"></i> {category}</h3>
-            <h2 id={`kc-${title.replace(/\s+/g, '-').toLowerCase()}`}>{title}</h2>
+        <article className="card">
+            <h3><i className={icon}></i> {category}</h3>
+            <h2>{title}</h2>
             <p>{summary}</p>
-            <p><small>Last Updated: <time dateTime={lastUpdated}>{lastUpdated}</time></small></p>
+            <p><small>Last Updated: <time>{new Date(last_updated).toLocaleDateString()}</time></small></p>
         </article>
     );
 }
 
-function ReviewCard({ title, requester, deadline, country, donor, outcome }) {
+function ReviewCard({ project_title, field_contexts, donors, outcomes }) {
     return (
-        <article className="card" aria-labelledby={`review-${title.replace(/\s+/g, '-').toLowerCase()}`}>
-            <h3 id={`review-${title.replace(/\s+/g, '-').toLowerCase()}`}>{title}</h3>
-            <h2>Requester: {requester}</h2>
-            <p><strong>Deadline:</strong> <time dateTime={deadline}>{deadline}</time></p>
-            <p><i className="fa-solid fa-earth-americas field-context" aria-hidden="true"></i> {country || 'N/A'}</p>
-            <p><i className="fa-solid fa-money-bill-wave donor" aria-hidden="true"></i> {donor || 'N/A'}</p>
-            <p><i className="fa-solid fa-bullseye outcome" aria-hidden="true"></i> {outcome || 'N/A'}</p>
+        <article className="card">
+            <h3>{project_title}</h3>
+            <h2>Requester: Unknown</h2>
+            <p><strong>Deadline:</strong> N/A</p>
+            <p><i className="fa-solid fa-earth-americas field-context"></i> {field_contexts?.join(', ') || 'N/A'}</p>
+            <p><i className="fa-solid fa-money-bill-wave donor"></i> {donors?.join(', ') || 'N/A'}</p>
+            <p><i className="fa-solid fa-bullseye outcome"></i> {outcomes?.join(', ') || 'N/A'}</p>
         </article>
     );
 }
 
-function FilterModal({ closeModal, activeTab }) {
+function FilterModal({ closeModal }) {
     return (
-        <div className="modal active" id="filter-modal" role="dialog" aria-modal="true" aria-labelledby="filter-title">
+        <div className="modal">
             <div className="modal-content">
-                <span className="modal-close" id="filter-close" onClick={closeModal}>&times;</span>
-                <h3 id="filter-title">Apply Content Filters</h3>
-
-                <div className="filter-section" style={{display: activeTab === 'proposals' ? 'block' : 'none'}}>
-                    <label htmlFor="status-filter">Status</label>
-                    <select id="status-filter">
-                        <option value="">All</option>
-                        <option value="draft">Drafting</option>
-                        <option value="review">Pending Review</option>
-                        <option value="submission">Pending Submission</option>
-                        <option value="submitted">Submitted</option>
-                        <option value="approved">Approved</option>
-                    </select>
-                </div>
-
-                <div className="filter-section" style={{display: activeTab === 'library' ? 'block' : 'none'}}>
-                    <label htmlFor="library-type">Category</label>
-                    <select id="library-type">
-                        <option value="">All</option>
-                        <option value="donor">Donor Insights</option>
-                        <option value="context">Country Context</option>
-                        <option value="outcome">Outcome Lessons</option>
-                    </select>
-                </div>
-
-                <div className="filter-.section" style={{display: activeTab === 'reviews' ? 'block' : 'none'}}>
-                    <label htmlFor="deadline-filter">Deadline before</label>
-                    <input type="date" id="deadline-filter" />
-                </div>
+                <span className="modal-close" onClick={closeModal}>&times;</span>
+                <h3>Apply Content Filters</h3>
             </div>
         </div>
     );
 }
 
 function NewProposalModal({ closeModal, onCreate }) {
-    const [donor, setDonor] = useState("");
-    const [fieldContext, setFieldContext] = useState("");
-    const [outcome, setOutcome] = useState("");
+    const [donors, setDonors] = useState("");
+    const [field_contexts, setFieldContexts] = useState("");
+    const [outcomes, setOutcomes] = useState("");
 
     const handleSubmit = () => {
         onCreate({
-            donor,
-            field_context: fieldContext,
-            outcome,
-            status: 'draft'
+            donors: donors.split(',').map(s => s.trim()).filter(Boolean),
+            field_contexts: field_contexts.split(',').map(s => s.trim()).filter(Boolean),
+            outcomes: outcomes.split(',').map(s => s.trim()).filter(Boolean),
         });
     };
 
     return (
-        <div className="modal active" role="dialog" aria-modal="true" aria-labelledby="new-proposal-title">
+        <div className="modal">
             <div className="modal-content">
                 <span className="modal-close" onClick={closeModal}>&times;</span>
-                <h3 id="new-proposal-title">Start New Proposal</h3>
+                <h3>Start New Proposal</h3>
                 <div className="filter-section">
-                    <label htmlFor="donor-input">Donor</label>
-                    <input id="donor-input" type="text" value={donor} onChange={e => setDonor(e.target.value)} />
+                    <label>Donors (comma-separated)</label>
+                    <input type="text" value={donors} onChange={e => setDonors(e.target.value)} />
                 </div>
                 <div className="filter-section">
-                    <label htmlFor="context-input">Field Context</label>
-                    <input id="context-input" type="text" value={fieldContext} onChange={e => setFieldContext(e.target.value)} />
+                    <label>Field Contexts (comma-separated)</label>
+                    <input type="text" value={field_contexts} onChange={e => setFieldContexts(e.target.value)} />
                 </div>
                 <div className="filter-section">
-                    <label htmlFor="outcome-input">Outcome</label>
-                    <input id="outcome-input" type="text" value={outcome} onChange={e => setOutcome(e.target.value)} />
+                    <label>Outcomes (comma-separated)</label>
+                    <input type="text" value={outcomes} onChange={e => setOutcomes(e.target.value)} />
                 </div>
                 <button className="btn" style={{marginTop: "1rem"}} onClick={handleSubmit}>Create and Start</button>
             </div>
         </div>
-    )
+    );
 }

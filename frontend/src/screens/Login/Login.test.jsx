@@ -1,9 +1,13 @@
-import { vi, describe, it, expect } from 'vitest'
+import { vi, describe, it, expect, beforeAll, afterEach, afterAll } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-
+import { server } from '../../mocks/server'
 import { BrowserRouter } from 'react-router-dom'
 import Login from './Login'
+
+beforeAll(() => server.listen())
+afterEach(() => server.resetHandlers())
+afterAll(() => server.close())
 
 const mockNavigate = vi.fn()
 vi.mock('react-router-dom', async () => {

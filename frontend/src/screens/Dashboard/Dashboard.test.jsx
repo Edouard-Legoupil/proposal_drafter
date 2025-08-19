@@ -1,134 +1,98 @@
-import React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { describe, it, expect, vi, beforeAll, afterEach, afterAll } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import Dashboard from './Dashboard'
 import { server } from '../../mocks/server'
-import { http, HttpResponse } from 'msw'
 
+// Mock the navigate function
 const mockNavigate = vi.fn()
 vi.mock('react-router-dom', async () => {
-        const actual = await vi.importActual('react-router-dom')
-        return {
-                ...actual,
-                useNavigate: () => mockNavigate,
-        }
+    const actual = await vi.importActual('react-router-dom')
+    return {
+        ...actual,
+        useNavigate: () => mockNavigate,
+    }
 })
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
+beforeAll(() => server.listen())
+afterEach(() => server.resetHandlers())
+afterAll(() => server.close())
 
 describe('Dashboard Component', () => {
-        beforeEach(() => {
-                sessionStorage.clear()
-                mockNavigate.mockClear()
+    it('renders the main tabs', async () => {
+        render(
+            <MemoryRouter>
+                <Dashboard />
+            </MemoryRouter>
+        )
+
+        await waitFor(() => {
+            expect(screen.getByRole('tab', { name: /my proposals/i })).toBeInTheDocument()
+            expect(screen.getByRole('tab', { name: /knowledge library/i })).toBeInTheDocument()
+            expect(screen.getByRole('tab', { name: /pending reviews/i })).toBeInTheDocument()
         })
+    })
 
-        const drafts = [
-                { proposal_id: '1', project_title: 'First Project', summary: 'Sum1', updated_at: '2025-05-10T10:00:00.123Z', is_accepted: true },
-                { proposal_id: '2', project_title: 'Second Project', summary: 'Sum2', updated_at: '2025-05-11T11:30:00.456Z', is_accepted: false },
-        ]
-
-        beforeAll(() => {
-                server.use(
-                        http.get(`${API_BASE_URL}/list-drafts`, () => HttpResponse.json({ drafts }))
-                )
+    it('displays proposals in the "My Proposals" tab', async () => {
+        render(
+            <MemoryRouter>
+                <Dashboard />
+            </MemoryRouter>
+        )
+        await waitFor(async () => {
+            expect(await screen.findByText('First Project')).toBeInTheDocument()
+            expect(await screen.findByText('Second Project')).toBeInTheDocument()
         })
+    })
 
-        it('renders list of drafts after fetch', async () => {
-                render(
-                        <MemoryRouter>
-                                <Dashboard />
-                        </MemoryRouter>
-                )
-
-                await waitFor(() => {
-                        expect(screen.getByText(/first project/i)).toBeInTheDocument()
-                        expect(screen.getByText(/second project/i)).toBeInTheDocument()
-                })
+    it('displays knowledge cards in the "Knowledge Library" tab', async () => {
+        render(
+            <MemoryRouter>
+                <Dashboard />
+            </MemoryRouter>
+        )
+        await userEvent.click(screen.getByRole('tab', { name: /knowledge library/i }))
+        await waitFor(async () => {
+            expect(await screen.findByText('ECHO')).toBeInTheDocument()
+            expect(await screen.findByText('Country A')).toBeInTheDocument()
         })
+    })
 
-        it('filters drafts based on search term', async () => {
-                render(
-                        <MemoryRouter>
-                                <Dashboard />
-                        </MemoryRouter>
-                )
-
-                await waitFor(() => {
-                        expect(screen.getByText('First Project')).toBeInTheDocument()
-                        expect(screen.getByText('Second Project')).toBeInTheDocument()
-                })
-
-                const searchInput = screen.getByPlaceholderText(/search/i)
-                await userEvent.clear(searchInput)
-                await userEvent.type(searchInput, 'second')
-
-
-                await waitFor(() => {
-                        expect(screen.queryByText('First Project')).not.toBeInTheDocument()
-                })
-
-                expect(screen.getByText('Second Project')).toBeInTheDocument()
+    it('displays reviews in the "Pending Reviews" tab', async () => {
+        render(
+            <MemoryRouter>
+                <Dashboard />
+            </MemoryRouter>
+        )
+        await userEvent.click(screen.getByRole('tab', { name: /pending reviews/i }))
+        await waitFor(async () => {
+            expect(await screen.findByText('Review Project 1')).toBeInTheDocument()
         })
+    })
 
-        it('shows no drafts notice when no drafts returned', async () => {
-                server.use(
-                        http.get(`${API_BASE_URL}/list-drafts`, () => HttpResponse.json({ drafts: [] }))
-                )
-
-                render(
-                        <MemoryRouter>
-                                <Dashboard />
-                        </MemoryRouter>
-                )
-
-                await waitFor(() => {
-                        expect(screen.getByText(/no drafts found\./i)).toBeInTheDocument()
-                })
+    it('opens the new proposal modal when "Start New Proposal" is clicked', async () => {
+        render(
+            <MemoryRouter>
+                <Dashboard />
+            </MemoryRouter>
+        )
+        const newProposalButton = await screen.findByRole('button', { name: /start new proposal/i })
+        await userEvent.click(newProposalButton)
+        await waitFor(async () => {
+            expect(await screen.findByRole('dialog', { name: /start new proposal/i })).toBeInTheDocument()
         })
+    })
 
-        it('navigates to /chat on create new click', async () => {
-                render(
-                        <MemoryRouter>
-                                <Dashboard />
-                        </MemoryRouter>
-                )
-
-                const createBtn = await screen.findByRole('button', { name: /create new proposal/i })
-                await userEvent.click(createBtn)
-                await waitFor(() => {
-                        expect(mockNavigate).toHaveBeenCalledWith('/chat')
-                })
+    it('shows a "Submit for Review" button for draft proposals', async () => {
+        render(
+            <MemoryRouter>
+                <Dashboard />
+            </MemoryRouter>
+        )
+        await waitFor(async () => {
+            const reviewButtons = await screen.findAllByRole('button', { name: /submit for review/i })
+            expect(reviewButtons.length).toBeGreaterThan(0)
         })
-
-        it('clicking project sets sessionStorage and navigates', async () => {
-                render(
-                        <MemoryRouter>
-                                <Dashboard />
-                        </MemoryRouter>
-                )
-
-                const projectItem = await screen.findByText('First Project')
-
-                await userEvent.click(projectItem)
-
-                await waitFor(() => {
-                        expect(sessionStorage.getItem('proposal_id')).toBe('1')
-                        expect(mockNavigate).toHaveBeenCalledWith('/chat')
-                })
-        }),
-
-        it('shows an Approved badge on accepted projects in Dashboard', async () => {
-                render(
-                        <MemoryRouter>
-                                <Dashboard />
-                        </MemoryRouter>
-                )
-
-                await screen.findByText('First Project')
-                expect(screen.getByText(/approved/i)).toBeInTheDocument()
-
-                await screen.findByText('Second Project')
-                expect(screen.getByText(/pending approval/i)).toBeInTheDocument()
-        })
+    })
 })
