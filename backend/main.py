@@ -15,13 +15,17 @@ import sys
 #     stream=sys.stdout
 # )
 
+import os
 # --- Logging Configuration ---
+log_dir = os.path.join(os.path.dirname(__file__), 'log')
+os.makedirs(log_dir, exist_ok=True)
+log_file = os.path.join(log_dir, 'app.log')
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler = logging.FileHandler("log/app.log")
+handler = logging.FileHandler(log_file)
 handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 logging.getLogger().addHandler(handler)
 
-import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 #  Internal Modules
@@ -31,6 +35,7 @@ from backend.core.middleware import (
     custom_http_exception_handler,
     setup_scheduler
 )
+from backend.core.init_db import initialize_database
 
 # This is the main application file. It brings together all the different
 # parts of the application: API routers, middleware, and event handlers.
@@ -80,6 +85,7 @@ def on_startup():
     Performs application startup tasks, such as initializing the background scheduler.
     """
     print("Application is starting up...")
+    initialize_database()
     setup_scheduler()
     print("Background scheduler has been started.")
 

@@ -39,11 +39,11 @@ services:
       - AZURE_OPENAI_API_KEY_EMBED=${AZURE_OPENAI_API_KEY_EMBED}
       - AZURE_OPENAI_API_VERSION_EMBED=${AZURE_OPENAI_API_VERSION_EMBED}
       - AZURE_EMBEDDING_DEPLOYMENT_NAME=${AZURE_EMBEDDING_DEPLOYMENT_NAME}
-      - DB_USERNAME=${DB_USERNAME}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${DB_NAME}
-      - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT}
       - SECRET_KEY=${SECRET_KEY}
       - REDIS_HOST=${REDIS_HOST}  # Using Azure Redis Cache instead of container
       - REDIS_PASSWORD=${REDIS_PASSWORD}
+    volumes:
+      - backend_data:/app/backend/data
+
+volumes:
+  backend_data:
