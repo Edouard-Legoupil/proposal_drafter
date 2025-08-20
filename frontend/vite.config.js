@@ -18,8 +18,7 @@ export default defineConfig(({ mode }) => {
       allowedHosts: [
         'localhost',
        // 'https://8c1aa6b4f54e.ngrok-free.app/',
-       // 'https://proposaldrafter-service-290826171799.europe-west1.run.app/',
-        'https://proposaldrafterservice2-290826171799.europe-west1.run.app/'
+        'https://proposalgenerator-290826171799.europe-west1.run.app/'
       ],
       proxy: {
         '/api': {

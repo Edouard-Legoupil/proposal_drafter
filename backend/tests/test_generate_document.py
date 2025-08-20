@@ -1,12 +1,12 @@
 import pytest
 from httpx import AsyncClient
-from main import app, redis_client, SECTIONS
+from backend.main import app
+from backend.core.redis import redis_client
+from backend.core.config import SECTIONS
 from httpx import ASGITransport
 import os
 import json
 from httpx import AsyncClient
-from httpx import ASGITransport
-from main import app
 
 @pytest.mark.asyncio
 async def test_generate_document():
