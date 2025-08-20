@@ -18,7 +18,7 @@ FROM python:3.11-slim AS final
 
 # Install OS dependencies including supervisor
 RUN apt-get update && \
-    apt-get install -y nginx curl supervisor dnsutils gettext-base procps net-tools dmesg && \
+    apt-get install -y nginx curl supervisor dnsutils gettext-base procps net-tools util-linux && \
     apt-get clean
 
 # Create a working directory
