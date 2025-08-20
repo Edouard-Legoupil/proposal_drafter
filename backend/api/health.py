@@ -12,7 +12,11 @@ def health():
     """
     A simple endpoint to confirm that the API is running and responsive.
     """
-    return {"status": "لْحَمْدُ لِلَّٰهِ API is running"}
+    return {
+        "status": "لْحَمْدُ لِلَّٰهِ API is running", 
+        "timestamp": datetime.now().isoformat(),
+        "memory_usage": psutil.Process().memory_info().rss / 1024 / 1024
+        }
 
 # --- Debugging Endpoints ---
 # These endpoints are intended for development and debugging purposes only.

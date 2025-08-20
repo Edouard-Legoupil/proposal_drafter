@@ -3,34 +3,76 @@ kind: Service
 metadata:
   name: $_SERVICE_NAME
   namespace: $_PROJECT_ID
+  annotations:
+    # Enable CPU always allocated to prevent CPU throttling during startup
+    autoscaling.knative.dev/minScale: "1"
+    # Add custom metrics for better debugging
+    run.googleapis.com/cpu-throttling: "false"
 spec:
   template:
+    metadata:
+      annotations:
+        # Increase startup timeout to 4 minutes (max allowed)
+        autoscaling.knative.dev/initialScale: "1"
     spec:
+      containerConcurrency: 80
+      timeoutSeconds: 600  # Increased to 10 minutes
       containers:
         - image: IMAGE_PLACEHOLDER
           ports:
-            - containerPort: 8080   # Nginx listening port
+            - containerPort: 8080
           env:
             - name: PORT
               value: "8080"
+            # Add diagnostic environment variables
+            - name: GCP_PROJECT
+              valueFrom:
+                secretKeyRef:
+                  name: gcp-config
+                  key: project
+            - name: SERVICE_NAME
+              value: $_SERVICE_NAME
+          # Resource limits - adjust based on your needs
+          resources:
+            requests:
+              cpu: "1000m"
+              memory: "1Gi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+          # Optimized probes
           readinessProbe:
             httpGet:
               path: /api/health
               port: 8080
-            initialDelaySeconds: 45
-            periodSeconds: 10
-            timeoutSeconds: 10
+            initialDelaySeconds: 10  # Reduced from 45
+            periodSeconds: 5
+            timeoutSeconds: 3
+            successThreshold: 1
             failureThreshold: 3
           livenessProbe:
             httpGet:
               path: /api/health
               port: 8080
-            initialDelaySeconds: 15
-            periodSeconds: 20
-            timeoutSeconds: 4
+            initialDelaySeconds: 30  # Increased from 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+            successThreshold: 1
             failureThreshold: 3
-      timeoutSeconds: 300
-      containerConcurrency: 80
+          # Startup probe (for slower starting applications)
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 30  # 30 * 5 = 150 seconds max startup time
+          # Lifecycle hooks for graceful shutdown
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "echo 'SIGTERM received, starting graceful shutdown'; pkill -TERM python; pkill -TERM nginx; sleep 10"]
   traffic:
     - latestRevision: true
       percent: 100
