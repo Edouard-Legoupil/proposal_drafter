@@ -7,6 +7,7 @@ import react from '@vitejs/plugin-react-swc'
 export default defineConfig(({ mode }) => {
   const isProduction = mode === 'production'
 // 👈 dynamic base if the front end is on github page
+// const base = isProduction ? '/proposal_drafter/' : '/'
   const base = isProduction ? '/' : '/'
   return {
 
@@ -29,7 +30,12 @@ export default defineConfig(({ mode }) => {
     },
 
     plugins: [react()],
-    base: base
+    base: base,
+
+    // ✅ Force Vite to output to /app/dist
+    build: {
+      outDir: 'dist'
+    }
 
 
   }

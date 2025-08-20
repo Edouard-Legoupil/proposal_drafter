@@ -31,3 +31,4 @@ fi
 echo "🚀 Handing over to supervisord for multiprocess management - Uvicorn for API and Nginx for proxying..."
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
 echo "🌀 Started all..."
+

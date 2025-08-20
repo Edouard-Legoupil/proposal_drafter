@@ -28,6 +28,7 @@ WORKDIR /app
 RUN python -m venv /venv
 ENV PATH="/venv/bin:$PATH"
 
+
 # Create the backend directory inside the container
 RUN mkdir backend
 
@@ -47,6 +48,7 @@ COPY backend/ backend/
 # This allows Python to find the 'backend' module and prevents the warning.
 ENV PYTHONPATH=/app
 
+
 # confirm
 RUN which uvicorn && uvicorn --version
 
@@ -60,6 +62,7 @@ RUN mkdir -p /app/log /app/proposal-documents /app/knowledge && chmod -R 755 /ap
 COPY ./backend/knowledge/combine_example.json /app/knowledge/
 # Let's confirm the file exists in the right place
 RUN echo "Checking knowledge dir after copy:" && ls -la /app/knowledge
+
 
 # Copy custom nginx config
 COPY nginx-proxy/nginx.conf /etc/nginx/conf.d/default.conf
@@ -84,3 +87,4 @@ COPY supervisor/start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
 CMD ["/usr/local/bin/start.sh"]
+

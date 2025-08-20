@@ -241,7 +241,14 @@ gcloud run deploy proposal_drafter-service \
     --set-env-vars INSTANCE_CONNECTION_NAME="YOUR_PROJECT_ID:YOUR_GCP_REGION:YOUR_CLOUD_SQL_INSTANCE_NAME" \
     --set-env-vars DB_USER="cloud-sql-connector-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
     --set-env-vars DB_NAME="YOUR_DATABASE_NAME" # etc.
+## you can check what env variables were deployed with
+gcloud run services describe proposaldrafter-service \
+  --region=YOUR_GCP_REGION \
+  --format="value(spec.template.spec.containers[0].env)"
+
 ```
+
+
 
 ### 5.3 Deploy to Cloud Run with Artifact Registry
  
@@ -478,7 +485,7 @@ Ensure your FastAPI backend has appropriate CORS (Cross-Origin Resource Sharing)
 
 In `main.py`:
 
-```bash
+```python
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -496,6 +503,52 @@ origins = [
 ```
 
 Important: Be specific with your allow_origins in production to only include your actual frontend domains.
+
+
+## 8. CI/CD deployment script from github
+
+Google Cloud Setup: Workload Identity Federation (WIF): You need to have Workload Identity Federation set up in your GCP project.
+
+Create a Workload Identity Pool: 
+
+```bash
+gcloud iam workload-identity-pools create github-pool --location=global --display-name="GitHub Actions Pool"
+```
+
+Create a Provider within the pool: 
+
+```bash
+gcloud iam workload-identity-pools providers create-oidc github-provider --location=global --workload-identity-pool=github-pool --display-name="GitHub Actions Provider" --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository" --issuer-uri="https://token.actions.githubusercontent.com"
+
+
+gcloud iam workload-identity-pools providers create-oidc github-provider \
+  --location=global \
+  --workload-identity-pool=github-pool \
+  --display-name="GitHub Actions Provider" \
+  --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository,attribute.repository_owner=assertion.repository_owner" \
+  --issuer-uri="https://token.actions.githubusercontent.com" \
+  --attribute-condition="attribute.repository_owner == 'YOUR_GITHUB_ORG' && attribute.repository == 'YOUR_REPO_NAME'"
+```
+
+Grant the necessary permissions to your SERVICE_ACCOUNT on the Workload Identity Pool (e.g., roles/run.admin, roles/artifactregistry.writer, roles/iam.serviceAccountUser).
+
+gcloud projects describe YOUR_PROJECT_ID_ALPHANUMERIC --format="value(projectNumber)"
+
+```bash
+## First get your project numeric id
+gcloud projects describe YOUR_PROJECT_ID_ALPHANUMERIC --format="value(projectNumber)"
+
+gcloud iam service-accounts add-iam-policy-binding YOUR_SERVICE_ACCOUNT_EMAIL  --member="principalSet://iam.googleapis.com/projects/NUMERIC_PROJECT_ID/locations/global/workloadIdentityPools/github-pool/attribute.repository/YOUR_GITHUB_ORG/YOUR_REPO_NAME"  
+```
+
+Ensure the service_account used in the workflow (github-actions-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com) exists and has the necessary roles for Cloud Run deployment and Artifact Registry access.
+
+Artifact Registry: Create a Docker repository in Artifact Registry in the specified GAR_LOCATION (e.g., 
+
+gcloud artifacts repositories create proposalgen-backend --repository-format=docker --location=europe-west1 --description="Docker repository for proposalgen backend").
+
+ The BACKEND_SERVICE_NAME is used here.
+
 
 # Next Steps
 
