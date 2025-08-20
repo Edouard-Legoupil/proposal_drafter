@@ -12,19 +12,6 @@ sed -i "s/\$PORT/$PORT/g" /etc/nginx/conf.d/default.conf
 echo "✅ Updated Nginx config:"
 grep "listen" /etc/nginx/conf.d/default.conf
 
-# Wait for Cloud SQL socket to be available
-# echo "Waiting for Cloud SQL socket..."
-# while [ ! -S "/cloudsql/$DB_HOST/.s.PGSQL.5432" ]; do
-#   sleep 1
-# done
-# echo "Cloud SQL socket is ready!"
-
-# # Optional: try a simple connection using psql to ensure DB is up
-# if ! PGPASSWORD=$DB_PASSWORD psql -h "/cloudsql/$DB_HOST" -U $DB_USER -d $DB_NAME -c '\q'; then
-#   echo "Database not ready, exiting..."
-#   exit 1
-# fi
-
 # Wait up to 15 seconds for Cloud SQL socket
 echo "Waiting for Cloud SQL socket..."
 timeout=15
