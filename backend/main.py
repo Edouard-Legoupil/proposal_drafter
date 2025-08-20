@@ -25,7 +25,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 #  Internal Modules
-from backend.api import auth, proposals, session, documents, health
+from backend.api import auth, proposals, session, documents, health, knowledge
 from backend.core.middleware import (
     setup_cors_middleware,
     custom_http_exception_handler,
@@ -67,6 +67,7 @@ app.add_exception_handler(HTTPException, custom_http_exception_handler)
 app.include_router(auth.router, prefix="/api", tags=["Authentication"])
 app.include_router(session.router, prefix="/api", tags=["Session Management"])
 app.include_router(proposals.router, prefix="/api", tags=["Proposals"])
+app.include_router(knowledge.router, prefix="/api/knowledge", tags=["Knowledge"])
 app.include_router(documents.router, prefix="/api", tags=["Documents"])
 app.include_router(health.router, tags=["Health & Debugging"])
 

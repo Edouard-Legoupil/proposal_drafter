@@ -31,47 +31,58 @@ CREATE TABLE IF NOT EXISTS proposals (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create Donors, Outcomes, and Knowledge Cards tables
+-- Create Donors table
 CREATE TABLE IF NOT EXISTS donors (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) UNIQUE NOT NULL
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL UNIQUE
 );
 
+-- Create Outcomes table
 CREATE TABLE IF NOT EXISTS outcomes (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) UNIQUE NOT NULL
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL UNIQUE
 );
 
+-- Create Field Contexts table
+CREATE TABLE IF NOT EXISTS field_contexts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL UNIQUE
+);
+
+-- Create Knowledge Cards table
 CREATE TABLE IF NOT EXISTS knowledge_cards (
-    id SERIAL PRIMARY KEY,
-    category VARCHAR(255) NOT NULL,
-    title VARCHAR(255) NOT NULL,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,
     summary TEXT,
-    last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    generated_sections JSONB,
+    is_accepted BOOLEAN DEFAULT FALSE,
+    status VARCHAR(255) DEFAULT 'draft',
+    donor_id UUID REFERENCES donors(id) ON DELETE SET NULL,
+    outcome_id UUID REFERENCES outcomes(id) ON DELETE SET NULL,
+    field_context_id UUID REFERENCES field_contexts(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT one_link_only CHECK (
+        (CASE WHEN donor_id IS NOT NULL THEN 1 ELSE 0 END +
+         CASE WHEN outcome_id IS NOT NULL THEN 1 ELSE 0 END +
+         CASE WHEN field_context_id IS NOT NULL THEN 1 ELSE 0 END) = 1
+    )
 );
 
--- Create join tables for many-to-many relationships
-CREATE TABLE IF NOT EXISTS proposal_donors (
-    proposal_id UUID REFERENCES proposals(id) ON DELETE CASCADE,
-    donor_id INTEGER REFERENCES donors(id) ON DELETE CASCADE,
-    PRIMARY KEY (proposal_id, donor_id)
+-- Create Knowledge Card References table
+CREATE TABLE IF NOT EXISTS knowledge_card_references (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    knowledge_card_id UUID NOT NULL REFERENCES knowledge_cards(id) ON DELETE CASCADE,
+    url TEXT NOT NULL
 );
-
-CREATE TABLE IF NOT EXISTS proposal_outcomes (
-    proposal_id UUID REFERENCES proposals(id) ON DELETE CASCADE,
-    outcome_id INTEGER REFERENCES outcomes(id) ON DELETE CASCADE,
-    PRIMARY KEY (proposal_id, outcome_id)
-);
-
 
 -- Create indexes for faster lookups
 CREATE INDEX IF NOT EXISTS idx_proposals_user_id ON proposals(user_id);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-CREATE INDEX IF NOT EXISTS idx_proposal_donors_proposal_id ON proposal_donors(proposal_id);
-CREATE INDEX IF NOT EXISTS idx_proposal_donors_donor_id ON proposal_donors(donor_id);
-CREATE INDEX IF NOT EXISTS idx_proposal_outcomes_proposal_id ON proposal_outcomes(proposal_id);
-CREATE INDEX IF NOT EXISTS idx_proposal_outcomes_outcome_id ON proposal_outcomes(outcome_id);
-
+CREATE INDEX IF NOT EXISTS idx_knowledge_cards_donor_id ON knowledge_cards(donor_id);
+CREATE INDEX IF NOT EXISTS idx_knowledge_cards_outcome_id ON knowledge_cards(outcome_id);
+CREATE INDEX IF NOT EXISTS idx_knowledge_cards_field_context_id ON knowledge_cards(field_context_id);
+CREATE INDEX IF NOT EXISTS idx_knowledge_card_references_knowledge_card_id ON knowledge_card_references(knowledge_card_id);
 
 -- Grant table permissions to application user
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO <DB_USERNAME>;
@@ -80,11 +91,4 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO <DB_USERNAME>;
 -- Seed data for new tables
 INSERT INTO donors (name) VALUES ('ECHO'), ('SIDA'), ('PRM'), ('CERF') ON CONFLICT (name) DO NOTHING;
 INSERT INTO outcomes (name) VALUES ('WASH'), ('Shelter'), ('Livelihoods'), ('Community'), ('Education'), ('Child protection'), ('Status'), ('Data') ON CONFLICT (name) DO NOTHING;
-
-INSERT INTO knowledge_cards (category, title, summary) VALUES
-('Donor Insights', 'ECHO', 'Key compliance and funding priorities for ECHO.'),
-('Donor Insights', 'CERF', 'Key compliance and funding priorities for CERF.'),
-('Field Context', 'Country A', 'Recent situational updates for Country A.'),
-('Field Context', 'Route Based Approach - West Africa', 'Recent situational updates for the West Africa route.'),
-('Outcome Lessons', 'Shelter', 'Extracted insights from Policies, Guidance and related Past Evaluation Recommendation for Shelter.')
-ON CONFLICT DO NOTHING;
+INSERT INTO field_contexts (name) VALUES ('Country A'), ('Country B'), ('Route based Approach - West Africa') ON CONFLICT (name) DO NOTHING;
