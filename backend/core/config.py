@@ -128,9 +128,10 @@ on_gcp = os.getenv('DB_HOST') != 'localhost'
 # This controls which frontend URLs can make requests to the API.
 origins = [
     #"https://edouard-legoupil.github.io", # Client in github page
-    "http://localhost:8503",               # Client for local dev 
-    "http://localhost:8080",               
-    "https://proposalgenerator-290826171799.europe-west1.run.app/" ## GCP deployment
+    "http://localhost:8503",      
+    "http://localhost:8503",          # Client for local dev 
+    "https://localhost:8080",               
+    "https://proposalgen-290826171799.europe-west9.run.app/" ## GCP deployment
 ]
 
 
