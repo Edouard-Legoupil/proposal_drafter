@@ -7,10 +7,14 @@ echo "🚀 Starting container entrypoint..."
 PORT=${PORT:-8080}
 echo "📌 Cloud Run will expect Nginx to listen on PORT=$PORT"
 
-# Replace $PORT placeholder in Nginx config
-sed -i "s/\$PORT/$PORT/g" /etc/nginx/conf.d/default.conf
-echo "✅ Updated Nginx config:"
-grep "listen" /etc/nginx/conf.d/default.conf
+# Create a temporary template file
+cp /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf.template
+
+# Replace $PORT placeholder in Nginx config using envsubst
+envsubst '${PORT}' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf
+
+echo "✅ Updated Nginx config with PORT=$PORT:"
+cat /etc/nginx/conf.d/default.conf | grep "listen"
 
 # Wait for Cloud SQL socket to be available
 # echo "Waiting for Cloud SQL socket..."
