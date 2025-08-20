@@ -12,6 +12,7 @@ spec:
   template:
     metadata:
       annotations:
+        run.googleapis.com/cloud-sql-instances: "proposal-465609:europe-west1:proposal"        
         # Increase startup timeout to 4 minutes (max allowed)
         autoscaling.knative.dev/initialScale: "1"
     spec:
