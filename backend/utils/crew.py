@@ -21,8 +21,9 @@ class ProposalCrew():
     # Path to knowledge files
     json_knowledge = JSONKnowledgeSource(
         file_paths=[
-            "backend/knowledge/combine_example.json"
-        ]
+            "combine_example.json"
+        ],
+        knowledge_base_directory="backend/knowledge"
     )
 
 ## List of agents ##########
