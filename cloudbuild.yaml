@@ -1,31 +1,36 @@
 steps:
+  # Step 1: Build image
   - name: gcr.io/cloud-builders/docker
     args:
       - build
       - '-t'
       - '$_GCR_HOSTNAME/$PROJECT_ID/$_SERVICE_NAME:$COMMIT_SHA'
       - .
+
+  # Step 2: Push image
   - name: gcr.io/cloud-builders/docker
     args:
       - push
       - '$_GCR_HOSTNAME/$PROJECT_ID/$_SERVICE_NAME:$COMMIT_SHA'
+
+  # Step 3: Inject new image tag into service.yaml
+  - name: gcr.io/cloud-builders/gcloud
+    entrypoint: /bin/bash
+    args:
+      - -c
+      - |
+        sed -i "s|IMAGE_PLACEHOLDER|$_GCR_HOSTNAME/$PROJECT_ID/$_SERVICE_NAME:$COMMIT_SHA|g" service.yaml
+
+  # Step 4: Deploy using service.yaml
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
     args:
       - run
-      - deploy
-      - $_SERVICE_NAME
-      - '--image'
-      - '$_GCR_HOSTNAME/$PROJECT_ID/$_SERVICE_NAME:$COMMIT_SHA'
-      - '--region'
-      - $_DEPLOY_REGION
-      - '--platform'
-      - $_PLATFORM
-      - '--readiness-probe-path=/api/health'
-      - '--readiness-probe-initial-delay=5s'
-      - '--readiness-probe-timeout=4s'
-      - '--readiness-probe-period=10s'
-      - '--readiness-probe-failure-threshold=3'
-    entrypoint: gcloud
+      - services
+      - replace
+      - service.yaml
+      - --region=$_DEPLOY_REGION
+
 timeout: 1200s
 images:
   - '$_GCR_HOSTNAME/$PROJECT_ID/$_SERVICE_NAME:$COMMIT_SHA'
