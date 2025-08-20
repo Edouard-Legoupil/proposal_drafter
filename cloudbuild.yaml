@@ -20,6 +20,11 @@ steps:
       - $_DEPLOY_REGION
       - '--platform'
       - $_PLATFORM
+      - '--readiness-probe-path=/api/health'
+      - '--readiness-probe-initial-delay=5s'
+      - '--readiness-probe-timeout=4s'
+      - '--readiness-probe-period=10s'
+      - '--readiness-probe-failure-threshold=3'
     entrypoint: gcloud
 timeout: 1200s
 images:

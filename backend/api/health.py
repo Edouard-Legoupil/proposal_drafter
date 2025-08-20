@@ -17,25 +17,25 @@ def health():
 # --- Debugging Endpoints ---
 # These endpoints are intended for development and debugging purposes only.
 
-@router.get("/debug/headers")
-async def debug_headers(request: Request):
-    """
-    Returns the headers of the incoming request.
-    Useful for debugging issues related to CORS, cookies, or other headers.
-    """
-    return {
-        "origin": request.headers.get("origin"),
-        "host": request.headers.get("host"),
-        "headers": dict(request.headers)
-    }
+# @router.get("/debug/headers")
+# async def debug_headers(request: Request):
+#     """
+#     Returns the headers of the incoming request.
+#     Useful for debugging issues related to CORS, cookies, or other headers.
+#     """
+#     return {
+#         "origin": request.headers.get("origin"),
+#         "host": request.headers.get("host"),
+#         "headers": dict(request.headers)
+#     }
 
-@router.get("/debug/origin")
-async def debug_origin(request: Request):
-    """
-    Returns the request's origin and cookies.
-    Helpful for diagnosing cookie and cross-origin request problems.
-    """
-    return {
-        "origin": request.headers.get("origin"),
-        "cookies": request.cookies
-    }
+# @router.get("/debug/origin")
+# async def debug_origin(request: Request):
+#     """
+#     Returns the request's origin and cookies.
+#     Helpful for diagnosing cookie and cross-origin request problems.
+#     """
+#     return {
+#         "origin": request.headers.get("origin"),
+#         "cookies": request.cookies
+#     }
