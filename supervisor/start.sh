@@ -1,6 +1,13 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
+echo "🚀 Starting container entrypoint..."
+echo "📅 Container start time: $(date)"
+echo "🔍 Process ID: $$"
+
+# Ensure PORT is set
+PORT=${PORT:-8080}
+echo "🌐 Cloud Run will expect Nginx to listen on PORT=$PORT"
 
 # Function to log diagnostic information
 log_diagnostics() {
@@ -61,32 +68,9 @@ log_diagnostics() {
     echo "📊 ===== END DIAGNOSTICS ====="
 }
 
-echo "🚀 Starting container entrypoint..."
-
-# Ensure PORT is set
-PORT=${PORT:-8080}
-echo "📌 Cloud Run will expect Nginx to listen on PORT=$PORT"
-
 # Replace $PORT placeholder in Nginx config
 sed -i "s/\$PORT/$PORT/g" /etc/nginx/conf.d/default.conf
-echo "✅ Updated Nginx config:"
-grep "listen" /etc/nginx/conf.d/default.conf
-
-# Wait up to 15 seconds for Cloud SQL socket
-# echo "Waiting for Cloud SQL socket..."
-# timeout=15
-# elapsed=0
-# while [ ! -S "/cloudsql/$DB_HOST/.s.PGSQL.5432" ] && [ $elapsed -lt $timeout ]; do
-#     sleep 1
-#     elapsed=$((elapsed + 1))
-# done
-
-# if [ -S "/cloudsql/$DB_HOST/.s.PGSQL.5432" ]; then
-#     echo "Cloud SQL socket is ready!"
-# else
-#     echo "Timeout: Cloud SQL socket not available after $timeout seconds. If you are on GCP, it is an issue..."
-# fi
-
+echo "✅ Updated Nginx config to listen on port $PORT"
 
 # Wait for Cloud SQL socket with timeout
 if [ -n "$DB_HOST" ]; then
@@ -108,15 +92,6 @@ else
     echo "ℹ️ No DB_HOST specified, skipping Cloud SQL wait"
 fi
 
-
-# Wait for Cloud SQL (but don't block indefinitely)
-# echo "Checking for Cloud SQL socket..."
-# if [ -n "$DB_HOST" ] && [ ! -S "/cloudsql/$DB_HOST/.s.PGSQL.5432" ]; then
-#     echo "Waiting up to 10s for Cloud SQL socket..."
-#     timeout 10 bash -c 'until [ -S "/cloudsql/$0/.s.PGSQL.5432" ]; do sleep 1; done' "$DB_HOST" || \
-#     echo "Warning: Cloud SQL socket not ready, proceeding anyway..."
-# fi
-
 # Start Nginx and FastAPI directly
 echo "🚀 Starting Nginx and FastAPI..."
 
@@ -135,7 +110,7 @@ echo "🐍 Starting FastAPI..."
 UVICORN_PID=$!
 echo "✅ FastAPI started with PID: $UVICORN_PID"
 
-# Monitor processes in background
+# Monitor processes in background (compatible with basic shell)
 monitor_processes() {
     while true; do
         if ! kill -0 $NGINX_PID 2>/dev/null; then
@@ -183,8 +158,12 @@ graceful_shutdown() {
     
     # Wait for processes to finish
     echo "⏳ Waiting for processes to terminate..."
-    wait $NGINX_PID 2>/dev/null || true
-    wait $UVICORN_PID 2>/dev/null || true
+    # Use a simple wait loop instead of wait -n
+    for pid in $NGINX_PID $UVICORN_PID; do
+        while kill -0 $pid 2>/dev/null; do
+            sleep 0.5
+        done
+    done
     
     echo "✅ Graceful shutdown completed at $(date)"
     exit 0
@@ -194,14 +173,25 @@ graceful_shutdown() {
 trap 'graceful_shutdown SIGTERM' TERM
 trap 'graceful_shutdown SIGINT' INT
 
-# Wait for processes and capture exit codes
+# Use a simple wait loop instead of wait -n (compatible with basic shell)
 echo "👀 Monitoring processes..."
-wait -n $NGINX_PID $UVICORN_PID
-EXIT_CODE=$?
-
-# If we get here, a process died unexpectedly
-echo "❌ A process died unexpectedly with exit code: $EXIT_CODE"
-log_diagnostics "PROCESS_FAILURE_$EXIT_CODE"
+while true; do
+    # Check if either process has died
+    if ! kill -0 $NGINX_PID 2>/dev/null; then
+        echo "❌ Nginx process ($NGINX_PID) died unexpectedly!"
+        log_diagnostics "NGINX_PROCESS_DIED"
+        break
+    fi
+    
+    if ! kill -0 $UVICORN_PID 2>/dev/null; then
+        echo "❌ FastAPI process ($UVICORN_PID) died unexpectedly!"
+        log_diagnostics "FASTAPI_PROCESS_DIED"
+        break
+    fi
+    
+    # Sleep briefly to avoid busy waiting
+    sleep 5
+done
 
 # Attempt to shutdown gracefully anyway
 graceful_shutdown "AUTO_SHUTDOWN"
