@@ -42,6 +42,9 @@ def get_engine():
     if engine is not None:
         return engine
 
+
+    logger.info("Initializing new SQLAlchemy engine...")
+
     if os.getenv("TESTING"):
         from unittest.mock import MagicMock
         logger.info("TESTING mode: using MagicMock engine")
@@ -50,29 +53,39 @@ def get_engine():
 
     if on_gcp:
         logger.info(f"Creating GCP SQLAlchemy engine for {db_host}")
-        engine = create_engine(
-            "postgresql+pg8000://",
-            creator=lambda: get_connector().connect(
-                db_host,
-                "pg8000",
-                user=db_username,
-                password=db_password,
-                db=db_name,
-            ),
-            pool_pre_ping=True,
-            pool_recycle=300,
-        )
+        try:
+            engine = create_engine(
+                "postgresql+pg8000://",
+                creator=lambda: get_connector().connect(
+                    db_host,
+                    "pg8000",
+                    user=db_username,
+                    password=db_password,
+                    db=db_name,
+                ),
+                pool_pre_ping=True,
+                pool_recycle=300,
+            )
+            logger.info("GCP engine created successfully")
+        except Exception as e:
+            logger.error(f"Failed to create GCP engine: {e}")
+            raise
     else:
         encoded_password = urllib.parse.quote_plus(db_password) if db_password else ""
         connection_string = (
             f"postgresql+psycopg2://{db_username}:{encoded_password}@{db_host}:5432/{db_name}"
         )
         logger.info(f"Creating local SQLAlchemy engine for {db_host}")
-        engine = create_engine(
-            connection_string,
-            pool_pre_ping=True,
-            pool_recycle=300,
-        )
+        try:
+            engine = create_engine(
+                connection_string,
+                pool_pre_ping=True,
+                pool_recycle=300,
+            )
+            logger.info("Local engine created successfully")
+        except Exception as e:
+            logger.error(f"Failed to create local engine: {e}")
+            raise
 
     return engine
 
@@ -84,7 +97,7 @@ def test_connection():
         eng = get_engine()
         with eng.connect() as conn:
             from sqlalchemy import text
-            result = conn.execute(text("SELECT NOW()"))
+            result = conn.execute(ext("SELECT NOW() as current_time, version() as db_version"))
             logger.info(f"✅ Database connection successful. Current time: {result.scalar()}")
             return True
     except Exception as e:

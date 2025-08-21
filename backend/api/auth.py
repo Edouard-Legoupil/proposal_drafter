@@ -156,13 +156,17 @@ async def profile(current_user: dict = Depends(get_current_user)):
     Fetches the profile of the currently authenticated user.
     Relies on the `get_current_user` dependency to ensure the user is logged in.
     """
-    return {
-        "message": "Profile fetched successfully",
-        "user": {
-            "name": current_user["name"],
-            "email": current_user["email"]
+    try:
+        return {
+            "message": "Profile fetched successfully",
+            "user": {
+                "name": current_user["name"],
+                "email": current_user["email"]
+            }
         }
-    }
+    except Exception as e:
+        logger.error(f"Error in profile endpoint: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch profile")
 
 
 @router.post("/logout")

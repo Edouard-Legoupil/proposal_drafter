@@ -8,6 +8,7 @@ import logging
 #  Third-Party Libraries
 from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError 
 
 #  Internal Modules
 from backend.core.db import get_engine
@@ -226,6 +227,7 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
     """
     Lists all drafts for the current user, including sample templates.
     """
+    logger.info(f"Attempting to list drafts for user: {current_user['user_id']}")
     user_id = current_user["user_id"]
     draft_list = []
 
@@ -242,15 +244,21 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
         print(f"[TEMPLATE LOAD ERROR] {e}")
 
     # Fetch user's drafts from the database.
-    try:
-        with get_engine().connect() as connection:
+   try:
+        logger.info("Attempting database connection...")
+        engine = get_engine()
+        logger.info(f"Engine type: {type(engine)}")
+        
+        with engine.connect() as connection:
+            logger.info("Database connection established")
             result = connection.execute(
                 text("SELECT id, form_data, generated_sections, created_at, updated_at, is_accepted FROM proposals WHERE user_id = :uid ORDER BY updated_at DESC"),
                 {"uid": user_id}
             )
-            for row in result.fetchall():
-                #form_data = json.loads(row[1]) if row[1] else {}
-                #sections = json.loads(row[2]) if row[2] else {}
+            rows = result.fetchall()
+            logger.info(f"Found {len(rows)} drafts in database")
+            
+            for row in rows:
                 form_data = row[1] if row[1] else {}
                 sections = row[2] if row[2] else {}
 
@@ -263,9 +271,16 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
                     "is_accepted": row[5],
                     "is_sample": False
                 })
+                
+        logger.info(f"Total drafts (samples + user): {len(draft_list)}")
         return {"message": "Drafts fetched successfully.", "drafts": draft_list}
+        
+    except SQLAlchemyError as db_error:
+        logger.error(f"[DATABASE ERROR - list_drafts] {db_error}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Database connection failed")
+    
     except Exception as e:
-        print(f"[LIST DRAFTS ERROR] {e}")
+        logger.error(f"[LIST DRAFTS ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch drafts")
 
 
