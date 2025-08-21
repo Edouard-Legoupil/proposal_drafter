@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy import text
 
 #  Internal Modules
-from backend.core.db import engine
+from backend.core.db import get_engine
 from backend.core.redis import redis_client
 from backend.core.security import get_current_user
 from backend.core.config import proposal_data, SECTIONS
@@ -44,7 +44,7 @@ async def process_section(session_id: str, request: SectionRequest, current_user
         raise HTTPException(status_code=400, detail="Session data not found.")
 
     # Prevent editing of finalized proposals.
-    with engine.connect() as connection:
+    with get_engine().connect() as connection:
         res = connection.execute(
             text("SELECT is_accepted FROM proposals WHERE id = :id AND user_id = :uid"),
             {"id": request.proposal_id, "uid": current_user["user_id"]}
@@ -112,7 +112,7 @@ async def process_section(session_id: str, request: SectionRequest, current_user
 
     # Persist the generated text to the database.
     try:
-        with engine.begin() as conn:
+        with get_engine().begin() as conn:
             db_res = conn.execute(text("SELECT generated_sections FROM proposals WHERE id = :id"), {"id": request.proposal_id}).scalar()
 
             # The database driver is already converting JSON to a dict,
@@ -154,7 +154,7 @@ async def regenerate_section(session_id: str, request: RegenerateRequest, curren
     Manually regenerates a section using concise user input.
     """
     # Prevent editing of finalized proposals.
-    with engine.connect() as connection:
+    with get_engine().connect() as connection:
         res = connection.execute(
             text("SELECT is_accepted FROM proposals WHERE id = :id AND user_id = :uid"),
             {"id": request.proposal_id, "uid": current_user["user_id"]}
@@ -177,7 +177,7 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
     proposal_id = request.proposal_id or str(uuid.uuid4())
 
     try:
-        with engine.begin() as connection:
+        with get_engine().begin() as connection:
             existing = connection.execute(
                 text("SELECT id FROM proposals WHERE id = :id AND user_id = :uid"),
                 {"id": proposal_id, "uid": user_id}
@@ -243,7 +243,7 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
 
     # Fetch user's drafts from the database.
     try:
-        with engine.connect() as connection:
+        with get_engine().connect() as connection:
             result = connection.execute(
                 text("SELECT id, form_data, generated_sections, created_at, updated_at, is_accepted FROM proposals WHERE user_id = :uid ORDER BY updated_at DESC"),
                 {"uid": user_id}
@@ -290,7 +290,7 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
 
     # Handle user drafts, loaded from the database.
     if not proposal_id.startswith("sample-"):
-        with engine.connect() as conn:
+        with get_engine().connect() as conn:
             # === Corrected SELECT statement with specific columns ===
             # The order of columns here is important and must match the indices below.
             draft = conn.execute(
@@ -346,7 +346,7 @@ async def finalize_proposal(request: FinalizeProposalRequest, current_user: dict
     Marks a proposal as 'accepted', making it read-only.
     """
     try:
-        with engine.begin() as connection:
+        with get_engine().begin() as connection:
             connection.execute(
                 text("UPDATE proposals SET is_accepted = TRUE, updated_at = NOW() WHERE id = :id AND user_id = :uid"),
                 {"id": request.proposal_id, "uid": current_user["user_id"]}
@@ -364,7 +364,7 @@ async def delete_draft(proposal_id: str, current_user: dict = Depends(get_curren
     """
     user_id = current_user["user_id"]
     try:
-        with engine.begin() as connection:
+        with get_engine().begin() as connection:
             result = connection.execute(
                 text("DELETE FROM proposals WHERE id = :id AND user_id = :uid AND is_accepted = FALSE RETURNING id"),
                 {"id": proposal_id, "uid": user_id}
