@@ -79,55 +79,75 @@ async def login(request: Request):
     On successful authentication, it creates a JWT and sets it in an HttpOnly cookie.
     """
     try:
+        # 1. Parse request body and validate input
         data = await request.json()
         email = data.get('email')
         password = data.get('password')
 
         if not email or not password:
+            logging.warning("Login attempt failed: Email or password not provided.")
             return JSONResponse(status_code=400, content={"error": "Email and password are required."})
 
-        with engine.connect() as connection:
-            result = connection.execute(
-                text("SELECT id, email, name, password FROM users WHERE email = :email"),
-                {'email': email}
-            )
-            user = result.fetchone()
-
+        # 2. Authenticate user against the database
+        try:
+            with engine.connect() as connection:
+                result = connection.execute(
+                    text("SELECT id, email, name, password FROM users WHERE email = :email"),
+                    {'email': email}
+                )
+                user = result.fetchone()
+        except SQLAlchemyError as db_error:
+            # Catch specific database-related errors
+            logging.error(f"Database error during login for email '{email}': {db_error}")
+            return JSONResponse(status_code=500, content={"error": "Authentication service is temporarily unavailable. Please try again later."})
+        
         if not user:
+            logging.warning(f"Login attempt failed for non-existent user: {email}")
             return JSONResponse(status_code=404, content={"error": "User does not exist!"})
 
         user_id, _, _, stored_password = user
         if not check_password_hash(stored_password, password):
+            logging.warning(f"Login attempt failed with invalid password for user ID: {user_id}")
             return JSONResponse(status_code=401, content={"error": "Invalid password!"})
-
-        # Create a JWT token with a 30-minute expiration.
+        
+        # 3. Create a JWT token and set Redis session
         token = jwt.encode(
             {"email": email, "exp": datetime.utcnow() + timedelta(minutes=30)},
             SECRET_KEY,
             algorithm="HS256"
         )
+        
+        try:
+            redis_client.setex(f"user_session:{user_id}", 1800, token)
+        except RedisError as redis_error:
+            # Catch specific Redis-related errors
+            logging.error(f"Redis error setting session for user ID {user_id}: {redis_error}")
+            # Do not stop login flow if session storage fails, but log it
+            # The user might still be able to access the API if the front-end handles the token correctly
+            pass
 
-        # Store the active session token in Redis.
-        redis_client.setex(f"user_session:{user_id}", 1800, token)
-
+        # 4. Set cookie and return success response
         response = JSONResponse(content={"message": "Login successful!"})
-
-        # Set the token in a secure, HttpOnly cookie.
+        
         cookie_settings = get_cookie_settings(request)
         response.set_cookie(
             key="auth_token",
             value=token,
             httponly=True,
             path="/",
-            max_age=1800,  # 30 minutes
+            max_age=1800,
             **cookie_settings
         )
+        logging.info(f"User {email} logged in successfully.")
         return response
+    
     except Exception as e:
-        logging.error(f"[LOGIN ERROR] {e}")
-        return JSONResponse(status_code=500, content={"error": "Login failed. Please try again later."})
+        # This catch-all is a final safety net.
+        # It's better to catch specific exceptions where possible.
+        logging.critical(f"An unexpected critical error occurred in the login endpoint: {e}", exc_info=True)
+        return JSONResponse(status_code=500, content={"error": "A server error occurred. Please contact support."})
 
-
+        
 @router.get("/profile")
 async def profile(current_user: dict = Depends(get_current_user)):
     """
