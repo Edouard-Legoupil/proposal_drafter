@@ -240,11 +240,12 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
             sample["summary"] = sample.get("generated_sections", {}).get("Summary", "")
             sample["is_sample"] = True
         draft_list.extend(sample_templates)
+        logger.info(f"Loaded {len(sample_templates)} sample templates")
     except Exception as e:
-        print(f"[TEMPLATE LOAD ERROR] {e}")
+        logger.error(f"[TEMPLATE LOAD ERROR] {e}")  # Changed print to logger
 
     # Fetch user's drafts from the database.
-   try:
+    try:  # Fixed: This was indented incorrectly (had extra spaces)
         logger.info("Attempting database connection...")
         engine = get_engine()
         logger.info(f"Engine type: {type(engine)}")
@@ -259,13 +260,27 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
             logger.info(f"Found {len(rows)} drafts in database")
             
             for row in rows:
-                form_data = row[1] if row[1] else {}
-                sections = row[2] if row[2] else {}
+                # Handle JSON fields properly - they might be strings or already parsed dicts
+                form_data = row[1]
+                if isinstance(form_data, str):
+                    try:
+                        form_data = json.loads(form_data)
+                    except json.JSONDecodeError:
+                        logger.warning(f"Failed to parse form_data JSON for proposal {row[0]}")
+                        form_data = {}
+                
+                sections = row[2]
+                if isinstance(sections, str):
+                    try:
+                        sections = json.loads(sections)
+                    except json.JSONDecodeError:
+                        logger.warning(f"Failed to parse generated_sections JSON for proposal {row[0]}")
+                        sections = {}
 
                 draft_list.append({
                     "proposal_id": row[0],
-                    "project_title": form_data.get("Project title", "Untitled Proposal"),
-                    "summary": sections.get("Summary", ""),
+                    "project_title": form_data.get("Project title", "Untitled Proposal") if form_data else "Untitled Proposal",
+                    "summary": sections.get("Summary", "") if sections else "",
                     "created_at": row[3].isoformat() if row[3] else None,
                     "updated_at": row[4].isoformat() if row[4] else None,
                     "is_accepted": row[5],
@@ -282,7 +297,6 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
     except Exception as e:
         logger.error(f"[LIST DRAFTS ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch drafts")
-
 
 @router.get("/sections")
 async def get_sections():

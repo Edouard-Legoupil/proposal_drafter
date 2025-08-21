@@ -40,10 +40,10 @@ def get_engine():
     """
     global engine
     if engine is not None:
+        logger.info(f"Returning existing engine: {type(engine)}")
         return engine
 
-
-    logger.info("Initializing new SQLAlchemy engine...")
+    logger.info(f"Initializing new SQLAlchemy engine... on_gcp={on_gcp}")
 
     if os.getenv("TESTING"):
         from unittest.mock import MagicMock
@@ -52,7 +52,7 @@ def get_engine():
         return engine
 
     if on_gcp:
-        logger.info(f"Creating GCP SQLAlchemy engine for {db_host}")
+        logger.info(f"Creating GCP SQLAlchemy engine for {db_host}, db: {db_name}, user: {db_username}")
         try:
             engine = create_engine(
                 "postgresql+pg8000://",
@@ -67,8 +67,14 @@ def get_engine():
                 pool_recycle=300,
             )
             logger.info("GCP engine created successfully")
+            
+            # Test the connection immediately
+            with engine.connect() as test_conn:
+                result = test_conn.execute(text("SELECT NOW()"))
+                logger.info(f"✅ Database connection test passed: {result.scalar()}")
+
         except Exception as e:
-            logger.error(f"Failed to create GCP engine: {e}")
+            logger.error(f"Failed to create GCP engine: {e}", exc_info=True)
             raise
     else:
         encoded_password = urllib.parse.quote_plus(db_password) if db_password else ""
