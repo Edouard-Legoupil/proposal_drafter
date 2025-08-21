@@ -1,6 +1,9 @@
 #  Third-Party Libraries
 import logging
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
+from fastapi.responses import FileResponse
 import uvicorn
 from dotenv import load_dotenv
 
@@ -74,6 +77,48 @@ app.include_router(proposals.router, prefix="/api", tags=["Proposals"])
 app.include_router(documents.router, prefix="/api", tags=["Documents"])
 app.include_router(health.router, tags=["Health & Debugging"])
 
+# --- Serve React Frontend ---
+frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend")
+if os.path.isdir(frontend_path):
+    # Serve static assets first
+    app.mount("/assets", StaticFiles(directory=os.path.join(frontend_path, "assets")), name="assets")
+    
+    # Serve other static files that might exist in the build
+    static_dirs = ['static', 'public']  # common React build directories
+    for static_dir in static_dirs:
+        static_path = os.path.join(frontend_path, static_dir)
+        if os.path.isdir(static_path):
+            app.mount(f"/{static_dir}", StaticFiles(directory=static_path), name=static_dir)
+
+    # SPA fallback - MUST BE DEFINED AFTER ALL API ROUTES
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        """
+        SPA fallback for React Router: always return index.html for non-API routes.
+        This should be the last route defined.
+        """
+        # Skip API routes explicitly
+        if full_path.startswith("api/"):
+            return {"detail": "API route not found"}
+        
+        # Check if the request is for a static file that exists
+        possible_file = os.path.join(frontend_path, full_path)
+        if os.path.isfile(possible_file):
+            return FileResponse(possible_file)
+        
+        # Check for common static file extensions
+        if '.' in full_path:
+            file_ext = full_path.split('.')[-1]
+            if file_ext in ['js', 'css', 'png', 'jpg', 'jpeg', 'gif', 'ico', 'svg', 'woff', 'woff2', 'ttf', 'eot']:
+                return {"detail": "Static file not found"}
+        
+        # Otherwise serve index.html for SPA routing
+        index_file = os.path.join(frontend_path, "index.html")
+        if os.path.isfile(index_file):
+            return FileResponse(index_file)
+        
+        return {"detail": "Frontend not built"}
+
 
 # --- Application Startup Events ---
 # Code in this block is executed when the application starts up.
@@ -84,9 +129,9 @@ async def startup_event():
     """
     Performs application startup tasks, such as initializing the background scheduler.
     """
-    if not test_connection():
+   # if not test_connection():
         # Optional: fail fast or just log
-        raise RuntimeError("Database connection failed at startup")
+    #    raise RuntimeError("Database connection failed at startup")
     print("Application is starting up...")
     setup_scheduler()
     print("Background scheduler has been started.")

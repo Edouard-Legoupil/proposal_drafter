@@ -5,6 +5,7 @@ import os
 
 #  Third-Party Libraries
 from sqlalchemy import create_engine, text
+from sqlalchemy.exc import SQLAlchemyError
 from google.cloud.sql.connector import Connector
 import pg8000.dbapi
 import psycopg2

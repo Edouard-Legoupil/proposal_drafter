@@ -8,9 +8,11 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
+from redis.exceptions import RedisError   
 
 #  Internal Modules
-from backend.core.db import engine
+from backend.core.db import get_engine
 from backend.core.redis import redis_client
 from backend.core.middleware import get_cookie_settings
 from backend.core.security import (
@@ -46,7 +48,7 @@ async def signup(request: Request):
     hashed_questions = {security_question: generate_password_hash(security_answer.strip().lower())}
 
     try:
-        with engine.begin() as connection:
+        with get_engine().begin() as connection:
             # Check if a user with the same email already exists.
             result = connection.execute(text("SELECT id FROM users WHERE email = :email"), {'email': email})
             if result.fetchone():
@@ -90,7 +92,7 @@ async def login(request: Request):
 
         # 2. Authenticate user against the database
         try:
-            with engine.connect() as connection:
+            with get_engine().connect() as connection:
                 result = connection.execute(
                     text("SELECT id, email, name, password FROM users WHERE email = :email"),
                     {'email': email}
@@ -147,7 +149,7 @@ async def login(request: Request):
         logging.critical(f"An unexpected critical error occurred in the login endpoint: {e}", exc_info=True)
         return JSONResponse(status_code=500, content={"error": "A server error occurred. Please contact support."})
 
-        
+
 @router.get("/profile")
 async def profile(current_user: dict = Depends(get_current_user)):
     """
@@ -191,7 +193,7 @@ async def get_security_question(request: Request):
     if not email:
         return JSONResponse(status_code=400, content={"error": "Email is required."})
 
-    with engine.connect() as connection:
+    with get_engine().connect() as connection:
         result = connection.execute(
             text("SELECT security_questions FROM users WHERE email = :email"),
             {"email": email}
@@ -219,7 +221,7 @@ async def verify_security_answer(request: Request):
     if not all([email, security_question, security_answer]):
         return JSONResponse(status_code=400, content={"error": "All fields are required."})
 
-    with engine.connect() as connection:
+    with get_engine().connect() as connection:
         result = connection.execute(
             text("SELECT security_questions FROM users WHERE email = :email"),
             {"email": email}
@@ -254,7 +256,7 @@ async def update_password(request: Request):
         return JSONResponse(status_code=400, content={"error": "All fields are required."})
 
     try:
-        with engine.begin() as connection:
+        with get_engine().begin() as connection:
             # Re-verify security answer before updating password.
             result = connection.execute(
                 text("SELECT security_questions FROM users WHERE email = :email"),
