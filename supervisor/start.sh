@@ -78,7 +78,6 @@ python3 -c "import importlib; importlib.import_module('backend.main')" \
     && echo "✅ FastAPI module backend.main:app is importable" \
     || { echo "❌ ERROR: Cannot import backend.main"; exit 1; }
 
-
 # Wait for Cloud SQL socket with timeout
 if [ -n "$DB_HOST" ]; then
     echo "🗄️ Waiting for Cloud SQL socket at /cloudsql/$DB_HOST/.s.PGSQL.5432"
