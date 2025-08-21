@@ -101,11 +101,6 @@ fi
 # Start Nginx and FastAPI directly
 echo "🚀 Starting Nginx and FastAPI..."
 
-# --- Start Nginx ---
-echo "🌐 Starting Nginx..."
-nginx -g "daemon off;" &
-NGINX_PID=$!
-echo "✅ Nginx started with PID: $NGINX_PID"
 
 # --- Start FastAPI with enhanced logging ---
 echo "🐍 Starting FastAPI (logging to /app/log/uvicorn_startup.log)..."
@@ -119,10 +114,10 @@ UVICORN_PID=$!
 # Wait a few seconds to confirm FastAPI starts
 sleep 5
 
-echo "🔎 Checking listening ports..."
+echo "🔎 Verifying FastAPI port..."
 ss -ltnp
+tail -n 50 /app/log/uvicorn_startup.log
 
- 
 
 if ! kill -0 $UVICORN_PID 2>/dev/null; then
     echo "❌ FastAPI failed to start! Dumping logs:"
@@ -141,6 +136,15 @@ else
     echo "----- Startup logs -----"
     tail -n 50 /app/log/uvicorn_startup.log
 fi
+
+echo "----- Uvicorn Startup Logs -----"
+cat /app/log/uvicorn_startup.log || echo "No uvicorn logs found"
+
+# --- Start Nginx ---
+echo "🌐 Starting Nginx..."
+nginx -g "daemon off;" &
+NGINX_PID=$!
+echo "✅ Nginx started with PID: $NGINX_PID"
 
 # --- Monitor both processes ---
 monitor_processes() {
