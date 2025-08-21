@@ -72,6 +72,14 @@ log_diagnostics() {
 sed -i "s/\$PORT/$PORT/g" /etc/nginx/conf.d/default.conf
 echo "✅ Updated Nginx config to listen on port $PORT"
 
+
+# --- Preflight checks ---
+echo "🔎 Preflight checks..."
+python3 -c "import importlib; importlib.import_module('backend.main')" \
+    && echo "✅ FastAPI module backend.main:app is importable" \
+    || { echo "❌ ERROR: Cannot import backend.main"; exit 1; }
+
+
 # Wait for Cloud SQL socket with timeout
 if [ -n "$DB_HOST" ]; then
     echo "🗄️ Waiting for Cloud SQL socket at /cloudsql/$DB_HOST/.s.PGSQL.5432"
@@ -95,41 +103,62 @@ fi
 # Start Nginx and FastAPI directly
 echo "🚀 Starting Nginx and FastAPI..."
 
-# Start Nginx in background
+# --- Start Nginx ---
 echo "🌐 Starting Nginx..."
 nginx -g "daemon off;" &
 NGINX_PID=$!
 echo "✅ Nginx started with PID: $NGINX_PID"
 
-# Small delay to ensure Nginx starts before FastAPI
-sleep 2
-
-# Start FastAPI
-echo "🐍 Starting FastAPI..."
-/venv/bin/uvicorn backend.main:app --host 0.0.0.0 --port 8502 --log-level info &
+# --- Start FastAPI with enhanced logging ---
+echo "🐍 Starting FastAPI (logging to /app/log/uvicorn_startup.log)..."
+/venv/bin/uvicorn backend.main:app \
+    --host 0.0.0.0 \
+    --port 8502 \
+    --log-level debug \
+    > /app/log/uvicorn_startup.log 2>&1 &
 UVICORN_PID=$!
-echo "✅ FastAPI started with PID: $UVICORN_PID"
 
-# Monitor processes in background (compatible with basic shell)
+# Wait a few seconds to confirm FastAPI starts
+sleep 5
+if ! kill -0 $UVICORN_PID 2>/dev/null; then
+    echo "❌ FastAPI failed to start! Dumping logs:"
+    cat /app/log/uvicorn_startup.log
+    exit 1
+else
+    echo "✅ FastAPI process started (PID: $UVICORN_PID)"
+fi
+
+# --- Immediate health check ---
+echo "🧪 Checking FastAPI health endpoint..."
+if curl --silent --fail http://127.0.0.1:8502/api/health; then
+    echo "✅ FastAPI health check passed"
+else
+    echo "⚠️ FastAPI health check failed (but process is running)"
+    echo "----- Startup logs -----"
+    tail -n 50 /app/log/uvicorn_startup.log
+fi
+
+# --- Monitor both processes ---
 monitor_processes() {
     while true; do
         if ! kill -0 $NGINX_PID 2>/dev/null; then
-            echo "❌ Nginx process ($NGINX_PID) died unexpectedly!"
-            log_diagnostics "NGINX_PROCESS_DIED"
-            exit 1
+            echo "❌ Nginx process died unexpectedly!"
+            break
         fi
-        
+
         if ! kill -0 $UVICORN_PID 2>/dev/null; then
-            echo "❌ FastAPI process ($UVICORN_PID) died unexpectedly!"
-            log_diagnostics "FASTAPI_PROCESS_DIED"
-            exit 1
+            echo "❌ FastAPI process died unexpectedly! Dumping recent logs:"
+            tail -n 50 /app/log/uvicorn_startup.log
+            break
         fi
-        
-        # Log resource usage every 60 seconds
-        echo "📊 Process status: Nginx($NGINX_PID)=alive, FastAPI($UVICORN_PID)=alive, Memory: $(free -m | awk 'NR==2{printf "%.2f%%", $3*100/$2}')"
-        sleep 60
+
+        echo "📊 Nginx($NGINX_PID)=alive, FastAPI($UVICORN_PID)=alive"
+        sleep 30
     done
+    echo "⚠️ One of the core services stopped. Exiting..."
+    exit 1
 }
+
 
 # Start monitoring in background
 monitor_processes &
