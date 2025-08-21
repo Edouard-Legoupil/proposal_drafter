@@ -72,7 +72,6 @@ log_diagnostics() {
 sed -i "s/\$PORT/$PORT/g" /etc/nginx/conf.d/default.conf
 echo "✅ Updated Nginx config to listen on port $PORT"
 
-
 # --- Preflight checks ---
 echo "🔎 Preflight checks..."
 python3 -c "import importlib; importlib.import_module('backend.main')" \
