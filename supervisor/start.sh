@@ -118,6 +118,12 @@ UVICORN_PID=$!
 
 # Wait a few seconds to confirm FastAPI starts
 sleep 5
+
+echo "🔎 Checking listening ports..."
+ss -ltnp
+
+ 
+
 if ! kill -0 $UVICORN_PID 2>/dev/null; then
     echo "❌ FastAPI failed to start! Dumping logs:"
     cat /app/log/uvicorn_startup.log

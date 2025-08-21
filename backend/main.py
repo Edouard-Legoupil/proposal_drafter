@@ -32,6 +32,8 @@ from backend.core.middleware import (
     setup_scheduler
 )
 
+from backend.core.db import test_connection
+
 # This is the main application file. It brings together all the different
 # parts of the application: API routers, middleware, and event handlers.
 
@@ -53,6 +55,8 @@ app = FastAPI(
     }
 )
 
+
+
 # --- Middleware Configuration ---
 # Middleware functions run for every request, before it's processed by a specific endpoint.
 # They are used here for handling CORS and custom exceptions.
@@ -73,11 +77,16 @@ app.include_router(health.router, tags=["Health & Debugging"])
 
 # --- Application Startup Events ---
 # Code in this block is executed when the application starts up.
+# Instead of connecting at import, do it in your startup event for lazy loading
+# If DB is unavailable, Cloud Run can retry health checks instead of killing container instantly.
 @app.on_event("startup")
-def on_startup():
+async def startup_event():
     """
     Performs application startup tasks, such as initializing the background scheduler.
     """
+    if not test_connection():
+        # Optional: fail fast or just log
+        raise RuntimeError("Database connection failed at startup")
     print("Application is starting up...")
     setup_scheduler()
     print("Background scheduler has been started.")
