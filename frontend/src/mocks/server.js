@@ -158,5 +158,35 @@ export const server = setupServer(
 
         http.post(`${API_BASE_URL}/finalize-proposal`, () =>
                 HttpResponse.json({ success: true })
-        )
+        ),
+
+        http.get(`${API_BASE_URL}/knowledge`, () =>
+                HttpResponse.json({
+                        knowledge_cards: [
+                                { id: 'kc-1', category: 'Donor Insights', title: 'ECHO', summary: 'Key compliance and funding priorities for this donor.', last_updated: '2025-08-05' },
+                                { id: 'kc-2', category: 'Field Context', title: 'Country A', summary: 'Recent situational updates.', last_updated: '2025-08-05' },
+                        ]
+                })
+        ),
+
+        http.get(`${API_BASE_URL}/proposals/reviews`, () =>
+                HttpResponse.json({
+                        reviews: [
+                                { proposal_id: 'rev-1', project_title: 'Review Project 1', status: 'review', field_context: 'Country C', donor: 'Donor X', outcome: 'Outcome Y', updated_at: '2025-08-12T10:00:00.123Z' },
+                        ]
+                })
+        ),
+
+        http.post(`${API_BASE_URL}/proposals/:proposal_id/submit-for-review`, () => {
+                return new HttpResponse(null, { status: 200 })
+        }),
+
+        http.get(`${API_BASE_URL}/sections`, () => {
+                return HttpResponse.json({
+                        "sections": [
+                                { "section_name": "Summary", "instructions": "Provide a brief summary of the project.", "word_limit": 150 },
+                                { "section_name": "Rationale", "instructions": "Explain the rationale behind the project.", "word_limit": 300 }
+                        ]
+                })
+        })
 )

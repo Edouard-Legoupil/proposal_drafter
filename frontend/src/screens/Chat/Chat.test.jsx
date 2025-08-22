@@ -1,9 +1,13 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, it, expect } from 'vitest'
-
+import { describe, it, expect, beforeAll, afterEach, afterAll } from 'vitest'
+import { server } from '../../mocks/server'
 import { BrowserRouter } from 'react-router-dom'
 import Chat from './Chat'
+
+beforeAll(() => server.listen())
+afterEach(() => server.resetHandlers())
+afterAll(() => server.close())
 
 describe('Proposal Drafter – Form validation', () => {
         it('disables the Generate button until all required inputs are filled', async () => {
