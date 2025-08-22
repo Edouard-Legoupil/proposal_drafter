@@ -3,6 +3,7 @@ import './Chat.css'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Markdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 import Base from '../../components/Base/Base'
 import CommonButton from '../../components/CommonButton/CommonButton'
@@ -741,7 +742,7 @@ export default function Chat (props)
                                                                                 (selectedSection === i && isEdit) ?
                                                                                         <textarea value={editorContent} onChange={e => setEditorContent(e.target.value)} aria-label={`editor for ${sectionObj[0]}`} />
                                                                                         :
-                                                                                        <Markdown>{sectionObj[1].content}</Markdown>
+                                                                                        <Markdown remarkPlugins={[remarkGfm]}>{sectionObj[1].content}</Markdown>
                                                                                 :
                                                                                 <div className='Chat_sectionContent_loading'>
                                                                                         <span className='submitButtonSpinner' />
