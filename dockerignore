@@ -4,6 +4,4 @@ __pycache__
 .git
 .env
 frontend/node_modules
-backend/.env
-backend/README.md
 backend/__pycache__

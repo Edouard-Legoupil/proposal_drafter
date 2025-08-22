@@ -12,13 +12,13 @@ RUN npm run build && echo "✅ Frontend build complete" && ls -l dist/
 
 
 # ============================================
-# Stage 2: Final image with backend + Nginx
+# Stage 2: Final image with FastAPI only
 # ============================================
 FROM python:3.11-slim AS final
 
 # Install OS dependencies including supervisor
 RUN apt-get update && \
-    apt-get install -y nginx curl supervisor dnsutils gettext-base  && \
+    apt-get install -y curl supervisor dnsutils gettext-base procps net-tools util-linux && \
     apt-get clean
 
 # Create a working directory
@@ -28,6 +28,12 @@ WORKDIR /app
 RUN python -m venv /venv
 ENV PATH="/venv/bin:$PATH"
 
+# Set the PYTHONPATH to include the /app directory
+# This allows Python to find the 'backend' module.
+# The `PYTHONPATH` will be set to `/app`
+# This allows Python to find the 'backend' module and prevents the warning.
+ENV PYTHONPATH=/app
+
 # Create the backend directory inside the container
 RUN mkdir backend
 
@@ -35,34 +41,33 @@ RUN mkdir backend
 COPY backend/requirements.txt backend/
 
 # Install dependencies from the requirements file
-RUN pip install --upgrade pip && pip install --no-cache-dir uvicorn fastapi gunicorn -r backend/requirements.txt && echo "✅ Python packages installed"
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir uvicorn fastapi gunicorn -r backend/requirements.txt && \
+    echo "✅ Python packages installed"
 
 # Copy all backend source code EXCEPT the knowledge folder into the backend folder
 COPY backend/ backend/
 
-
-# Set the PYTHONPATH to include the /app directory
-# This allows Python to find the 'backend' module.
-# The `PYTHONPATH` will be set to `/app`
-# This allows Python to find the 'backend' module and prevents the warning.
-ENV PYTHONPATH=/app
-
 # confirm
 RUN which uvicorn && uvicorn --version
 
-# Copy frontend build
-COPY --from=frontend-builder /app/dist /usr/share/nginx/html
+# Copy frontend build into app/frontend (served by FastAPI)
+COPY --from=frontend-builder /app/dist /app/frontend
+
+# Copy frontend build if using nginx
+# COPY --from=frontend-builder /app/dist /usr/share/nginx/html
 
 # Create a logs directory for the application and data
-RUN mkdir -p /app/log /app/proposal-documents /app/knowledge && chmod -R 755 /app/log /app/proposal-documents /app/knowledge
+RUN mkdir -p /app/log /app/proposal-documents /app/knowledge && \
+    chmod -R 755 /app/log /app/proposal-documents /app/knowledge
 
 # Copy the knowledge files for crewai
 COPY ./backend/knowledge/combine_example.json /app/knowledge/
-# Let's confirm the file exists in the right place
-RUN echo "Checking knowledge dir after copy:" && ls -la /app/knowledge
 
-# Copy custom nginx config
-COPY nginx-proxy/nginx.conf /etc/nginx/conf.d/default.conf
+# Let's confirm the file exists in the right place
+RUN echo "Checking knowledge dir after copy:" &&  \
+    ls -la /app/knowledge
+
 
 ## ensure logs can be written
 RUN chmod 777 /dev/stdout /dev/stderr
@@ -70,13 +75,16 @@ RUN chmod 777 /dev/stdout /dev/stderr
 # Expose Cloud Run default port
 EXPOSE 8080
 
+##
+# Copy custom nginx config
+#COPY nginx-proxy/nginx.conf /etc/nginx/conf.d/default.conf
+# Copy supervisor config
+# COPY supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+# CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
 
 # ============================================
 # Stage 3: Start FastAPI + Nginx in parallel 
 # ============================================
-# Copy supervisor config
-COPY supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-# CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
 
 ## using a dedicated script..
 # Copy the startup script and make it executable
@@ -84,3 +92,4 @@ COPY supervisor/start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
 CMD ["/usr/local/bin/start.sh"]
+

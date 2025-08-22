@@ -11,7 +11,7 @@ from docx import Document
 from sqlalchemy import text
 
 #  Internal Modules
-from backend.core.db import engine
+from backend.core.db import get_engine
 from backend.core.security import get_current_user
 from backend.core.config import SECTIONS
 from backend.utils.doc_export import add_markdown_paragraph, create_pdf_from_sections
@@ -35,7 +35,7 @@ async def generate_and_download_document(
 
     try:
         # Fetch the proposal data from the database.
-        with engine.connect() as connection:
+        with get_engine().connect() as connection:
             result = connection.execute(
                 text("""
                     SELECT form_data, project_description, generated_sections

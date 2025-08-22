@@ -1,7 +1,9 @@
 python-dotenv
 fastapi
 redis
-crewai
+crewai>=0.1.48
+litellm>=1.73.7
+openai<1.99.9 
 python-docx
 langchain
 langchain-openai
@@ -13,9 +15,11 @@ PyJWT
 werkzeug
 reportlab
 apscheduler
+uvicorn[standard]
 cloud-sql-python-connector[asyncpg]
 cloud-sql-python-connector[pg8000]
 google-cloud-secret-manager
 pytest
 pytest-asyncio
 pytest-mock
+psutil
