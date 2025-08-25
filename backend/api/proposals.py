@@ -322,7 +322,7 @@ async def get_sections():
     DEPRECATED: Use /templates/{template_name}/sections instead.
     """
     try:
-        default_template = load_proposal_template("unhcr_cerf_proposal_template.json")
+        default_template = load_proposal_template("unhcr_proposal_template.json")
         return {"sections": default_template.get("sections", [])}
     except HTTPException as e:
         # Handle case where default template is not found
@@ -364,7 +364,7 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
             if not draft:
                 raise HTTPException(status_code=404, detail="Draft not found.")
 
-            template_name = draft[0] or "unhcr_cerf_proposal_template.json" # Default if null
+            template_name = draft[0] or "unhcr_proposal_template.json" # Default if null
             proposal_template = load_proposal_template(template_name)
             section_names = [s.get("section_name") for s in proposal_template.get("sections", [])]
 
@@ -392,7 +392,7 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
             if not sample:
                 raise HTTPException(status_code=404, detail="Sample not found.")
 
-            template_name = sample.get("template_name", "unhcr_cerf_proposal_template.json")
+            template_name = sample.get("template_name", "unhcr_proposal_template.json")
             proposal_template = load_proposal_template(template_name)
 
             data_to_load = sample

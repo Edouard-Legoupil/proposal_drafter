@@ -193,8 +193,8 @@ export default function Chat (props)
                         // Define a mapping between donors and their templates
                         const templates = {
                                 CERF: "cerf_proposal_template.json",
-                                ECHO: "echo_proposal_template",
-                                Not_specified_yet: "unhcr_proposal_template"
+                                ECHO: "echo_proposal_template.json",
+                                Not_Yet_Specified: "unhcr_proposal_template.json"
                         };
                         
                         // Pick the template for the donor, or default to UNHCR template
@@ -564,7 +564,7 @@ export default function Chat (props)
                                                                         : label === "Duration"
                                                                         ? ["1 month", "3 months", "6 months", "12 months", "18 months", "24 months", "30 months", "36 months"]
                                                                         : label === "Targeted Donor"
-                                                                        ? ["CERF", "ECHO", "Not_specified_yet"]
+                                                                        ? ["Not_Yet_Specified", "CERF", "ECHO"]
                                                                         : label === "Budget Range"
                                                                         ? ["50k$", "100k$","250k$","500k$","1M$","2M$","5M$","10M$","15M$","25M$"]         
                                                                         : label === "Geographical Scope"
