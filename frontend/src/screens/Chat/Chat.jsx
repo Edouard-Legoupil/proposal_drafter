@@ -218,13 +218,6 @@ export default function Chat (props)
                         }
                         setProposal(sectionState);
                         setSidebarOpen(true);
-
-                        // Call getSections to start the generation process
-                        if (loadData.proposal_template && loadData.proposal_template.sections.length > 0) {
-                                getSections(loadData.proposal_template.sections[0].section_name);
-                        } else {
-                                setGenerateLoading(false);
-                        }
                 }
                 catch (error)
                 {
@@ -348,6 +341,20 @@ export default function Chat (props)
 
         const [isApproved, setIsApproved] = useState(false)
 
+        useEffect(() => {
+                // This effect triggers the generation process when the proposal state is set and
+                // the app is in a 'generating' state.
+                if (generateLoading && proposal && Object.keys(proposal).length > 0) {
+                    const firstEmptySection = Object.keys(proposal).find(key => !proposal[key].content);
+                    if (firstEmptySection) {
+                        getSections(firstEmptySection);
+                    } else {
+                        // All sections are filled, stop loading
+                        setGenerateLoading(false);
+                    }
+                }
+        }, [generateLoading, proposal])
+
         async function getContent()         {
 
                 if(sessionStorage.getItem("proposal_id"))
@@ -384,19 +391,7 @@ export default function Chat (props)
                                 setProposal(sectionState);
 
                                 setIsApproved(data.is_accepted)
-
                                 setSidebarOpen(true)
-
-                                if(!data.is_accepted && !data.generated_sections["Evaluation"])
-                                {
-                                        setGenerateLoading(true)
-                                        setFormExpanded(false)
-
-                                        let i
-                                        for(i = 0; Object.entries(data.generated_sections)[i][1]; i++);
-
-                                        getSections(Object.entries(data.generated_sections)[i][0])
-                                }
                         }
                         else if(response.status === 401)
                         {
