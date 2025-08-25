@@ -11,7 +11,6 @@ from sqlalchemy import text
 from backend.utils.crew import ProposalCrew
 from backend.core.redis import redis_client
 from backend.core.db import engine
-from backend.core.config import proposal_data
 
 # This module contains the core logic for generating and regenerating proposal sections
 # using the 'crew' of AI agents.
@@ -43,8 +42,13 @@ def regenerate_section_logic(session_id: str, section: str, concise_input: str, 
     form_data = session_data.get("form_data", {})
     project_description = session_data.get("project_description", "")
 
+    # Get proposal template from session data
+    proposal_template = session_data.get("proposal_template")
+    if not proposal_template:
+        raise HTTPException(status_code=400, detail="Proposal template not found in session.")
+
     # Find the specific instructions and word limit for the section.
-    section_config = next((s for s in proposal_data.get("sections", []) if s.get("section_name") == section), None)
+    section_config = next((s for s in proposal_template.get("sections", []) if s.get("section_name") == section), None)
     if not section_config:
         raise HTTPException(status_code=400, detail=f"Invalid section name: {section}")
 
