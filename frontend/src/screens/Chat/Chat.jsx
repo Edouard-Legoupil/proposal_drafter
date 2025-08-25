@@ -102,49 +102,6 @@ export default function Chat (props)
                         setButtonEnable(false)
         }, [userPrompt, formData])
 
-        // const [proposal, setProposal] = useState({
-        //         "Summary": {
-        //                 content: "",
-        //                 open: true
-        //         },
-        //         "Rationale": {
-        //                 content: "",
-        //                 open: true
-        //         },
-        //         "Project Description": {
-        //                 content: "",
-        //                 open: true
-        //         },
-        //         "Partnerships and Coordination": {
-        //                 content: "",
-        //                 open: true
-        //         },
-        //         "Monitoring": {
-        //                 content: "",
-        //                 open: true
-        //         },
-        //         "Evaluation": {
-        //                 content: "",
-        //                 open: true
-        //         },
-        //         "Results Matrix": {
-        //                 content: "",
-        //                 open: true
-        //         },
-        //         "Work Plan": {
-        //                 content: "",
-        //                 open: true
-        //         },
-        //         "Budget": {
-        //                 content: "",
-        //                 open: true
-        //         },
-        //         "Annex 1. Risk Assessment Plan": {
-        //                 content: "",
-        //                 open: true
-        //         }
-        // })
-
         // Load proposal sections from the API...
         const [proposal, setProposal] = useState({})
 
@@ -221,7 +178,7 @@ export default function Chat (props)
 
         const [generateLoading, setGenerateLoading] = useState(false)
         const [generateLabel, setGenerateLabel] = useState("Generate")
-        async function saveDraft ()
+        async function handleGenerateClick ()
         {
                 setGenerateLoading(true)
                 setFormExpanded(false)
@@ -249,7 +206,7 @@ export default function Chat (props)
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
-                                        session_id: sessionStorage.getItem("session_id"),
+                                        proposal_id: sessionStorage.getItem("proposal_id"),
                                         project_description: userPrompt,
                                         form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])),
                                         template_name: template_name
@@ -262,59 +219,7 @@ export default function Chat (props)
                                 const data = await response.json()
                                 sessionStorage.setItem("proposal_id", data.proposal_id)
                                 setSidebarOpen(true)
-                                getSections()
-                        }
-                        else
-                        {
-                                setGenerateLoading(false)
-                                setGenerateLabel("Regenerate")
-                                console.log("Error: ", response)
-                        }
-                }
-                catch (error)
-                {
-                        setGenerateLoading(false)
-                        setGenerateLabel("Regenerate")
-                        console.log("Error", error)
-                }
-        }
-        async function handleGenerateClick ()
-        {
-                setGenerateLoading(true)
-                setFormExpanded(false)
-
-                for (const section in proposal)
-                        proposal[section].content = ""
-
-                try
-                {
-                        const donor = formData["Targeted Donor"].value;
-                        // Define a mapping between donors and their templates
-                        const templates = {
-                                CERF: "cerf_proposal_template.json",
-                                ECHO: "echo_proposal_template",
-                                Not_specified_yet: "unhcr_proposal_template"
-                        };
-                        
-                        // Pick the template for the donor, or default to UNHCR template
-                        const template_name = templates[donor] || "unhcr_proposal_template.json";
-
-                        const response = await fetch(`${API_BASE_URL}/store_base_data`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                        project_description: userPrompt,
-                                        form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])),
-                                        template_name: template_name
-                                }),
-                                credentials: 'include'
-                        })
-
-                        if(response.ok)
-                        {
-                                const data = await response.json()
-                                sessionStorage.setItem("session_id", data.session_id)
-                                saveDraft()
+                                await getContent()
                         }
                         else if(response.status === 401)
                         {
