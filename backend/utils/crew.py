@@ -21,7 +21,7 @@ class ProposalCrew():
     # Path to knowledge files
     json_knowledge = JSONKnowledgeSource(
         file_paths=[
-            "combine_example.json"
+            "../knowledge/combine_example.json"
         ]
     )
 

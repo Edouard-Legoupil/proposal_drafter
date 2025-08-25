@@ -217,6 +217,13 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
                 message = "Draft updated successfully"
             else:
                 # Insert a new draft.
+                session_data_str = redis_client.get(request.session_id)
+                if not session_data_str:
+                    raise HTTPException(status_code=400, detail="Session data not found for new draft.")
+
+                session_data = json.loads(session_data_str)
+                template_name = session_data.get("template_name")
+
                 connection.execute(
                     text("""
                         INSERT INTO proposals (id, user_id, form_data, project_description, generated_sections, template_name)
@@ -228,7 +235,7 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
                         "form": json.dumps(request.form_data),
                         "desc": request.project_description,
                         "sections": json.dumps(request.generated_sections),
-                        "template_name": request.template_name
+                        "template_name": template_name
                     }
                 )
                 message = "Draft created successfully"
