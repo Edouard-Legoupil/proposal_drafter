@@ -48,6 +48,9 @@ async def process_section(session_id: str, request: SectionRequest, current_user
     Processes a single section of a proposal by running the generation crew.
     If the initial output is flagged, it automatically triggers a regeneration.
     """
+    logger.info(f"Processing section {request.section} for proposal {request.proposal_id}")
+    logger.info(f"Type of proposal_id: {type(request.proposal_id)}")
+
     session_data_str = redis_client.get(session_id)
     if not session_data_str:
         raise HTTPException(status_code=400, detail="Session data not found.")
@@ -188,14 +191,23 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
     Saves a new draft or updates an existing one in the database.
     """
     user_id = current_user["user_id"]
-    proposal_id = request.proposal_id or str(uuid.uuid4())
+    # If proposal_id is not provided in the request, generate a new one.
+    proposal_id = request.proposal_id or uuid.uuid4()
 
     try:
         with get_engine().begin() as connection:
+            # Check if a draft with this ID already exists for the user.
             existing = connection.execute(
                 text("SELECT id FROM proposals WHERE id = :id AND user_id = :uid"),
                 {"id": proposal_id, "uid": user_id}
             ).fetchone()
+
+            # Prepare the data for insertion/update.
+            # The 'generated_sections' are now expected to be a dict of Pydantic models,
+            # so we need to convert them to a JSON-serializable dict.
+            sections_to_save = {
+                key: value.dict() for key, value in request.generated_sections.items()
+            } if request.generated_sections else {}
 
             if existing:
                 # Update an existing draft.
@@ -209,7 +221,7 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
                     {
                         "form": json.dumps(request.form_data),
                         "desc": request.project_description,
-                        "sections": json.dumps(request.generated_sections),
+                        "sections": json.dumps(sections_to_save),
                         "id": proposal_id,
                         "template_name": request.template_name
                     }
@@ -227,16 +239,20 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
                         "uid": user_id,
                         "form": json.dumps(request.form_data),
                         "desc": request.project_description,
-                        "sections": json.dumps(request.generated_sections),
+                        "sections": json.dumps(sections_to_save),
                         "template_name": request.template_name
                     }
                 )
                 message = "Draft created successfully"
 
-        return {"message": message, "proposal_id": proposal_id}
+        # Return the proposal_id as a string for JSON serialization.
+        return {"message": message, "proposal_id": str(proposal_id)}
+    except SQLAlchemyError as db_error:
+        logger.error(f"[SAVE DRAFT DB ERROR] {db_error}", exc_info=True)
+        raise HTTPException(status_code=500, detail="A database error occurred while saving the draft.")
     except Exception as e:
-        print(f"[SAVE DRAFT ERROR] {e}")
-        raise HTTPException(status_code=500, detail="Failed to save draft")
+        logger.error(f"[SAVE DRAFT ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while saving the draft.")
 
 
 @router.get("/list-drafts")
@@ -348,6 +364,11 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
     try:
         # Handle user drafts, loaded from the database.
         if not proposal_id.startswith("sample-"):
+            # Manually validate if the proposal_id is a valid UUID for non-sample drafts.
+            try:
+                uuid.UUID(proposal_id)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid proposal ID format: '{proposal_id}'.")
 
             with get_engine().connect() as conn:
                 draft = conn.execute(
@@ -369,7 +390,7 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
                 form_data = draft[1] if draft[1] else {}
                 sections = draft[2] if draft[2] else {}
                 project_description = draft[3]
-
+                
                 data_to_load = {
                     "form_data": form_data,
                     "project_description": project_description,
@@ -399,11 +420,9 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
 
     except HTTPException as http_exc:
         # Re-raise HTTP exceptions to be handled by FastAPI's default handler.
-        # This is important for returning specific error codes (e.g., 404, 500).
         raise http_exc
     except Exception as e:
         # Catch any other unexpected errors during draft loading.
-        # This could be database errors, file I/O errors (for samples), etc.
         logger.error(f"[LOAD DRAFT ERROR] Failed to load draft {proposal_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred while loading the draft: {e}")
 
@@ -411,12 +430,12 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
     session_id = str(uuid.uuid4())
     redis_payload = {
         "user_id": user_id,
-        "proposal_id": proposal_id,
+        "proposal_id": str(proposal_id),  # Ensure proposal_id is a string for Redis
         **data_to_load
     }
-    # Serialize the payload, ensuring datetime objects are handled if they exist.
-    # The current implementation uses isoformat, which is safe.
-    redis_client.setex(session_id, 3600, json.dumps(redis_payload))
+    
+    # The proposal_template is already a dict, which is JSON serializable.
+    redis_client.setex(session_id, 3600, json.dumps(redis_payload, default=str))
 
     return {"session_id": session_id, **data_to_load}
 
@@ -438,7 +457,7 @@ async def finalize_proposal(request: FinalizeProposalRequest, current_user: dict
 
 
 @router.delete("/delete-draft/{proposal_id}")
-async def delete_draft(proposal_id: str, current_user: dict = Depends(get_current_user)):
+async def delete_draft(proposal_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
     """
     Deletes a draft proposal from the database.
     """
@@ -454,5 +473,5 @@ async def delete_draft(proposal_id: str, current_user: dict = Depends(get_curren
 
         return {"message": f"Draft '{proposal_id}' deleted successfully."}
     except Exception as e:
-        print(f"[DELETE DRAFT ERROR] {e}")
+        logger.error(f"[DELETE DRAFT ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to delete draft.")

@@ -1,4 +1,5 @@
 #  Standard Library
+import uuid
 from typing import Dict, Optional, Any
 
 #  Third-Party Libraries
@@ -24,7 +25,7 @@ class SectionRequest(BaseModel):
     Requires the section name and the unique proposal ID.
     """
     section: str
-    proposal_id: str
+    proposal_id: uuid.UUID
 
 class RegenerateRequest(BaseModel):
     """
@@ -32,7 +33,7 @@ class RegenerateRequest(BaseModel):
     """
     section: str
     concise_input: str
-    proposal_id: str
+    proposal_id: uuid.UUID
 
 class GeneratedSection(BaseModel):
     generated_content: Optional[str] = None
@@ -45,7 +46,7 @@ class SaveDraftRequest(BaseModel):
     Includes all proposal data, and can be used for both creating and updating a draft.
     """
     session_id: Optional[str] = None
-    proposal_id: Optional[str] = None
+    proposal_id: Optional[uuid.UUID] = None
     template_name: Optional[str] = None
     form_data: Dict[str, str]
     #form_data: Dict[str, Any]
@@ -58,4 +59,4 @@ class FinalizeProposalRequest(BaseModel):
     """
     Schema for finalizing a proposal, which marks it as complete and read-only.
     """
-    proposal_id: str
+    proposal_id: uuid.UUID
