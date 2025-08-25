@@ -345,47 +345,44 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
     """
     user_id = current_user["user_id"]
     
-    # Handle user drafts, loaded from the database.
-    if not proposal_id.startswith("sample-"):
- 
-        with get_engine().connect() as conn:
-            # === Corrected SELECT statement with specific columns ===
-            # The order of columns here is important and must match the indices below.
- 
-            draft = conn.execute(
-                text("""
-                    SELECT template_name, form_data, generated_sections, project_description,
-                           is_accepted, created_at, updated_at
-                    FROM proposals
-                    WHERE id = :id AND user_id = :uid
-                """),
-                {"id": proposal_id, "uid": user_id}
-            ).fetchone()
-            if not draft:
-                raise HTTPException(status_code=404, detail="Draft not found.")
+    try:
+        # Handle user drafts, loaded from the database.
+        if not proposal_id.startswith("sample-"):
 
-            template_name = draft[0] or "unhcr_proposal_template.json" # Default if null
-            proposal_template = load_proposal_template(template_name)
-            section_names = [s.get("section_name") for s in proposal_template.get("sections", [])]
+            with get_engine().connect() as conn:
+                draft = conn.execute(
+                    text("""
+                        SELECT template_name, form_data, generated_sections, project_description,
+                               is_accepted, created_at, updated_at
+                        FROM proposals
+                        WHERE id = :id AND user_id = :uid
+                    """),
+                    {"id": proposal_id, "uid": user_id}
+                ).fetchone()
+                if not draft:
+                    raise HTTPException(status_code=404, detail="Draft not found.")
 
-            form_data = draft[1] if draft[1] else {}
-            sections = draft[2] if draft[2] else {}
-            project_description = draft[3]
-            
-            data_to_load = {
-                "form_data": form_data,
-                "project_description": project_description,
-                "generated_sections": {sec: sections.get(sec) for sec in section_names},
-                "is_accepted": draft[4],
-                "created_at": draft[5].isoformat() if draft[5] else None,
-                "updated_at": draft[6].isoformat() if draft[6] else None,
-                "is_sample": False,
-                "template_name": template_name,
-                "proposal_template": proposal_template
-            }
-    else:
-        # Handle sample drafts, which are loaded from a JSON file.
-        try:
+                template_name = draft[0] or "unhcr_proposal_template.json" # Default if null
+                proposal_template = load_proposal_template(template_name)
+                section_names = [s.get("section_name") for s in proposal_template.get("sections", [])]
+
+                form_data = draft[1] if draft[1] else {}
+                sections = draft[2] if draft[2] else {}
+                project_description = draft[3]
+
+                data_to_load = {
+                    "form_data": form_data,
+                    "project_description": project_description,
+                    "generated_sections": {sec: sections.get(sec) for sec in section_names},
+                    "is_accepted": draft[4],
+                    "created_at": draft[5].isoformat() if draft[5] else None,
+                    "updated_at": draft[6].isoformat() if draft[6] else None,
+                    "is_sample": False,
+                    "template_name": template_name,
+                    "proposal_template": proposal_template
+                }
+        else:
+            # Handle sample drafts, which are loaded from a JSON file.
             with open("templates/sample_templates.json", "r") as f:
                 samples = json.load(f)
             sample = next((s for s in samples if s["proposal_id"] == proposal_id), None)
@@ -400,8 +397,15 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
             data_to_load["proposal_template"] = proposal_template
             data_to_load["template_name"] = template_name
 
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to load sample: {e}")
+    except HTTPException as http_exc:
+        # Re-raise HTTP exceptions to be handled by FastAPI's default handler.
+        # This is important for returning specific error codes (e.g., 404, 500).
+        raise http_exc
+    except Exception as e:
+        # Catch any other unexpected errors during draft loading.
+        # This could be database errors, file I/O errors (for samples), etc.
+        logger.error(f"[LOAD DRAFT ERROR] Failed to load draft {proposal_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred while loading the draft: {e}")
 
     # Create a new Redis session for the loaded draft.
     session_id = str(uuid.uuid4())
@@ -410,6 +414,8 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
         "proposal_id": proposal_id,
         **data_to_load
     }
+    # Serialize the payload, ensuring datetime objects are handled if they exist.
+    # The current implementation uses isoformat, which is safe.
     redis_client.setex(session_id, 3600, json.dumps(redis_payload))
 
     return {"session_id": session_id, **data_to_load}
