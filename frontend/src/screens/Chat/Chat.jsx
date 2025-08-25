@@ -231,13 +231,21 @@ export default function Chat (props)
 
                 try
                 {
+                        const donor = formData["Targeted Donor"].value;
+                        const template_name = donor === "CERF"
+                                ? "unhcr_cerf_proposal_template.json"
+                                : donor === "ECHO"
+                                ? "iom_proposal_template.json"
+                                : "unhcr_cerf_proposal_template.json";
+
                         const response = await fetch(`${API_BASE_URL}/save-draft`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
                                         session_id: sessionStorage.getItem("session_id"),
                                         project_description: userPrompt,
-                                        form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value]))
+                                        form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])),
+                                        template_name: template_name
                                 }),
                                 credentials: 'include'
                         })
@@ -273,12 +281,20 @@ export default function Chat (props)
 
                 try
                 {
+                        const donor = formData["Targeted Donor"].value;
+                        const template_name = donor === "CERF"
+                                ? "unhcr_cerf_proposal_template.json"
+                                : donor === "ECHO"
+                                ? "iom_proposal_template.json"
+                                : "unhcr_cerf_proposal_template.json";
+
                         const response = await fetch(`${API_BASE_URL}/store_base_data`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
                                         project_description: userPrompt,
-                                        form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value]))
+                                        form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])),
+                                        template_name: template_name
                                 }),
                                 credentials: 'include'
                         })
