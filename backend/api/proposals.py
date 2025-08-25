@@ -193,14 +193,24 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
     user_id = current_user["user_id"]
     # If proposal_id is not provided in the request, generate a new one.
     proposal_id = request.proposal_id or uuid.uuid4()
+    # If proposal_id is not provided in the request, generate a new one.
+    proposal_id = request.proposal_id or uuid.uuid4()
 
     try:
         with get_engine().begin() as connection:
+            # Check if a draft with this ID already exists for the user.
             # Check if a draft with this ID already exists for the user.
             existing = connection.execute(
                 text("SELECT id FROM proposals WHERE id = :id AND user_id = :uid"),
                 {"id": proposal_id, "uid": user_id}
             ).fetchone()
+
+            # Prepare the data for insertion/update.
+            # The 'generated_sections' are now expected to be a dict of Pydantic models,
+            # so we need to convert them to a JSON-serializable dict.
+            sections_to_save = {
+                key: value.dict() for key, value in request.generated_sections.items()
+            } if request.generated_sections else {}
 
             # Prepare the data for insertion/update.
             # The 'generated_sections' are now expected to be a dict of Pydantic models,
@@ -222,6 +232,7 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
                         "form": json.dumps(request.form_data),
                         "desc": request.project_description,
                         "sections": json.dumps(sections_to_save),
+                        "sections": json.dumps(sections_to_save),
                         "id": proposal_id,
                         "template_name": request.template_name
                     }
@@ -240,6 +251,7 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
                         "form": json.dumps(request.form_data),
                         "desc": request.project_description,
                         "sections": json.dumps(sections_to_save),
+                        "sections": json.dumps(sections_to_save),
                         "template_name": request.template_name
                     }
                 )
@@ -250,7 +262,14 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
     except SQLAlchemyError as db_error:
         logger.error(f"[SAVE DRAFT DB ERROR] {db_error}", exc_info=True)
         raise HTTPException(status_code=500, detail="A database error occurred while saving the draft.")
+        # Return the proposal_id as a string for JSON serialization.
+        return {"message": message, "proposal_id": str(proposal_id)}
+    except SQLAlchemyError as db_error:
+        logger.error(f"[SAVE DRAFT DB ERROR] {db_error}", exc_info=True)
+        raise HTTPException(status_code=500, detail="A database error occurred while saving the draft.")
     except Exception as e:
+        logger.error(f"[SAVE DRAFT ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while saving the draft.")
         logger.error(f"[SAVE DRAFT ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="An unexpected error occurred while saving the draft.")
 
@@ -400,7 +419,8 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
                     "updated_at": draft[6].isoformat() if draft[6] else None,
                     "is_sample": False,
                     "template_name": template_name,
-                    "proposal_template": proposal_template
+                    "proposal_template": proposal_template,
+                    "proposal_id": str(proposal_id)
                 }
         else:
             # Handle sample drafts, which are loaded from a JSON file.
@@ -433,7 +453,7 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
         "proposal_id": str(proposal_id),  # Ensure proposal_id is a string for Redis
         **data_to_load
     }
-    
+
     # The proposal_template is already a dict, which is JSON serializable.
     redis_client.setex(session_id, 3600, json.dumps(redis_payload, default=str))
 
