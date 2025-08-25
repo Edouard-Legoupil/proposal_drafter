@@ -232,11 +232,18 @@ export default function Chat (props)
                 try
                 {
                         const donor = formData["Targeted Donor"].value;
-                        const template_name = donor === "CERF"
-                                ? "unhcr_cerf_proposal_template.json"
-                                : donor === "ECHO"
-                                ? "iom_proposal_template.json"
-                                : "unhcr_cerf_proposal_template.json";
+
+                        // Define a mapping between donors and their templates
+                        const templates = {
+                                CERF: "cerf_proposal_template.json",
+                                ECHO: "echo_proposal_template",
+                                Not_specified_yet: "unhcr_proposal_template"
+                        };
+                        
+                        // Pick the template for the donor, or default to UNHCR template
+                        const template_name = templates[donor] || "unhcr_proposal_template.json";
+    
+
 
                         const response = await fetch(`${API_BASE_URL}/save-draft`, {
                                 method: 'POST',
@@ -282,11 +289,15 @@ export default function Chat (props)
                 try
                 {
                         const donor = formData["Targeted Donor"].value;
-                        const template_name = donor === "CERF"
-                                ? "unhcr_cerf_proposal_template.json"
-                                : donor === "ECHO"
-                                ? "iom_proposal_template.json"
-                                : "unhcr_cerf_proposal_template.json";
+                        // Define a mapping between donors and their templates
+                        const templates = {
+                                CERF: "cerf_proposal_template.json",
+                                ECHO: "echo_proposal_template",
+                                Not_specified_yet: "unhcr_proposal_template"
+                        };
+                        
+                        // Pick the template for the donor, or default to UNHCR template
+                        const template_name = templates[donor] || "unhcr_proposal_template.json";
 
                         const response = await fetch(`${API_BASE_URL}/store_base_data`, {
                                 method: 'POST',
@@ -648,7 +659,7 @@ export default function Chat (props)
                                                                         : label === "Duration"
                                                                         ? ["1 month", "3 months", "6 months", "12 months", "18 months", "24 months", "30 months", "36 months"]
                                                                         : label === "Targeted Donor"
-                                                                        ? ["CERF", "ECHO"]
+                                                                        ? ["CERF", "ECHO", "Not_specified_yet"]
                                                                         : label === "Budget Range"
                                                                         ? ["50k$", "100k$","250k$","500k$","1M$","2M$","5M$","10M$","15M$","25M$"]         
                                                                         : label === "Geographical Scope"
