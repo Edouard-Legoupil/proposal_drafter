@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 from sqlalchemy import create_engine, text
 from fastapi.testclient import TestClient
 from backend.main import app
-from backend.core.db import engine as main_engine
+from backend.core.db import get_engine as main_engine
 from backend.core.security import get_current_user
 import jwt
 from datetime import datetime, timedelta
@@ -14,7 +14,7 @@ import uuid
 def test_db():
     # Use an in-memory SQLite database for testing
     engine = create_engine("sqlite:///:memory:")
-    with engine.connect() as connection:
+    with get_engine().connect() as connection:
         # Create tables
         connection.execute(text("""
             CREATE TABLE users (

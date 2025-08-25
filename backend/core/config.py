@@ -180,7 +180,7 @@ def load_proposal_template(template_name: str):
 # Load the default template to extract section names for backward compatibility
 # in some parts of the app that might still rely on a global SECTIONS list.
 try:
-    DEFAULT_TEMPLATE_NAME = "unhcr_cerf_proposal_template.json"
+    DEFAULT_TEMPLATE_NAME = "unhcr_proposal_template.json"
     if DEFAULT_TEMPLATE_NAME in get_available_templates():
         default_proposal_data = load_proposal_template(DEFAULT_TEMPLATE_NAME)
         SECTIONS = [section.get("section_name") for section in default_proposal_data.get("sections", [])]
