@@ -7,7 +7,7 @@ from docx import Document
 from docx.shared import Pt
 from markdown_it import MarkdownIt
 from mdit_py_plugins.front_matter import front_matter_plugin
-from mdit_py_plugins.table import table_plugin
+#from mdit_py_plugins.table import table_plugin
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_JUSTIFY
 from reportlab.lib.pagesizes import A4

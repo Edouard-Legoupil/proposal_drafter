@@ -31,6 +31,14 @@ async def generate_and_download_document(
     It fetches the completed proposal from the database, assembles the document,
     and returns it as a file download.
     """
+
+    # Validate UUID
+    try:
+        UUID(proposal_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid proposal_id: {proposal_id}")
+
+
     user_id = current_user["user_id"]
 
     try:

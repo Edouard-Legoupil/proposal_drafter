@@ -6,7 +6,7 @@ litellm>=1.73.7
 openai<1.99.9
 python-docx
 markdown-it-py
-mdit-py-plugins
+markdown-it-py[linkify,plugins]
 langchain
 langchain-openai
 langchain-community

@@ -422,8 +422,9 @@ export default function Chat (props)
         }
 
         const [isApproved, setIsApproved] = useState(false)
-        async function getContent()
-        {
+
+        async function getContent()         {
+
                 if(sessionStorage.getItem("proposal_id"))
                 {
                         const response = await fetch(`${API_BASE_URL}/load-draft/${sessionStorage.getItem("proposal_id")}`, {
@@ -477,6 +478,7 @@ export default function Chat (props)
                         }
                 }
         }
+        
         useEffect(() => {
                 getContent()
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -484,6 +486,15 @@ export default function Chat (props)
 
         async function handleExport (format)
         {
+                
+                
+                const proposalId = sessionStorage.getItem("proposal_id");
+
+                if (!proposalId || proposalId === "undefined") {
+                        setErrorMessage("No draft available to export. Please create or load a draft first.");
+                        return;
+                }
+                
                 const response = await fetch(`${API_BASE_URL}/generate-document/${sessionStorage.getItem("proposal_id")}?format=${format}`, {
                         method: "GET",
                         headers: { 'Content-Type': 'application/json' },
