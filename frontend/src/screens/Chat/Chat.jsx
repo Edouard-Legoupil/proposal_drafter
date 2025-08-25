@@ -102,24 +102,7 @@ export default function Chat (props)
                         setButtonEnable(false)
         }, [userPrompt, formData])
 
-        // Load proposal sections from the API...
         const [proposal, setProposal] = useState({})
-
-        useEffect(() => {
-                fetch(`${API_BASE_URL}/sections`)
-                  .then(res => res.json())
-                  .then(data => {
-                    const sectionState = {}
-                    data.sections.forEach(section => {
-                      sectionState[section.section_name] = {
-                        content: "",
-                        open: true
-                      }
-                    })
-                    setProposal(sectionState)
-                  })
-                  .catch(err => console.error("Failed to load sections:", err))
-              }, [])
                
 
         async function getSections(latestSection = Object.keys(proposal)[0])
@@ -183,9 +166,6 @@ export default function Chat (props)
                 setGenerateLoading(true)
                 setFormExpanded(false)
 
-                for (const section in proposal)
-                        proposal[section].content = ""
-
                 try
                 {
                         const donor = formData["Targeted Donor"].value;
@@ -200,8 +180,6 @@ export default function Chat (props)
                         // Pick the template for the donor, or default to UNHCR template
                         const template_name = templates[donor] || "unhcr_proposal_template.json";
     
-
-
                         const response = await fetch(`${API_BASE_URL}/save-draft`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
@@ -218,8 +196,24 @@ export default function Chat (props)
                         {
                                 const data = await response.json()
                                 sessionStorage.setItem("proposal_id", data.proposal_id)
+
+                                // Fetch the sections for the selected template
+                                const sectionsResponse = await fetch(`${API_BASE_URL}/templates/${template_name}/sections`);
+                                if (!sectionsResponse.ok) {
+                                        throw new Error('Failed to fetch sections for the selected template.');
+                                }
+                                const sectionsData = await sectionsResponse.json();
+
+                                const sectionState = {};
+                                sectionsData.sections.forEach(section => {
+                                        sectionState[section.section_name] = {
+                                                content: "",
+                                                open: true
+                                        };
+                                });
+                                setProposal(sectionState);
                                 setSidebarOpen(true)
-                                await getContent()
+                                // The generation will be triggered by the useEffect below
                         }
                         else if(response.status === 401)
                         {
@@ -355,6 +349,15 @@ export default function Chat (props)
 
         const [isApproved, setIsApproved] = useState(false)
 
+        useEffect(() => {
+                if (generateLoading && proposal && Object.keys(proposal).length > 0) {
+                    const firstEmptySection = Object.keys(proposal).find(key => !proposal[key].content);
+                    if (firstEmptySection) {
+                        getSections(firstEmptySection);
+                    }
+                }
+        }, [generateLoading, proposal])
+
         async function getContent()         {
 
                 if(sessionStorage.getItem("proposal_id"))
@@ -381,12 +384,14 @@ export default function Chat (props)
                                         }]
                                 )))
 
-                                setProposal(p => Object.fromEntries(Object.entries(data.generated_sections).map(section =>
-                                        [section[0], {
-                                                content: section[1],
-                                                open: p[section[0]].open
-                                        }]
-                                )))
+                                const sectionState = {};
+                                Object.entries(data.generated_sections).forEach(([key, value]) => {
+                                        sectionState[key] = {
+                                                content: value,
+                                                open: true
+                                        };
+                                });
+                                setProposal(sectionState);
 
                                 setIsApproved(data.is_accepted)
 
@@ -396,11 +401,6 @@ export default function Chat (props)
                                 {
                                         setGenerateLoading(true)
                                         setFormExpanded(false)
-
-                                        let i
-                                        for(i = 0; Object.entries(data.generated_sections)[i][1]; i++);
-
-                                        getSections(Object.entries(data.generated_sections)[i][0])
                                 }
                         }
                         else if(response.status === 401)
