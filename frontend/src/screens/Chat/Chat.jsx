@@ -221,7 +221,7 @@ export default function Chat (props)
 
         const [generateLoading, setGenerateLoading] = useState(false)
         const [generateLabel, setGenerateLabel] = useState("Generate")
-        async function saveDraft ()
+        async function handleGenerateClick ()
         {
                 setGenerateLoading(true)
                 setFormExpanded(false)
@@ -242,7 +242,7 @@ export default function Chat (props)
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
-                                        session_id: sessionStorage.getItem("session_id"),
+                                        proposal_id: sessionStorage.getItem("proposal_id"),
                                         project_description: userPrompt,
                                         form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])),
                                         template_name: template_name
@@ -255,55 +255,7 @@ export default function Chat (props)
                                 const data = await response.json()
                                 sessionStorage.setItem("proposal_id", data.proposal_id)
                                 setSidebarOpen(true)
-                                getSections()
-                        }
-                        else
-                        {
-                                setGenerateLoading(false)
-                                setGenerateLabel("Regenerate")
-                                console.log("Error: ", response)
-                        }
-                }
-                catch (error)
-                {
-                        setGenerateLoading(false)
-                        setGenerateLabel("Regenerate")
-                        console.log("Error", error)
-                }
-        }
-        async function handleGenerateClick ()
-        {
-                setGenerateLoading(true)
-                setFormExpanded(false)
-
-                for (const section in proposal)
-                        proposal[section].content = ""
-
-                try
-                {
-                        const donor = formData["Targeted Donor"].value;
-                        const template_name = donor === "CERF"
-                                ? "unhcr_cerf_proposal_template.json"
-                                : donor === "ECHO"
-                                ? "iom_proposal_template.json"
-                                : "unhcr_cerf_proposal_template.json";
-
-                        const response = await fetch(`${API_BASE_URL}/store_base_data`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                        project_description: userPrompt,
-                                        form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])),
-                                        template_name: template_name
-                                }),
-                                credentials: 'include'
-                        })
-
-                        if(response.ok)
-                        {
-                                const data = await response.json()
-                                sessionStorage.setItem("session_id", data.session_id)
-                                saveDraft()
+                                await getContent()
                         }
                         else if(response.status === 401)
                         {
