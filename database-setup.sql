@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS proposals (
     id UUID PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    template_name VARCHAR(255) DEFAULT 'unhcr_cerf_proposal_template.json',
     form_data JSONB NOT NULL,
     project_description TEXT NOT NULL,
     generated_sections JSONB,
