@@ -225,9 +225,7 @@ export default function Login (props)
                                         </form>
                                 }
                         </div>
-                        <div className="Login-rightIllustration">
-                                <ResponsiveIllustration />
-                        </div>
+
                 </div>
 
                 <OSSFooter />

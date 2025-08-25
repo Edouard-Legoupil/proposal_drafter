@@ -11,10 +11,10 @@ from docx import Document
 from sqlalchemy import text
 
 #  Internal Modules
-from backend.core.db import engine
+from backend.core.db import get_engine
 from backend.core.security import get_current_user
 from backend.core.config import SECTIONS
-from backend.utils.doc_export import add_markdown_paragraph, create_pdf_from_sections
+from backend.utils.doc_export import create_word_from_sections, create_pdf_from_sections
 
 # This router handles endpoints for generating and downloading final proposal documents.
 router = APIRouter()
@@ -35,7 +35,7 @@ async def generate_and_download_document(
 
     try:
         # Fetch the proposal data from the database.
-        with engine.connect() as connection:
+        with get_engine().connect() as connection:
             result = connection.execute(
                 text("""
                     SELECT form_data, project_description, generated_sections
@@ -59,29 +59,6 @@ async def generate_and_download_document(
 
         ordered_sections = {section: generated_sections.get(section, "") for section in SECTIONS}
 
-        # --- Create Word Document (.docx) ---
-        doc = Document()
-        doc.add_heading("Project Proposal", level=1)
-
-        # Add form data as a table.
-        table = doc.add_table(rows=1, cols=2)
-        table.style = 'Table Grid'
-        hdr_cells = table.rows[0].cells
-        hdr_cells[0].text = 'Field'
-        hdr_cells[1].text = 'Value'
-        for key, value in form_data.items():
-            row_cells = table.add_row().cells
-            row_cells[0].text = key
-            row_cells[1].text = str(value) # Ensure value is a string
-        doc.add_paragraph("\n")
-
-        # Add the main content sections.
-        for section, content in ordered_sections.items():
-            doc.add_heading(section, level=2)
-            for para in (content or "").split("\n\n"):
-                add_markdown_paragraph(doc, para.strip())
-
-        # --- Save and Return File ---
         if format == "pdf":
             try:
                 pdf_buffer = create_pdf_from_sections(form_data, ordered_sections)
@@ -95,6 +72,7 @@ async def generate_and_download_document(
                 raise HTTPException(status_code=500, detail="Failed to generate PDF document.")
         else:
             # Return the DOCX file by default.
+            doc = create_word_from_sections(form_data, ordered_sections)
             docx_buffer = io.BytesIO()
             doc.save(docx_buffer)
             docx_buffer.seek(0)

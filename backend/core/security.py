@@ -9,7 +9,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 #  Internal Modules
 from backend.core.config import SECRET_KEY
-from backend.core.db import engine
+from backend.core.db import get_engine
 
 # This module centralizes security-related functions, such as authentication,
 # token handling, and password management.
@@ -47,7 +47,7 @@ def get_current_user(request: Request) -> dict:
             raise HTTPException(status_code=401, detail="Invalid token payload.")
 
         # Fetch the user from the database.
-        with engine.connect() as connection:
+        with get_engine().connect() as connection:
             result = connection.execute(
                 text("SELECT id, name, email FROM users WHERE email = :email"),
                 {"email": email}

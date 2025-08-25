@@ -16,6 +16,9 @@
         font-family: "Noto";
         font-weight: 400;
         font-size: 8px;
+
+        position: fixed;
+        bottom: 0;
 }
 
 .OSSFooter a {
