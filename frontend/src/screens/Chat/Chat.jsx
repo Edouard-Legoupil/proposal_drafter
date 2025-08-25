@@ -103,7 +103,6 @@ export default function Chat (props)
         }, [userPrompt, formData])
 
         const [proposal, setProposal] = useState({})
-               
 
         async function getSections(latestSection = Object.keys(proposal)[0])
         {
@@ -169,18 +168,14 @@ export default function Chat (props)
                 try
                 {
                         const donor = formData["Targeted Donor"].value;
-
-                        // Define a mapping between donors and their templates
                         const templates = {
                                 CERF: "cerf_proposal_template.json",
                                 ECHO: "echo_proposal_template.json",
                                 Not_Yet_Specified: "unhcr_proposal_template.json"
                         };
-                        
-                        // Pick the template for the donor, or default to UNHCR template
                         const template_name = templates[donor] || "unhcr_proposal_template.json";
     
-                        const response = await fetch(`${API_BASE_URL}/save-draft`, {
+                        const saveResponse = await fetch(`${API_BASE_URL}/save-draft`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
@@ -192,39 +187,43 @@ export default function Chat (props)
                                 credentials: 'include'
                         })
 
-                        if(response.ok)
-                        {
-                                const data = await response.json()
-                                sessionStorage.setItem("proposal_id", data.proposal_id)
+                        if(!saveResponse.ok) {
+                                throw new Error("Failed to save draft.");
+                        }
 
-                                // Fetch the sections for the selected template
-                                const sectionsResponse = await fetch(`${API_BASE_URL}/templates/${template_name}/sections`);
-                                if (!sectionsResponse.ok) {
-                                        throw new Error('Failed to fetch sections for the selected template.');
-                                }
-                                const sectionsData = await sectionsResponse.json();
+                        const saveData = await saveResponse.json();
+                        sessionStorage.setItem("proposal_id", saveData.proposal_id);
 
-                                const sectionState = {};
-                                sectionsData.sections.forEach(section => {
+                        const loadResponse = await fetch(`${API_BASE_URL}/load-draft/${saveData.proposal_id}`, {
+                                method: "GET",
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: "include"
+                        });
+
+                        if (!loadResponse.ok) {
+                                throw new Error("Failed to load draft after saving.");
+                        }
+
+                        const loadData = await loadResponse.json();
+                        sessionStorage.setItem("session_id", loadData.session_id);
+
+                        const sectionState = {};
+                        if (loadData.proposal_template && loadData.proposal_template.sections) {
+                                loadData.proposal_template.sections.forEach(section => {
                                         sectionState[section.section_name] = {
-                                                content: "",
+                                                content: "", // Start with empty content for new generation
                                                 open: true
                                         };
                                 });
-                                setProposal(sectionState);
-                                setSidebarOpen(true)
-                                // The generation will be triggered by the useEffect below
                         }
-                        else if(response.status === 401)
-                        {
-                                sessionStorage.setItem("session_expired", "Session expired. Please login again.")
-                                navigate("/login")
-                        }
-                        else
-                        {
-                                setGenerateLoading(false)
-                                setGenerateLabel("Regenerate")
-                                console.log("Error: ", response)
+                        setProposal(sectionState);
+                        setSidebarOpen(true);
+
+                        // Call getSections to start the generation process
+                        if (loadData.proposal_template && loadData.proposal_template.sections.length > 0) {
+                                getSections(loadData.proposal_template.sections[0].section_name);
+                        } else {
+                                setGenerateLoading(false);
                         }
                 }
                 catch (error)
@@ -349,15 +348,6 @@ export default function Chat (props)
 
         const [isApproved, setIsApproved] = useState(false)
 
-        useEffect(() => {
-                if (generateLoading && proposal && Object.keys(proposal).length > 0) {
-                    const firstEmptySection = Object.keys(proposal).find(key => !proposal[key].content);
-                    if (firstEmptySection) {
-                        getSections(firstEmptySection);
-                    }
-                }
-        }, [generateLoading, proposal])
-
         async function getContent()         {
 
                 if(sessionStorage.getItem("proposal_id"))
@@ -401,6 +391,11 @@ export default function Chat (props)
                                 {
                                         setGenerateLoading(true)
                                         setFormExpanded(false)
+
+                                        let i
+                                        for(i = 0; Object.entries(data.generated_sections)[i][1]; i++);
+
+                                        getSections(Object.entries(data.generated_sections)[i][0])
                                 }
                         }
                         else if(response.status === 401)
