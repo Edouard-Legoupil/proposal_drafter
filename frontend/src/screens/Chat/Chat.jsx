@@ -103,7 +103,8 @@ export default function Chat (props)
         }, [userPrompt, formData])
 
         const [proposal, setProposal] = useState({})
-
+        const [generateLoading, setGenerateLoading] = useState(false)
+        const [generateLabel, setGenerateLabel] = useState("Generate")
         const isGenerating = useRef(false);
 
         useEffect(() => {
@@ -120,7 +121,7 @@ export default function Chat (props)
                                 if (proposal[sectionKey]?.content) {
                                         continue;
                                 }
-
+                                
                                 try {
                                         setSelectedSection(i);
                                         const el = proposalRef.current?.children[i];
@@ -177,8 +178,6 @@ export default function Chat (props)
         // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [sidebarOpen])
 
-        const [generateLoading, setGenerateLoading] = useState(false)
-        const [generateLabel, setGenerateLabel] = useState("Generate")
         const [templateConfig, setTemplateConfig] = useState({});
 
         // Fetch template configuration from the backend when the component mounts.
@@ -240,7 +239,7 @@ export default function Chat (props)
                                         };
                                 });
                         }
-
+                        
                         setProposal(sectionState);
                         setSidebarOpen(true);
                         // The getSections() call will be triggered by the useEffect that depends on `proposal`.
@@ -358,7 +357,7 @@ export default function Chat (props)
                 {
                         // Saving the edit
                         const sectionKey = Object.keys(proposal)[selectedSection];
-
+                        
                         try {
                                 const response = await fetch(`${API_BASE_URL}/update-section-content`, {
                                         method: 'POST',
@@ -658,7 +657,7 @@ export default function Chat (props)
                                                         Results
                                                 </div>
 
-                                                {proposal.Evaluation.content ? <div className='Chat_exportButtons'>
+                                                {proposal.Evaluation?.content ? <div className='Chat_exportButtons'>
                                                         <button type="button" onClick={() => handleExport("docx")}>
                                                                 <img src={word_icon} />
                                                                 Download .DOCX
@@ -749,3 +748,4 @@ export default function Chat (props)
                 </div>
         </Base>
 }
+
