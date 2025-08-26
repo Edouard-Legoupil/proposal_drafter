@@ -104,21 +104,19 @@ export default function Chat (props)
 
         const [proposal, setProposal] = useState({})
 
-        // This effect is now the single entry point for triggering the section generation loop.
-        // It runs only when `generateLoading` is set to true.
+        const isGenerating = useRef(false);
+
         useEffect(() => {
                 const generateAllSections = async () => {
-                        // Ensure we have sections to generate.
-                        if (!proposal || Object.keys(proposal).length === 0) {
-                                return;
-                        }
+                        // Use a ref to prevent this function from running again if it's already in progress.
+                        if (isGenerating.current) return;
+                        isGenerating.current = true;
 
                         const sectionKeys = Object.keys(proposal);
-
                         for (let i = 0; i < sectionKeys.length; i++) {
                                 const sectionKey = sectionKeys[i];
 
-                                // Skip if section already has content.
+                                // Check for content again inside the loop, as state might have changed.
                                 if (proposal[sectionKey]?.content) {
                                         continue;
                                 }
@@ -144,42 +142,31 @@ export default function Chat (props)
 
                                         if (response.ok) {
                                                 const data = await response.json();
-                                                // Update state for the current section and allow React to re-render.
-                                                // This approach is safe because the loop will continue on the next iteration.
-                                                setProposal(prevProposal => ({
-                                                        ...prevProposal,
-                                                        [sectionKey]: {
-                                                                ...prevProposal[sectionKey],
-                                                                content: data.generated_text
-                                                        }
+                                                setProposal(prev => ({
+                                                        ...prev,
+                                                        [sectionKey]: { ...prev[sectionKey], content: data.generated_text }
                                                 }));
                                         } else {
                                                 console.error(`Failed to generate section: ${sectionKey}`);
-                                                // Stop the entire process on the first failure.
-                                                setGenerateLoading(false);
-                                                setGenerateLabel("Regenerate");
-                                                return;
+                                                break; // Exit loop on failure
                                         }
                                 } catch (error) {
                                         console.error(`An error occurred while generating section ${sectionKey}:`, error);
-                                        setGenerateLoading(false);
-                                        setGenerateLabel("Regenerate");
-                                        return;
+                                        break; // Exit loop on error
                                 }
                         }
 
-                        // Once all sections are processed successfully.
+                        // Reset the guard and loading state when the process is complete or has failed.
+                        isGenerating.current = false;
                         setGenerateLoading(false);
                         setGenerateLabel("Regenerate");
                 };
 
-                if (generateLoading) {
+                // Trigger the generation process only when loading is enabled and sections are present.
+                if (generateLoading && proposal && Object.keys(proposal).length > 0) {
                         generateAllSections();
                 }
-        // Disabling exhaustive-deps because we intentionally only want this to run when `generateLoading` changes.
-        // The function uses other state variables, but they are read at the time of execution, which is the desired behavior.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        }, [generateLoading]);
+        }, [generateLoading, proposal, formData, userPrompt]); // Dependencies are now correctly listed.
 
         useEffect(() => {
                 if(sidebarOpen)
