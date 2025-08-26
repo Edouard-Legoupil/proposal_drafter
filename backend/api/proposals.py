@@ -4,6 +4,7 @@ import re
 import uuid
 from datetime import datetime 
 import logging
+from typing import Optional
 
 #  Third-Party Libraries
 from fastapi import APIRouter, Depends, HTTPException, Body
@@ -14,12 +15,14 @@ from sqlalchemy.exc import SQLAlchemyError
 from backend.core.db import get_engine
 from backend.core.redis import redis_client
 from backend.core.security import get_current_user
-from backend.core.config import proposal_data, SECTIONS
+from backend.core.config import get_available_templates, load_proposal_template
 from backend.models.schemas import (
     SectionRequest,
     RegenerateRequest,
     SaveDraftRequest,
-    FinalizeProposalRequest
+    FinalizeProposalRequest,
+    CreateSessionRequest,
+    UpdateSectionRequest
 )
 from backend.utils.proposal_logic import regenerate_section_logic
 from backend.utils.crew import ProposalCrew
@@ -32,6 +35,90 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+@router.get("/templates")
+async def get_templates():
+    """
+    Returns a dictionary mapping donor names to template filenames.
+    This allows the frontend to populate a dropdown with donor names, making the
+    backend the single source of truth for template selection.
+    """
+    try:
+        templates_map = get_available_templates()
+        return {"templates": templates_map}
+    except Exception as e:
+        logger.error(f"[GET TEMPLATES ERROR] Failed to get available templates: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Could not retrieve proposal templates.")
+
+
+@router.post("/create-session")
+async def create_session(request: CreateSessionRequest, current_user: dict = Depends(get_current_user)):
+    """
+    Creates a new proposal session and a corresponding draft in the database.
+    This single endpoint replaces the frontend's previous multi-step process
+    of saving a draft and then immediately reloading it to start a session.
+
+    The process is as follows:
+    1.  Determine the template name from the form data's "Targeted Donor".
+    2.  Generate a new UUID for the proposal.
+    3.  Create an initial record in the 'proposals' database table.
+    4.  Load the full proposal template from the determined file.
+    5.  Store all relevant data (form data, template, etc.) in a new Redis session.
+    6.  Return the new session_id and proposal_id to the client.
+    """
+    user_id = current_user["user_id"]
+    proposal_id = uuid.uuid4()
+    session_id = str(uuid.uuid4())
+
+    try:
+        # 1. Determine the template name from the form data.
+        templates_map = get_available_templates()
+        donor = request.form_data.get("Targeted Donor", "Not Yet Specified")
+        template_name = templates_map.get(donor, "unhcr_proposal_template.json")
+
+        # 2. Create an initial record in the database.
+        with get_engine().begin() as connection:
+            connection.execute(
+                text("""
+                    INSERT INTO proposals (id, user_id, form_data, project_description, template_name, generated_sections)
+                    VALUES (:id, :uid, :form, :desc, :template, '{}')
+                """),
+                {
+                    "id": proposal_id,
+                    "uid": user_id,
+                    "form": json.dumps(request.form_data),
+                    "desc": request.project_description,
+                    "template": template_name,
+                }
+            )
+
+        # 3. Load the full proposal template.
+        proposal_template = load_proposal_template(template_name)
+
+        # 4. Create the Redis session payload.
+        redis_payload = {
+            "user_id": user_id,
+            "proposal_id": str(proposal_id),
+            "form_data": request.form_data,
+            "project_description": request.project_description,
+            "template_name": template_name,
+            "proposal_template": proposal_template,
+            "generated_sections": {},
+            "is_sample": False,
+            "is_accepted": False
+        }
+
+        # 5. Store the payload in Redis.
+        redis_client.setex(session_id, 3600, json.dumps(redis_payload, default=str))
+
+        # 6. Return the new IDs.
+        return {"session_id": session_id, "proposal_id": str(proposal_id), "proposal_template": proposal_template}
+
+    except HTTPException as http_exc:
+        logger.error(f"[CREATE SESSION HTTP ERROR] {http_exc.detail}", exc_info=True)
+        raise http_exc
+    except Exception as e:
+        logger.error(f"[CREATE SESSION ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to create a new proposal session.")
 
 
 @router.post("/process_section/{session_id}")
@@ -40,9 +127,21 @@ async def process_section(session_id: str, request: SectionRequest, current_user
     Processes a single section of a proposal by running the generation crew.
     If the initial output is flagged, it automatically triggers a regeneration.
     """
+    logger.info(f"Processing section {request.section} for proposal {request.proposal_id}")
+    logger.info(f"Type of proposal_id: {type(request.proposal_id)}")
+
     session_data_str = redis_client.get(session_id)
     if not session_data_str:
         raise HTTPException(status_code=400, detail="Session data not found.")
+
+    session_data = json.loads(session_data_str)
+
+    # Update session with the latest data from the request to prevent stale data issues.
+    session_data["form_data"] = request.form_data
+    session_data["project_description"] = request.project_description
+
+    # Persist the updated session back to Redis.
+    redis_client.setex(session_id, 3600, json.dumps(session_data, default=str))
 
     # Prevent editing of finalized proposals.
     with get_engine().connect() as connection:
@@ -53,11 +152,15 @@ async def process_section(session_id: str, request: SectionRequest, current_user
         if res:
             raise HTTPException(status_code=403, detail="This proposal is finalized and cannot be modified.")
 
-    session_data = json.loads(session_data_str)
     form_data = session_data["form_data"]
     project_description = session_data["project_description"]
 
-    section_config = next((s for s in proposal_data["sections"] if s["section_name"] == request.section), None)
+    #  Get proposal template from session data
+    proposal_template = session_data.get("proposal_template")
+    if not proposal_template:
+        raise HTTPException(status_code=400, detail="Proposal template not found in session.")
+
+    section_config = next((s for s in proposal_template["sections"] if s["section_name"] == request.section), None)
     if not section_config:
         raise HTTPException(status_code=400, detail=f"Invalid section name: {request.section}")
 
@@ -163,10 +266,69 @@ async def regenerate_section(session_id: str, request: RegenerateRequest, curren
         if res:
             raise HTTPException(status_code=403, detail="This proposal is finalized and cannot be modified.")
 
+    # Load session data and update it with fresh data from the request.
+    session_data_str = redis_client.get(session_id)
+    if not session_data_str:
+        raise HTTPException(status_code=400, detail="Session data not found for regeneration.")
+
+    session_data = json.loads(session_data_str)
+    session_data["form_data"] = request.form_data
+    session_data["project_description"] = request.project_description
+    redis_client.setex(session_id, 3600, json.dumps(session_data, default=str))
+
     generated_text = regenerate_section_logic(
         session_id, request.section, request.concise_input, request.proposal_id
     )
     return {"message": f"Content regenerated for {request.section}", "generated_text": generated_text}
+
+
+@router.post("/update-section-content")
+async def update_section_content(request: UpdateSectionRequest, current_user: dict = Depends(get_current_user)):
+    """
+    Directly updates the content of a specific section in the database.
+    This is used for saving manually edited content without invoking the AI.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().begin() as conn:
+            # First, verify the proposal belongs to the user and is not finalized.
+            proposal_check = conn.execute(
+                text("SELECT is_accepted FROM proposals WHERE id = :id AND user_id = :uid"),
+                {"id": request.proposal_id, "uid": user_id}
+            ).scalar()
+
+            if proposal_check is None:
+                raise HTTPException(status_code=404, detail="Proposal not found.")
+            if proposal_check:
+                raise HTTPException(status_code=403, detail="Cannot modify a finalized proposal.")
+
+            # Use jsonb_set to update the specific key in the generated_sections JSON object.
+            # The path '{request.section}' targets the key to be updated.
+            # The third parameter is the new value, wrapped in to_jsonb to ensure it's a valid JSON value.
+            conn.execute(
+                text("""
+                    UPDATE proposals
+                    SET generated_sections = jsonb_set(
+                        generated_sections::jsonb,
+                        ARRAY[:section],
+                        to_jsonb(:content::text)
+                    ),
+                    updated_at = NOW()
+                    WHERE id = :id
+                """),
+                {
+                    "section": request.section,
+                    "content": request.content,
+                    "id": request.proposal_id
+                }
+            )
+        return {"message": f"Section '{request.section}' updated successfully."}
+    except SQLAlchemyError as db_error:
+        logger.error(f"[UPDATE SECTION DB ERROR] {db_error}", exc_info=True)
+        raise HTTPException(status_code=500, detail="A database error occurred while updating the section.")
+    except Exception as e:
+        logger.error(f"[UPDATE SECTION ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while updating the section.")
 
 
 @router.post("/save-draft")
@@ -175,27 +337,50 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
     Saves a new draft or updates an existing one in the database.
     """
     user_id = current_user["user_id"]
-    proposal_id = request.proposal_id or str(uuid.uuid4())
+    # If proposal_id is not provided in the request, generate a new one.
+    proposal_id = request.proposal_id or uuid.uuid4()
+    # If proposal_id is not provided in the request, generate a new one.
+    proposal_id = request.proposal_id or uuid.uuid4()
 
     try:
         with get_engine().begin() as connection:
+            # Check if a draft with this ID already exists for the user.
+            # Check if a draft with this ID already exists for the user.
             existing = connection.execute(
                 text("SELECT id FROM proposals WHERE id = :id AND user_id = :uid"),
                 {"id": proposal_id, "uid": user_id}
             ).fetchone()
 
+            # Prepare the data for insertion/update.
+            # The 'generated_sections' are now expected to be a dict of Pydantic models,
+            # so we need to convert them to a JSON-serializable dict.
+            sections_to_save = {
+                key: value.dict() for key, value in request.generated_sections.items()
+            } if request.generated_sections else {}
+
+            # Prepare the data for insertion/update.
+            # The 'generated_sections' are now expected to be a dict of Pydantic models,
+            # so we need to convert them to a JSON-serializable dict.
+            sections_to_save = {
+                key: value.dict() for key, value in request.generated_sections.items()
+            } if request.generated_sections else {}
+
             if existing:
                 # Update an existing draft.
                 connection.execute(
                     text("""
-                        UPDATE proposals SET form_data = :form, project_description = :desc,
-                        generated_sections = :sections, updated_at = NOW() WHERE id = :id
+                        UPDATE proposals
+                        SET form_data = :form, project_description = :desc, generated_sections = :sections,
+                            template_name = :template_name, updated_at = NOW()
+                        WHERE id = :id
                     """),
                     {
                         "form": json.dumps(request.form_data),
                         "desc": request.project_description,
-                        "sections": json.dumps(request.generated_sections),
-                        "id": proposal_id
+                        "sections": json.dumps(sections_to_save),
+                        "sections": json.dumps(sections_to_save),
+                        "id": proposal_id,
+                        "template_name": request.template_name
                     }
                 )
                 message = "Draft updated successfully"
@@ -203,23 +388,36 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
                 # Insert a new draft.
                 connection.execute(
                     text("""
-                        INSERT INTO proposals (id, user_id, form_data, project_description, generated_sections)
-                        VALUES (:id, :uid, :form, :desc, :sections)
+                        INSERT INTO proposals (id, user_id, form_data, project_description, generated_sections, template_name)
+                        VALUES (:id, :uid, :form, :desc, :sections, :template_name)
                     """),
                     {
                         "id": proposal_id,
                         "uid": user_id,
                         "form": json.dumps(request.form_data),
                         "desc": request.project_description,
-                        "sections": json.dumps(request.generated_sections)
+                        "sections": json.dumps(sections_to_save),
+                        "sections": json.dumps(sections_to_save),
+                        "template_name": request.template_name
                     }
                 )
                 message = "Draft created successfully"
 
-        return {"message": message, "proposal_id": proposal_id}
+        # Return the proposal_id as a string for JSON serialization.
+        return {"message": message, "proposal_id": str(proposal_id)}
+    except SQLAlchemyError as db_error:
+        logger.error(f"[SAVE DRAFT DB ERROR] {db_error}", exc_info=True)
+        raise HTTPException(status_code=500, detail="A database error occurred while saving the draft.")
+        # Return the proposal_id as a string for JSON serialization.
+        return {"message": message, "proposal_id": str(proposal_id)}
+    except SQLAlchemyError as db_error:
+        logger.error(f"[SAVE DRAFT DB ERROR] {db_error}", exc_info=True)
+        raise HTTPException(status_code=500, detail="A database error occurred while saving the draft.")
     except Exception as e:
-        print(f"[SAVE DRAFT ERROR] {e}")
-        raise HTTPException(status_code=500, detail="Failed to save draft")
+        logger.error(f"[SAVE DRAFT ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while saving the draft.")
+        logger.error(f"[SAVE DRAFT ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while saving the draft.")
 
 
 @router.get("/list-drafts")
@@ -301,9 +499,25 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
 @router.get("/sections")
 async def get_sections():
     """
-    Returns the list of sections and their config (name, instructions, word_limit).
+    Returns the list of sections for the default template.
+    DEPRECATED: Use /templates/{template_name}/sections instead.
     """
-    return {"sections": proposal_data.get("sections", [])}
+    try:
+        default_template = load_proposal_template("unhcr_proposal_template.json")
+        sections = [section.get("section_name") for section in default_template.get("sections", [])]
+        return {"sections": sections}
+    except HTTPException as e:
+        # Handle case where default template is not found
+        logger.error(f"Could not load default template: {e.detail}")
+        return {"sections": []}
+
+@router.get("/templates/{template_name}/sections")
+async def get_template_sections(template_name: str):
+    """
+    Returns the list of sections for a given template.
+    """
+    proposal_template = load_proposal_template(template_name)
+    return {"sections": proposal_template.get("sections", [])}
 
 @router.get("/load-draft/{proposal_id}")
 async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_user)):
@@ -312,60 +526,83 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
     It creates a new Redis session for the loaded draft.
     """
     user_id = current_user["user_id"]
-
-    # Extract section names from JSON template (dynamic structure).
-    section_names = [s.get("section_name") for s in proposal_data.get("sections", [])]
     
+    try:
+        # Handle user drafts, loaded from the database.
+        if not proposal_id.startswith("sample-"):
+            # Manually validate if the proposal_id is a valid UUID for non-sample drafts.
+            try:
+                uuid.UUID(proposal_id)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid proposal ID format: '{proposal_id}'.")
 
-    # Handle user drafts, loaded from the database.
-    if not proposal_id.startswith("sample-"):
-        with get_engine().connect() as conn:
-            # === Corrected SELECT statement with specific columns ===
-            # The order of columns here is important and must match the indices below.
-            draft = conn.execute(
-                text("SELECT form_data, generated_sections, project_description, is_accepted, created_at, updated_at FROM proposals WHERE id = :id AND user_id = :uid"),
-                {"id": proposal_id, "uid": user_id}
-            ).fetchone()
-            if not draft:
-                raise HTTPException(status_code=404, detail="Draft not found.")
+            with get_engine().connect() as conn:
+                draft = conn.execute(
+                    text("""
+                        SELECT template_name, form_data, generated_sections, project_description,
+                               is_accepted, created_at, updated_at
+                        FROM proposals
+                        WHERE id = :id AND user_id = :uid
+                    """),
+                    {"id": proposal_id, "uid": user_id}
+                ).fetchone()
+                if not draft:
+                    raise HTTPException(status_code=404, detail="Draft not found.")
 
-            # === Corrected access using integer indices ===
-            # Access columns by their position (0-based) from the SELECT statement.
-            form_data = draft[0] if draft[0] else {}
-            sections = draft[1] if draft[1] else {}
-            project_description = draft[2]
-            
-            data_to_load = {
-                "form_data": form_data,
-                "project_description": project_description,
-                "generated_sections": {sec: sections.get(sec) for sec in SECTIONS},
-                "is_accepted": draft[3],
-                "created_at": draft[4].isoformat() if draft[4] else None,
-                "updated_at": draft[5].isoformat() if draft[5] else None,
-                "is_sample": False
-            }
-    else:
-        # Handle sample drafts, which are loaded from a JSON file.
-        try:
+                template_name = draft[0] or "unhcr_proposal_template.json" # Default if null
+                proposal_template = load_proposal_template(template_name)
+                section_names = [s.get("section_name") for s in proposal_template.get("sections", [])]
+
+                form_data = draft[1] if draft[1] else {}
+                sections = draft[2] if draft[2] else {}
+                project_description = draft[3]
+                
+                data_to_load = {
+                    "form_data": form_data,
+                    "project_description": project_description,
+                    "generated_sections": {sec: sections.get(sec) for sec in section_names},
+                    "is_accepted": draft[4],
+                    "created_at": draft[5].isoformat() if draft[5] else None,
+                    "updated_at": draft[6].isoformat() if draft[6] else None,
+                    "is_sample": False,
+                    "template_name": template_name,
+                    "proposal_template": proposal_template,
+                    "proposal_id": str(proposal_id)
+                }
+        else:
+            # Handle sample drafts, which are loaded from a JSON file.
             with open("templates/sample_templates.json", "r") as f:
                 samples = json.load(f)
             sample = next((s for s in samples if s["proposal_id"] == proposal_id), None)
             if not sample:
                 raise HTTPException(status_code=404, detail="Sample not found.")
 
+            template_name = sample.get("template_name", "unhcr_proposal_template.json")
+            proposal_template = load_proposal_template(template_name)
+
             data_to_load = sample
             data_to_load["is_sample"] = True
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to load sample: {e}")
+            data_to_load["proposal_template"] = proposal_template
+            data_to_load["template_name"] = template_name
+
+    except HTTPException as http_exc:
+        # Re-raise HTTP exceptions to be handled by FastAPI's default handler.
+        raise http_exc
+    except Exception as e:
+        # Catch any other unexpected errors during draft loading.
+        logger.error(f"[LOAD DRAFT ERROR] Failed to load draft {proposal_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred while loading the draft: {e}")
 
     # Create a new Redis session for the loaded draft.
     session_id = str(uuid.uuid4())
     redis_payload = {
         "user_id": user_id,
-        "proposal_id": proposal_id,
+        "proposal_id": str(proposal_id),  # Ensure proposal_id is a string for Redis
         **data_to_load
     }
-    redis_client.setex(session_id, 3600, json.dumps(redis_payload))
+
+    # The proposal_template is already a dict, which is JSON serializable.
+    redis_client.setex(session_id, 3600, json.dumps(redis_payload, default=str))
 
     return {"session_id": session_id, **data_to_load}
 
@@ -387,7 +624,7 @@ async def finalize_proposal(request: FinalizeProposalRequest, current_user: dict
 
 
 @router.delete("/delete-draft/{proposal_id}")
-async def delete_draft(proposal_id: str, current_user: dict = Depends(get_current_user)):
+async def delete_draft(proposal_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
     """
     Deletes a draft proposal from the database.
     """
@@ -403,5 +640,5 @@ async def delete_draft(proposal_id: str, current_user: dict = Depends(get_curren
 
         return {"message": f"Draft '{proposal_id}' deleted successfully."}
     except Exception as e:
-        print(f"[DELETE DRAFT ERROR] {e}")
+        logger.error(f"[DELETE DRAFT ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to delete draft.")

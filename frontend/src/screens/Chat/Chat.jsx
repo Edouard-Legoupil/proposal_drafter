@@ -3,6 +3,7 @@ import './Chat.css'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Markdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 import Base from '../../components/Base/Base'
 import CommonButton from '../../components/CommonButton/CommonButton'
@@ -101,113 +102,72 @@ export default function Chat (props)
                         setButtonEnable(false)
         }, [userPrompt, formData])
 
-        // const [proposal, setProposal] = useState({
-        //         "Summary": {
-        //                 content: "",
-        //                 open: true
-        //         },
-        //         "Rationale": {
-        //                 content: "",
-        //                 open: true
-        //         },
-        //         "Project Description": {
-        //                 content: "",
-        //                 open: true
-        //         },
-        //         "Partnerships and Coordination": {
-        //                 content: "",
-        //                 open: true
-        //         },
-        //         "Monitoring": {
-        //                 content: "",
-        //                 open: true
-        //         },
-        //         "Evaluation": {
-        //                 content: "",
-        //                 open: true
-        //         },
-        //         "Results Matrix": {
-        //                 content: "",
-        //                 open: true
-        //         },
-        //         "Work Plan": {
-        //                 content: "",
-        //                 open: true
-        //         },
-        //         "Budget": {
-        //                 content: "",
-        //                 open: true
-        //         },
-        //         "Annex 1. Risk Assessment Plan": {
-        //                 content: "",
-        //                 open: true
-        //         }
-        // })
-
-        // Load proposal sections from the API...
         const [proposal, setProposal] = useState({})
+        const [generateLoading, setGenerateLoading] = useState(false)
+        const [generateLabel, setGenerateLabel] = useState("Generate")
+        const isGenerating = useRef(false);
 
         useEffect(() => {
-                fetch(`${API_BASE_URL}/sections`)
-                  .then(res => res.json())
-                  .then(data => {
-                    const sectionState = {}
-                    data.sections.forEach(section => {
-                      sectionState[section.section_name] = {
-                        content: "",
-                        open: true
-                      }
-                    })
-                    setProposal(sectionState)
-                  })
-                  .catch(err => console.error("Failed to load sections:", err))
-              }, [])
-               
+                const generateAllSections = async () => {
+                        // Use a ref to prevent this function from running again if it's already in progress.
+                        if (isGenerating.current) return;
+                        isGenerating.current = true;
 
-        async function getSections(latestSection = Object.keys(proposal)[0])
-        {
-                let i
-                for (i = 0; Object.keys(proposal)[i] !== latestSection; i++);
+                        const sectionKeys = Object.keys(proposal);
+                        for (let i = 0; i < sectionKeys.length; i++) {
+                                const sectionKey = sectionKeys[i];
 
-                setSelectedSection(i)
-                proposalRef?.current?.children[i]?.scrollIntoView({behavior: "smooth"})
-
-                for(let j = i; j < Object.keys(proposal).length; j++)
-                {
-                        const response = await fetch(`${API_BASE_URL}/process_section/${sessionStorage.getItem("session_id")}`, {
-                                method: "POST",
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                        section: Object.keys(proposal)[j],
-                                        proposal_id: sessionStorage.getItem("proposal_id")
-                                }),
-                                credentials: 'include'
-                        })
-
-                        if(response.ok) {
-                                const data = await response.json()
-
-                                setProposal(p => ({
-                                        ...p,
-                                        [Object.keys(p)[j]]: { // We have index, not key, hence
-                                                open: Object.values(p)[j].open,
-                                                content: data.generated_text
+                                // Check for content again inside the loop, as state might have changed.
+                                if (proposal[sectionKey]?.content) {
+                                        continue;
+                                }
+                                
+                                try {
+                                        setSelectedSection(i);
+                                        const el = proposalRef.current?.children[i];
+                                        if (typeof el?.scrollIntoView === 'function') {
+                                                el.scrollIntoView({ behavior: 'smooth' });
                                         }
-                                }))
-                                setSelectedSection(j)
-                                const el = proposalRef.current?.children[j];
-                                if (typeof el?.scrollIntoView === 'function') {
-                                        el.scrollIntoView({ behavior: 'smooth' });
+
+                                        const response = await fetch(`${API_BASE_URL}/process_section/${sessionStorage.getItem("session_id")}`, {
+                                                method: "POST",
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                        section: sectionKey,
+                                                        proposal_id: sessionStorage.getItem("proposal_id"),
+                                                        form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])),
+                                                        project_description: userPrompt
+                                                }),
+                                                credentials: 'include'
+                                        });
+
+                                        if (response.ok) {
+                                                const data = await response.json();
+                                                setProposal(prev => ({
+                                                        ...prev,
+                                                        [sectionKey]: { ...prev[sectionKey], content: data.generated_text }
+                                                }));
+                                        } else {
+                                                console.error(`Failed to generate section: ${sectionKey}`);
+                                                break; // Exit loop on failure
+                                        }
+                                } catch (error) {
+                                        console.error(`An error occurred while generating section ${sectionKey}:`, error);
+                                        break; // Exit loop on error
                                 }
                         }
 
-                        else
-                                console.log(response)
-                }
+                        // Reset the guard and loading state when the process is complete or has failed.
+                        isGenerating.current = false;
+                        setGenerateLoading(false);
+                        setGenerateLabel("Regenerate");
+                };
 
-                setGenerateLoading(false)
-                setGenerateLabel("Regenerate")
-        }
+                // Trigger the generation process only when loading is enabled and sections are present.
+                if (generateLoading && proposal && Object.keys(proposal).length > 0) {
+                        generateAllSections();
+                }
+        }, [generateLoading, proposal, formData, userPrompt]); // Dependencies are now correctly listed.
 
         useEffect(() => {
                 if(sidebarOpen)
@@ -218,93 +178,76 @@ export default function Chat (props)
         // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [sidebarOpen])
 
-        const [generateLoading, setGenerateLoading] = useState(false)
-        const [generateLabel, setGenerateLabel] = useState("Generate")
-        async function saveDraft ()
-        {
-                setGenerateLoading(true)
-                setFormExpanded(false)
+        const [templateConfig, setTemplateConfig] = useState({});
 
-                for (const section in proposal)
-                        proposal[section].content = ""
-
-                try
-                {
-                        const response = await fetch(`${API_BASE_URL}/save-draft`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                        session_id: sessionStorage.getItem("session_id"),
-                                        project_description: userPrompt,
-                                        form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value]))
-                                }),
-                                credentials: 'include'
-                        })
-
-                        if(response.ok)
-                        {
-                                const data = await response.json()
-                                sessionStorage.setItem("proposal_id", data.proposal_id)
-                                setSidebarOpen(true)
-                                getSections()
-                        }
-                        else
-                        {
-                                setGenerateLoading(false)
-                                setGenerateLabel("Regenerate")
-                                console.log("Error: ", response)
+        // Fetch template configuration from the backend when the component mounts.
+        useEffect(() => {
+                async function fetchTemplates() {
+                        try {
+                                const response = await fetch(`${API_BASE_URL}/templates`, {
+                                        method: 'GET',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        credentials: 'include'
+                                });
+                                if (response.ok) {
+                                        const data = await response.json();
+                                        setTemplateConfig(data.templates);
+                                } else {
+                                        console.error("Failed to fetch templates");
+                                }
+                        } catch (error) {
+                                console.error("Error fetching templates:", error);
                         }
                 }
-                catch (error)
-                {
-                        setGenerateLoading(false)
-                        setGenerateLabel("Regenerate")
-                        console.log("Error", error)
-                }
-        }
+                fetchTemplates();
+        }, []);
+
         async function handleGenerateClick ()
         {
-                setGenerateLoading(true)
-                setFormExpanded(false)
+                setGenerateLoading(true);
+                setFormExpanded(false);
 
-                for (const section in proposal)
-                        proposal[section].content = ""
-
-                try
-                {
-                        const response = await fetch(`${API_BASE_URL}/store_base_data`, {
+                try {
+                        // Call the new, streamlined endpoint to create the session and initial draft.
+                        const response = await fetch(`${API_BASE_URL}/create-session`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
                                         project_description: userPrompt,
-                                        form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value]))
+                                        form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])),
                                 }),
                                 credentials: 'include'
-                        })
+                        });
 
-                        if(response.ok)
-                        {
-                                const data = await response.json()
-                                sessionStorage.setItem("session_id", data.session_id)
-                                saveDraft()
+                        if (!response.ok) {
+                                throw new Error("Failed to create a new session.");
                         }
-                        else if(response.status === 401)
-                        {
-                                sessionStorage.setItem("session_expired", "Session expired. Please login again.")
-                                navigate("/login")
+
+                        const data = await response.json();
+
+                        // Store the new session and proposal IDs received from the backend.
+                        sessionStorage.setItem("session_id", data.session_id);
+                        sessionStorage.setItem("proposal_id", data.proposal_id);
+
+                        // Initialize the proposal sections based on the template received from the backend.
+                        const sectionState = {};
+                        if (data.proposal_template && data.proposal_template.sections) {
+                                data.proposal_template.sections.forEach(section => {
+                                        sectionState[section.section_name] = {
+                                                content: "", // Content will be populated by the getSections call.
+                                                open: true
+                                        };
+                                });
                         }
-                        else
-                        {
-                                setGenerateLoading(false)
-                                setGenerateLabel("Regenerate")
-                                console.log("Error: ", response)
-                        }
-                }
-                catch (error)
-                {
-                        setGenerateLoading(false)
-                        setGenerateLabel("Regenerate")
-                        console.log("Error", error)
+                        
+                        setProposal(sectionState);
+                        setSidebarOpen(true);
+                        // The getSections() call will be triggered by the useEffect that depends on `proposal`.
+
+                } catch (error) {
+                        console.error("Error during proposal generation:", error);
+                        setGenerateLoading(false);
+                        setGenerateLabel("Generate"); // Reset button label on error.
                 }
         }
 
@@ -351,7 +294,9 @@ export default function Chat (props)
                         body: JSON.stringify({
                                 section: Object.keys(proposal)[selectedSection],
                                 concise_input: ip,
-                                proposal_id: sessionStorage.getItem("proposal_id")
+                                proposal_id: sessionStorage.getItem("proposal_id"),
+                                form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])),
+                                project_description: userPrompt
                         }),
                         credentials: 'include'
                 })
@@ -399,30 +344,59 @@ export default function Chat (props)
 
         const [isEdit, setIsEdit] = useState(false)
         const [editorContent, setEditorContent] = useState("")
-        function handleEditClick (section)
+        async function handleEditClick (section)
         {
                 if(!isEdit)
                 {
-                        setSelectedSection(section)
-                        setIsEdit(true)
-                        setEditorContent(Object.values(proposal)[section].content)
+                        // Entering edit mode
+                        setSelectedSection(section);
+                        setIsEdit(true);
+                        setEditorContent(Object.values(proposal)[section].content);
                 }
                 else
                 {
-                        setProposal(p => ({
-                                ...p,
-                                [Object.keys(p)[selectedSection]]: {
-                                        ...Object.values(p)[selectedSection],
-                                        content: ""
+                        // Saving the edit
+                        const sectionKey = Object.keys(proposal)[selectedSection];
+                        
+                        try {
+                                const response = await fetch(`${API_BASE_URL}/update-section-content`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                                proposal_id: sessionStorage.getItem("proposal_id"),
+                                                section: sectionKey,
+                                                content: editorContent
+                                        }),
+                                        credentials: 'include'
+                                });
+
+                                if (!response.ok) {
+                                        throw new Error('Failed to save the section content.');
                                 }
-                        }))
-                        handleRegenerateButtonClick("Message to the AI assistant: The below content is what was manually entered by the user. ENSURE it is within the **specified word limit** for this section, AT ALL COSTS. If it is, leave it be, else COMPULSORILY bring it **BELOW** the word limit. Even a few words above the limit are NOT ACCEPTABLE by our system. You can go so far as to omit content if need be in order to fit it within the word limit. Even tightening up the language via very short and concise sentences and bullet points will also be acceptable AND IN FACT ENCOURAGED.  \n\n" + editorContent)
+
+                                // On successful save, update the local state to reflect the change.
+                                setProposal(p => ({
+                                        ...p,
+                                        [sectionKey]: {
+                                                ...Object.values(p)[selectedSection],
+                                                content: editorContent
+                                        }
+                                }));
+
+                        } catch (error) {
+                                console.error("Error saving section:", error);
+                                // Optionally, show an error message to the user.
+                        } finally {
+                                // Exit edit mode regardless of success or failure.
+                                setIsEdit(false);
+                        }
                 }
         }
 
         const [isApproved, setIsApproved] = useState(false)
-        async function getContent()
-        {
+
+        async function getContent()         {
+
                 if(sessionStorage.getItem("proposal_id"))
                 {
                         const response = await fetch(`${API_BASE_URL}/load-draft/${sessionStorage.getItem("proposal_id")}`, {
@@ -447,27 +421,17 @@ export default function Chat (props)
                                         }]
                                 )))
 
-                                setProposal(p => Object.fromEntries(Object.entries(data.generated_sections).map(section =>
-                                        [section[0], {
-                                                content: section[1],
-                                                open: p[section[0]].open
-                                        }]
-                                )))
+                                const sectionState = {};
+                                Object.entries(data.generated_sections).forEach(([key, value]) => {
+                                        sectionState[key] = {
+                                                content: value,
+                                                open: true
+                                        };
+                                });
+                                setProposal(sectionState);
 
                                 setIsApproved(data.is_accepted)
-
                                 setSidebarOpen(true)
-
-                                if(!data.is_accepted && !data.generated_sections["Evaluation"])
-                                {
-                                        setGenerateLoading(true)
-                                        setFormExpanded(false)
-
-                                        let i
-                                        for(i = 0; Object.entries(data.generated_sections)[i][1]; i++);
-
-                                        getSections(Object.entries(data.generated_sections)[i][0])
-                                }
                         }
                         else if(response.status === 401)
                         {
@@ -476,6 +440,7 @@ export default function Chat (props)
                         }
                 }
         }
+        
         useEffect(() => {
                 getContent()
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -483,6 +448,15 @@ export default function Chat (props)
 
         async function handleExport (format)
         {
+                
+                
+                const proposalId = sessionStorage.getItem("proposal_id");
+
+                if (!proposalId || proposalId === "undefined") {
+                        setErrorMessage("No draft available to export. Please create or load a draft first.");
+                        return;
+                }
+                
                 const response = await fetch(`${API_BASE_URL}/generate-document/${sessionStorage.getItem("proposal_id")}?format=${format}`, {
                         method: "GET",
                         headers: { 'Content-Type': 'application/json' },
@@ -620,7 +594,7 @@ export default function Chat (props)
                                                                         : label === "Duration"
                                                                         ? ["1 month", "3 months", "6 months", "12 months", "18 months", "24 months", "30 months", "36 months"]
                                                                         : label === "Targeted Donor"
-                                                                        ? ["CERF", "ECHO"]
+                                                                        ? Object.keys(templateConfig)
                                                                         : label === "Budget Range"
                                                                         ? ["50k$", "100k$","250k$","500k$","1M$","2M$","5M$","10M$","15M$","25M$"]         
                                                                         : label === "Geographical Scope"
@@ -683,7 +657,7 @@ export default function Chat (props)
                                                         Results
                                                 </div>
 
-                                                {proposal.Evaluation.content ? <div className='Chat_exportButtons'>
+                                                {proposal.Evaluation?.content ? <div className='Chat_exportButtons'>
                                                         <button type="button" onClick={() => handleExport("docx")}>
                                                                 <img src={word_icon} />
                                                                 Download .DOCX
@@ -741,7 +715,7 @@ export default function Chat (props)
                                                                                 (selectedSection === i && isEdit) ?
                                                                                         <textarea value={editorContent} onChange={e => setEditorContent(e.target.value)} aria-label={`editor for ${sectionObj[0]}`} />
                                                                                         :
-                                                                                        <Markdown>{sectionObj[1].content}</Markdown>
+                                                                                        <Markdown remarkPlugins={[remarkGfm]}>{sectionObj[1].content}</Markdown>
                                                                                 :
                                                                                 <div className='Chat_sectionContent_loading'>
                                                                                         <span className='submitButtonSpinner' />
@@ -774,3 +748,4 @@ export default function Chat (props)
                 </div>
         </Base>
 }
+

@@ -52,7 +52,7 @@ COPY backend/ backend/
 RUN which uvicorn && uvicorn --version
 
 # Copy frontend build into app/frontend (served by FastAPI)
-COPY --from=frontend-builder /app/dist /app/frontend
+COPY --from=frontend-builder /app/dist /app/frontend/dist
 
 # Copy frontend build if using nginx
 # COPY --from=frontend-builder /app/dist /usr/share/nginx/html

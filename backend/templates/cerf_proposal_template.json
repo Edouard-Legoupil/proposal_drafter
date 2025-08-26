@@ -1,0 +1,959 @@
+{
+    "donors": ["CERF"],
+    "project_info": {
+      "section_name": "Project Information",
+      "fields": [
+        {
+          "field": "Project title",
+          "instructions": "Enter a concise title (max 200 characters) that clearly reflects the purpose and scope of the project."
+        },
+        {
+          "field": "Project type",
+          "instructions": "Select the primary sector/cluster relevant to this project, aligned with CERF sector classifications."
+        },
+        {
+          "field": "Secondary project type",
+          "instructions": "Indicate any secondary sector/cluster addressed by the project, if applicable."
+        },
+        {
+          "field": "Geographical Coverage",
+          "instructions": "Specify country and subnational locations (regions, districts, cities) where activities will be implemented."
+        },
+        {
+          "field": "Executing agency",
+          "instructions": "Indicate UNHCR as the executing agency unless otherwise coordinated."
+        },
+        {
+          "field": "Beneficiaries",
+          "instructions": "Provide total number of direct beneficiaries disaggregated by sex (men, women), age (boys, girls), and persons with disabilities. Avoid household or percentage-based figures."
+        },
+        {
+          "field": "Partner(s)",
+          "instructions": "List implementing sub-partners (e.g. NGOs, national/local actors) and describe their role where relevant."
+        },
+        {
+          "field": "Management site",
+          "instructions": "Identify the UNHCR Field or Sub-Office responsible for implementation oversight."
+        },
+        {
+          "field": "Duration",
+          "instructions": "Specify project duration: either 6 months for Rapid Response (RR) or 12 months for Underfunded Emergencies (UFE)."
+        },
+        {
+          "field": "Budget",
+          "instructions": "Indicate total amount requested from CERF and breakdown by sector(s). Budget must match Excel template."
+        }
+      ]
+    },
+    "sections": [
+      {
+        "section_name": "1.5. Project title",
+        "section_parent": "1. Overview",
+        "format_type": "text",
+        "word_limit": 50,
+        "instructions": "Compose a project title that: 1) Begins with the country name, 2) Includes the primary humanitarian sector, 3) Specifies the target population, 4) Ends with the expected outcome. Example: 'Ethiopia Shelter Support for Conflict-Affected IDPs in Tigray Region'",
+        "mandatory": true
+      },
+      {
+        "section_name": "1.6. Project Summary",
+        "section_parent": "1. Overview",
+        "format_type": "text",
+        "word_limit": 300,
+        "instructions": "Write a comprehensive project summary covering: 1) Context (crisis overview), 2) Key objectives (max 3), 3) Expected impact (quantifiable where possible), 4) Main activities (bullet points). Ensure alignment with Humanitarian Response Plan priorities.",
+        "mandatory": true
+      },
+      {
+        "section_name": "1.8. Project Duration",
+        "section_parent": "1. Overview",
+        "format_type": "text",
+        "word_limit": 350,
+        "instructions": "Specify and justify the project duration considering: 1) For Rapid Response: Explain why 6 months is sufficient to achieve objectives 2) For Underfunded Emergencies: Demonstrate how 9-12 months enables sustainable outcomes. Reference seasonal factors if relevant.",
+        "mandatory": true
+      },
+      {
+        "section_name": "2.1. Total Funds Required for Organization Response",
+        "section_parent": "2. Funding summary and Country Context",
+        "format_type": "number",
+        "instructions": "Calculate and present the total funding requirements by: 1) Referencing HRP/flash appeal figures if available 2) Breaking down by sector/cluster 3) Showing unmet needs. For protracted crises, focus only on new emergency requirements.",
+        "mandatory": true
+      },
+      {
+        "section_name": "2.2. Funds received for organization's response",
+        "section_parent": "2. Funding summary and Country Context",
+        "format_type": "number",
+        "instructions": "Report received funds by: 1) Amount 2) Donor 3) Timeframe 4) Alignment with FTS records. Highlight any funding gaps that this CERF request would address.",
+        "mandatory": true
+      },
+      {
+        "section_name": "2.3. Total Funds Requested from CERF for this Proposal",
+        "section_parent": "2. Funding summary and Country Context",
+        "format_type": "Number",
+        "instructions": "Specify the CERF request amount ensuring: 1) Consistency with budget section 2) Clear justification of how amount was calculated 3) Demonstration of cost-efficiency 4) Explanation of how this complements other funding.",
+        "mandatory": true
+      },
+      {
+        "section_name": "4. Overall project objective",
+        "section_parent": "",
+        "format_type": "text",
+        "word_limit": 350,
+        "instructions": "Draft one concise objective statement that: 1) Begins with an action verb 2) Specifies target population 3) States intended impact 4) Aligns with HRP/cluster objectives. Example: 'Provide life-saving WASH assistance to 15,000 drought-affected households in Somaliland.'",
+        "mandatory": true
+      },
+      {
+        "section_name": "5. Logical Framework by Sector",
+        "section_parent": "",
+        "instructions": "Develop a results framework with: 1) 1-2 outcomes (sector-level changes) 2) 3-5 outputs (direct deliverables) 3) SMART indicators (specific metrics) 4) Disaggregated targets (gender/age) 5) Verification methods 6) Linked activities. Use CERF standard indicators where possible.",
+        "format_type": "table",
+        "columns": [
+          "Indicator",
+          "Target (Men/Women/Boys/Girls)",
+          "Means of Verification",
+          "Comments"
+        ],
+        "rows": [
+          {
+            "row_title": "Outcome 1",
+            "row_description": "The intended changes in institutional performance, individual or group behaviour or attitudes, or the political, economic, or social position of the beneficiaries. Example: Conflict-affected population accesses integrated protection services",
+            "cells": {
+              "Indicator": "Quantitative or qualitative factors or variables to measure achievement or to reflect expected changes. Example: # of people receiving protection assistance",
+              "Target (Men/Women/Boys/Girls)": "XX/XX/XX/XX",
+              "Means of Verification": "Partner reports, UNHCR reports, post-distribution monitoring",
+              "Comments": ""
+            }
+          },
+          {
+            "row_title": "Output 1.1",
+            "row_description": "The intended changes in the skills or abilities of the beneficiaries, or the availability of new products or services as a result of project activities. Example: Provision of MPCA and protection referrals",
+            "cells": {
+              "Indicator": "Quantitative or qualitative factors or variables to measure achievement or to reflect expected changes. Example: # of individuals receiving MPCA",
+              "Target (Men/Women/Boys/Girls)": "XX/XX/XX/XX",
+              "Means of Verification": "Distribution records, partner reports",
+              "Comments": ""
+            }
+          }
+        ],
+        "mandatory": true
+      },
+      {
+        "section_name": "6. Workplan",
+        "section_parent": "",
+        "format_type": "table",
+        "columns": [
+          {
+            "name": "Activity Description",
+            "type": "fillable"
+          },
+          {
+            "name": "Responsible Partner",
+            "type": "fillable"
+          },
+          {
+            "name": "Month 1",
+            "type": "fillable"
+          },
+          {
+            "name": "Month 2",
+            "type": "fillable"
+          },
+          {
+            "name": "Month 3",
+            "type": "fillable"
+          },
+          {
+            "name": "Month 4",
+            "type": "fillable"
+          },
+          {
+            "name": "Month 5",
+            "type": "fillable"
+          },
+          {
+            "name": "Month 6",
+            "type": "fillable"
+          }
+        ],
+        "instructions": "Create a monthly workplan that: 1) Lists key activities from the logframe 2) Assigns clear responsibility 3) Shows phasing across months (use 'X' for active months) 4) Notes dependencies between activities 5) Aligns with seasonal factors. Use CERF activity codes where available.",
+        "mandatory": true
+      },
+      {
+        "section_name": "7.1. People Directly Targeted",
+        "section_parent": "7. People Targeted",
+        "instructions": "Complete the beneficiary table with: 1) Categories matching HRP/cluster definitions 2) Gender/age disaggregation 3) Clear totals 4) Consistency with logframe targets. Ensure no double-counting across categories.",
+        "format_type": "table",
+        "columns": [
+          {
+            "name": "Categories",
+            "type": "select",
+            "selectvalue": [
+              "Displacement related",
+              "IDP",
+              "Refugees",
+              "Returnees",
+              "Host Communities",
+              "Non-Displacement related",
+              "Total Directly Targeted",
+              "Persons with Disabilities"
+            ]
+          },
+          {
+            "name": "Women (>18)",
+            "type": "fillable"
+          },
+          {
+            "name": "Girls (<18)",
+            "type": "fillable"
+          },
+          {
+            "name": "Men (>18)",
+            "type": "fillable"
+          },
+          {
+            "name": "Boys (<18)",
+            "type": "fillable"
+          },
+          {
+            "name": "Total",
+            "type": "fillable"
+          }
+        ],
+        "mandatory": true
+      },
+      {
+        "section_name": "7.2. DIRECTLY TARGETED BY SECTOR/CLUSTER",
+        "section_parent": "7. People Targeted",
+        "instructions": "Populate the sector-specific beneficiary table ensuring: 1) Alignment with cluster/Sector definitions 2) Consistency with overall targets 3) Clear gender/age breakdown 4) No duplication across sectors. Leave blank cells where not applicable.",
+        "format_type": "table",
+        "columns": [
+          {
+            "name": "Categories",
+            "type": "select",
+            "selectvalue": [
+              "Displacement related",
+              "IDP",
+              "Refugees",
+              "Returnees",
+              "Host Communities",
+              "Non-Displacement related",
+              "Total Directly Targeted"
+            ]
+          },
+          {
+            "name": "Women (>18)",
+            "type": "fillable"
+          },
+          {
+            "name": "Girls (<18)",
+            "type": "fillable"
+          },
+          {
+            "name": "Men (>18)",
+            "type": "fillable"
+          },
+          {
+            "name": "Boys (<18)",
+            "type": "fillable"
+          },
+          {
+            "name": "Total",
+            "type": "fillable"
+          }
+        ],
+        "mandatory": true
+      },
+      {
+        "section_name": "8.1. Estimate of people indirectly targeted",
+        "section_parent": "8. People Indirectly Targeted",
+        "format_type": "text",
+        "word_limit": 350,
+        "instructions": "Provide a realistic estimate of indirect beneficiaries considering: 1) Type of intervention 2) Community-level impacts 3) Multiplier effects. Justify the calculation methodology and note any assumptions.",
+        "mandatory": true
+      },
+      {
+        "section_name": "8.2. Description of people indirectly targeted",
+        "section_parent": "8. People Indirectly Targeted",
+        "format_type": "text",
+        "word_limit": 350,
+        "instructions": "Describe indirect beneficiaries by: 1) Explaining impact pathways 2) Identifying beneficiary groups 3) Linking to protection outcomes 4) Referencing monitoring systems. For cash projects, detail economic multiplier effects.",
+        "mandatory": true
+      },
+      {
+        "section_name": "A. Staff and Other Personnel Costs",
+        "section_parent": "9. Proposal Budget",
+        "instructions": "Detail staffing requirements with: 1) Position titles and grades 2) Time allocations 3) Justification for each role 4) % charged to CERF. For <6% of direct costs, consolidate into one line item with rationale.",
+        "mandatory": true,
+        "format_type": "table",
+        "columns": [
+          {
+            "name": "Budget Line Description",
+            "type": "fillable"
+          },
+          {
+            "name": "Remarks (max. 1,500 characters)",
+            "type": "fillable"
+          },
+          {
+            "name": "Unit description",
+            "type": "fillable"
+          },
+          {
+            "name": "Unit Quantity:",
+            "type": "number"
+          },
+          {
+            "name": "Unit Cost (USD)",
+            "type": "number"
+          },
+          {
+            "name": "Duration (month)",
+            "type": "number"
+          },
+          {
+            "name": "% Charged to CERF",
+            "type": "number"
+          },
+          {
+            "name": "Total cost (USD)",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "section_name": "B. Supplies, Commodities, Materials",
+        "section_parent": "9. Proposal Budget",
+        "instructions": "List required supplies with: 1) Item specifications 2) Quantities 3) Unit costs 4) Procurement method. For CERF, assume 100% coverage (mark % as n/a). Group similar items where appropriate.",
+        "mandatory": true,
+        "format_type": "table",
+        "columns": [
+          {
+            "name": "Budget Line Description",
+            "type": "fillable"
+          },
+          {
+            "name": "Remarks (max. 1,500 characters)",
+            "type": "fillable"
+          },
+          {
+            "name": "Unit description",
+            "type": "fillable"
+          },
+          {
+            "name": "Unit Quantity:",
+            "type": "number"
+          },
+          {
+            "name": "Unit Cost (USD)",
+            "type": "number"
+          },
+          {
+            "name": "Duration (month)",
+            "type": "number"
+          },
+          {
+            "name": "% Charged to CERF",
+            "type": "number"
+          },
+          {
+            "name": "Total cost (USD)",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "section_name": "C. Equipments",
+        "section_parent": "9. Proposal Budget",
+        "instructions": "Specify equipment needs with: 1) Item descriptions 2) Justification for each 3) Disposition plan post-project. For <2% of direct costs, consolidate into one line. Mark % as n/a for CERF.",
+        "mandatory": true,
+        "format_type": "table",
+        "columns": [
+          {
+            "name": "Budget Line Description",
+            "type": "fillable"
+          },
+          {
+            "name": "Remarks (max. 1,500 characters)",
+            "type": "fillable"
+          },
+          {
+            "name": "Unit description",
+            "type": "fillable"
+          },
+          {
+            "name": "Unit Quantity:",
+            "type": "number"
+          },
+          {
+            "name": "Unit Cost (USD)",
+            "type": "number"
+          },
+          {
+            "name": "Duration (month)",
+            "type": "number"
+          },
+          {
+            "name": "% Charged to CERF",
+            "type": "number"
+          },
+          {
+            "name": "Total cost (USD)",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "section_name": "D. Contractual Services",
+        "section_parent": "9. Proposal Budget",
+        "instructions": "Detail service contracts including: 1) Type of service 2) Provider qualifications 3) Deliverables 4) Payment schedule. Include cash transfer fees if applicable. Mark % as n/a for CERF.",
+        "mandatory": true,
+        "format_type": "table",
+        "columns": [
+          {
+            "name": "Budget Line Description",
+            "type": "fillable"
+          },
+          {
+            "name": "Remarks (max. 1,500 characters)",
+            "type": "fillable"
+          },
+          {
+            "name": "Unit description",
+            "type": "fillable"
+          },
+          {
+            "name": "Unit Quantity:",
+            "type": "number"
+          },
+          {
+            "name": "Unit Cost (USD)",
+            "type": "number"
+          },
+          {
+            "name": "Duration (month)",
+            "type": "number"
+          },
+          {
+            "name": "% Charged to CERF",
+            "type": "number"
+          },
+          {
+            "name": "Total cost (USD)",
+            "type": "number"
+          }
+        ]
+      },
+      {
+        "section_name": "E. Travel",
+        "section_parent": "9. Proposal Budget",
+        "instructions": "Itemize travel costs with: 1) Purpose of each trip 2) Itineraries 3) Daily rates 4) Number of staff. For <1.5% of direct costs, consolidate. Mark % as n/a for CERF.",
+        "mandatory": true,
+        "format_type": "table",
+        "columns": [
+          {
+            "name": "Budget Line Description",
+            "type": "fillable"
+          },
+          {
+            "name": "Remarks (max. 1,500 characters)",
+            "type": "fillable"
+          },
+          {
+            "name": "Unit description",
+            "type": "fillable"
+          },
+          {
+            "name": "Unit Quantity:",
+            "type": "fillable"
+          },
+          {
+            "name": "Unit Cost",
+            "type": "fillable"
+          },
+          {
+            "name": "Duration",
+            "type": "fillable"
+          },
+          {
+            "name": "% Charged to CERF",
+            "type": "fillable"
+          },
+          {
+            "name": "Total cost (USD)",
+            "type": "fillable"
+          }
+        ]
+      },
+      {
+        "section_name": "F. Transfers and Grants to Counterparts",
+        "section_parent": "9. Proposal Budget",
+        "instructions": "List partner transfers including: 1) Organization names 2) Type (NNGO/INGO/Govt) 3) Amounts 4) Expected deliverables. Include capacity building components if relevant. Mark % as n/a for CERF.",
+        "mandatory": true,
+        "format_type": "table",
+        "columns": [
+          {
+            "name": "Budget Line Description",
+            "type": "fillable"
+          },
+          {
+            "name": "Remarks (max. 1,500 characters)",
+            "type": "fillable"
+          },
+          {
+            "name": "Unit description",
+            "type": "fillable"
+          },
+          {
+            "name": "Unit Quantity:",
+            "type": "fillable"
+          },
+          {
+            "name": "Unit Cost",
+            "type": "fillable"
+          },
+          {
+            "name": "Duration",
+            "type": "fillable"
+          },
+          {
+            "name": "% Charged to CERF",
+            "type": "fillable"
+          },
+          {
+            "name": "Total cost (USD)",
+            "type": "fillable"
+          }
+        ]
+      },
+      {
+        "section_name": "G. General Operating and Other Direct Costs",
+        "section_parent": "9. Proposal Budget",
+        "instructions": "Specify operational costs ensuring: 1) Total ≤6.5% of budget 2) Clear justification for each item 3) Cost-efficiency measures. For <1.5% of direct costs, consolidate. Mark % as n/a for CERF.",
+        "mandatory": true,
+        "format_type": "table",
+        "columns": [
+          {
+            "name": "Budget Line Description",
+            "type": "fillable"
+          },
+          {
+            "name": "Remarks (max. 1,500 characters)",
+            "type": "fillable"
+          },
+          {
+            "name": "Unit description",
+            "type": "fillable"
+          },
+          {
+            "name": "Unit Quantity:",
+            "type": "fillable"
+          },
+          {
+            "name": "Unit Cost",
+            "type": "fillable"
+          },
+          {
+            "name": "Duration",
+            "type": "fillable"
+          },
+          {
+            "name": "% Charged to CERF",
+            "type": "fillable"
+          },
+          {
+            "name": "Total cost (USD)",
+            "type": "fillable"
+          }
+        ]
+      },
+      {
+        "section_name": "10. Budget by Sector/Cluster",
+        "section_parent": "",
+        "instructions": "Allocate the budget across sectors/clusters showing: 1) Percentage for each 2) Alignment with response priorities 3) Consistency with beneficiary targeting. Only complete for multi-sector projects.",
+        "mandatory": true,
+        "format_type": "table",
+        "columns": [
+          {
+            "name": "Sector/Cluster Name",
+            "type": "pre-populated"
+          },
+          {
+            "name": "Percentage of Budget Requested",
+            "type": "fillable"
+          },
+          {
+            "name": "Budget Value",
+            "type": "pre-populated"
+          }
+        ]
+      },
+      {
+        "section_name": "11. Budget Value References",
+        "section_parent": "",
+        "instructions": "Cross-reference budget allocations to key programming areas: 1) Protection 2) GBV 3) Gender 4) Disability 5) CVA. Ensure values match detailed budget sections.",
+        "mandatory": true,
+        "format_type": "table",
+        "columns": [
+          {
+            "name": "Category",
+            "type": "select",
+            "selectvalue": [
+              "Programming - Protection",
+              "Programming - GBV",
+              "Programming - Gender Equality",
+              "Programming - Persons with Disabilities",
+              "Cash and Voucher Assistance (CVA)"
+            ]
+          },
+          {
+            "name": "Value",
+            "type": "pre-populated"
+          }
+        ]
+      },
+      {
+        "section_name": "12. Localization",
+        "section_parent": "",
+        "format_type": "text",
+        "word_limit": 150,
+        "instructions": "Demonstrate localization by: 1) Listing local/national partners 2) Showing percentage of funds to local actors (target ≥25%) 3) Describing capacity building 4) Explaining community involvement in design. Use specific data and examples.",
+        "mandatory": true
+      },
+      {
+        "section_name": "13.1. Protection Mainstreaming and Integration",
+        "section_parent": "13. Protection",
+        "format_type": "text",
+        "word_limit": 350,
+        "instructions": "Explain protection mainstreaming by: 1) Identifying risks addressed 2) Describing mitigation measures across sectors 3) Linking to cluster standards 4) Showing staff capacity. Reference GPC guidelines.",
+        "mandatory": true
+      },
+      {
+        "section_name": "13.2. Protection Budget Value",
+        "section_parent": "13. Protection",
+        "format_type": "table",
+        "columns": [
+          {
+            "name": "Sector/Cluster",
+            "type": "pre-populated"
+          },
+          {
+            "name": "Sector Budget",
+            "type": "number"
+          },
+          {
+            "name": "Protection Budget Percent",
+            "type": "percentage"
+          },
+          {
+            "name": "Protection Budget Value",
+            "type": "number"
+          },
+          {
+            "name": "Protection People Target",
+            "type": "number"
+          }
+        ],
+        "instructions": "Calculate protection-specific allocations by: 1) Sector 2) Percentage for targeted protection (exclude mainstreaming) 3) Dollar value 4) Beneficiary numbers. Enter 0 for sectors without targeted protection.",
+        "mandatory": true
+      },
+      {
+        "section_name": "13.3. Protection Budget Value Estimation Approach",
+        "section_parent": "13. Protection",
+        "format_type": "text",
+        "word_limit": 350,
+        "instructions": "Explain the protection budgeting methodology: 1) Cost categories included 2) Assumptions made 3) Alignment with cluster standards 4) Verification methods. Be specific about calculation models.",
+        "mandatory": true
+      },
+      {
+        "section_name": "13.4. Gender-Based Violence (GBV) Programming Marker",
+        "section_parent": "13. Protection",
+        "format_type": "text",
+        "word_limit": 350,
+        "instructions": "Indicate GBV component status (Yes/No). If Yes: 1) Describe interventions 2) Reference IASC guidelines. If No: Justify exclusion based on 1) Risk assessment 2) Alternative approaches 3) Referral mechanisms.",
+        "mandatory": true
+      },
+      {
+        "section_name": "13.5. Considerations for Protection from Gender-Based Violence",
+        "section_parent": "13. Protection",
+        "format_type": "text",
+        "word_limit": 350,
+        "instructions": "Detail GBV integration by: 1) Risk analysis 2) Prevention measures 3) Response services 4) Staff training. Reference the GBV Accountability Framework. If no GBV component, explain alternative protection strategies.",
+        "mandatory": true
+      },
+      {
+        "section_name": "13.6. Gender-Based Violence (GBV) Budget Value",
+        "section_parent": "13. Protection",
+        "format_type": "table",
+        "columns": [
+          {
+            "name": "Sector/Cluster",
+            "type": "pre-populated"
+          },
+          {
+            "name": "Sector Budget",
+            "type": "number"
+          },
+          {
+            "name": "GBV Budget Percent",
+            "type": "percentage"
+          },
+          {
+            "name": "GBV Budget Value",
+            "type": "number"
+          },
+          {
+            "name": "GBV People Target",
+            "type": "number"
+          }
+        ],
+        "instructions": "Complete only if GBV is included. Show: 1) Sector-specific GBV allocations 2) Percentage calculations 3) Dollar values 4) Target beneficiaries. Ensure consistency with protection budget above.",
+        "mandatory": false
+      },
+      {
+        "section_name": "13.7. Gender-Based Violence Budget Value Estimation Approach",
+        "section_parent": "13. Protection",
+        "format_type": "text",
+        "word_limit": 350,
+        "instructions": "If GBV component exists, explain: 1) Costing methodology 2) Staffing requirements 3) Service delivery costs 4) Monitoring expenses. Reference standard GBV intervention packages if used.",
+        "mandatory": false
+      },
+      {
+        "section_name": "13.8. Target GBV Funding for WLOs",
+        "section_parent": "13. Protection",
+        "format_type": "text",
+        "word_limit": 350,
+        "instructions": "If GBV component exists, describe: 1) Engagement with women-led organizations 2) Percentage of GBV funds to WLOs 3) Capacity building components 4) Partnership modalities. Explain any challenges in meeting targets.",
+        "mandatory": false
+      },
+      {
+        "section_name": "13.9. Involvement in Women-Led Organizations (WLO) in GBV programming",
+        "section_parent": "13. Protection",
+        "format_type": "text",
+        "word_limit": 100,
+        "instructions": "If GBV component exists, briefly explain: 1) WLO partners involved 2) Their roles 3) Value added 4) Any constraints in partnering with WLOs.",
+        "mandatory": false
+      },
+      {
+        "section_name": "13.10. Accountability to Affected Populations (AAP), Participation and Inclusion in Project Planning and Design",
+        "section_parent": "13. Protection",
+        "format_type": "text",
+        "word_limit": 100,
+        "instructions": "Describe AAP mechanisms including: 1) Consultation methods 2) Feedback channels 3) Participation in design 4) Adaptation processes. Highlight inclusion of women, children, PWD and marginalized groups.",
+        "mandatory": true
+      },
+      {
+        "section_name": "13.11. AAP Feedback and Complaints Mechanisms",
+        "section_parent": "13. Protection",
+        "format_type": "text",
+        "word_limit": 100,
+        "instructions": "Detail the CFM system with: 1) Access points 2) Confidentiality measures 3) Response timelines 4) Community awareness. Reference PSEA linkages if applicable.",
+        "mandatory": true
+      },
+      {
+        "section_name": "13.12. Prevention of Sexual Exploitation and Abuse (PSEA)",
+        "section_parent": "13. Protection",
+        "format_type": "text",
+        "word_limit": 100,
+        "instructions": "Outline PSEA measures: 1) Staff/partner training 2) Community awareness 3) Reporting channels 4) Investigation procedures. Note coordination with PSEA Network if active.",
+        "mandatory": true
+      },
+      {
+        "section_name": "14.1. Gender and Age Marker (GAM) reference",
+        "section_parent": "14. Gender Equality",
+        "format_type": "text",
+        "word_limit": 100,
+        "instructions": "Provide the GAM code from the IASC marker tool (https://www.iascgenderwithagemarker.com) and briefly explain the rating based on: 1) Gender analysis 2) Targeted actions 3) Expected impacts.",
+        "mandatory": true
+      },
+      {
+        "section_name": "14.2. Gender equality programme focus",
+        "section_parent": "14. Gender Equality",
+        "format_type": "text",
+        "word_limit": 350,
+        "instructions": "Describe gender equality integration through: 1) Needs assessment findings 2) Specific interventions 3) Staff capacity 4) Monitoring indicators. Highlight AGD policy implementation.",
+        "mandatory": true
+      },
+      {
+        "section_name": "14.3. Considerations for gender equality",
+        "section_parent": "14. Gender Equality",
+        "format_type": "text",
+        "word_limit": 350,
+        "instructions": "Explain gender equality approach by: 1) Addressing specific barriers 2) Empowering women/girls 3) Engaging men/boys 4) Including sexual/gender minorities. Provide concrete examples from project design.",
+        "mandatory": true
+      },
+      {
+        "section_name": "14.4. Gender Equality budget value",
+        "section_parent": "14. Gender Equality",
+        "format_type": "table",
+        "columns": [
+          {
+            "name": "Sector Name",
+            "type": "pre-populated"
+          },
+          {
+            "name": "Sector Budget",
+            "type": "number"
+          },
+          {
+            "name": "Gender Equality Budget Percent",
+            "type": "percentage"
+          },
+          {
+            "name": "Gender Equality Budget Value",
+            "type": "number"
+          },
+          {
+            "name": "Gender Equality People Target",
+            "type": "number"
+          }
+        ],
+        "instructions": "Complete if gender equality is a component. Show: 1) Sector allocations 2) Percentage calculations 3) Dollar values 4) Target beneficiaries. Differentiate from GBV budgets if both exist.",
+        "mandatory": false
+      },
+      {
+        "section_name": "14.5. Gender equality budget value estimation approach",
+        "section_parent": "14. Gender Equality",
+        "format_type": "number",
+        "instructions": "If gender equality component exists, explain: 1) Costing methodology 2) Staffing requirements 3) Activity-specific costs 4) Monitoring components. Reference any standard gender budgeting tools used.",
+        "mandatory": false
+      },
+      {
+        "section_name": "15.1. Disability marker",
+        "section_parent": "15. Person with Disabilities",
+        "format_type": "text",
+        "word_limit": 75,
+        "instructions": "Indicate disability inclusion status. If included: 1) Reference CRPD principles 2) Describe accessibility measures 3) Note targeted interventions. If not included: Justify based on 1) Alternative approaches 2) Referral systems.",
+        "mandatory": false
+      },
+      {
+        "section_name": "15.2. Considerations for disability inclusion",
+        "section_parent": "15. Person with Disabilities",
+        "format_type": "text",
+        "word_limit": 350,
+        "instructions": "If disability component exists, detail: 1) Accessibility adaptations 2) Targeted services 3) Staff training 4) Partnership with OPDs. Highlight protection measures for women/girls with disabilities.",
+        "mandatory": false
+      },
+      {
+        "section_name": "15.3. Organizations of Persons with Disabilities (OPDs)",
+        "section_parent": "15. Person with Disabilities",
+        "format_type": "text",
+        "word_limit": 350,
+        "instructions": "If disability component exists, describe: 1) OPD partners 2) Their roles 3) Capacity building 4) Consultation processes. Explain any challenges in OPD engagement.",
+        "mandatory": false
+      },
+      {
+        "section_name": "15.4. Persons with Disabilities budget value",
+        "section_parent": "15. Person with Disabilities",
+        "format_type": "table",
+        "columns": [
+          {
+            "name": "Sector Name",
+            "type": "pre-populated"
+          },
+          {
+            "name": "Sector Budget",
+            "type": "number"
+          },
+          {
+            "name": "Disability Budget Percent",
+            "type": "percentage"
+          },
+          {
+            "name": "Disability Budget Value",
+            "type": "number"
+          }
+        ],
+        "instructions": "Complete if disability component exists. Show: 1) Sector allocations 2) Percentage calculations 3) Dollar values. Differentiate between accessibility costs and targeted interventions.",
+        "mandatory": false
+      },
+      {
+        "section_name": "15.5. Persons with Disabilities budget value estimation approach",
+        "section_parent": "15. Person with Disabilities",
+        "format_type": "text",
+        "word_limit": 350,
+        "instructions": "If disability component exists, explain: 1) Costing methodology 2) Accessibility investments 3) Staff training costs 4) Monitoring components. Reference any disability inclusion budgeting tools used.",
+        "mandatory": false
+      },
+      {
+        "section_name": "16.1. Cash and Voucher Assistance (CVA)",
+        "section_parent": "16. CASH",
+        "format_type": "text",
+        "word_limit": 350,
+        "instructions": "Specify CVA use (Yes/No). If Yes: 1) Describe modality 2) Target beneficiaries 3) Amounts 4) Delivery mechanism 5) Linkages to social protection. If No: Justify based on 1) Market analysis 2) Alternative modalities 3) Risks.",
+        "mandatory": true
+      },
+      {
+        "section_name": "17.1 Coordination Summary",
+        "section_parent": "17 Implementation and Coordination Arrangements",
+        "format_type": "text",
+        "word_limit": 150,
+        "instructions": "Explain coordination with: 1) Other CERF-funded projects 2) Cluster/sector groups 3) Government counterparts 4) Other actors. Highlight complementarity and avoidance of duplication.",
+        "mandatory": true
+      },
+      {
+        "section_name": "17.2 Implementation Summary",
+        "section_parent": "17 Implementation and Coordination Arrangements",
+        "format_type": "text",
+        "word_limit": 150,
+        "instructions": "Describe implementation approach covering: 1) Partner roles 2) Geographic coverage 3) Operational challenges 4) Alignment with HRP/cluster strategies. Emphasize coordination mechanisms.",
+        "mandatory": true
+      },
+      {
+        "section_name": "17.3 Access",
+        "section_parent": "17 Implementation and Coordination Arrangements",
+        "format_type": "text",
+        "word_limit": 350,
+        "instructions": "Analyze access considerations: 1) Physical access constraints 2) Negotiation processes 3) Security measures 4) Contingency plans. Reference any access monitoring systems.",
+        "mandatory": true
+      },
+      {
+        "section_name": "17.4 Risk Management",
+        "section_parent": "17 Implementation and Coordination Arrangements",
+        "instructions": "Assess key risks using: 1) Risk matrix methodology 2) Likelihood/impact ratings 3) Mitigation measures 4) Contingency planning. Focus on operational and contextual risks.",
+        "format_type": "table",
+        "columns": [
+          "Risk Factor",
+          "Consequence (Rank 1 to 6)",
+          "Likelihood & Timeline",
+          "Risk Treatment Plan"
+        ],
+        "mandatory": true
+      },
+      {
+        "section_name": "17.5 Exit Strategy and Sustainability",
+        "section_parent": "17 Implementation and Coordination Arrangements",
+        "format_type": "text",
+        "word_limit": 350,
+        "instructions": "Outline transition planning including: 1) Capacity transfer 2) Handover processes 3) Sustainability measures 4) Linkages to longer-term programs. Specify any follow-on funding anticipated.",
+        "mandatory": true
+      },
+      {
+        "section_name": "18. Subgrants and sub-partners",
+        "format_type": "table",
+        "columns": [
+          {
+            "name": "Sub-partner Name",
+            "type": "text",
+            "mandatory": false
+          },
+          {
+            "name": "Sub-partner Type",
+            "type": "select",
+            "optional": true
+          },
+          {
+            "name": "Budget",
+            "type": "number"
+          },
+          {
+            "name": "Activities",
+            "type": "select",
+            "guidance": "select from logframe (optional)"
+          }
+        ],
+        "instructions": "List all sub-partners with: 1) Organization details 2) Type (NNGO/INGO/etc.) 3) Budget allocation 4) Linked activities. Include capacity assessment information if available."
+      }
+    ],
+    "headquarters_info": {
+      "note": "UNHCR Headquarters Contact (for official correspondence)",
+      "address": "Case Postale 2500, CH-1211 Genève 2 Dépôt, Switzerland",
+      "contact": "Tel: +41 22 739 81 11 • Fax: +41 22 739 73 23 • E-mail: hq@unhcr.org • Internet: http://www.unhcr.org"
+    }
+  }

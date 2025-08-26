@@ -5,6 +5,8 @@ import importlib
 import json
 import logging
 
+from fastapi import HTTPException
+
 # Configure logging
 logger = logging.getLogger(__name__)
 
@@ -137,27 +139,83 @@ origins = [
 
 # --- Proposal Configuration ---
 
-# Construct an absolute path to the configuration file.
-# This makes the path robust, regardless of the current working directory.
+# Construct a robust path to the templates directory.
 BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-CONFIG_PATH = os.path.join(BACKEND_DIR, "templates/unhcr_cerf_proposal_template.json")
+TEMPLATES_DIR = os.path.join(BACKEND_DIR, "templates")
 
-# Load the proposal template data from the JSON file.
-try:
-    with open(CONFIG_PATH, "r", encoding="utf-8") as file:
-        proposal_data = json.load(file)
-        logger.info(f"Proposal template loaded successfully from {CONFIG_PATH}")
-except FileNotFoundError:
-    logger.error(f"Proposal template file not found at: {CONFIG_PATH}")
-    proposal_data = {"sections": []}
-except json.JSONDecodeError:
-    logger.error(f"Error decoding JSON from proposal template file: {CONFIG_PATH}")
-    proposal_data = {"sections": []}
+def get_available_templates():
+    """
+    Scans the templates directory, reads each template file, and returns a
+    dictionary mapping donor names to their corresponding template filename.
+    This supports a one-to-many relationship between templates and donors.
+    """
+    templates_map = {}
+    if not os.path.isdir(TEMPLATES_DIR):
+        logger.error(f"Templates directory not found at: {TEMPLATES_DIR}")
+        return templates_map
 
-# Extract the list of section names from the loaded JSON.
-SECTIONS = [section.get("section_name") for section in proposal_data.get("sections", [])]
+    for filename in os.listdir(TEMPLATES_DIR):
+        if filename.endswith('.json') and os.path.isfile(os.path.join(TEMPLATES_DIR, filename)):
+            template_path = os.path.join(TEMPLATES_DIR, filename)
+            try:
+                with open(template_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
 
-if not SECTIONS:
-    logger.error("No sections were loaded from the proposal template JSON.")
+                # Ensure the loaded data is a dictionary, skipping files like sample_templates.json
+                if not isinstance(data, dict):
+                    logger.info(f"Skipping non-dictionary template file: {filename}")
+                    continue
+
+                # Handle multiple donors per template
+                if "donors" in data and isinstance(data["donors"], list):
+                    for donor_name in data["donors"]:
+                        templates_map[donor_name] = filename
+                # Fallback to single donor field for backward compatibility
+                elif "donor" in data:
+                    templates_map[data["donor"]] = filename
+                else:
+                    # Fallback for templates without a 'donors' or 'donor' field
+                    base_name = filename.replace(".json", "").replace("_", " ").title()
+                    templates_map[base_name] = filename
+                    logger.warning(f"Template '{filename}' is missing a 'donors' or 'donor' field. Falling back to filename.")
+
+            except (json.JSONDecodeError, IOError) as e:
+                logger.error(f"Failed to read or parse template file: {filename}. Error: {e}")
+
+    # Ensure "Not Yet Specified" option points to the default UNHCR template.
+    unhcr_template_file = "unhcr_proposal_template.json"
+    if os.path.isfile(os.path.join(TEMPLATES_DIR, unhcr_template_file)):
+        templates_map["Not Yet Specified"] = unhcr_template_file
+
+    return templates_map
+
+def load_proposal_template(template_name: str):
+    """
+    Loads a specific proposal template by its filename.
+    """
+    # Validate that the template name is one of the available template files to prevent
+    # directory traversal attacks.
+    available_templates = get_available_templates()
+    if template_name not in available_templates.values():
+        logger.error(f"Invalid or non-existent template requested: {template_name}")
+        raise HTTPException(status_code=400, detail=f"Template '{template_name}' not found.")
+
+    template_path = os.path.join(TEMPLATES_DIR, template_name)
+
+    try:
+        with open(template_path, "r", encoding="utf-8") as file:
+            proposal_data = json.load(file)
+            logger.info(f"Proposal template loaded successfully from {template_path}")
+            return proposal_data
+    except FileNotFoundError:
+        logger.error(f"Proposal template file not found at: {template_path}")
+        raise HTTPException(status_code=404, detail="Proposal template file not found.")
+    except json.JSONDecodeError:
+        logger.error(f"Error decoding JSON from proposal template file: {template_path}")
+        raise HTTPException(status_code=500, detail="Error parsing proposal template file.")
+
+# The global SECTIONS variable has been removed to prevent circular dependencies
+# during module initialization. Endpoints or functions that need the list of sections
+# should now load a specific template on-demand.
 
  

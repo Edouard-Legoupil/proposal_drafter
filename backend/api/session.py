@@ -29,7 +29,8 @@ async def store_base_data(request: BaseDataRequest, current_user: dict = Depends
     data = {
         "form_data": request.form_data,
         "project_description": request.project_description,
-        "user_id": current_user["user_id"]
+        "user_id": current_user["user_id"],
+        "template_name": request.template_name
     }
     # Store in Redis with a 1-hour expiration (3600 seconds).
     redis_client.setex(session_id, 3600, json.dumps(data))

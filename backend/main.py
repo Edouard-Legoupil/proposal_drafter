@@ -19,8 +19,12 @@ import sys
 # )
 
 # --- Logging Configuration ---
+log_dir = Path(__file__).parent / "log"
+log_dir.mkdir(exist_ok=True)
+log_file = log_dir / "app.log"
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler = logging.FileHandler("log/app.log")
+handler = logging.FileHandler(log_file)
 handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 logging.getLogger().addHandler(handler)
 
@@ -78,7 +82,8 @@ app.include_router(documents.router, prefix="/api", tags=["Documents"])
 app.include_router(health.router, tags=["Health & Debugging"])
 
 # --- Serve React Frontend ---
-frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend")
+frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))
+#frontend_path = os.path.join(os.path.dirname(__file__), "..", "/frontend/dist")
 if os.path.isdir(frontend_path):
     # Serve static assets first
     app.mount("/assets", StaticFiles(directory=os.path.join(frontend_path, "assets")), name="assets")
@@ -129,12 +134,20 @@ async def startup_event():
     """
     Performs application startup tasks, such as initializing the background scheduler.
     """
-   # if not test_connection():
-        # Optional: fail fast or just log
-    #    raise RuntimeError("Database connection failed at startup")
-    print("Application is starting up...")
+    logging.info("Application is starting up...")
+    
+    # Debug: Check database configuration
+   # logging.info(f"Database config - on_gcp: {on_gcp}, host: {db_host}, db: {db_name}")
+   # logging.info(f"DB username: {db_username}, password set: {bool(db_password)}")
+    
+    # Test connection
+    #if test_connection():
+    #    logging.info("✅ Database connection test passed")
+    #else:
+    #    logging.error("❌ Database connection test failed")
+        # Don't raise error immediately, let health checks handle it
     setup_scheduler()
-    print("Background scheduler has been started.")
+    logging.info("Background scheduler has been started.")
 
 
 # --- Main Execution Block ---
