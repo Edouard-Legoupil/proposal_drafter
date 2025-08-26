@@ -145,21 +145,49 @@ TEMPLATES_DIR = os.path.join(BACKEND_DIR, "templates")
 
 def get_available_templates():
     """
-    Scans the templates directory and returns a list of available .json template files.
+    Scans the templates directory, reads each template file, and returns a
+    dictionary mapping the donor name from the template's content to its filename.
     """
+    templates_map = {}
     if not os.path.isdir(TEMPLATES_DIR):
         logger.error(f"Templates directory not found at: {TEMPLATES_DIR}")
-        return []
+        return templates_map
 
-    return [f for f in os.listdir(TEMPLATES_DIR) if f.endswith('.json') and os.path.isfile(os.path.join(TEMPLATES_DIR, f))]
+    for filename in os.listdir(TEMPLATES_DIR):
+        if filename.endswith('.json') and os.path.isfile(os.path.join(TEMPLATES_DIR, filename)):
+            template_path = os.path.join(TEMPLATES_DIR, filename)
+            try:
+                with open(template_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    # The 'donor' key in the JSON file holds the display name.
+                    donor_name = data.get("donor")
+                    if donor_name:
+                        templates_map[donor_name] = filename
+                    else:
+                        # Fallback for templates without a 'donor' field; use the filename.
+                        # E.g., "unhcr_proposal_template.json" -> "unhcr_proposal_template"
+                        base_name = filename.replace(".json", "").replace("_", " ").title()
+                        templates_map[base_name] = filename
+                        logger.warning(f"Template '{filename}' is missing a 'donor' field. Falling back to filename.")
+            except (json.JSONDecodeError, IOError) as e:
+                logger.error(f"Failed to read or parse template file: {filename}. Error: {e}")
+
+    # Add a "Not Yet Specified" option pointing to the default UNHCR template.
+    # This provides a fallback for users who haven't selected a specific donor.
+    unhcr_template_file = "unhcr_proposal_template.json"
+    if unhcr_template_file in os.listdir(TEMPLATES_DIR):
+        templates_map["Not Yet Specified"] = unhcr_template_file
+
+    return templates_map
 
 def load_proposal_template(template_name: str):
     """
     Loads a specific proposal template by its filename.
     """
-    # Validate that the template name is in the list of available templates to prevent
+    # Validate that the template name is one of the available template files to prevent
     # directory traversal attacks.
-    if template_name not in get_available_templates():
+    available_templates = get_available_templates()
+    if template_name not in available_templates.values():
         logger.error(f"Invalid or non-existent template requested: {template_name}")
         raise HTTPException(status_code=400, detail=f"Template '{template_name}' not found.")
 
