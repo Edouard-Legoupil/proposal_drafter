@@ -7,6 +7,7 @@ import remarkGfm from 'remark-gfm'
 
 import Base from '../../components/Base/Base'
 import CommonButton from '../../components/CommonButton/CommonButton'
+import MultiSelectModal from '../../components/MultiSelectModal/MultiSelectModal'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
 
@@ -35,18 +36,23 @@ export default function Chat (props)
 
         const [userPrompt, setUserPrompt] = useState("")
 
+        const [isModalOpen, setIsModalOpen] = useState(false)
         const [form_expanded, setFormExpanded] = useState(true)
         const [formData, setFormData] = useState({
-
-                "Project title": {
+                "Project Draft Short name": {
                         mandatory: true,
                         value: ""
                 },
                 "Main Outcome": {
                         mandatory: true,
+                        value: [],
+                        type: 'multiselect'
+                },
+                "Beneficiaries Profile": {
+                        mandatory: true,
                         value: ""
                 },
-                "Secondary Outcome": {
+                "Potential Implementing Partner": {
                         mandatory: false,
                         value: ""
                 },
@@ -58,24 +64,16 @@ export default function Chat (props)
                         mandatory: true,
                         value: ""
                 },
-                "Beneficiaries Profile": {
+                "Budget Range": {
                         mandatory: true,
                         value: ""
                 },
                 "Duration": {
                         mandatory: true,
                         value: ""
-                },            
-                "Budget Range": {
-                        mandatory: true,
-                        value: ""
                 },
                 "Targeted Donor": {
                         mandatory: true,
-                        value: ""
-                },
-                "Potential Implementing Partner": {
-                        mandatory: false,
                         value: ""
                 }
         })
@@ -94,13 +92,88 @@ export default function Chat (props)
                 if(userPrompt) {
                         setButtonEnable(true)
 
-                        for (const property in formData)
-                                if(!formData[property].value && !(property === "Secondary Outcome"))
-                                        setButtonEnable(false)
+                        for (const property in formData) {
+                                const field = formData[property];
+                                if (field.mandatory) {
+                                        if (Array.isArray(field.value) && field.value.length === 0) {
+                                                setButtonEnable(false);
+                                                return;
+                                        } else if (!field.value) {
+                                                setButtonEnable(false);
+                                                return;
+                                        }
+                                }
+                        }
                 }
                 else
                         setButtonEnable(false)
         }, [userPrompt, formData])
+
+        const renderFormField = (label) => {
+                const field = formData[label];
+                if (!field) return null;
+        
+                const datalistId = `datalist_${label.replace(/\s/g, '_')}`;
+                const options = {
+                        "Main Outcome": ["OA1-Access/Documentation", "OA2-Status", "OA3-Protection Policy", "OA4-GBV", "OA5-Child protection", "OA6-Justice", "OA7-Community", "OA8-Well-Being", "OA9-Housing", "OA10-Health", "OA11-Education", "OA12-WASH", "OA13-Livelihoods", "OA14-Return", "OA15-Resettlement", "OA16-Integrate"],
+                        "Duration": ["1 month", "3 months", "6 months", "12 months", "18 months", "24 months", "30 months", "36 months"],
+                        "Targeted Donor": Object.keys(templateConfig),
+                        "Budget Range": ["50k$", "100k$","250k$","500k$","1M$","2M$","5M$","10M$","15M$","25M$"],
+                        "Geographical Scope": ["One Area", "One Country Operation", "Multiple Country","One Region","Route-Based-Approach","Global"],
+                }[label] || [];
+        
+                return (
+                        <div key={label} className='Chat_form_inputContainer'>
+                                <label className='Chat_form_inputLabel' htmlFor={`Chat_form_input_${label.replace(/\s/g, '')}`}>
+                                        <div className="tooltip-container">
+                                                {label}
+                                                <span className={`Chat_form_input_mandatoryAsterisk ${!field.mandatory ? "hidden" : ""}`}>*</span>
+                                                {label === "Project Draft Short name" && <span className="tooltip-text">This will be the name used to story your draft on this system</span>}
+                                        </div>
+                                </label>
+        
+                                {field.type === 'multiselect' ? (
+                                        <>
+                                                <button type="button" className='Chat_form_input' onClick={() => setIsModalOpen(true)}>
+                                                        {field.value.length > 0 ? field.value.join(', ') : `Select ${label}`}
+                                                </button>
+                                                <MultiSelectModal
+                                                        isOpen={isModalOpen}
+                                                        onClose={() => setIsModalOpen(false)}
+                                                        options={options}
+                                                        selectedOptions={field.value}
+                                                        onSelectionChange={(newSelection) => handleFormInput({ target: { value: newSelection } }, label)}
+                                                />
+                                        </>
+                                ) : options.length > 0 ? (
+                                        <>
+                                                <input
+                                                        list={datalistId}
+                                                        className='Chat_form_input'
+                                                        id={`Chat_form_input_${label.replace(/\s/g, '')}`}
+                                                        placeholder={`Enter or select ${label}`}
+                                                        value={field.value}
+                                                        onChange={e => handleFormInput(e, label)}
+                                                />
+                                                <datalist id={datalistId}>
+                                                        {options.map((option, idx) => (
+                                                                <option key={idx} value={option} />
+                                                        ))}
+                                                </datalist>
+                                        </>
+                                ) : (
+                                        <input
+                                                type="text"
+                                                className='Chat_form_input'
+                                                id={`Chat_form_input_${label.replace(/\s/g, '')}`}
+                                                placeholder={`Enter ${label}`}
+                                                value={field.value}
+                                                onChange={e => handleFormInput(e, label)}
+                                        />
+                                )}
+                        </div>
+                );
+        };
 
         const [proposal, setProposal] = useState({})
         const [generateLoading, setGenerateLoading] = useState(false)
@@ -468,7 +541,7 @@ export default function Chat (props)
                         const blob = await response.blob();
                         const link = document.createElement('a');
                         link.href = URL.createObjectURL(blob);
-                        link.download = formData["Project title"].value ?? "proposal" + "." + format;
+                link.download = formData["Project Draft Short name"].value ?? "proposal" + "." + format;
                         document.body.appendChild(link);
                         link.click();
                         link.remove();
@@ -494,7 +567,9 @@ export default function Chat (props)
                 })
 
                 if(response.ok)
-                        getContent()
+                {
+                        await getContent()
+                }
                 else if(response.status === 401)
                 {
                         sessionStorage.setItem("session_expired", "Session expired. Please login again.")
@@ -536,6 +611,7 @@ export default function Chat (props)
                                                 </div>
 
                                                 <div className="Chat_inputArea">
+                                                        {renderFormField("Project Draft Short name")}
                                                         <textarea value={userPrompt} onChange={e => setUserPrompt(e.target.value)} placeholder='Provide as much details as possible on your initial project idea!' className='Chat_inputArea_prompt' />
 
                                                         <span onClick={() => setFormExpanded(p => !p)} className={`Chat_inputArea_additionalDetails ${form_expanded && "expanded"}`}>
@@ -543,103 +619,36 @@ export default function Chat (props)
                                                                 <img src={arrow} alt="Arrow" />
                                                         </span>
 
-                                                        {form_expanded ? <form className='Chat_form'>
-
-
-                                                                {Object.entries(formData).map((fieldObj, i) => {
-                                                                const label = fieldObj[0];
-                                                                    const isDropdown =
-                                                                        label === "Main Outcome" ||
-                                                                        label === "Secondary Outcome" ||
-                                                                        label === "Duration" ||
-                                                                        label === "Targeted Donor" ||
-                                                                        label === "Budget Range" ||
-                                                                        label === "Geographical Scope" ||
-                                                                        label === "Duration";
-                                                                const datalistId = `datalist_${label.replaceAll(' ', '_')}`;
-                                                                const options = label === "Main Outcome"
-                                                                        ? [    "OA1-Access/Documentation",
-                                                                               "OA2-Status",
-                                                                                "OA3-Protection Policy",
-                                                                                "OA4-GBV",
-                                                                                "OA5-Child protection",
-                                                                                "OA6-Justice",
-                                                                                "OA7-Community",
-                                                                                "OA8-Well-Being",
-                                                                                "OA9-Housing",
-                                                                                "OA10-Health",
-                                                                                "OA11-Education",
-                                                                                "OA12-WASH",
-                                                                                "OA13-Livelihoods",
-                                                                                "OA14-Return",
-                                                                                "OA15-Resettlement",
-                                                                                "OA16-Integrate"  ]
-                                                                        : label === "Secondary Outcome"
-                                                                        ? [    "OA1-Access/Documentation",
-                                                                               "OA2-Status",
-                                                                                "OA3-Protection Policy",
-                                                                                "OA4-GBV",
-                                                                                "OA5-Child protection",
-                                                                                "OA6-Justice",
-                                                                                "OA7-Community",
-                                                                                "OA8-Well-Being",
-                                                                                "OA9-Housing",
-                                                                                "OA10-Health",
-                                                                                "OA11-Education",
-                                                                                "OA12-WASH",
-                                                                                "OA13-Livelihoods",
-                                                                                "OA14-Return",
-                                                                                "OA15-Resettlement",
-                                                                                "OA16-Integrate"  ]
-                                                                        : label === "Duration"
-                                                                        ? ["1 month", "3 months", "6 months", "12 months", "18 months", "24 months", "30 months", "36 months"]
-                                                                        : label === "Targeted Donor"
-                                                                        ? Object.keys(templateConfig)
-                                                                        : label === "Budget Range"
-                                                                        ? ["50k$", "100k$","250k$","500k$","1M$","2M$","5M$","10M$","15M$","25M$"]         
-                                                                        : label === "Geographical Scope"
-                                                                        ? ["One Area", "One Country Operation", "Multiple Country","One Region","Route-Based-Approach","Global"]         
-                                                                        : [];
-
-                                                                return (
-                                                                        <div key={i} className='Chat_form_inputContainer'>
-                                                                        <label className='Chat_form_inputLabel' htmlFor={`Chat_form_input_${label.replaceAll(' ', '')}`}>
-                                                                                {label}
-                                                                                <span className={`Chat_form_input_mandatoryAsterisk ${!fieldObj[1].mandatory ? "hidden" : ""}`}>*</span>
-                                                                        </label>
-
-                                                                        {isDropdown ? (
-                                                                                <>
-                                                                                <input
-                                                                                        list={datalistId}
-                                                                                        className='Chat_form_input'
-                                                                                        id={`Chat_form_input_${label.replaceAll(' ', '')}`}
-                                                                                        placeholder={`Enter or select ${label}`}
-                                                                                        value={fieldObj[1].value}
-                                                                                        onChange={e => handleFormInput(e, label)}
-                                                                                />
-                                                                                <datalist id={datalistId}>
-                                                                                        {options.map((option, idx) => (
-                                                                                        <option key={idx} value={option} />
-                                                                                        ))}
-                                                                                </datalist>
-                                                                                </>
-                                                                        ) : (
-                                                                                <input
-                                                                                type="text"
-                                                                                className='Chat_form_input'
-                                                                                id={`Chat_form_input_${label.replaceAll(' ', '')}`}
-                                                                                placeholder={`Enter ${label}`}
-                                                                                value={fieldObj[1].value}
-                                                                                onChange={e => handleFormInput(e, label)}
-                                                                                />
-                                                                        )}
+                                                        {form_expanded ?
+                                                                <form className='Chat_form'>
+                                                                        <div className='Chat_form_group'>
+                                                                                <div className="tooltip-container">
+                                                                                        <h3 className='Chat_form_group_title'>Identify Potential Interventions based on policies, strategies and past evaluation recommendations</h3>
+                                                                                        <span className="tooltip-text">to leverage knowledge of  policies, strategies and past evaluation recommendations</span>
+                                                                                </div>
+                                                                                {renderFormField("Main Outcome")}
+                                                                                {renderFormField("Beneficiaries Profile")}
+                                                                                {renderFormField("Potential Implementing Partner")}
                                                                         </div>
-                                                                );
-                                                                })}
-
-
-                                                        </form> : ""}
+                                                                        <div className='Chat_form_group'>
+                                                                                <div className="tooltip-container">
+                                                                                        <h3 className='Chat_form_group_title'>Define Field context based on Situation Analysis and Needs Assessment</h3>
+                                                                                        <span className="tooltip-text">to leverage knowledge of Situation Analysis and Needs Assessment</span>
+                                                                                </div>
+                                                                                {renderFormField("Geographical Scope")}
+                                                                                {renderFormField("Country / Location(s)")}
+                                                                        </div>
+                                                                        <div className='Chat_form_group'>
+                                                                                <div className="tooltip-container">
+                                                                                        <h3 className='Chat_form_group_title'>Tailor funding request from Donor profile and content submission requirement</h3>
+                                                                                        <span className="tooltip-text">to leverage knowledge of Donor profile and content submission formal requirement</span>
+                                                                                </div>
+                                                                                {renderFormField("Budget Range")}
+                                                                                {renderFormField("Duration")}
+                                                                                {renderFormField("Targeted Donor")}
+                                                                        </div>
+                                                                </form> : ""
+                                                        }
 
                                                         <div className="Chat_inputArea_buttonContainer">
                                                                 <CommonButton onClick={handleGenerateClick} icon={generateIcon} label={generateLabel} loading={generateLoading} loadingLabel={generateLabel === "Generate" ? "Generating" : "Regenerating"} disabled={!buttonEnable}/>
