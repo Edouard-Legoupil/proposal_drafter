@@ -14,8 +14,7 @@ class BaseDataRequest(BaseModel):
     Schema for the initial data required to start a proposal.
     This includes form data and the main project description.
     """
-    form_data: Dict[str, str]
-    #form_data: Dict[str, Any]
+    form_data: Dict[str, Any]
     project_description: str
     template_name: str
 
@@ -54,12 +53,9 @@ class SaveDraftRequest(BaseModel):
     session_id: Optional[str] = None
     proposal_id: Optional[uuid.UUID] = None
     template_name: Optional[str] = None
-    form_data: Dict[str, str]
-    #form_data: Dict[str, Any]
+    form_data: Dict[str, Any]
     project_description: str
-   # generated_sections: Optional[Dict[str, str]] = {}
     generated_sections: Optional[Dict[str, GeneratedSection]] = {}
-   # generated_sections: Optional[Dict[str, Any]]
 
 class FinalizeProposalRequest(BaseModel):
     """
@@ -71,7 +67,7 @@ class CreateSessionRequest(BaseModel):
     """
     Schema for creating a new proposal session from the initial form data.
     """
-    form_data: Dict[str, str]
+    form_data: Dict[str, Any]
     project_description: str
 
 
