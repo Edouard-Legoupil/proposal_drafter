@@ -20,7 +20,9 @@ from backend.models.schemas import (
     SectionRequest,
     RegenerateRequest,
     SaveDraftRequest,
-    FinalizeProposalRequest
+    FinalizeProposalRequest,
+    CreateSessionRequest,
+    UpdateSectionRequest
 )
 from backend.utils.proposal_logic import regenerate_section_logic
 from backend.utils.crew import ProposalCrew
@@ -36,10 +38,87 @@ logger = logging.getLogger(__name__)
 @router.get("/templates")
 async def get_templates():
     """
-    Returns a list of available proposal templates.
+    Returns a dictionary mapping donor names to template filenames.
+    This allows the frontend to populate a dropdown with donor names, making the
+    backend the single source of truth for template selection.
     """
-    templates = get_available_templates()
-    return {"templates": templates}
+    try:
+        templates_map = get_available_templates()
+        return {"templates": templates_map}
+    except Exception as e:
+        logger.error(f"[GET TEMPLATES ERROR] Failed to get available templates: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Could not retrieve proposal templates.")
+
+
+@router.post("/create-session")
+async def create_session(request: CreateSessionRequest, current_user: dict = Depends(get_current_user)):
+    """
+    Creates a new proposal session and a corresponding draft in the database.
+    This single endpoint replaces the frontend's previous multi-step process
+    of saving a draft and then immediately reloading it to start a session.
+
+    The process is as follows:
+    1.  Determine the template name from the form data's "Targeted Donor".
+    2.  Generate a new UUID for the proposal.
+    3.  Create an initial record in the 'proposals' database table.
+    4.  Load the full proposal template from the determined file.
+    5.  Store all relevant data (form data, template, etc.) in a new Redis session.
+    6.  Return the new session_id and proposal_id to the client.
+    """
+    user_id = current_user["user_id"]
+    proposal_id = uuid.uuid4()
+    session_id = str(uuid.uuid4())
+
+    try:
+        # 1. Determine the template name from the form data.
+        templates_map = get_available_templates()
+        donor = request.form_data.get("Targeted Donor", "Not Yet Specified")
+        template_name = templates_map.get(donor, "unhcr_proposal_template.json")
+
+        # 2. Create an initial record in the database.
+        with get_engine().begin() as connection:
+            connection.execute(
+                text("""
+                    INSERT INTO proposals (id, user_id, form_data, project_description, template_name, generated_sections)
+                    VALUES (:id, :uid, :form, :desc, :template, '{}')
+                """),
+                {
+                    "id": proposal_id,
+                    "uid": user_id,
+                    "form": json.dumps(request.form_data),
+                    "desc": request.project_description,
+                    "template": template_name,
+                }
+            )
+
+        # 3. Load the full proposal template.
+        proposal_template = load_proposal_template(template_name)
+
+        # 4. Create the Redis session payload.
+        redis_payload = {
+            "user_id": user_id,
+            "proposal_id": str(proposal_id),
+            "form_data": request.form_data,
+            "project_description": request.project_description,
+            "template_name": template_name,
+            "proposal_template": proposal_template,
+            "generated_sections": {},
+            "is_sample": False,
+            "is_accepted": False
+        }
+
+        # 5. Store the payload in Redis.
+        redis_client.setex(session_id, 3600, json.dumps(redis_payload, default=str))
+
+        # 6. Return the new IDs.
+        return {"session_id": session_id, "proposal_id": str(proposal_id), "proposal_template": proposal_template}
+
+    except HTTPException as http_exc:
+        logger.error(f"[CREATE SESSION HTTP ERROR] {http_exc.detail}", exc_info=True)
+        raise http_exc
+    except Exception as e:
+        logger.error(f"[CREATE SESSION ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to create a new proposal session.")
 
 
 @router.post("/process_section/{session_id}")
@@ -52,6 +131,15 @@ async def process_section(session_id: str, request: SectionRequest, current_user
     if not session_data_str:
         raise HTTPException(status_code=400, detail="Session data not found.")
 
+    session_data = json.loads(session_data_str)
+
+    # Update session with the latest data from the request to prevent stale data issues.
+    session_data["form_data"] = request.form_data
+    session_data["project_description"] = request.project_description
+
+    # Persist the updated session back to Redis.
+    redis_client.setex(session_id, 3600, json.dumps(session_data, default=str))
+
     # Prevent editing of finalized proposals.
     with get_engine().connect() as connection:
         res = connection.execute(
@@ -61,7 +149,6 @@ async def process_section(session_id: str, request: SectionRequest, current_user
         if res:
             raise HTTPException(status_code=403, detail="This proposal is finalized and cannot be modified.")
 
-    session_data = json.loads(session_data_str)
     form_data = session_data["form_data"]
     project_description = session_data["project_description"]
 
@@ -176,10 +263,69 @@ async def regenerate_section(session_id: str, request: RegenerateRequest, curren
         if res:
             raise HTTPException(status_code=403, detail="This proposal is finalized and cannot be modified.")
 
+    # Load session data and update it with fresh data from the request.
+    session_data_str = redis_client.get(session_id)
+    if not session_data_str:
+        raise HTTPException(status_code=400, detail="Session data not found for regeneration.")
+
+    session_data = json.loads(session_data_str)
+    session_data["form_data"] = request.form_data
+    session_data["project_description"] = request.project_description
+    redis_client.setex(session_id, 3600, json.dumps(session_data, default=str))
+
     generated_text = regenerate_section_logic(
         session_id, request.section, request.concise_input, request.proposal_id
     )
     return {"message": f"Content regenerated for {request.section}", "generated_text": generated_text}
+
+
+@router.post("/update-section-content")
+async def update_section_content(request: UpdateSectionRequest, current_user: dict = Depends(get_current_user)):
+    """
+    Directly updates the content of a specific section in the database.
+    This is used for saving manually edited content without invoking the AI.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().begin() as conn:
+            # First, verify the proposal belongs to the user and is not finalized.
+            proposal_check = conn.execute(
+                text("SELECT is_accepted FROM proposals WHERE id = :id AND user_id = :uid"),
+                {"id": request.proposal_id, "uid": user_id}
+            ).scalar()
+
+            if proposal_check is None:
+                raise HTTPException(status_code=404, detail="Proposal not found.")
+            if proposal_check:
+                raise HTTPException(status_code=403, detail="Cannot modify a finalized proposal.")
+
+            # Use jsonb_set to update the specific key in the generated_sections JSON object.
+            # The path '{request.section}' targets the key to be updated.
+            # The third parameter is the new value, wrapped in to_jsonb to ensure it's a valid JSON value.
+            conn.execute(
+                text("""
+                    UPDATE proposals
+                    SET generated_sections = jsonb_set(
+                        generated_sections::jsonb,
+                        ARRAY[:section],
+                        to_jsonb(:content::text)
+                    ),
+                    updated_at = NOW()
+                    WHERE id = :id
+                """),
+                {
+                    "section": request.section,
+                    "content": request.content,
+                    "id": request.proposal_id
+                }
+            )
+        return {"message": f"Section '{request.section}' updated successfully."}
+    except SQLAlchemyError as db_error:
+        logger.error(f"[UPDATE SECTION DB ERROR] {db_error}", exc_info=True)
+        raise HTTPException(status_code=500, detail="A database error occurred while updating the section.")
+    except Exception as e:
+        logger.error(f"[UPDATE SECTION ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while updating the section.")
 
 
 @router.post("/save-draft")

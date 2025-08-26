@@ -119,7 +119,9 @@ export default function Chat (props)
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
                                         section: Object.keys(proposal)[j],
-                                        proposal_id: sessionStorage.getItem("proposal_id")
+                                        proposal_id: sessionStorage.getItem("proposal_id"),
+                                        form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])),
+                                        project_description: userPrompt
                                 }),
                                 credentials: 'include'
                         })
@@ -160,70 +162,76 @@ export default function Chat (props)
 
         const [generateLoading, setGenerateLoading] = useState(false)
         const [generateLabel, setGenerateLabel] = useState("Generate")
+        const [templateConfig, setTemplateConfig] = useState({});
+
+        // Fetch template configuration from the backend when the component mounts.
+        useEffect(() => {
+                async function fetchTemplates() {
+                        try {
+                                const response = await fetch(`${API_BASE_URL}/templates`, {
+                                        method: 'GET',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        credentials: 'include'
+                                });
+                                if (response.ok) {
+                                        const data = await response.json();
+                                        setTemplateConfig(data.templates);
+                                } else {
+                                        console.error("Failed to fetch templates");
+                                }
+                        } catch (error) {
+                                console.error("Error fetching templates:", error);
+                        }
+                }
+                fetchTemplates();
+        }, []);
+
         async function handleGenerateClick ()
         {
-                setGenerateLoading(true)
-                setFormExpanded(false)
+                setGenerateLoading(true);
+                setFormExpanded(false);
 
-                try
-                {
-                        const donor = formData["Targeted Donor"].value;
-                        const templates = {
-                                CERF: "cerf_proposal_template.json",
-                                ECHO: "echo_proposal_template.json",
-                                Not_Yet_Specified: "unhcr_proposal_template.json"
-                        };
-                        const template_name = templates[donor] || "unhcr_proposal_template.json";
-    
-                        const saveResponse = await fetch(`${API_BASE_URL}/save-draft`, {
+                try {
+                        // Call the new, streamlined endpoint to create the session and initial draft.
+                        const response = await fetch(`${API_BASE_URL}/create-session`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
-                                        proposal_id: sessionStorage.getItem("proposal_id"),
                                         project_description: userPrompt,
                                         form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])),
-                                        template_name: template_name
                                 }),
                                 credentials: 'include'
-                        })
-
-                        if(!saveResponse.ok) {
-                                throw new Error("Failed to save draft.");
-                        }
-
-                        const saveData = await saveResponse.json();
-                        sessionStorage.setItem("proposal_id", saveData.proposal_id);
-
-                        const loadResponse = await fetch(`${API_BASE_URL}/load-draft/${saveData.proposal_id}`, {
-                                method: "GET",
-                                headers: { 'Content-Type': 'application/json' },
-                                credentials: "include"
                         });
 
-                        if (!loadResponse.ok) {
-                                throw new Error("Failed to load draft after saving.");
+                        if (!response.ok) {
+                                throw new Error("Failed to create a new session.");
                         }
 
-                        const loadData = await loadResponse.json();
-                        sessionStorage.setItem("session_id", loadData.session_id);
+                        const data = await response.json();
 
+                        // Store the new session and proposal IDs received from the backend.
+                        sessionStorage.setItem("session_id", data.session_id);
+                        sessionStorage.setItem("proposal_id", data.proposal_id);
+
+                        // Initialize the proposal sections based on the template received from the backend.
                         const sectionState = {};
-                        if (loadData.proposal_template && loadData.proposal_template.sections) {
-                                loadData.proposal_template.sections.forEach(section => {
+                        if (data.proposal_template && data.proposal_template.sections) {
+                                data.proposal_template.sections.forEach(section => {
                                         sectionState[section.section_name] = {
-                                                content: "", // Start with empty content for new generation
+                                                content: "", // Content will be populated by the getSections call.
                                                 open: true
                                         };
                                 });
                         }
+
                         setProposal(sectionState);
                         setSidebarOpen(true);
-                }
-                catch (error)
-                {
-                        setGenerateLoading(false)
-                        setGenerateLabel("Regenerate")
-                        console.log("Error", error)
+                        // The getSections() call will be triggered by the useEffect that depends on `proposal`.
+
+                } catch (error) {
+                        console.error("Error during proposal generation:", error);
+                        setGenerateLoading(false);
+                        setGenerateLabel("Generate"); // Reset button label on error.
                 }
         }
 
@@ -270,7 +278,9 @@ export default function Chat (props)
                         body: JSON.stringify({
                                 section: Object.keys(proposal)[selectedSection],
                                 concise_input: ip,
-                                proposal_id: sessionStorage.getItem("proposal_id")
+                                proposal_id: sessionStorage.getItem("proposal_id"),
+                                form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])),
+                                project_description: userPrompt
                         }),
                         credentials: 'include'
                 })
@@ -318,24 +328,52 @@ export default function Chat (props)
 
         const [isEdit, setIsEdit] = useState(false)
         const [editorContent, setEditorContent] = useState("")
-        function handleEditClick (section)
+        async function handleEditClick (section)
         {
                 if(!isEdit)
                 {
-                        setSelectedSection(section)
-                        setIsEdit(true)
-                        setEditorContent(Object.values(proposal)[section].content)
+                        // Entering edit mode
+                        setSelectedSection(section);
+                        setIsEdit(true);
+                        setEditorContent(Object.values(proposal)[section].content);
                 }
                 else
                 {
-                        setProposal(p => ({
-                                ...p,
-                                [Object.keys(p)[selectedSection]]: {
-                                        ...Object.values(p)[selectedSection],
-                                        content: ""
+                        // Saving the edit
+                        const sectionKey = Object.keys(proposal)[selectedSection];
+
+                        try {
+                                const response = await fetch(`${API_BASE_URL}/update-section-content`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                                proposal_id: sessionStorage.getItem("proposal_id"),
+                                                section: sectionKey,
+                                                content: editorContent
+                                        }),
+                                        credentials: 'include'
+                                });
+
+                                if (!response.ok) {
+                                        throw new Error('Failed to save the section content.');
                                 }
-                        }))
-                        handleRegenerateButtonClick("Message to the AI assistant: The below content is what was manually entered by the user. ENSURE it is within the **specified word limit** for this section, AT ALL COSTS. If it is, leave it be, else COMPULSORILY bring it **BELOW** the word limit. Even a few words above the limit are NOT ACCEPTABLE by our system. You can go so far as to omit content if need be in order to fit it within the word limit. Even tightening up the language via very short and concise sentences and bullet points will also be acceptable AND IN FACT ENCOURAGED.  \n\n" + editorContent)
+
+                                // On successful save, update the local state to reflect the change.
+                                setProposal(p => ({
+                                        ...p,
+                                        [sectionKey]: {
+                                                ...Object.values(p)[selectedSection],
+                                                content: editorContent
+                                        }
+                                }));
+
+                        } catch (error) {
+                                console.error("Error saving section:", error);
+                                // Optionally, show an error message to the user.
+                        } finally {
+                                // Exit edit mode regardless of success or failure.
+                                setIsEdit(false);
+                        }
                 }
         }
 
@@ -554,7 +592,7 @@ export default function Chat (props)
                                                                         : label === "Duration"
                                                                         ? ["1 month", "3 months", "6 months", "12 months", "18 months", "24 months", "30 months", "36 months"]
                                                                         : label === "Targeted Donor"
-                                                                        ? ["Not_Yet_Specified", "CERF", "ECHO"]
+                                                                        ? Object.keys(templateConfig)
                                                                         : label === "Budget Range"
                                                                         ? ["50k$", "100k$","250k$","500k$","1M$","2M$","5M$","10M$","15M$","25M$"]         
                                                                         : label === "Geographical Scope"
