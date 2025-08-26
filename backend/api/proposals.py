@@ -477,7 +477,7 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
 
                 draft_list.append({
                     "proposal_id": row[0],
-                    "project_title": form_data.get("Project title", "Untitled Proposal") if form_data else "Untitled Proposal",
+                    "project_title": form_data.get("Project Draft Short name") or form_data.get("Project title", "Untitled Proposal") if form_data else "Untitled Proposal",
                     "summary": sections.get("Summary", "") if sections else "",
                     "created_at": row[3].isoformat() if row[3] else None,
                     "updated_at": row[4].isoformat() if row[4] else None,

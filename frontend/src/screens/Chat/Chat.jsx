@@ -630,8 +630,8 @@ export default function Chat (props)
                                                                 <form className='Chat_form'>
                                                                         <div className='Chat_form_group'>
                                                                                 <div className="tooltip-container">
-                                                                                        <h3 className='Chat_form_group_title'>Identify Potential Interventions based on policies, strategies and past evaluation recommendations</h3>
-                                                                                        <span className="tooltip-text">to leverage knowledge of  policies, strategies and past evaluation recommendations</span>
+                                                                                        <h3 className='Chat_form_group_title'>Identify Potential Interventions</h3>
+                                                                                        <span className="tooltip-text">to leverage knowledge of policies, strategies and past evaluation recommendations</span>
                                                                                 </div>
                                                                                 {renderFormField("Main Outcome")}
                                                                                 {renderFormField("Beneficiaries Profile")}
@@ -639,7 +639,7 @@ export default function Chat (props)
                                                                         </div>
                                                                         <div className='Chat_form_group'>
                                                                                 <div className="tooltip-container">
-                                                                                        <h3 className='Chat_form_group_title'>Define Field context based on Situation Analysis and Needs Assessment</h3>
+                                                                                        <h3 className='Chat_form_group_title'>Define Field context</h3>
                                                                                         <span className="tooltip-text">to leverage knowledge of Situation Analysis and Needs Assessment</span>
                                                                                 </div>
                                                                                 {renderFormField("Geographical Scope")}
@@ -647,7 +647,7 @@ export default function Chat (props)
                                                                         </div>
                                                                         <div className='Chat_form_group'>
                                                                                 <div className="tooltip-container">
-                                                                                        <h3 className='Chat_form_group_title'>Tailor funding request from Donor profile and content submission requirement</h3>
+                                                                                        <h3 className='Chat_form_group_title'>Tailor funding request</h3>
                                                                                         <span className="tooltip-text">to leverage knowledge of Donor profile and content submission formal requirement</span>
                                                                                 </div>
                                                                                 {renderFormField("Budget Range")}

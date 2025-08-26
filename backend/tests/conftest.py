@@ -1,71 +1,95 @@
+import os
 import pytest
-from unittest.mock import MagicMock, patch
-from sqlalchemy import create_engine, text
-from fastapi.testclient import TestClient
-from backend.main import app
-from backend.core.db import get_engine as main_engine
-from backend.core.security import get_current_user
+import uuid
 import jwt
 from datetime import datetime, timedelta
-from backend.core.config import SECRET_KEY
-import uuid
+from sqlalchemy import create_engine, text
+from fastapi.testclient import TestClient
 
-@pytest.fixture(scope="function")
-def test_db():
-    # Use an in-memory SQLite database for testing
+# --- Environment Variable Setup ---
+os.environ['DB_USERNAME'] = 'testuser'
+os.environ['DB_PASSWORD'] = 'testpass'
+os.environ['DB_HOST'] = 'localhost'
+os.environ['DB_NAME'] = 'testdb'
+os.environ['SECRET_KEY'] = 'test-secret-key'
+os.environ['AZURE_OPENAI_ENDPOINT'] = 'https://test.openai.azure.com/'
+os.environ['AZURE_OPENAI_API_KEY'] = 'test-key'
+os.environ['OPENAI_API_VERSION'] = '2023-07-01-preview'
+os.environ['AZURE_OPENAI_DEPLOYMENT'] = 'test-deployment'
+os.environ['AZURE_DEPLOYMENT_NAME'] = 'test-deployment'
+os.environ['AZURE_OPENAI_EMBEDDING_DEPLOYMENT'] = 'test-embedding-deployment'
+
+# --- Application and Dependency Imports ---
+from backend.main import app
+from backend.core.db import get_engine
+from backend.core.security import get_current_user
+
+@pytest.fixture(scope="session")
+def test_engine():
+    """Creates a single, in-memory SQLite engine for the entire test session."""
     engine = create_engine("sqlite:///:memory:")
-    with get_engine().connect() as connection:
-        # Create tables
-        connection.execute(text("""
-            CREATE TABLE users (
-                id TEXT PRIMARY KEY,
-                email TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL,
-                name TEXT,
-                security_questions TEXT,
-                session_active BOOLEAN DEFAULT FALSE,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        """))
-        connection.execute(text("""
-            CREATE TABLE proposals (
-                id TEXT PRIMARY KEY,
-                user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                form_data TEXT NOT NULL,
-                project_description TEXT NOT NULL,
-                generated_sections TEXT,
-                is_accepted BOOLEAN DEFAULT FALSE,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        """))
-        connection.commit()
-        yield connection
+    with engine.connect() as connection:
+        # Use transaction to ensure DDL is committed
+        with connection.begin():
+            connection.execute(text("""
+                CREATE TABLE users (
+                    id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, password TEXT NOT NULL,
+                    name TEXT, security_questions TEXT, session_active BOOLEAN,
+                    created_at DATETIME, updated_at DATETIME
+                )
+            """))
+            connection.execute(text("""
+                CREATE TABLE proposals (
+                    id TEXT PRIMARY KEY, user_id TEXT, form_data TEXT, project_description TEXT,
+                    generated_sections TEXT, is_accepted BOOLEAN, template_name TEXT,
+                    created_at DATETIME, updated_at DATETIME,
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )
+            """))
+    return engine
+
+@pytest.fixture(scope="function", autouse=True)
+def override_get_engine(test_engine):
+    """Fixture to override the get_engine dependency for all tests."""
+    app.dependency_overrides[get_engine] = lambda: test_engine
+    yield
+    app.dependency_overrides.pop(get_engine, None)
 
 @pytest.fixture(scope="function")
-def authenticated_client(test_db):
+def db_session(test_engine):
+    """Provides a transactional scope for each test function."""
+    connection = test_engine.connect()
+    transaction = connection.begin()
+    yield connection
+    transaction.rollback()
+    connection.close()
+
+@pytest.fixture
+def client():
+    """A basic, unauthenticated TestClient."""
+    return TestClient(app)
+
+@pytest.fixture
+def authenticated_client(client, db_session):
+    """An authenticated TestClient."""
     user_id = str(uuid.uuid4())
     user_email = "test@example.com"
 
-    # Create a test user
-    test_db.execute(text("INSERT INTO users (id, email, name, password) VALUES (:id, :email, :name, :password)"),
-                    {"id": user_id, "email": user_email, "name": "Test User", "password": "password"})
-    test_db.commit()
+    db_session.execute(
+        text("INSERT INTO users (id, email, name, password) VALUES (:id, :email, :name, :password)"),
+        {"id": user_id, "email": user_email, "name": "Test User", "password": "password"}
+    )
+    db_session.commit()
 
-    # Generate a token
-    token_data = {"email": user_email, "exp": datetime.utcnow() + timedelta(minutes=30)}
-    token = jwt.encode(token_data, SECRET_KEY, algorithm="HS256")
-
-    # Override the get_current_user dependency
     def get_current_user_override():
         return {"user_id": user_id, "email": user_email, "name": "Test User"}
 
     app.dependency_overrides[get_current_user] = get_current_user_override
 
-    with patch('backend.core.db.engine', test_db.engine):
-         with TestClient(app) as c:
-            c.cookies["auth_token"] = token
-            yield c
+    token_data = {"email": user_email, "exp": datetime.utcnow() + timedelta(minutes=30)}
+    token = jwt.encode(token_data, os.environ['SECRET_KEY'], algorithm="HS256")
+    client.cookies["auth_token"] = token
 
-    app.dependency_overrides = {}
+    yield client
+
+    app.dependency_overrides.pop(get_current_user, None)
