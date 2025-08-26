@@ -72,6 +72,10 @@
         flex-shrink: 0;
 }
 
+.Chat_inputArea .Chat_form_inputContainer {
+        margin-bottom: 15px;
+}
+
 .Chat_inputArea_prompt {
         outline: none;
         border: 1px solid #ACB8CB;
@@ -130,20 +134,62 @@
 .Chat_form {
         margin-top: 17.5px;
         margin-bottom: 27.5px;
-
         padding: 1px;
-
-        display: grid;
-        row-gap: 15px;
-        column-gap: 25px;
-        grid-template-columns: repeat(5, 1fr);
-
-        overflow-y: auto;
+        display: flex;
+        gap: 20px;
+        overflow-x: auto;
 }
 
-@media (min-height: 746px) {
+.Chat_form_group {
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        padding: 15px;
+        flex: 1;
+        min-width: 300px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+}
+
+.Chat_form_group_title {
+        font-family: "Noto";
+        font-size: 16px;
+        font-weight: 700;
+        color: #0072bc;
+        margin-bottom: 10px;
+        text-align: left;
+}
+
+.tooltip-container {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip-text {
+  visibility: hidden;
+  width: 160px;
+  background-color: #555;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px;
+  position: absolute;
+  z-index: 1;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -80px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.tooltip-container:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+}
+
+@media (max-width: 900px) {
         .Chat_form {
-                padding-right: 1px;
+                flex-direction: column;
         }
 }
 

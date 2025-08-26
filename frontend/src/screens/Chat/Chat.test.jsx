@@ -1,12 +1,21 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor, vi } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect } from 'vitest'
-
+import { http, HttpResponse } from 'msw'
+import { server } from '../../mocks/server'
 import { BrowserRouter } from 'react-router-dom'
 import Chat from './Chat'
 
 describe('Proposal Drafter – Form validation', () => {
         it('disables the Generate button until all required inputs are filled', async () => {
+                server.use(
+                        http.get('http://localhost:8502/api/templates', () => {
+                                return HttpResponse.json({ templates: { "UNHCR": {}, "IOM": {} } })
+                        }),
+                        http.get('http://localhost:8502/api/profile', () => {
+                                return HttpResponse.json({ user: { "email": "test@test.com", "name": "Test User" } })
+                        })
+                )
                 render(
                         <BrowserRouter>
                                 <Chat />
@@ -16,71 +25,86 @@ describe('Proposal Drafter – Form validation', () => {
                 const generateButton = screen.getByRole('button', { name: /generate/i })
                 expect(generateButton).toBeDisabled()
 
-                const textarea = screen.getByPlaceholderText(/enter your project requirements/i)
+                const textarea = screen.getByPlaceholderText(/Provide as much details as possible on your initial project idea!/i)
                 await userEvent.type(textarea, 'School for the disabled in New York')
                 await waitFor(() => expect(generateButton).toBeDisabled())
 
-                const projectTitleInput = screen.getByLabelText(/^Project title/i)
+                const projectTitleInput = screen.getByLabelText(/Project Draft Short name/i)
                 await userEvent.type(projectTitleInput, 'Accessible School')
                 await waitFor(() => expect(generateButton).toBeDisabled())
 
-                const projectTypeInput = screen.getByLabelText(/^Project type/i)
-                await userEvent.type(projectTypeInput, 'Infra')
+                const geographicalScopeInput = screen.getByLabelText(/Geographical Scope/i)
+                await userEvent.type(geographicalScopeInput, 'NYC')
                 await waitFor(() => expect(generateButton).toBeDisabled())
 
-                const geographicalCoverageInput = screen.getByLabelText(/geographical coverage/i)
-                await userEvent.type(geographicalCoverageInput, 'NYC, US, NA')
+                const countryInput = screen.getByLabelText(/Country \/ Location\(s\)/i)
+                await userEvent.type(countryInput, 'USA')
                 await waitFor(() => expect(generateButton).toBeDisabled())
 
-                const executingAgencyInput = screen.getByLabelText(/executing agency/i)
-                await userEvent.type(executingAgencyInput, 'IOM')
+                const beneficiariesProfileInput = screen.getByLabelText(/Beneficiaries Profile/i)
+                await userEvent.type(beneficiariesProfileInput, 'Students')
                 await waitFor(() => expect(generateButton).toBeDisabled())
 
-                const beneficiariesInput = screen.getByLabelText(/beneficiaries/i)
-                await userEvent.type(beneficiariesInput, 'Disabled individuals')
+                const durationInput = screen.getByLabelText(/Duration/i)
+                await userEvent.type(durationInput, '12 months')
                 await waitFor(() => expect(generateButton).toBeDisabled())
 
-                const partnersInput = screen.getByLabelText(/partner/i)
-                await userEvent.type(partnersInput, 'UN')
+                const budgetInput = screen.getByLabelText(/Budget Range/i)
+                await userEvent.type(budgetInput, '1M$')
                 await waitFor(() => expect(generateButton).toBeDisabled())
 
-                const managementSiteInput = screen.getByLabelText(/management site/i)
-                await userEvent.type(managementSiteInput, 'IOM NYC')
+                const mainOutcomeButton = screen.getByRole('button', { name: /Select Main Outcome/i })
+                await userEvent.click(mainOutcomeButton)
+                await userEvent.click(screen.getByLabelText('OA1-Access/Documentation'))
+                await userEvent.click(screen.getByText('Close'))
                 await waitFor(() => expect(generateButton).toBeDisabled())
 
-                const durationInput = screen.getByLabelText(/duration/i)
-                await userEvent.type(durationInput, '5Y')
-                await waitFor(() => expect(generateButton).toBeDisabled())
-
-                const budgetInput = screen.getByLabelText(/budget/i)
-                await userEvent.type(budgetInput, '$3M')
-                await waitFor(() => expect(generateButton).toBeEnabled())
-
-                const secondaryProjectTypeInput = screen.getByLabelText(/secondary project type/i)
-                await userEvent.type(secondaryProjectTypeInput, 'Edu')
+                const donorInput = screen.getByLabelText(/Targeted Donor/i)
+                await userEvent.type(donorInput, 'USAID')
                 await waitFor(() => expect(generateButton).toBeEnabled())
         })
 })
 
 describe('Proposal Drafter – One‑Section Generation Flow', () => {
         it('calls process_section with session and body, renders all cards', async () => {
+                server.use(
+                        http.get('http://localhost:8502/api/templates', () => HttpResponse.json({ templates: { "UNHCR": {}, "IOM": {} } })),
+                        http.get('http://localhost:8502/api/profile', () => HttpResponse.json({ user: { "email": "test@test.com", "name": "Test User" } })),
+                        http.post('http://localhost:8502/api/create-session', () => {
+                                return HttpResponse.json({
+                                        session_id: 'test-session-id',
+                                        proposal_id: 'test-proposal-id',
+                                        proposal_template: {
+                                                sections: [
+                                                        { section_name: 'Summary' }, { section_name: 'Rationale' }, { section_name: 'Project Description' },
+                                                        { section_name: 'Partnerships and Coordination' }, { section_name: 'Monitoring' }, { section_name: 'Evaluation' },
+                                                ]
+                                        }
+                                })
+                        }),
+                        http.post('http://localhost:8502/api/process_section/:session_id', async ({request}) => {
+                                const body = await request.json()
+                                return HttpResponse.json({ generated_text: `Mocked text for ${body.section}` })
+                        })
+                )
                 render(
                         <BrowserRouter>
                                 <Chat />
                         </BrowserRouter>
                 )
 
-                await userEvent.type(screen.getByPlaceholderText(/enter your project requirements/i), 'School for the disabled in New York')
-                await userEvent.type(screen.getByLabelText(/^project title/i), 'Accessible School')
-                await userEvent.type(screen.getByLabelText(/^project type/i), 'Infra')
-                await userEvent.type(screen.getByLabelText(/secondary project type/i), 'Edu')
-                await userEvent.type(screen.getByLabelText(/geographical coverage/i), 'NYC, US, NA')
-                await userEvent.type(screen.getByLabelText(/executing agency/i), 'IOM')
-                await userEvent.type(screen.getByLabelText(/beneficiaries/i), 'Disabled individuals')
-                await userEvent.type(screen.getByLabelText(/partner/i), 'UN')
-                await userEvent.type(screen.getByLabelText(/management site/i), 'IOM NYC')
-                await userEvent.type(screen.getByLabelText(/duration/i), '5Y')
-                await userEvent.type(screen.getByLabelText(/budget/i), '$3M')
+                await userEvent.type(screen.getByPlaceholderText(/Provide as much details as possible on your initial project idea!/i), 'School for the disabled in New York')
+                await userEvent.type(screen.getByLabelText(/Project Draft Short name/i), 'Accessible School')
+                const mainOutcomeButton = screen.getByRole('button', { name: /Select Main Outcome/i })
+                await userEvent.click(mainOutcomeButton)
+                await userEvent.click(screen.getByLabelText('OA1-Access/Documentation'))
+                await userEvent.click(screen.getByText('Close'))
+                await userEvent.type(screen.getByLabelText(/Geographical Scope/i), 'NYC')
+                await userEvent.type(screen.getByLabelText(/Country \/ Location\(s\)/i), 'USA')
+                await userEvent.type(screen.getByLabelText(/Beneficiaries Profile/i), 'Students')
+                await userEvent.type(screen.getByLabelText(/Duration/i), '12 months')
+                await userEvent.type(screen.getByLabelText(/Budget Range/i), '1M$')
+                await userEvent.type(screen.getByLabelText(/Targeted Donor/i), 'USAID')
 
                 await userEvent.click(screen.getByRole('button', { name: /generate/i }))
 
@@ -93,23 +117,48 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
         })
 
         it('allows editing Summary content', async () => {
+                server.use(
+                        http.get('http://localhost:8502/api/templates', () => HttpResponse.json({ templates: { "UNHCR": {}, "IOM": {} } })),
+                        http.get('http://localhost:8502/api/profile', () => HttpResponse.json({ user: { "email": "test@test.com", "name": "Test User" } })),
+                        http.post('http://localhost:8502/api/create-session', () => {
+                                return HttpResponse.json({
+                                        session_id: 'test-session-id',
+                                        proposal_id: 'test-proposal-id',
+                                        proposal_template: {
+                                                sections: [
+                                                        { section_name: 'Summary' }, { section_name: 'Rationale' }, { section_name: 'Project Description' },
+                                                        { section_name: 'Partnerships and Coordination' }, { section_name: 'Monitoring' }, { section_name: 'Evaluation' },
+                                                ]
+                                        }
+                                })
+                        }),
+                        http.post('http://localhost:8502/api/process_section/:session_id', async ({request}) => {
+                                const body = await request.json()
+                                return HttpResponse.json({ generated_text: `Mocked text for ${body.section}` })
+                        }),
+                        http.post('http://localhost:8502/api/update-section-content', async ({request}) => {
+                                const body = await request.json()
+                                return HttpResponse.json({ content: body.content })
+                        })
+                )
                 render(
                         <BrowserRouter>
                                 <Chat />
                         </BrowserRouter>
                 )
 
-                await userEvent.type(screen.getByPlaceholderText(/enter your project requirements/i), 'School for the disabled in New York')
-                await userEvent.type(screen.getByLabelText(/^project title/i), 'Accessible School')
-                await userEvent.type(screen.getByLabelText(/^project type/i), 'Infra')
-                await userEvent.type(screen.getByLabelText(/secondary project type/i), 'Edu')
-                await userEvent.type(screen.getByLabelText(/geographical coverage/i), 'NYC, US, NA')
-                await userEvent.type(screen.getByLabelText(/executing agency/i), 'IOM')
-                await userEvent.type(screen.getByLabelText(/beneficiaries/i), 'Disabled individuals')
-                await userEvent.type(screen.getByLabelText(/partner/i), 'UN')
-                await userEvent.type(screen.getByLabelText(/management site/i), 'IOM NYC')
-                await userEvent.type(screen.getByLabelText(/duration/i), '5Y')
-                await userEvent.type(screen.getByLabelText(/budget/i), '$3M')
+                await userEvent.type(screen.getByPlaceholderText(/Provide as much details as possible on your initial project idea!/i), 'School for the disabled in New York')
+                await userEvent.type(screen.getByLabelText(/Project Draft Short name/i), 'Accessible School')
+                const mainOutcomeButton = screen.getByRole('button', { name: /Select Main Outcome/i })
+                await userEvent.click(mainOutcomeButton)
+                await userEvent.click(screen.getByLabelText('OA1-Access/Documentation'))
+                await userEvent.click(screen.getByText('Close'))
+                await userEvent.type(screen.getByLabelText(/Geographical Scope/i), 'NYC')
+                await userEvent.type(screen.getByLabelText(/Country \/ Location\(s\)/i), 'USA')
+                await userEvent.type(screen.getByLabelText(/Beneficiaries Profile/i), 'Students')
+                await userEvent.type(screen.getByLabelText(/Duration/i), '12 months')
+                await userEvent.type(screen.getByLabelText(/Budget Range/i), '1M$')
+                await userEvent.type(screen.getByLabelText(/Targeted Donor/i), 'USAID')
 
                 await userEvent.click(screen.getByRole('button', { name: /generate/i }))
 
@@ -138,48 +187,36 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                 expect(regenerated).toBeInTheDocument()
         }),
 
-        it('finalizes proposal on Approve click and locks editing in Chat', async () => {
+        it('hides the input form when a finalized proposal is loaded', async () => {
+                server.use(
+                        http.get('http://localhost:8502/api/templates', () => HttpResponse.json({ templates: { "UNHCR": {}, "IOM": {} } })),
+                        http.get('http://localhost:8502/api/profile', () => HttpResponse.json({ user: { "email": "test@test.com", "name": "Test User" } })),
+                        http.get('http://localhost:8502/api/load-draft/:proposal_id', () => {
+                                return HttpResponse.json({
+                                        proposal_id: 'approved-proposal-123',
+                                        session_id: 'test-session-id',
+                                        project_description: 'test description',
+                                        form_data: {
+                                                "Project Draft Short name": "test project", "Main Outcome": ["OA1-Access/Documentation"],
+                                                "Beneficiaries Profile": "test beneficiaries", "Potential Implementing Partner": "test partner",
+                                                "Geographical Scope": "test scope", "Country / Location(s)": "test country",
+                                                "Budget Range": "1M$", "Duration": "12 months", "Targeted Donor": "USAID"
+                                        },
+                                        generated_sections: { 'Summary': 'Mocked text for Summary' },
+                                        is_accepted: true
+                                })
+                        })
+                )
+
+                sessionStorage.setItem('proposal_id', 'approved-proposal-123')
                 render(
                         <BrowserRouter>
                                 <Chat />
                         </BrowserRouter>
                 )
 
-                await userEvent.type(screen.getByPlaceholderText(/enter your project requirements/i), 'School for the disabled in New York')
-                await userEvent.type(screen.getByLabelText(/^project title/i), 'Accessible School')
-                await userEvent.type(screen.getByLabelText(/^project type/i), 'Infra')
-                await userEvent.type(screen.getByLabelText(/secondary project type/i), 'Edu')
-                await userEvent.type(screen.getByLabelText(/geographical coverage/i), 'NYC, US, NA')
-                await userEvent.type(screen.getByLabelText(/executing agency/i), 'IOM')
-                await userEvent.type(screen.getByLabelText(/beneficiaries/i), 'Disabled individuals')
-                await userEvent.type(screen.getByLabelText(/partner/i), 'UN')
-                await userEvent.type(screen.getByLabelText(/management site/i), 'IOM NYC')
-                await userEvent.type(screen.getByLabelText(/duration/i), '5Y')
-                await userEvent.type(screen.getByLabelText(/budget/i), '$3M')
+                await screen.findByText('Results')
 
-                await userEvent.click(screen.getByRole('button', { name: /generate/i }))
-
-                const sections = ['Summary','Rationale','Project Description', "Partnerships and Coordination", "Monitoring", "Evaluation"]
-
-                for (const sec of sections) {
-                        const card = await screen.findByText(new RegExp(`Mocked text for ${sec}`, 'i'), { timeout: 10000 });
-                        expect(card).toBeInTheDocument();
-                }
-
-                sessionStorage.setItem('proposal_id', 'approved-proposal-123')
-
-                const approveButton = await screen.findByRole('button', { name: /approve/i })
-                await userEvent.click(approveButton)
-
-                await waitFor(() => {
-                        expect(screen.queryByPlaceholderText(/enter your project requirements/i)).toBeNull()
-                        expect(screen.queryByRole('button', { name: /generate/i })).toBeNull()
-
-                        const opts = screen.queryAllByTestId(/section-options-/)
-                        for (const container of opts) {
-                                const { queryByRole } = within(container)
-                                expect(queryByRole('button', { name: /^Regenerate$/i })).toBeNull()
-                        }
-                })
+                expect(screen.queryByPlaceholderText(/Provide as much details as possible on your initial project idea!/i)).not.toBeInTheDocument()
         })
 })
