@@ -104,52 +104,82 @@ export default function Chat (props)
 
         const [proposal, setProposal] = useState({})
 
-        async function getSections(latestSection = Object.keys(proposal)[0])
-        {
-                let i
-                for (i = 0; Object.keys(proposal)[i] !== latestSection; i++);
+        // This effect is now the single entry point for triggering the section generation loop.
+        // It runs only when `generateLoading` is set to true.
+        useEffect(() => {
+                const generateAllSections = async () => {
+                        // Ensure we have sections to generate.
+                        if (!proposal || Object.keys(proposal).length === 0) {
+                                return;
+                        }
 
-                setSelectedSection(i)
-                proposalRef?.current?.children[i]?.scrollIntoView({behavior: "smooth"})
+                        const sectionKeys = Object.keys(proposal);
 
-                for(let j = i; j < Object.keys(proposal).length; j++)
-                {
-                        const response = await fetch(`${API_BASE_URL}/process_section/${sessionStorage.getItem("session_id")}`, {
-                                method: "POST",
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                        section: Object.keys(proposal)[j],
-                                        proposal_id: sessionStorage.getItem("proposal_id"),
-                                        form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])),
-                                        project_description: userPrompt
-                                }),
-                                credentials: 'include'
-                        })
+                        for (let i = 0; i < sectionKeys.length; i++) {
+                                const sectionKey = sectionKeys[i];
 
-                        if(response.ok) {
-                                const data = await response.json()
+                                // Skip if section already has content.
+                                if (proposal[sectionKey]?.content) {
+                                        continue;
+                                }
 
-                                setProposal(p => ({
-                                        ...p,
-                                        [Object.keys(p)[j]]: { // We have index, not key, hence
-                                                open: Object.values(p)[j].open,
-                                                content: data.generated_text
+                                try {
+                                        setSelectedSection(i);
+                                        const el = proposalRef.current?.children[i];
+                                        if (typeof el?.scrollIntoView === 'function') {
+                                                el.scrollIntoView({ behavior: 'smooth' });
                                         }
-                                }))
-                                setSelectedSection(j)
-                                const el = proposalRef.current?.children[j];
-                                if (typeof el?.scrollIntoView === 'function') {
-                                        el.scrollIntoView({ behavior: 'smooth' });
+
+                                        const response = await fetch(`${API_BASE_URL}/process_section/${sessionStorage.getItem("session_id")}`, {
+                                                method: "POST",
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                        section: sectionKey,
+                                                        proposal_id: sessionStorage.getItem("proposal_id"),
+                                                        form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])),
+                                                        project_description: userPrompt
+                                                }),
+                                                credentials: 'include'
+                                        });
+
+                                        if (response.ok) {
+                                                const data = await response.json();
+                                                // Update state for the current section and allow React to re-render.
+                                                // This approach is safe because the loop will continue on the next iteration.
+                                                setProposal(prevProposal => ({
+                                                        ...prevProposal,
+                                                        [sectionKey]: {
+                                                                ...prevProposal[sectionKey],
+                                                                content: data.generated_text
+                                                        }
+                                                }));
+                                        } else {
+                                                console.error(`Failed to generate section: ${sectionKey}`);
+                                                // Stop the entire process on the first failure.
+                                                setGenerateLoading(false);
+                                                setGenerateLabel("Regenerate");
+                                                return;
+                                        }
+                                } catch (error) {
+                                        console.error(`An error occurred while generating section ${sectionKey}:`, error);
+                                        setGenerateLoading(false);
+                                        setGenerateLabel("Regenerate");
+                                        return;
                                 }
                         }
 
-                        else
-                                console.log(response)
-                }
+                        // Once all sections are processed successfully.
+                        setGenerateLoading(false);
+                        setGenerateLabel("Regenerate");
+                };
 
-                setGenerateLoading(false)
-                setGenerateLabel("Regenerate")
-        }
+                if (generateLoading) {
+                        generateAllSections();
+                }
+        // Disabling exhaustive-deps because we intentionally only want this to run when `generateLoading` changes.
+        // The function uses other state variables, but they are read at the time of execution, which is the desired behavior.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [generateLoading]);
 
         useEffect(() => {
                 if(sidebarOpen)
@@ -378,20 +408,6 @@ export default function Chat (props)
         }
 
         const [isApproved, setIsApproved] = useState(false)
-
-        useEffect(() => {
-                // This effect triggers the generation process when the proposal state is set and
-                // the app is in a 'generating' state.
-                if (generateLoading && proposal && Object.keys(proposal).length > 0) {
-                    const firstEmptySection = Object.keys(proposal).find(key => !proposal[key].content);
-                    if (firstEmptySection) {
-                        getSections(firstEmptySection);
-                    } else {
-                        // All sections are filled, stop loading
-                        setGenerateLoading(false);
-                    }
-                }
-        }, [generateLoading, proposal])
 
         async function getContent()         {
 
