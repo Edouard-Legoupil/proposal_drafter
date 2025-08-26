@@ -22,18 +22,24 @@ class BaseDataRequest(BaseModel):
 class SectionRequest(BaseModel):
     """
     Schema for processing a single proposal section.
-    Requires the section name and the unique proposal ID.
+    Requires the section name, the unique proposal ID, and the latest
+    form data to ensure the generation logic is up-to-date.
     """
     section: str
     proposal_id: uuid.UUID
+    form_data: Dict[str, str]
+    project_description: str
 
 class RegenerateRequest(BaseModel):
     """
     Schema for regenerating a proposal section with new, concise input.
+    Also includes the latest form data.
     """
     section: str
     concise_input: str
     proposal_id: uuid.UUID
+    form_data: Dict[str, str]
+    project_description: str
 
 class GeneratedSection(BaseModel):
     generated_content: Optional[str] = None
@@ -60,3 +66,19 @@ class FinalizeProposalRequest(BaseModel):
     Schema for finalizing a proposal, which marks it as complete and read-only.
     """
     proposal_id: uuid.UUID
+
+class CreateSessionRequest(BaseModel):
+    """
+    Schema for creating a new proposal session from the initial form data.
+    """
+    form_data: Dict[str, str]
+    project_description: str
+
+
+class UpdateSectionRequest(BaseModel):
+    """
+    Schema for manually updating the content of a single section.
+    """
+    proposal_id: uuid.UUID
+    section: str
+    content: str
