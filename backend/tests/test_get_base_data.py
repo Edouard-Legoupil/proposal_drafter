@@ -9,10 +9,12 @@ def test_get_base_data(authenticated_client):
             "Project title": "Health Access Project",
             "Project type": "Development Aid"
         },
-        "project_description": "A testing project."
+        "project_description": "A testing project.",
+        "template_name": "unhcr_proposal_template.json"
     }
 
     post_response = client.post("/api/store_base_data", json=payload)
+    assert post_response.status_code == 200
     session_id = post_response.json()["session_id"]
 
     get_response = client.get(f"/api/get_base_data/{session_id}")
