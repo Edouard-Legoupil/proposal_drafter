@@ -2,6 +2,7 @@
 import io
 import json
 import logging
+from uuid import UUID
 from sqlalchemy.exc import SQLAlchemyError
 
 #  Third-Party Libraries
@@ -13,7 +14,7 @@ from sqlalchemy import text
 #  Internal Modules
 from backend.core.db import get_engine
 from backend.core.security import get_current_user
-from backend.core.config import SECTIONS
+from backend.core.config import load_proposal_template
 from backend.utils.doc_export import create_word_from_sections, create_pdf_from_sections
 
 # This router handles endpoints for generating and downloading final proposal documents.
@@ -46,7 +47,7 @@ async def generate_and_download_document(
         with get_engine().connect() as connection:
             result = connection.execute(
                 text("""
-                    SELECT form_data, project_description, generated_sections
+                    SELECT form_data, project_description, generated_sections, template_name
                     FROM proposals
                     WHERE id = :proposal_id AND user_id = :user_id
                 """),
@@ -57,15 +58,26 @@ async def generate_and_download_document(
         if not draft:
             raise HTTPException(status_code=404, detail="Proposal not found for this user.")
 
-        form_data = draft[0] if draft[0] else {}
-        generated_sections = draft[2] if draft[2] else {}
+        form_data, _, generated_sections, template_name = draft
+        form_data = form_data if form_data else {}
+        generated_sections = generated_sections if generated_sections else {}
+
+        # Load the template to get the correct section order and list.
+        if not template_name:
+            # Fallback to a default if no template is stored with the proposal.
+            template_name = "unhcr_proposal_template.json"
+            logger.warning(f"Proposal {proposal_id} has no template_name, falling back to default.")
+
+        proposal_template = load_proposal_template(template_name)
+        template_sections = [s.get("section_name") for s in proposal_template.get("sections", [])]
+
 
         # Ensure all required sections are present before generating.
-        if len(generated_sections) != len(SECTIONS):
-            missing = [s for s in SECTIONS if s not in generated_sections]
+        if len(generated_sections) < len(template_sections):
+            missing = [s for s in template_sections if s not in generated_sections]
             raise HTTPException(status_code=400, detail=f"Cannot generate document. Missing sections: {', '.join(missing)}")
 
-        ordered_sections = {section: generated_sections.get(section, "") for section in SECTIONS}
+        ordered_sections = {section: generated_sections.get(section, "") for section in template_sections}
 
         if format == "pdf":
             try:
