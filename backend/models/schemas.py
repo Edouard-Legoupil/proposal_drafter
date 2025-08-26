@@ -26,7 +26,7 @@ class SectionRequest(BaseModel):
     """
     section: str
     proposal_id: uuid.UUID
-    form_data: Dict[str, str]
+    form_data: Dict[str, Any]
     project_description: str
 
 class RegenerateRequest(BaseModel):
@@ -37,7 +37,7 @@ class RegenerateRequest(BaseModel):
     section: str
     concise_input: str
     proposal_id: uuid.UUID
-    form_data: Dict[str, str]
+    form_data: Dict[str, Any]
     project_description: str
 
 class GeneratedSection(BaseModel):
