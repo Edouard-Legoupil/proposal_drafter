@@ -1,5 +1,5 @@
 {
-    "donors": ["UNHCR"],
+    "donors": ["UNHCR Default"],
   "project_info": {
     "section_name": "Project Information",
     "fields": [

@@ -55,7 +55,8 @@
         "mandatory": true
       },
       {
-        "section_name": "1.6. Project Summary",
+        "section_name": "Summary",
+        "section_label": "1.6. Project Summary",
         "section_parent": "1. Overview",
         "format_type": "text",
         "word_limit": 300,
@@ -63,7 +64,8 @@
         "mandatory": true
       },
       {
-        "section_name": "1.8. Project Duration",
+        "section_name": "Duration",
+        "section_label": "1.8. Project Duration",
         "section_parent": "1. Overview",
         "format_type": "text",
         "word_limit": 350,
@@ -71,21 +73,24 @@
         "mandatory": true
       },
       {
-        "section_name": "2.1. Total Funds Required for Organization Response",
+        "section_name": "Funds Required for Organization Response",
+        "section_label": "2.1. Total Funds Required for Organization Response",
         "section_parent": "2. Funding summary and Country Context",
         "format_type": "number",
         "instructions": "Calculate and present the total funding requirements by: 1) Referencing HRP/flash appeal figures if available 2) Breaking down by sector/cluster 3) Showing unmet needs. For protracted crises, focus only on new emergency requirements.",
         "mandatory": true
       },
       {
-        "section_name": "2.2. Funds received for organization's response",
+        "section_name": "Funds received for organization's response",
+        "section_label": "2.2. Funds received for organization's response",
         "section_parent": "2. Funding summary and Country Context",
         "format_type": "number",
         "instructions": "Report received funds by: 1) Amount 2) Donor 3) Timeframe 4) Alignment with FTS records. Highlight any funding gaps that this CERF request would address.",
         "mandatory": true
       },
       {
-        "section_name": "2.3. Total Funds Requested from CERF for this Proposal",
+        "section_name": "Funds Requested from CERF for this Proposal",
+        "section_label": "2.3. Total Funds Requested from CERF for this Proposal",
         "section_parent": "2. Funding summary and Country Context",
         "format_type": "Number",
         "instructions": "Specify the CERF request amount ensuring: 1) Consistency with budget section 2) Clear justification of how amount was calculated 3) Demonstration of cost-efficiency 4) Explanation of how this complements other funding.",
