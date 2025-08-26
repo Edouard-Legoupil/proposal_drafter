@@ -146,7 +146,8 @@ TEMPLATES_DIR = os.path.join(BACKEND_DIR, "templates")
 def get_available_templates():
     """
     Scans the templates directory, reads each template file, and returns a
-    dictionary mapping the donor name from the template's content to its filename.
+    dictionary mapping donor names to their corresponding template filename.
+    This supports a one-to-many relationship between templates and donors.
     """
     templates_map = {}
     if not os.path.isdir(TEMPLATES_DIR):
@@ -159,23 +160,31 @@ def get_available_templates():
             try:
                 with open(template_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                    # The 'donor' key in the JSON file holds the display name.
-                    donor_name = data.get("donor")
-                    if donor_name:
+
+                # Ensure the loaded data is a dictionary, skipping files like sample_templates.json
+                if not isinstance(data, dict):
+                    logger.info(f"Skipping non-dictionary template file: {filename}")
+                    continue
+
+                # Handle multiple donors per template
+                if "donors" in data and isinstance(data["donors"], list):
+                    for donor_name in data["donors"]:
                         templates_map[donor_name] = filename
-                    else:
-                        # Fallback for templates without a 'donor' field; use the filename.
-                        # E.g., "unhcr_proposal_template.json" -> "unhcr_proposal_template"
-                        base_name = filename.replace(".json", "").replace("_", " ").title()
-                        templates_map[base_name] = filename
-                        logger.warning(f"Template '{filename}' is missing a 'donor' field. Falling back to filename.")
+                # Fallback to single donor field for backward compatibility
+                elif "donor" in data:
+                    templates_map[data["donor"]] = filename
+                else:
+                    # Fallback for templates without a 'donors' or 'donor' field
+                    base_name = filename.replace(".json", "").replace("_", " ").title()
+                    templates_map[base_name] = filename
+                    logger.warning(f"Template '{filename}' is missing a 'donors' or 'donor' field. Falling back to filename.")
+
             except (json.JSONDecodeError, IOError) as e:
                 logger.error(f"Failed to read or parse template file: {filename}. Error: {e}")
 
-    # Add a "Not Yet Specified" option pointing to the default UNHCR template.
-    # This provides a fallback for users who haven't selected a specific donor.
+    # Ensure "Not Yet Specified" option points to the default UNHCR template.
     unhcr_template_file = "unhcr_proposal_template.json"
-    if unhcr_template_file in os.listdir(TEMPLATES_DIR):
+    if os.path.isfile(os.path.join(TEMPLATES_DIR, unhcr_template_file)):
         templates_map["Not Yet Specified"] = unhcr_template_file
 
     return templates_map
@@ -205,22 +214,8 @@ def load_proposal_template(template_name: str):
         logger.error(f"Error decoding JSON from proposal template file: {template_path}")
         raise HTTPException(status_code=500, detail="Error parsing proposal template file.")
 
-# Load the default template to extract section names for backward compatibility
-# in some parts of the app that might still rely on a global SECTIONS list.
-try:
-    DEFAULT_TEMPLATE_NAME = "unhcr_proposal_template.json"
-    if DEFAULT_TEMPLATE_NAME in get_available_templates():
-        default_proposal_data = load_proposal_template(DEFAULT_TEMPLATE_NAME)
-        SECTIONS = [section.get("section_name") for section in default_proposal_data.get("sections", [])]
-    else:
-        SECTIONS = []
-        logger.warning("Default proposal template not found. SECTIONS list will be empty.")
-except Exception as e:
-    SECTIONS = []
-    logger.error(f"Failed to load default template for SECTIONS: {e}")
-
-
-if not SECTIONS:
-    logger.error("No sections were loaded from the default proposal template JSON.")
+# The global SECTIONS variable has been removed to prevent circular dependencies
+# during module initialization. Endpoints or functions that need the list of sections
+# should now load a specific template on-demand.
 
  

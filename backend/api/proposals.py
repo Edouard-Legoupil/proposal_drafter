@@ -15,7 +15,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from backend.core.db import get_engine
 from backend.core.redis import redis_client
 from backend.core.security import get_current_user
-from backend.core.config import SECTIONS, get_available_templates, load_proposal_template
+from backend.core.config import get_available_templates, load_proposal_template
 from backend.models.schemas import (
     SectionRequest,
     RegenerateRequest,
@@ -504,7 +504,8 @@ async def get_sections():
     """
     try:
         default_template = load_proposal_template("unhcr_proposal_template.json")
-        return {"sections": default_template.get("sections", [])}
+        sections = [section.get("section_name") for section in default_template.get("sections", [])]
+        return {"sections": sections}
     except HTTPException as e:
         # Handle case where default template is not found
         logger.error(f"Could not load default template: {e.detail}")
