@@ -77,7 +77,7 @@ export default function Dashboard ()
                         {projects && projects.filter(project => !project.is_sample).length ?
                                 <div className='Dashboard_search'>
                                         <img src={search} />
-                                        <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className='Dashboard_search_input' placeholder='Search' />
+                                        <input type="text" id="dashboard-search" name="dashboard-search" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className='Dashboard_search_input' placeholder='Search' />
                                 </div>
                                 :
                                 <h3 className='Dashboard_sectionHeading'>Sample proposals</h3>

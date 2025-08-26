@@ -8,6 +8,7 @@ import remarkGfm from 'remark-gfm'
 import Base from '../../components/Base/Base'
 import CommonButton from '../../components/CommonButton/CommonButton'
 import MultiSelectModal from '../../components/MultiSelectModal/MultiSelectModal'
+import MultiSelectModal from '../../components/MultiSelectModal/MultiSelectModal'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
 
@@ -108,72 +109,6 @@ export default function Chat (props)
                 else
                         setButtonEnable(false)
         }, [userPrompt, formData])
-
-        const renderFormField = (label) => {
-                const field = formData[label];
-                if (!field) return null;
-        
-                const datalistId = `datalist_${label.replace(/\s/g, '_')}`;
-                const options = {
-                        "Main Outcome": ["OA1-Access/Documentation", "OA2-Status", "OA3-Protection Policy", "OA4-GBV", "OA5-Child protection", "OA6-Justice", "OA7-Community", "OA8-Well-Being", "OA9-Housing", "OA10-Health", "OA11-Education", "OA12-WASH", "OA13-Livelihoods", "OA14-Return", "OA15-Resettlement", "OA16-Integrate"],
-                        "Duration": ["1 month", "3 months", "6 months", "12 months", "18 months", "24 months", "30 months", "36 months"],
-                        "Targeted Donor": Object.keys(templateConfig),
-                        "Budget Range": ["50k$", "100k$","250k$","500k$","1M$","2M$","5M$","10M$","15M$","25M$"],
-                        "Geographical Scope": ["One Area", "One Country Operation", "Multiple Country","One Region","Route-Based-Approach","Global"],
-                }[label] || [];
-        
-                return (
-                        <div key={label} className='Chat_form_inputContainer'>
-                                <label className='Chat_form_inputLabel' htmlFor={`Chat_form_input_${label.replace(/\s/g, '')}`}>
-                                        <div className="tooltip-container">
-                                                {label}
-                                                <span className={`Chat_form_input_mandatoryAsterisk ${!field.mandatory ? "hidden" : ""}`}>*</span>
-                                                {label === "Project Draft Short name" && <span className="tooltip-text">This will be the name used to story your draft on this system</span>}
-                                        </div>
-                                </label>
-        
-                                {field.type === 'multiselect' ? (
-                                        <>
-                                                <button type="button" className='Chat_form_input' onClick={() => setIsModalOpen(true)}>
-                                                        {field.value.length > 0 ? field.value.join(', ') : `Select ${label}`}
-                                                </button>
-                                                <MultiSelectModal
-                                                        isOpen={isModalOpen}
-                                                        onClose={() => setIsModalOpen(false)}
-                                                        options={options}
-                                                        selectedOptions={field.value}
-                                                        onSelectionChange={(newSelection) => handleFormInput({ target: { value: newSelection } }, label)}
-                                                />
-                                        </>
-                                ) : options.length > 0 ? (
-                                        <>
-                                                <input
-                                                        list={datalistId}
-                                                        className='Chat_form_input'
-                                                        id={`Chat_form_input_${label.replace(/\s/g, '')}`}
-                                                        placeholder={`Enter or select ${label}`}
-                                                        value={field.value}
-                                                        onChange={e => handleFormInput(e, label)}
-                                                />
-                                                <datalist id={datalistId}>
-                                                        {options.map((option, idx) => (
-                                                                <option key={idx} value={option} />
-                                                        ))}
-                                                </datalist>
-                                        </>
-                                ) : (
-                                        <input
-                                                type="text"
-                                                className='Chat_form_input'
-                                                id={`Chat_form_input_${label.replace(/\s/g, '')}`}
-                                                placeholder={`Enter ${label}`}
-                                                value={field.value}
-                                                onChange={e => handleFormInput(e, label)}
-                                        />
-                                )}
-                        </div>
-                );
-        };
 
         const [proposal, setProposal] = useState({})
         const [generateLoading, setGenerateLoading] = useState(false)
@@ -612,7 +547,7 @@ export default function Chat (props)
 
                                                 <div className="Chat_inputArea">
                                                         {renderFormField("Project Draft Short name")}
-                                                        <textarea value={userPrompt} onChange={e => setUserPrompt(e.target.value)} placeholder='Provide as much details as possible on your initial project idea!' className='Chat_inputArea_prompt' />
+                                                        <textarea id="main-prompt" name="main-prompt" value={userPrompt} onChange={e => setUserPrompt(e.target.value)} placeholder='Provide as much details as possible on your initial project idea!' className='Chat_inputArea_prompt' />
 
                                                         <span onClick={() => setFormExpanded(p => !p)} className={`Chat_inputArea_additionalDetails ${form_expanded && "expanded"}`}>
                                                                 Specify Parameters
@@ -746,7 +681,7 @@ export default function Chat (props)
 
                                 <main className='Chat_right'>
                                         <section className='Chat_inputArea'>
-                                                <textarea value={regenerateInput} onChange={e => setRegenerateInput(e.target.value)} className='Chat_inputArea_prompt' />
+                                                <textarea id="regenerate-prompt" name="regenerate-prompt" value={regenerateInput} onChange={e => setRegenerateInput(e.target.value)} className='Chat_inputArea_prompt' />
 
                                                 <div className="Chat_inputArea_buttonContainer" style={{marginTop: "20px"}}>
                                                         <CommonButton icon={generateIcon} onClick={() => handleRegenerateButtonClick()} label="Regenerate" loading={regenerateSectionLoading} loadingLabel="Regenerating" disabled={!regenerateInput} />
