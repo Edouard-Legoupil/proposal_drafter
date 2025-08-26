@@ -103,7 +103,8 @@ export default function Chat (props)
         }, [userPrompt, formData])
 
         const [proposal, setProposal] = useState({})
-
+        const [generateLoading, setGenerateLoading] = useState(false)
+        const [generateLabel, setGenerateLabel] = useState("Generate")
         const isGenerating = useRef(false);
 
         useEffect(() => {
@@ -177,8 +178,6 @@ export default function Chat (props)
         // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [sidebarOpen])
 
-        const [generateLoading, setGenerateLoading] = useState(false)
-        const [generateLabel, setGenerateLabel] = useState("Generate")
         const [templateConfig, setTemplateConfig] = useState({});
 
         // Fetch template configuration from the backend when the component mounts.
