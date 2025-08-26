@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import Dashboard from './Dashboard'
@@ -28,13 +28,8 @@ describe('Dashboard Component', () => {
                 { proposal_id: '2', project_title: 'Second Project', summary: 'Sum2', updated_at: '2025-05-11T11:30:00.456Z', is_accepted: false },
         ]
 
-        beforeAll(() => {
-                server.use(
-                        http.get(`${API_BASE_URL}/list-drafts`, () => HttpResponse.json({ drafts }))
-                )
-        })
-
         it('renders list of drafts after fetch', async () => {
+                server.use(http.get(`${API_BASE_URL}/list-drafts`, () => HttpResponse.json({ drafts })))
                 render(
                         <MemoryRouter>
                                 <Dashboard />
@@ -48,6 +43,7 @@ describe('Dashboard Component', () => {
         })
 
         it('filters drafts based on search term', async () => {
+                server.use(http.get(`${API_BASE_URL}/list-drafts`, () => HttpResponse.json({ drafts })))
                 render(
                         <MemoryRouter>
                                 <Dashboard />
@@ -71,11 +67,8 @@ describe('Dashboard Component', () => {
                 expect(screen.getByText('Second Project')).toBeInTheDocument()
         })
 
-        it('shows no drafts notice when no drafts returned', async () => {
-                server.use(
-                        http.get(`${API_BASE_URL}/list-drafts`, () => HttpResponse.json({ drafts: [] }))
-                )
-
+        it('shows "Sample proposals" heading when no drafts are returned', async () => {
+                server.use(http.get(`${API_BASE_URL}/list-drafts`, () => HttpResponse.json({ drafts: [] })))
                 render(
                         <MemoryRouter>
                                 <Dashboard />
@@ -83,25 +76,27 @@ describe('Dashboard Component', () => {
                 )
 
                 await waitFor(() => {
-                        expect(screen.getByText(/no drafts found\./i)).toBeInTheDocument()
+                        expect(screen.getByText(/Sample proposals/i)).toBeInTheDocument()
                 })
         })
 
-        it('navigates to /chat on create new click', async () => {
+        it('navigates to /chat on "Generate New Proposal" click', async () => {
                 render(
                         <MemoryRouter>
                                 <Dashboard />
                         </MemoryRouter>
                 )
 
-                const createBtn = await screen.findByRole('button', { name: /create new proposal/i })
+                const createBtn = await screen.findByRole('button', { name: /Generate New Proposal/i })
                 await userEvent.click(createBtn)
+
                 await waitFor(() => {
                         expect(mockNavigate).toHaveBeenCalledWith('/chat')
                 })
         })
 
         it('clicking project sets sessionStorage and navigates', async () => {
+                server.use(http.get(`${API_BASE_URL}/list-drafts`, () => HttpResponse.json({ drafts })))
                 render(
                         <MemoryRouter>
                                 <Dashboard />
@@ -118,17 +113,22 @@ describe('Dashboard Component', () => {
                 })
         }),
 
-        it('shows an Approved badge on accepted projects in Dashboard', async () => {
+        it('shows a "Shared" badge on accepted projects and "Draft" on others', async () => {
+                server.use(http.get(`${API_BASE_URL}/list-drafts`, () => HttpResponse.json({ drafts })))
                 render(
                         <MemoryRouter>
                                 <Dashboard />
                         </MemoryRouter>
                 )
 
-                await screen.findByText('First Project')
-                expect(screen.getByText(/approved/i)).toBeInTheDocument()
+                // Find the container for the first project to scope the search for the badge
+                const firstProjectContainer = await screen.findByText('First Project')
+                // Check for the "Shared" badge within the context of the first project's container/card
+                expect(within(firstProjectContainer.closest('.Dashboard_project')).getByText(/Shared/i)).toBeInTheDocument()
 
-                await screen.findByText('Second Project')
-                expect(screen.getByText(/pending approval/i)).toBeInTheDocument()
+                // Find the container for the second project
+                const secondProjectContainer = await screen.findByText('Second Project')
+                // Check for the "Draft" badge within the context of the second project's container/card
+                expect(within(secondProjectContainer.closest('.Dashboard_project')).getByText(/Draft/i)).toBeInTheDocument()
         })
 })

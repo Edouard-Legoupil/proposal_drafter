@@ -1,17 +1,19 @@
 import { vi, describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-
 import { BrowserRouter } from 'react-router-dom'
+import { http, HttpResponse } from 'msw'
+import { server } from '../../mocks/server'
 import Login from './Login'
 
 const mockNavigate = vi.fn()
+
 vi.mock('react-router-dom', async () => {
-        const actual = await vi.importActual('react-router-dom')
-        return {
-                ...actual,
-                useNavigate: () => mockNavigate,
-        }
+    const actual = await vi.importActual('react-router-dom')
+    return {
+        ...actual,
+        useNavigate: () => mockNavigate,
+    }
 })
 
 describe('Login Form Validation', () => {
@@ -57,7 +59,13 @@ describe('Login Form Validation', () => {
 })
 
 describe('Login', () => {
-        it('submits login and navigates', async () => {
+        it('submits login and navigates on success', async () => {
+                server.use(
+                        http.post('http://localhost:8502/api/login', () => {
+                                return new HttpResponse(null, { status: 200 })
+                        })
+                )
+
                 render(
                         <BrowserRouter>
                                 <Login />
@@ -68,10 +76,17 @@ describe('Login', () => {
                 const passwordInput = screen.getByLabelText(/password/i)
                 const loginButton = screen.getByRole('button', { name: /login/i })
 
-                await userEvent.type(emailInput, 'karan@gmail.com')
-                await userEvent.type(passwordInput, 'Karan123')
+                await userEvent.type(emailInput, 'test@example.com')
+                await userEvent.type(passwordInput, 'password123')
+
+                await waitFor(() => {
+                        expect(loginButton).toBeEnabled()
+                })
+
                 await userEvent.click(loginButton)
 
-                expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
+                await waitFor(() => {
+                        expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
+                })
         }, 10000)
 })
