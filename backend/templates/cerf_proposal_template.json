@@ -47,7 +47,8 @@
     },
     "sections": [
       {
-        "section_name": "1.5. Project title",
+        "section_name": "Project title",
+        "section_label": "1.5. Project title",
         "section_parent": "1. Overview",
         "format_type": "text",
         "word_limit": 50,
@@ -97,7 +98,8 @@
         "mandatory": true
       },
       {
-        "section_name": "4. Overall project objective",
+        "section_name": "Objective",
+        "section_label": "4. Overall project objective",
         "section_parent": "",
         "format_type": "text",
         "word_limit": 350,
@@ -105,7 +107,8 @@
         "mandatory": true
       },
       {
-        "section_name": "5. Logical Framework by Sector",
+        "section_name": "Logical Framework",
+        "section_label": "5. Logical Framework by Sector",
         "section_parent": "",
         "instructions": "Develop a results framework with: 1) 1-2 outcomes (sector-level changes) 2) 3-5 outputs (direct deliverables) 3) SMART indicators (specific metrics) 4) Disaggregated targets (gender/age) 5) Verification methods 6) Linked activities. Use CERF standard indicators where possible.",
         "format_type": "table",
@@ -140,7 +143,8 @@
         "mandatory": true
       },
       {
-        "section_name": "6. Workplan",
+        "section_name": "Workplan",
+        "section_label": "6. Workplan",
         "section_parent": "",
         "format_type": "table",
         "columns": [
@@ -181,7 +185,8 @@
         "mandatory": true
       },
       {
-        "section_name": "7.1. People Directly Targeted",
+        "section_name": "People Directly Targeted",
+        "section_label": "7.1. People Directly Targeted",
         "section_parent": "7. People Targeted",
         "instructions": "Complete the beneficiary table with: 1) Categories matching HRP/cluster definitions 2) Gender/age disaggregation 3) Clear totals 4) Consistency with logframe targets. Ensure no double-counting across categories.",
         "format_type": "table",
@@ -224,7 +229,8 @@
         "mandatory": true
       },
       {
-        "section_name": "7.2. DIRECTLY TARGETED BY SECTOR/CLUSTER",
+        "section_name": "DIRECTLY TARGETED BY SECTOR/CLUSTER",
+        "section_label": "7.2. DIRECTLY TARGETED BY SECTOR/CLUSTER",
         "section_parent": "7. People Targeted",
         "instructions": "Populate the sector-specific beneficiary table ensuring: 1) Alignment with cluster/Sector definitions 2) Consistency with overall targets 3) Clear gender/age breakdown 4) No duplication across sectors. Leave blank cells where not applicable.",
         "format_type": "table",
@@ -266,7 +272,8 @@
         "mandatory": true
       },
       {
-        "section_name": "8.1. Estimate of people indirectly targeted",
+        "section_name": "Indirectly targeted",
+        "section_label": "8.1. Estimate of people indirectly targeted",
         "section_parent": "8. People Indirectly Targeted",
         "format_type": "text",
         "word_limit": 350,
@@ -274,7 +281,8 @@
         "mandatory": true
       },
       {
-        "section_name": "8.2. Description of people indirectly targeted",
+        "section_name": "Description of people indirectly targeted",
+        "section_label": "8.2. Description of people indirectly targeted",
         "section_parent": "8. People Indirectly Targeted",
         "format_type": "text",
         "word_limit": 350,
@@ -282,7 +290,8 @@
         "mandatory": true
       },
       {
-        "section_name": "A. Staff and Other Personnel Costs",
+        "section_name": "Budget - Staff and Other Personnel Costs",
+        "section_label": "A. Staff and Other Personnel Costs",
         "section_parent": "9. Proposal Budget",
         "instructions": "Detail staffing requirements with: 1) Position titles and grades 2) Time allocations 3) Justification for each role 4) % charged to CERF. For <6% of direct costs, consolidate into one line item with rationale.",
         "mandatory": true,
@@ -323,7 +332,8 @@
         ]
       },
       {
-        "section_name": "B. Supplies, Commodities, Materials",
+        "section_name": "Budget - Supplies, Commodities, Materials",
+        "section_label": "B. Supplies, Commodities, Materials",
         "section_parent": "9. Proposal Budget",
         "instructions": "List required supplies with: 1) Item specifications 2) Quantities 3) Unit costs 4) Procurement method. For CERF, assume 100% coverage (mark % as n/a). Group similar items where appropriate.",
         "mandatory": true,
@@ -364,7 +374,8 @@
         ]
       },
       {
-        "section_name": "C. Equipments",
+        "section_name": "Budget - Equipments",
+        "section_label": "C. Equipments",
         "section_parent": "9. Proposal Budget",
         "instructions": "Specify equipment needs with: 1) Item descriptions 2) Justification for each 3) Disposition plan post-project. For <2% of direct costs, consolidate into one line. Mark % as n/a for CERF.",
         "mandatory": true,
@@ -405,7 +416,8 @@
         ]
       },
       {
-        "section_name": "D. Contractual Services",
+        "section_name": "Budget - Contractual Services",
+        "section_label": "D. Contractual Services",
         "section_parent": "9. Proposal Budget",
         "instructions": "Detail service contracts including: 1) Type of service 2) Provider qualifications 3) Deliverables 4) Payment schedule. Include cash transfer fees if applicable. Mark % as n/a for CERF.",
         "mandatory": true,
@@ -446,7 +458,8 @@
         ]
       },
       {
-        "section_name": "E. Travel",
+        "section_name": "Budget - Travel",
+        "section_label": "E. Travel",
         "section_parent": "9. Proposal Budget",
         "instructions": "Itemize travel costs with: 1) Purpose of each trip 2) Itineraries 3) Daily rates 4) Number of staff. For <1.5% of direct costs, consolidate. Mark % as n/a for CERF.",
         "mandatory": true,
@@ -487,7 +500,8 @@
         ]
       },
       {
-        "section_name": "F. Transfers and Grants to Counterparts",
+        "section_name": "Budget - Transfers and Grants to Counterparts",
+        "section_label": "F. Transfers and Grants to Counterparts",
         "section_parent": "9. Proposal Budget",
         "instructions": "List partner transfers including: 1) Organization names 2) Type (NNGO/INGO/Govt) 3) Amounts 4) Expected deliverables. Include capacity building components if relevant. Mark % as n/a for CERF.",
         "mandatory": true,
@@ -528,7 +542,8 @@
         ]
       },
       {
-        "section_name": "G. General Operating and Other Direct Costs",
+        "section_name": "Budget - General Operating and Other Direct Costs",
+        "section_label": "G. General Operating and Other Direct Costs",
         "section_parent": "9. Proposal Budget",
         "instructions": "Specify operational costs ensuring: 1) Total ≤6.5% of budget 2) Clear justification for each item 3) Cost-efficiency measures. For <1.5% of direct costs, consolidate. Mark % as n/a for CERF.",
         "mandatory": true,
@@ -569,7 +584,8 @@
         ]
       },
       {
-        "section_name": "10. Budget by Sector/Cluster",
+        "section_name": "Budget by Sector/Cluster",
+        "section_label": "10. Budget by Sector/Cluster",
         "section_parent": "",
         "instructions": "Allocate the budget across sectors/clusters showing: 1) Percentage for each 2) Alignment with response priorities 3) Consistency with beneficiary targeting. Only complete for multi-sector projects.",
         "mandatory": true,
@@ -590,7 +606,8 @@
         ]
       },
       {
-        "section_name": "11. Budget Value References",
+        "section_name": "Budget Value References",
+        "section_label": "11. Budget Value References",
         "section_parent": "",
         "instructions": "Cross-reference budget allocations to key programming areas: 1) Protection 2) GBV 3) Gender 4) Disability 5) CVA. Ensure values match detailed budget sections.",
         "mandatory": true,
@@ -614,7 +631,8 @@
         ]
       },
       {
-        "section_name": "12. Localization",
+        "section_name": "Localization",
+        "section_label": "12. Localization",
         "section_parent": "",
         "format_type": "text",
         "word_limit": 150,
@@ -622,7 +640,8 @@
         "mandatory": true
       },
       {
-        "section_name": "13.1. Protection Mainstreaming and Integration",
+        "section_name": "Protection Mainstreaming and Integration",
+        "section_label": "13.1. Protection Mainstreaming and Integration",
         "section_parent": "13. Protection",
         "format_type": "text",
         "word_limit": 350,
@@ -630,7 +649,8 @@
         "mandatory": true
       },
       {
-        "section_name": "13.2. Protection Budget Value",
+        "section_name": "Protection Budget Value",
+        "section_label": "13.2. Protection Budget Value",
         "section_parent": "13. Protection",
         "format_type": "table",
         "columns": [
@@ -659,7 +679,8 @@
         "mandatory": true
       },
       {
-        "section_name": "13.3. Protection Budget Value Estimation Approach",
+        "section_name": "Protection Budget Estimation",
+        "section_label": "13.3. Protection Budget Value Estimation Approach",
         "section_parent": "13. Protection",
         "format_type": "text",
         "word_limit": 350,
@@ -667,7 +688,8 @@
         "mandatory": true
       },
       {
-        "section_name": "13.4. Gender-Based Violence (GBV) Programming Marker",
+        "section_name": "GBV Programming Marker",
+        "section_label": "13.4. Gender-Based Violence (GBV) Programming Marker",
         "section_parent": "13. Protection",
         "format_type": "text",
         "word_limit": 350,
@@ -675,7 +697,8 @@
         "mandatory": true
       },
       {
-        "section_name": "13.5. Considerations for Protection from Gender-Based Violence",
+        "section_name": "Considerations - Gender-Based Violence",
+        "section_label": "13.5. Considerations for Protection from Gender-Based Violence",
         "section_parent": "13. Protection",
         "format_type": "text",
         "word_limit": 350,
@@ -683,7 +706,8 @@
         "mandatory": true
       },
       {
-        "section_name": "13.6. Gender-Based Violence (GBV) Budget Value",
+        "section_name": "Gender-Based Violence (GBV) Budget",
+        "section_label": "13.6. Gender-Based Violence (GBV) Budget Value",
         "section_parent": "13. Protection",
         "format_type": "table",
         "columns": [
@@ -712,7 +736,8 @@
         "mandatory": false
       },
       {
-        "section_name": "13.7. Gender-Based Violence Budget Value Estimation Approach",
+        "section_name": "Gender-Based Violence Budget Estimation",
+        "section_label": "13.7. Gender-Based Violence Budget Value Estimation Approach",
         "section_parent": "13. Protection",
         "format_type": "text",
         "word_limit": 350,
@@ -720,7 +745,8 @@
         "mandatory": false
       },
       {
-        "section_name": "13.8. Target GBV Funding for WLOs",
+        "section_name": "Target GBV Funding for WLOs",
+        "section_label": "13.8. Target GBV Funding for WLOs",
         "section_parent": "13. Protection",
         "format_type": "text",
         "word_limit": 350,
@@ -728,15 +754,17 @@
         "mandatory": false
       },
       {
-        "section_name": "13.9. Involvement in Women-Led Organizations (WLO) in GBV programming",
+        "section_name": "Involvement in Women-Led Organizations",
+        "section_label": "13.9. Involvement in Women-Led Organizations (WLO) in GBV programming",
         "section_parent": "13. Protection",
         "format_type": "text",
         "word_limit": 100,
         "instructions": "If GBV component exists, briefly explain: 1) WLO partners involved 2) Their roles 3) Value added 4) Any constraints in partnering with WLOs.",
         "mandatory": false
       },
-      {
-        "section_name": "13.10. Accountability to Affected Populations (AAP), Participation and Inclusion in Project Planning and Design",
+      { 
+        "section_name": "AAP  Participation and Inclusion",
+        "section_label": "13.10. Accountability to Affected Populations (AAP), Participation and Inclusion in Project Planning and Design",
         "section_parent": "13. Protection",
         "format_type": "text",
         "word_limit": 100,
@@ -744,7 +772,8 @@
         "mandatory": true
       },
       {
-        "section_name": "13.11. AAP Feedback and Complaints Mechanisms",
+        "section_name": "AAP Feedback and Complaints Mechanisms",
+        "section_label": "13.11. AAP Feedback and Complaints Mechanisms",
         "section_parent": "13. Protection",
         "format_type": "text",
         "word_limit": 100,
@@ -752,7 +781,8 @@
         "mandatory": true
       },
       {
-        "section_name": "13.12. Prevention of Sexual Exploitation and Abuse (PSEA)",
+        "section_name": "Prevention of Sexual Exploitation and Abuse (PSEA)",
+        "section_label": "13.12. Prevention of Sexual Exploitation and Abuse (PSEA)",
         "section_parent": "13. Protection",
         "format_type": "text",
         "word_limit": 100,
@@ -760,7 +790,8 @@
         "mandatory": true
       },
       {
-        "section_name": "14.1. Gender and Age Marker (GAM) reference",
+        "section_name": "Gender and Age Marker (GAM) reference",
+        "section_label": "14.1. Gender and Age Marker (GAM) reference",
         "section_parent": "14. Gender Equality",
         "format_type": "text",
         "word_limit": 100,
@@ -768,7 +799,8 @@
         "mandatory": true
       },
       {
-        "section_name": "14.2. Gender equality programme focus",
+        "section_name": "Gender equality programme focus",
+        "section_label": "14.2. Gender equality programme focus",
         "section_parent": "14. Gender Equality",
         "format_type": "text",
         "word_limit": 350,
@@ -776,7 +808,8 @@
         "mandatory": true
       },
       {
-        "section_name": "14.3. Considerations for gender equality",
+        "section_name": "Considerations for gender equality",
+        "section_label": "14.3. Considerations for gender equality",
         "section_parent": "14. Gender Equality",
         "format_type": "text",
         "word_limit": 350,
@@ -784,7 +817,8 @@
         "mandatory": true
       },
       {
-        "section_name": "14.4. Gender Equality budget value",
+        "section_name": "Gender Equality budget value",
+        "section_label": "14.4. Gender Equality budget value",
         "section_parent": "14. Gender Equality",
         "format_type": "table",
         "columns": [
@@ -813,14 +847,16 @@
         "mandatory": false
       },
       {
-        "section_name": "14.5. Gender equality budget value estimation approach",
+        "section_name": "Gender equality budget value estimation approach",
+        "section_label": "14.5. Gender equality budget value estimation approach",
         "section_parent": "14. Gender Equality",
         "format_type": "number",
         "instructions": "If gender equality component exists, explain: 1) Costing methodology 2) Staffing requirements 3) Activity-specific costs 4) Monitoring components. Reference any standard gender budgeting tools used.",
         "mandatory": false
       },
       {
-        "section_name": "15.1. Disability marker",
+        "section_name": "Disability marker",
+        "section_label": "15.1. Disability marker",
         "section_parent": "15. Person with Disabilities",
         "format_type": "text",
         "word_limit": 75,
@@ -828,7 +864,8 @@
         "mandatory": false
       },
       {
-        "section_name": "15.2. Considerations for disability inclusion",
+        "section_name": "Considerations for disability inclusion",
+        "section_label": "15.2. Considerations for disability inclusion",
         "section_parent": "15. Person with Disabilities",
         "format_type": "text",
         "word_limit": 350,
@@ -836,7 +873,8 @@
         "mandatory": false
       },
       {
-        "section_name": "15.3. Organizations of Persons with Disabilities (OPDs)",
+        "section_name": "Organizations of Persons with Disabilities (OPDs)",
+        "section_label": "15.3. Organizations of Persons with Disabilities (OPDs)",
         "section_parent": "15. Person with Disabilities",
         "format_type": "text",
         "word_limit": 350,
@@ -844,7 +882,8 @@
         "mandatory": false
       },
       {
-        "section_name": "15.4. Persons with Disabilities budget value",
+        "section_name": "Persons with Disabilities budget",
+        "section_label": "15.4. Persons with Disabilities budget value",
         "section_parent": "15. Person with Disabilities",
         "format_type": "table",
         "columns": [
@@ -869,7 +908,8 @@
         "mandatory": false
       },
       {
-        "section_name": "15.5. Persons with Disabilities budget value estimation approach",
+        "section_name": "Persons with Disabilities Budget Estimation",
+        "section_label": "15.5. Persons with Disabilities budget value estimation approach",
         "section_parent": "15. Person with Disabilities",
         "format_type": "text",
         "word_limit": 350,
@@ -877,7 +917,8 @@
         "mandatory": false
       },
       {
-        "section_name": "16.1. Cash and Voucher Assistance (CVA)",
+        "section_name": "Cash and Voucher Assistance",
+        "section_label": "16.1. Cash and Voucher Assistance (CVA)",
         "section_parent": "16. CASH",
         "format_type": "text",
         "word_limit": 350,
@@ -885,7 +926,8 @@
         "mandatory": true
       },
       {
-        "section_name": "17.1 Coordination Summary",
+        "section_name": "Coordination Summary",
+        "section_label": "17.1 Coordination Summary",
         "section_parent": "17 Implementation and Coordination Arrangements",
         "format_type": "text",
         "word_limit": 150,
@@ -893,7 +935,8 @@
         "mandatory": true
       },
       {
-        "section_name": "17.2 Implementation Summary",
+        "section_name": "Implementation Summary",
+        "section_label": "17.2 Implementation Summary",
         "section_parent": "17 Implementation and Coordination Arrangements",
         "format_type": "text",
         "word_limit": 150,
@@ -901,7 +944,8 @@
         "mandatory": true
       },
       {
-        "section_name": "17.3 Access",
+        "section_name": "Humanitarian Access",
+        "section_label": "17.3 Access",
         "section_parent": "17 Implementation and Coordination Arrangements",
         "format_type": "text",
         "word_limit": 350,
@@ -909,7 +953,8 @@
         "mandatory": true
       },
       {
-        "section_name": "17.4 Risk Management",
+        "section_name": "Risk Management",
+        "section_label": "17.4 Risk Management",
         "section_parent": "17 Implementation and Coordination Arrangements",
         "instructions": "Assess key risks using: 1) Risk matrix methodology 2) Likelihood/impact ratings 3) Mitigation measures 4) Contingency planning. Focus on operational and contextual risks.",
         "format_type": "table",
@@ -922,7 +967,8 @@
         "mandatory": true
       },
       {
-        "section_name": "17.5 Exit Strategy and Sustainability",
+        "section_name": "Exit Strategy and Sustainability",
+        "section_label": "17.5 Exit Strategy and Sustainability",
         "section_parent": "17 Implementation and Coordination Arrangements",
         "format_type": "text",
         "word_limit": 350,
@@ -930,7 +976,8 @@
         "mandatory": true
       },
       {
-        "section_name": "18. Subgrants and sub-partners",
+        "section_name": "Subgrants and sub-partners",
+        "section_label": "18. Subgrants and sub-partners",
         "format_type": "table",
         "columns": [
           {

@@ -673,14 +673,10 @@ export default function Chat (props)
                                                         Results
                                                 </div>
 
-                                                {proposal.Evaluation?.content ? <div className='Chat_exportButtons'>
+                                                {Object.values(proposal).some(section => section.content) ? <div className='Chat_exportButtons'>
                                                         <button type="button" onClick={() => handleExport("docx")}>
                                                                 <img src={word_icon} />
-                                                                Download .DOCX
-                                                        </button>
-                                                        <button type="button" onClick={() => handleExport("pdf")}>
-                                                                <img src={pdf_icon} />
-                                                                Download .PDF
+                                                                Download Document
                                                         </button>
                                                         {!isApproved ? <button type="button" onClick={handleApprove}>
                                                                 <img src={approved_icon} />
