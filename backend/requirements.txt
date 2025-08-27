@@ -7,6 +7,7 @@ openai<1.99.9
 python-docx
 markdown-it-py
 markdown-it-py[linkify,plugins]
+mdit-py-plugins>=0.3.5
 langchain
 langchain-openai
 langchain-community
