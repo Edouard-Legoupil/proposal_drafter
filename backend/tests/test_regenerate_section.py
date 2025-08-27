@@ -16,8 +16,12 @@ async def test_regenerate_section(authenticated_client, mocker):
     # Mock Redis to return session data
     mocker.patch('backend.api.proposals.redis_client.get', return_value='{"key": "value"}')
     mocker.patch('backend.api.proposals.redis_client.setex')
-    # Mock the database check within the endpoint
-    mocker.patch('backend.api.proposals.get_engine')
+    # Mock the database check for is_accepted
+    mock_engine = MagicMock()
+    mock_connection = MagicMock()
+    mock_connection.execute.return_value.scalar.return_value = False # Not accepted
+    mock_engine.connect.return_value.__enter__.return_value = mock_connection
+    mocker.patch('backend.api.proposals.get_engine', return_value=mock_engine)
 
     # Prepare payload
     session_id = str(uuid.uuid4())

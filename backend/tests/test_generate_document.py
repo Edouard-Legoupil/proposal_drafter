@@ -5,8 +5,17 @@ from sqlalchemy import text
 from backend.main import app
 from backend.core.security import get_current_user
 
+from unittest.mock import MagicMock
+
+
 @pytest.mark.asyncio
-async def test_generate_document(authenticated_client, db_session):
+async def test_generate_document(authenticated_client, db_session, mocker):
+    # Mock the database engine for this specific test
+    mock_engine = MagicMock()
+    mock_connection = db_session
+    mock_engine.connect.return_value.__enter__.return_value = mock_connection
+    mocker.patch('backend.api.documents.get_engine', return_value=mock_engine)
+
     client = authenticated_client
     user_id = app.dependency_overrides[get_current_user]()['user_id']
     proposal_id = str(uuid.uuid4())
@@ -21,11 +30,21 @@ async def test_generate_document(authenticated_client, db_session):
             "id": proposal_id, "user_id": user_id,
             "form_data": json.dumps({"Project Draft Short name": "Disaster Relief"}),
             "project_description": "Testing document generation.",
-            "generated_sections": json.dumps({"Summary": "Content"}),
+                "generated_sections": json.dumps({
+                    "Summary": "Content",
+                    "Rationale": "Content",
+                    "Project Description": "Content",
+                    "Implementation and Coordination Arrangements": "Content",
+                    "Monitoring": "Content",
+                    "Evaluation": "Content",
+                    "Results Matrix": "Content",
+                    "Work Plan": "Content",
+                    "Budget": "Content",
+                    "Annex 1. Risk Assessment Plan": "Content"
+                }),
             "template_name": "unhcr_proposal_template.json", "is_accepted": False
         }
     )
-    db_session.commit()
 
     # Call the endpoint
     response = client.get(f"/api/generate-document/{proposal_id}?format=docx")

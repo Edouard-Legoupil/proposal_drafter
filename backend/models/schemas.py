@@ -78,3 +78,17 @@ class UpdateSectionRequest(BaseModel):
     proposal_id: uuid.UUID
     section: str
     content: str
+
+
+class SubmitPeerReviewRequest(BaseModel):
+    """
+    Schema for submitting a proposal for peer review.
+    """
+    user_ids: list[uuid.UUID]
+
+
+class SubmitReviewRequest(BaseModel):
+    """
+    Schema for submitting a peer review.
+    """
+    review_data: Dict[str, Any]

@@ -26,6 +26,18 @@ CREATE TABLE IF NOT EXISTS proposals (
     project_description TEXT NOT NULL,
     generated_sections JSONB,
     is_accepted BOOLEAN DEFAULT FALSE,
+    reviews JSONB,
+    status VARCHAR(50) DEFAULT 'draft',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create Proposal_Peer table
+CREATE TABLE IF NOT EXISTS proposal_peer (
+    id SERIAL PRIMARY KEY,
+    proposal_id UUID REFERENCES proposals(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    status VARCHAR(50) DEFAULT 'pending',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
@@ -33,6 +45,8 @@ CREATE TABLE IF NOT EXISTS proposals (
 -- Create index for faster user lookup
 CREATE INDEX IF NOT EXISTS idx_proposals_user_id ON proposals(user_id);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_proposal_peer_proposal_id ON proposal_peer(proposal_id);
+CREATE INDEX IF NOT EXISTS idx_proposal_peer_user_id ON proposal_peer(user_id);
 
 -- Grant table permissions to application user
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO <DB_USERNAME>;

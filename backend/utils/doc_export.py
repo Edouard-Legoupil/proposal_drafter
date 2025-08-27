@@ -7,7 +7,6 @@ from docx import Document
 from docx.shared import Pt
 from markdown_it import MarkdownIt
 from mdit_py_plugins.front_matter import front_matter_plugin
-#from mdit_py_plugins.table import table_plugin
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_JUSTIFY
 from reportlab.lib.pagesizes import A4
@@ -31,7 +30,7 @@ def add_markdown_to_doc(doc: Document, text: str):
         text: The text, which may contain Markdown syntax.
     """
     # Configure the Markdown parser to handle tables.
-    md = MarkdownIt().use(front_matter_plugin).use(table_plugin)
+    md = MarkdownIt().enable('table')
     tokens = md.parse(text)
 
     for token in tokens:
@@ -62,14 +61,15 @@ def add_markdown_to_doc(doc: Document, text: str):
         elif token.type == "paragraph_open":
             # Handle paragraphs, including bold text.
             paragraph = doc.add_paragraph()
-            for child in token.children:
-                if child.type == "strong_open":
-                    # Add bold text.
-                    run = paragraph.add_run(child.next_sibling.content)
-                    run.bold = True
-                elif child.type == "text" and not child.find_predecessor("strong_open"):
-                    # Add regular text.
-                    paragraph.add_run(child.content)
+            if token.children:
+                for child in token.children:
+                    if child.type == "strong_open":
+                        # Add bold text.
+                        run = paragraph.add_run(child.next_sibling.content)
+                        run.bold = True
+                    elif child.type == "text" and not child.find_predecessor("strong_open"):
+                        # Add regular text.
+                        paragraph.add_run(child.content)
             # Apply paragraph formatting.
             paragraph.paragraph_format.space_after = Pt(12)
             paragraph.paragraph_format.line_spacing = 1.5

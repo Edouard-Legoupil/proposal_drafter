@@ -17,7 +17,10 @@ export default function Dashboard ()
 {
         const navigate = useNavigate()
 
-        const [projects, setProjects] = useState()
+        const [projects, setProjects] = useState([])
+        const [reviews, setReviews] = useState([])
+        const [selectedTab, setSelectedTab] = useState('my_proposals')
+
         async function getProjects ()
         {
                 const response = await fetch(`${API_BASE_URL}/list-drafts`, {
@@ -32,17 +35,38 @@ export default function Dashboard ()
                         setProjects(data.drafts)
                 }
         }
+
+        async function getReviews ()
+        {
+                const response = await fetch(`${API_BASE_URL}/proposals/reviews`, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include'
+                })
+
+                if(response.ok)
+                {
+                        const data = await response.json()
+                        setReviews(data.reviews)
+                }
+        }
+
         useEffect(() => {
                 sessionStorage.removeItem("proposal_id")
                 getProjects()
+                getReviews()
         }, [])
 
-        async function handleProjectClick(e, proposal_id)
+        async function handleProjectClick(e, proposal_id, isReview = false)
         {
                 if(e.target.className !== "Dashboard_project_tripleDots" && !(e.target.className === "Project_optionsPopover_option_delete" || e.target.className === "Project_optionsPopover_option" && e.target.innerText === "Delete"))
                 {
                         sessionStorage.setItem("proposal_id", proposal_id)
-                        navigate("/chat")
+                        if (isReview) {
+                                navigate(`/review/${proposal_id}`)
+                        } else {
+                                navigate("/chat")
+                        }
                 }
         }
 
@@ -58,11 +82,12 @@ export default function Dashboard ()
         const [searchTerm, setSearchTerm] = useState("")
         const [displayProjects, setDisplayProjects] = useState([])
         useEffect(() => {
-                if(projects && projects.length)
-                        setDisplayProjects(projects.filter(project =>
+                const source = selectedTab === 'my_proposals' ? projects : reviews;
+                if(source && source.length)
+                        setDisplayProjects(source.filter(project =>
                                 project.project_title.toLowerCase().includes(searchTerm.toLowerCase())
                 ))
-        }, [projects, searchTerm])
+        }, [projects, reviews, searchTerm, selectedTab])
 
         return  <Base>
                 <div className="Dashboard">
@@ -74,13 +99,28 @@ export default function Dashboard ()
                                 <CommonButton icon={createNew} label="Generate New Proposal" onClick={() => navigate("/chat")} />
                         </div>
 
-                        {projects && projects.filter(project => !project.is_sample).length ?
+                        <div className="Dashboard_tabs">
+                                <button
+                                        className={`Dashboard_tab ${selectedTab === 'my_proposals' ? 'active' : ''}`}
+                                        onClick={() => setSelectedTab('my_proposals')}
+                                >
+                                        My Proposals
+                                </button>
+                                <button
+                                        className={`Dashboard_tab ${selectedTab === 'for_review' ? 'active' : ''}`}
+                                        onClick={() => setSelectedTab('for_review')}
+                                >
+                                        For Review
+                                </button>
+                        </div>
+
+                        {displayProjects && displayProjects.filter(project => !project.is_sample).length ?
                                 <div className='Dashboard_search'>
                                         <img src={search} />
                                         <input type="text" id="dashboard-search" name="dashboard-search" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className='Dashboard_search_input' placeholder='Search' />
                                 </div>
                                 :
-                                <h3 className='Dashboard_sectionHeading'>Sample proposals</h3>
+                                <h3 className='Dashboard_sectionHeading'>{selectedTab === 'my_proposals' ? 'Sample proposals' : 'No proposals to review'}</h3>
                         }
 
                         <div className='Dashboard_projects'>
@@ -92,7 +132,7 @@ export default function Dashboard ()
                                                         project_title={project.project_title}
                                                         proposal_id={project.proposal_id}
                                                         date={cleanedDate(project.updated_at)}
-                                                        onClick={handleProjectClick}
+                                                        onClick={(e, proposal_id) => handleProjectClick(e, proposal_id, selectedTab === 'for_review')}
                                                         status={project.is_accepted}
                                                 >
                                                         {project.summary}
@@ -106,7 +146,7 @@ export default function Dashboard ()
                                                         project_title={project.project_title}
                                                         proposal_id={project.proposal_id}
                                                         date={cleanedDate(project.updated_at)}
-                                                        onClick={handleProjectClick}
+                                                        onClick={(e, proposal_id) => handleProjectClick(e, proposal_id, selectedTab === 'for_review')}
                                                         status={project.is_accepted}
                                                         sample
                                                 >

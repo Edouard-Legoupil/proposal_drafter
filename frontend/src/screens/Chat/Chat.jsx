@@ -37,6 +37,28 @@ export default function Chat (props)
         const [userPrompt, setUserPrompt] = useState("")
 
         const [isModalOpen, setIsModalOpen] = useState(false)
+        const [isPeerReviewModalOpen, setIsPeerReviewModalOpen] = useState(false)
+        const [users, setUsers] = useState([])
+        const [selectedUsers, setSelectedUsers] = useState([])
+
+        async function getUsers () {
+                const response = await fetch(`${API_BASE_URL}/users`, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include'
+                })
+
+                if(response.ok)
+                {
+                        const data = await response.json()
+                        setUsers(data.users.map(user => ({id: user.id, name: user.name})))
+                }
+        }
+
+        useEffect(() => {
+                getUsers()
+        }, [])
+
         const [form_expanded, setFormExpanded] = useState(true)
         const [formData, setFormData] = useState({
                 "Project Draft Short name": {
@@ -474,6 +496,7 @@ export default function Chat (props)
         }
 
         const [isApproved, setIsApproved] = useState(false)
+        const [proposalStatus, setProposalStatus] = useState("draft")
 
         async function getContent()         {
 
@@ -511,6 +534,7 @@ export default function Chat (props)
                                 setProposal(sectionState);
 
                                 setIsApproved(data.is_accepted)
+                                setProposalStatus(data.status)
                                 setSidebarOpen(true)
                         }
                         else if(response.status === 401)
@@ -584,8 +608,38 @@ export default function Chat (props)
                 }
         }
 
+        async function handleSubmitForPeerReview ()
+        {
+                const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/submit-for-review`, {
+                        method: "POST",
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ user_ids: selectedUsers }),
+                        credentials: "include"
+                })
+
+                if(response.ok)
+                {
+                        await getContent()
+                        setIsPeerReviewModalOpen(false)
+                }
+                else if(response.status === 401)
+                {
+                        sessionStorage.setItem("session_expired", "Session expired. Please login again.")
+                        navigate("/login")
+                }
+        }
+
         return  <Base>
                 <div className="Chat">
+                        <MultiSelectModal
+                                isOpen={isPeerReviewModalOpen}
+                                onClose={() => setIsPeerReviewModalOpen(false)}
+                                options={users}
+                                selectedOptions={selectedUsers}
+                                onSelectionChange={setSelectedUsers}
+                                onConfirm={handleSubmitForPeerReview}
+                                title="Select Users for Peer Review"
+                        />
                         {sidebarOpen ? <aside>
                                 <ul className='Chat_sidebar'>
                                         <li
@@ -685,6 +739,9 @@ export default function Chat (props)
                                                         {!isApproved ? <button type="button" onClick={handleApprove}>
                                                                 <img src={approved_icon} />
                                                                 Approve
+                                                        </button> : ""}
+                                                        {proposalStatus === 'draft' && !isApproved ? <button type="button" onClick={() => setIsPeerReviewModalOpen(true)}>
+                                                                Submit for Peer Review
                                                         </button> : ""}
                                                 </div> : ""}
                                         </div>
