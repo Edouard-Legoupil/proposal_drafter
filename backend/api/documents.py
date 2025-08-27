@@ -72,10 +72,10 @@ async def generate_and_download_document(
         template_sections = [s.get("section_name") for s in proposal_template.get("sections", [])]
 
 
-        # Ensure all required sections are present before generating.
-        if len(generated_sections) < len(template_sections):
-            missing = [s for s in template_sections if s not in generated_sections]
-            raise HTTPException(status_code=400, detail=f"Cannot generate document. Missing sections: {', '.join(missing)}")
+        # # Ensure all required sections are present before generating.
+        # if len(generated_sections) < len(template_sections):
+        #     missing = [s for s in template_sections if s not in generated_sections]
+        #     raise HTTPException(status_code=400, detail=f"Cannot generate document. Missing sections: {', '.join(missing)}")
 
         ordered_sections = {section: generated_sections.get(section, "") for section in template_sections}
 
@@ -92,15 +92,21 @@ async def generate_and_download_document(
                 raise HTTPException(status_code=500, detail="Failed to generate PDF document.")
         else:
             # Return the DOCX file by default.
-            doc = create_word_from_sections(form_data, ordered_sections)
-            docx_buffer = io.BytesIO()
-            doc.save(docx_buffer)
-            docx_buffer.seek(0)
-            return StreamingResponse(
-                docx_buffer,
-                media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                headers={"Content-Disposition": f"attachment; filename=Proposal_{proposal_id}.docx"}
-            )
+            try:
+                doc = create_word_from_sections(form_data, ordered_sections)
+                docx_buffer = io.BytesIO()
+                doc.save(docx_buffer)
+                docx_buffer.seek(0)
+                return StreamingResponse(
+                    docx_buffer,
+                    media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    headers={"Content-Disposition": f"attachment; filename=Proposal_{proposal_id}.docx"}
+                )
+            except Exception as e:
+                logger.error(f"[DOCX Generation Error] {e}", exc_info=True)
+                raise HTTPException(status_code=500, detail="Failed to generate DOCX document.")
+
+
 
     except SQLAlchemyError as e:
         logger.error(f"Database error during document generation: {e}", exc_info=True)
