@@ -1,6 +1,8 @@
 import './Login.css'
 
 import { useEffect, useRef, useState } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faWandMagicSparkles, faDatabase, faUsers } from '@fortawesome/free-solid-svg-icons'
 import { useNavigate } from 'react-router-dom'
 
 import ForgotPassword from '../ForgotPassword/ForgotPassword'
@@ -132,8 +134,10 @@ export default function Login (props)
                         </div>
                         <div className='Login-left'>
                                 <div className="Login-appLogo">
-                                        <img className='Login-logo' src={logo} alt='My Rafiki logo' />
+                                        <img className='Login-logo' src={logo} alt='Proposal Gen logo' />
                                 </div>
+
+
                                 {props?.forgotPassword ?
                                         <ForgotPassword errorPopoverRef={errorPopover} setErrorText={setErrorText} />
                                         :
@@ -224,8 +228,21 @@ export default function Login (props)
                                                 </div>
                                         </form>
                                 }
+                                <div className='Login-motto'>
+                                        <div className='Login-motto-item'>
+                                                <FontAwesomeIcon icon={faWandMagicSparkles} className='Login-motto-icon' />
+                                                <p className='Login-motto-text'>Draft Initial Project Proposal with AI</p>
+                                        </div>
+                                        <div className='Login-motto-item'>
+                                                <FontAwesomeIcon icon={faDatabase} className='Login-motto-icon' />
+                                                <p className='Login-motto-text'>Leverage Curated Knowledge on Donors, Field Context and Interventions</p>
+                                        </div>
+                                        <div className='Login-motto-item'>
+                                                <FontAwesomeIcon icon={faUsers} className='Login-motto-icon' />
+                                                <p className='Login-motto-text'>Organize Peer Review for Continuous Learning</p>
+                                        </div>
+                                </div>
                         </div>
-
                 </div>
 
                 <OSSFooter />

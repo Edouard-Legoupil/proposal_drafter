@@ -45,6 +45,7 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
+        padding-top: 50px;
 }
 
 .Login-appLogo {
@@ -254,11 +255,30 @@ input.Login_inputPassword {
         text-decoration: none;
 }
 
-.Login_right-tabAndFold {
-        display: none;
+.Login-motto {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        margin-top: 50px;
+        max-width: 390px;
+        padding: 0 50px;
 }
 
-.Login-rightIllustration {
+.Login-motto-item {
         display: flex;
-        flex-shrink: 0;
+        align-items: center;
+        gap: 15px;
+}
+
+.Login-motto-icon {
+        font-size: 1.5rem;
+        color: #0033AE;
+        width: 30px;
+        text-align: center;
+}
+
+.Login-motto-text {
+        font-family: "Noto";
+        font-weight: 350;
+        font-size: 14px;
 }
