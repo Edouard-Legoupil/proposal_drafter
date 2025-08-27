@@ -631,7 +631,7 @@ export default function Chat (props)
                                                                         <div className='Chat_form_group'>
                                                                                 <div className="tooltip-container">
                                                                                         <h3 className='Chat_form_group_title'>Identify Potential Interventions</h3>
-                                                                                        <span className="tooltip-text">to leverage knowledge of policies, strategies and past evaluation recommendations</span>
+                                                                                        <span className="tooltip-text">surface Relevant Policies, Strategies and past Evaluation Recommendations</span>
                                                                                 </div>
                                                                                 {renderFormField("Main Outcome")}
                                                                                 {renderFormField("Beneficiaries Profile")}
@@ -639,16 +639,16 @@ export default function Chat (props)
                                                                         </div>
                                                                         <div className='Chat_form_group'>
                                                                                 <div className="tooltip-container">
-                                                                                        <h3 className='Chat_form_group_title'>Define Field context</h3>
-                                                                                        <span className="tooltip-text">to leverage knowledge of Situation Analysis and Needs Assessment</span>
+                                                                                        <h3 className='Chat_form_group_title'>Define Field Context</h3>
+                                                                                        <span className="tooltip-text">surface Situation Analysis and Needs Assessment</span>
                                                                                 </div>
                                                                                 {renderFormField("Geographical Scope")}
                                                                                 {renderFormField("Country / Location(s)")}
                                                                         </div>
                                                                         <div className='Chat_form_group'>
                                                                                 <div className="tooltip-container">
-                                                                                        <h3 className='Chat_form_group_title'>Tailor funding request</h3>
-                                                                                        <span className="tooltip-text">to leverage knowledge of Donor profile and content submission formal requirement</span>
+                                                                                        <h3 className='Chat_form_group_title'>Tailor Funding Request</h3>
+                                                                                        <span className="tooltip-text">surface Donor profile and apply Formal Requirement for Submission</span>
                                                                                 </div>
                                                                                 {renderFormField("Budget Range")}
                                                                                 {renderFormField("Duration")}

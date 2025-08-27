@@ -167,19 +167,35 @@
 
 .tooltip-text {
   visibility: hidden;
-  width: 160px;
-  background-color: #555;
+  min-width: 280px;
+  background-color: #0072bc;
   color: #fff;
-  text-align: center;
+  font-family: "Noto";
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
   border-radius: 6px;
-  padding: 5px;
+  padding: 10px;
   position: absolute;
-  z-index: 1;
-  bottom: 125%;
+  z-index: 10;
+  top: 120%;
   left: 50%;
-  margin-left: -80px;
+  transform: translateX(-50%);
   opacity: 0;
   transition: opacity 0.3s;
+  white-space: normal;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.tooltip-text::after {
+  content: " ";
+  position: absolute;
+  bottom: 100%;  /* At the top of the tooltip */
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent transparent #333 transparent;
 }
 
 .tooltip-container:hover .tooltip-text {
