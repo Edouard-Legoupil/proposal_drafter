@@ -17,6 +17,9 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Create Proposal Status Enum Type
+CREATE TYPE proposal_status AS ENUM ('draft', 'in_review', 'submission', 'submitted', 'approved');
+
 -- Create Proposals table
 CREATE TABLE IF NOT EXISTS proposals (
     id UUID PRIMARY KEY,
@@ -27,7 +30,7 @@ CREATE TABLE IF NOT EXISTS proposals (
     generated_sections JSONB,
     is_accepted BOOLEAN DEFAULT FALSE,
     reviews JSONB,
-    status VARCHAR(50) DEFAULT 'draft',
+    status proposal_status DEFAULT 'draft',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );

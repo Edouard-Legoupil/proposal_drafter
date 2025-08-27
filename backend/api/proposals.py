@@ -658,6 +658,40 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
 
     return {"session_id": session_id, **data_to_load}
 
+@router.post("/proposals/{proposal_id}/request-submission")
+async def request_submission(proposal_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
+    """
+    Requests submission of a proposal.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().begin() as connection:
+            connection.execute(
+                text("UPDATE proposals SET status = 'submission', updated_at = NOW() WHERE id = :id AND user_id = :uid"),
+                {"id": proposal_id, "uid": user_id}
+            )
+        return {"message": "Proposal submitted for submission."}
+    except Exception as e:
+        logger.error(f"[REQUEST SUBMISSION ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to request submission.")
+
+@router.post("/proposals/{proposal_id}/submit")
+async def submit_proposal(proposal_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
+    """
+    Submits a proposal.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().begin() as connection:
+            connection.execute(
+                text("UPDATE proposals SET status = 'submitted', updated_at = NOW() WHERE id = :id AND user_id = :uid"),
+                {"id": proposal_id, "uid": user_id}
+            )
+        return {"message": "Proposal submitted."}
+    except Exception as e:
+        logger.error(f"[SUBMIT PROPOSAL ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to submit proposal.")
+
 @router.post("/finalize-proposal")
 async def finalize_proposal(request: FinalizeProposalRequest, current_user: dict = Depends(get_current_user)):
     """
@@ -666,7 +700,7 @@ async def finalize_proposal(request: FinalizeProposalRequest, current_user: dict
     try:
         with get_engine().begin() as connection:
             connection.execute(
-                text("UPDATE proposals SET is_accepted = TRUE, updated_at = NOW() WHERE id = :id AND user_id = :uid"),
+                text("UPDATE proposals SET is_accepted = TRUE, status = 'approved', updated_at = NOW() WHERE id = :id AND user_id = :uid"),
                 {"id": request.proposal_id, "uid": current_user["user_id"]}
             )
         return {"message": "Proposal finalized.", "proposal_id": request.proposal_id, "is_accepted": True}

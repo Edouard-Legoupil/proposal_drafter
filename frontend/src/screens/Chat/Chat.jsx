@@ -588,6 +588,44 @@ export default function Chat (props)
                         throw new Error(`Download failed: ${response.status} ${response.statusText}`);
         }
 
+        async function handleRequestSubmission ()
+        {
+                const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/request-submission`, {
+                        method: "POST",
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: "include"
+                })
+
+                if(response.ok)
+                {
+                        await getContent()
+                }
+                else if(response.status === 401)
+                {
+                        sessionStorage.setItem("session_expired", "Session expired. Please login again.")
+                        navigate("/login")
+                }
+        }
+
+        async function handleSubmit ()
+        {
+                const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/submit`, {
+                        method: "POST",
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: "include"
+                })
+
+                if(response.ok)
+                {
+                        await getContent()
+                }
+                else if(response.status === 401)
+                {
+                        sessionStorage.setItem("session_expired", "Session expired. Please login again.")
+                        navigate("/login")
+                }
+        }
+
         async function handleApprove ()
         {
                 const response = await fetch(`${API_BASE_URL}/finalize-proposal`, {
@@ -736,13 +774,30 @@ export default function Chat (props)
                                                                 <img src={pdf_icon} />
                                                                 Download .PDF
                                                         </button>
-                                                        {!isApproved ? <button type="button" onClick={handleApprove}>
-                                                                <img src={approved_icon} />
-                                                                Approve
-                                                        </button> : ""}
-                                                        {proposalStatus === 'draft' && !isApproved ? <button type="button" onClick={() => setIsPeerReviewModalOpen(true)}>
-                                                                Submit for Peer Review
-                                                        </button> : ""}
+                                                        <button
+                                                                type="button"
+                                                                className={`status-${proposalStatus}`}
+                                                                onClick={() => {
+                                                                        if (proposalStatus === 'draft') {
+                                                                                setIsPeerReviewModalOpen(true);
+                                                                        } else if (proposalStatus === 'in_review') {
+                                                                                handleRequestSubmission();
+                                                                        } else if (proposalStatus === 'submission') {
+                                                                                handleSubmit();
+                                                                        } else if (proposalStatus === 'submitted') {
+                                                                                handleApprove();
+                                                                        }
+                                                                }}
+                                                                disabled={proposalStatus === 'approved'}
+                                                        >
+                                                                {
+                                                                        proposalStatus === 'draft' ? 'Submit for Peer Review' :
+                                                                        proposalStatus === 'in_review' ? 'Request Submission' :
+                                                                        proposalStatus === 'submission' ? 'Submit' :
+                                                                        proposalStatus === 'submitted' ? 'Approve' :
+                                                                        'Approved'
+                                                                }
+                                                        </button>
                                                 </div> : ""}
                                         </div>
 
