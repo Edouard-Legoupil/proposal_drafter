@@ -80,6 +80,19 @@ class UpdateSectionRequest(BaseModel):
     content: str
 
 
+class SubmitPeerReviewRequest(BaseModel):
+    """
+    Schema for submitting a proposal for peer review.
+    """
+    user_ids: list[uuid.UUID]
+
+
+class SubmitReviewRequest(BaseModel):
+    """
+    Schema for submitting a peer review.
+    """
+    review_data: Dict[str, Any]
+
 # class Donor(BaseModel):
 #     id: uuid.UUID
 #     name: str
@@ -129,3 +142,4 @@ class UpdateSectionRequest(BaseModel):
 
 #     class Config:
 #         orm_mode = True
+

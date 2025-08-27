@@ -8,7 +8,6 @@ from docx import Document
 from docx.shared import Pt, RGBColor
 from markdown_it import MarkdownIt
 from mdit_py_plugins.front_matter import front_matter_plugin
-
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_JUSTIFY
 from reportlab.lib.pagesizes import A4
@@ -122,6 +121,7 @@ def add_markdown_to_doc(doc: Document, text: str):
             print(f"Error processing token type '{token.type}' at index {i}: {e}")
             doc.add_paragraph(f"Error processing content near: {token.content}")
             i += 1
+
 
 
 def create_word_from_sections(form_data: Dict, ordered_sections: Dict) -> Document:

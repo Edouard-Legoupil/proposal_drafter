@@ -548,4 +548,24 @@
         cursor: pointer;
         font-weight: bold;
     }
+
+.status-draft {
+    background: #757575;
+}
+
+.status-review {
+    background: #FF9800;
+}
+
+.status-submission {
+    background: #0072BC;
+}
+
+.status-submitted {
+    background: #6A1B9A;
+}
+
+.status-approved {
+    background: #2E7D32;
+}
     

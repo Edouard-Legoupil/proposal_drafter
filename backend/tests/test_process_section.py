@@ -14,7 +14,14 @@ def test_process_section(authenticated_client, mocker):
     # Mock database and redis calls within the endpoint
     mocker.patch('backend.api.proposals.redis_client.get', return_value='{"proposal_template": {"sections": [{"section_name": "Summary"}]}}')
     mocker.patch('backend.api.proposals.redis_client.setex')
-    mocker.patch('backend.api.proposals.get_engine') # Mock the engine to prevent real DB calls
+
+    # Mock the database check for is_accepted
+    mock_engine = MagicMock()
+    mock_connection = MagicMock()
+    # Let's mock the scalar result directly
+    mock_connection.execute.return_value.scalar.return_value = False # Not accepted
+    mock_engine.connect.return_value.__enter__.return_value = mock_connection
+    mocker.patch('backend.api.proposals.get_engine', return_value=mock_engine)
 
     # Prepare payload
     session_id = str(uuid.uuid4())

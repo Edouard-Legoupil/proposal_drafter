@@ -37,6 +37,28 @@ export default function Chat (props)
         const [userPrompt, setUserPrompt] = useState("")
 
         const [isModalOpen, setIsModalOpen] = useState(false)
+        const [isPeerReviewModalOpen, setIsPeerReviewModalOpen] = useState(false)
+        const [users, setUsers] = useState([])
+        const [selectedUsers, setSelectedUsers] = useState([])
+
+        async function getUsers () {
+                const response = await fetch(`${API_BASE_URL}/users`, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include'
+                })
+
+                if(response.ok)
+                {
+                        const data = await response.json()
+                        setUsers(data.users.map(user => ({id: user.id, name: user.name})))
+                }
+        }
+
+        useEffect(() => {
+                getUsers()
+        }, [])
+
         const [form_expanded, setFormExpanded] = useState(true)
         const [formData, setFormData] = useState({
                 "Project Draft Short name": {
@@ -474,6 +496,7 @@ export default function Chat (props)
         }
 
         const [isApproved, setIsApproved] = useState(false)
+        const [proposalStatus, setProposalStatus] = useState("draft")
 
         async function getContent()         {
 
@@ -511,6 +534,7 @@ export default function Chat (props)
                                 setProposal(sectionState);
 
                                 setIsApproved(data.is_accepted)
+                                setProposalStatus(data.status)
                                 setSidebarOpen(true)
                         }
                         else if(response.status === 401)
@@ -564,6 +588,44 @@ export default function Chat (props)
                         throw new Error(`Download failed: ${response.status} ${response.statusText}`);
         }
 
+        async function handleRequestSubmission ()
+        {
+                const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/request-submission`, {
+                        method: "POST",
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: "include"
+                })
+
+                if(response.ok)
+                {
+                        await getContent()
+                }
+                else if(response.status === 401)
+                {
+                        sessionStorage.setItem("session_expired", "Session expired. Please login again.")
+                        navigate("/login")
+                }
+        }
+
+        async function handleSubmit ()
+        {
+                const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/submit`, {
+                        method: "POST",
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: "include"
+                })
+
+                if(response.ok)
+                {
+                        await getContent()
+                }
+                else if(response.status === 401)
+                {
+                        sessionStorage.setItem("session_expired", "Session expired. Please login again.")
+                        navigate("/login")
+                }
+        }
+
         async function handleApprove ()
         {
                 const response = await fetch(`${API_BASE_URL}/finalize-proposal`, {
@@ -584,8 +646,38 @@ export default function Chat (props)
                 }
         }
 
+        async function handleSubmitForPeerReview ()
+        {
+                const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/submit-for-review`, {
+                        method: "POST",
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ user_ids: selectedUsers }),
+                        credentials: "include"
+                })
+
+                if(response.ok)
+                {
+                        await getContent()
+                        setIsPeerReviewModalOpen(false)
+                }
+                else if(response.status === 401)
+                {
+                        sessionStorage.setItem("session_expired", "Session expired. Please login again.")
+                        navigate("/login")
+                }
+        }
+
         return  <Base>
                 <div className="Chat">
+                        <MultiSelectModal
+                                isOpen={isPeerReviewModalOpen}
+                                onClose={() => setIsPeerReviewModalOpen(false)}
+                                options={users}
+                                selectedOptions={selectedUsers}
+                                onSelectionChange={setSelectedUsers}
+                                onConfirm={handleSubmitForPeerReview}
+                                title="Select Users for Peer Review"
+                        />
                         {sidebarOpen ? <aside>
                                 <ul className='Chat_sidebar'>
                                         <li
@@ -678,10 +770,30 @@ export default function Chat (props)
                                                                 <img src={word_icon} />
                                                                 Download Document
                                                         </button>
-                                                        {!isApproved ? <button type="button" onClick={handleApprove}>
-                                                                <img src={approved_icon} />
-                                                                Approve
-                                                        </button> : ""}
+                                                        <button
+                                                                type="button"
+                                                                className={`status-${proposalStatus}`}
+                                                                onClick={() => {
+                                                                        if (proposalStatus === 'draft') {
+                                                                                setIsPeerReviewModalOpen(true);
+                                                                        } else if (proposalStatus === 'in_review') {
+                                                                                handleRequestSubmission();
+                                                                        } else if (proposalStatus === 'submission') {
+                                                                                handleSubmit();
+                                                                        } else if (proposalStatus === 'submitted') {
+                                                                                handleApprove();
+                                                                        }
+                                                                }}
+                                                                disabled={proposalStatus === 'approved'}
+                                                        >
+                                                                {
+                                                                        proposalStatus === 'draft' ? 'Submit for Peer Review' :
+                                                                        proposalStatus === 'in_review' ? 'Request Submission' :
+                                                                        proposalStatus === 'submission' ? 'Submit' :
+                                                                        proposalStatus === 'submitted' ? 'Approve' :
+                                                                        'Approved'
+                                                                }
+                                                        </button>
                                                 </div> : ""}
                                         </div>
 

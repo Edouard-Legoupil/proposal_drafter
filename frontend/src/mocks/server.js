@@ -86,6 +86,29 @@ export const server = setupServer(
                 })
         ),
 
+        http.get(`${API_BASE_URL}/users`, () => {
+                return HttpResponse.json({
+                        users: [
+                                { id: '1', name: 'User 1' },
+                                { id: '2', name: 'User 2' },
+                        ]
+                })
+        }),
+
+        http.get(`${API_BASE_URL}/proposals/reviews`, () => {
+                return HttpResponse.json({
+                        reviews: [
+                                {
+                                        proposal_id: '3',
+                                        project_title: 'Third Project',
+                                        summary: 'Sum3',
+                                        updated_at: '2025-05-12T12:00:00.123Z',
+                                        is_accepted: false
+                                }
+                        ]
+                })
+        }),
+
         http.get(new RegExp(`${API_BASE_URL}/load-draft/.*`), async ({ request }) => {
                 const url = new URL(request.url)
                 const segments = url.pathname.split('/')

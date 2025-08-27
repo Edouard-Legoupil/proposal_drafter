@@ -1,0 +1,49 @@
+.Review {
+    padding: 2rem;
+}
+
+.Review_header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.Review_proposal {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.Review_section {
+    border: 1px solid #ccc;
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+.Review_section_content {
+    background-color: #f9f9f9;
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+
+.Review_comment_textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.Review_footer {
+    margin-top: 2rem;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.loading {
+    text-align: center;
+    padding: 2rem;
+    font-size: 1.5rem;
+}

@@ -22,7 +22,9 @@ from backend.models.schemas import (
     SaveDraftRequest,
     FinalizeProposalRequest,
     CreateSessionRequest,
-    UpdateSectionRequest
+    UpdateSectionRequest,
+    SubmitPeerReviewRequest,
+    SubmitReviewRequest
 )
 from backend.utils.proposal_logic import regenerate_section_logic
 from backend.utils.crew import ProposalCrew
@@ -420,6 +422,56 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
         raise HTTPException(status_code=500, detail="An unexpected error occurred while saving the draft.")
 
 
+@router.get("/proposals/reviews")
+async def get_proposals_for_review(current_user: dict = Depends(get_current_user)):
+    """
+    Lists all proposals assigned to the current user for review.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().connect() as connection:
+            result = connection.execute(
+                text("""
+                    SELECT p.id, p.form_data, p.generated_sections, p.created_at, p.updated_at, p.is_accepted
+                    FROM proposals p
+                    JOIN proposal_peer pp ON p.id = pp.proposal_id
+                    WHERE pp.user_id = :uid AND pp.status = 'pending'
+                    ORDER BY p.updated_at DESC
+                """),
+                {"uid": user_id}
+            )
+            rows = result.fetchall()
+            review_list = []
+            for row in rows:
+                form_data = row[1]
+                if isinstance(form_data, str):
+                    try:
+                        form_data = json.loads(form_data)
+                    except json.JSONDecodeError:
+                        form_data = {}
+
+                sections = row[2]
+                if isinstance(sections, str):
+                    try:
+                        sections = json.loads(sections)
+                    except json.JSONDecodeError:
+                        sections = {}
+
+                review_list.append({
+                    "proposal_id": row[0],
+                    "project_title": form_data.get("Project Draft Short name") or form_data.get("Project title", "Untitled Proposal") if form_data else "Untitled Proposal",
+                    "summary": sections.get("Summary", "") if sections else "",
+                    "created_at": row[3].isoformat() if row[3] else None,
+                    "updated_at": row[4].isoformat() if row[4] else None,
+                    "is_accepted": row[5],
+                    "is_sample": False
+                })
+        return {"message": "Proposals for review fetched successfully.", "reviews": review_list}
+    except Exception as e:
+        logger.error(f"[GET PROPOSALS FOR REVIEW ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch proposals for review.")
+
+
 @router.get("/list-drafts")
 async def list_drafts(current_user: dict = Depends(get_current_user)):
     """
@@ -606,6 +658,40 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
 
     return {"session_id": session_id, **data_to_load}
 
+@router.post("/proposals/{proposal_id}/request-submission")
+async def request_submission(proposal_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
+    """
+    Requests submission of a proposal.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().begin() as connection:
+            connection.execute(
+                text("UPDATE proposals SET status = 'submission', updated_at = NOW() WHERE id = :id AND user_id = :uid"),
+                {"id": proposal_id, "uid": user_id}
+            )
+        return {"message": "Proposal submitted for submission."}
+    except Exception as e:
+        logger.error(f"[REQUEST SUBMISSION ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to request submission.")
+
+@router.post("/proposals/{proposal_id}/submit")
+async def submit_proposal(proposal_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
+    """
+    Submits a proposal.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().begin() as connection:
+            connection.execute(
+                text("UPDATE proposals SET status = 'submitted', updated_at = NOW() WHERE id = :id AND user_id = :uid"),
+                {"id": proposal_id, "uid": user_id}
+            )
+        return {"message": "Proposal submitted."}
+    except Exception as e:
+        logger.error(f"[SUBMIT PROPOSAL ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to submit proposal.")
+
 @router.post("/finalize-proposal")
 async def finalize_proposal(request: FinalizeProposalRequest, current_user: dict = Depends(get_current_user)):
     """
@@ -614,13 +700,96 @@ async def finalize_proposal(request: FinalizeProposalRequest, current_user: dict
     try:
         with get_engine().begin() as connection:
             connection.execute(
-                text("UPDATE proposals SET is_accepted = TRUE, updated_at = NOW() WHERE id = :id AND user_id = :uid"),
+                text("UPDATE proposals SET is_accepted = TRUE, status = 'approved', updated_at = NOW() WHERE id = :id AND user_id = :uid"),
                 {"id": request.proposal_id, "uid": current_user["user_id"]}
             )
         return {"message": "Proposal finalized.", "proposal_id": request.proposal_id, "is_accepted": True}
     except Exception as e:
         print(f"[FINALIZE ERROR] {e}")
         raise HTTPException(status_code=500, detail="Failed to finalize proposal.")
+
+
+@router.post("/proposals/{proposal_id}/review")
+async def submit_review(proposal_id: uuid.UUID, request: SubmitReviewRequest, current_user: dict = Depends(get_current_user)):
+    """
+    Submits a peer review for a proposal.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().begin() as connection:
+            # Check if the user is assigned to review this proposal
+            review_assignment = connection.execute(
+                text("SELECT id FROM proposal_peer WHERE proposal_id = :proposal_id AND user_id = :user_id AND status = 'pending'"),
+                {"proposal_id": proposal_id, "user_id": user_id}
+            ).fetchone()
+
+            if not review_assignment:
+                raise HTTPException(status_code=403, detail="You are not assigned to review this proposal.")
+
+            # Get existing reviews and append the new one
+            existing_reviews = connection.execute(
+                text("SELECT reviews FROM proposals WHERE id = :id"),
+                {"id": proposal_id}
+            ).scalar() or []
+
+            new_review = {
+                "reviewer_id": user_id,
+                "review_data": request.review_data,
+                "created_at": datetime.utcnow().isoformat()
+            }
+            existing_reviews.append(new_review)
+
+            # Update the reviews in the proposals table
+            connection.execute(
+                text("UPDATE proposals SET reviews = :reviews, updated_at = NOW() WHERE id = :id"),
+                {"reviews": json.dumps(existing_reviews), "id": proposal_id}
+            )
+
+            # Update the status in the proposal_peer table
+            connection.execute(
+                text("UPDATE proposal_peer SET status = 'completed', updated_at = NOW() WHERE id = :id"),
+                {"id": review_assignment[0]}
+            )
+
+        return {"message": "Review submitted successfully."}
+    except Exception as e:
+        logger.error(f"[SUBMIT REVIEW ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to submit review.")
+
+
+@router.post("/proposals/{proposal_id}/submit-for-review")
+async def submit_for_review(proposal_id: uuid.UUID, request: SubmitPeerReviewRequest, current_user: dict = Depends(get_current_user)):
+    """
+    Submits a proposal for peer review.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().begin() as connection:
+            # Check if the proposal exists and belongs to the user
+            proposal = connection.execute(
+                text("SELECT id FROM proposals WHERE id = :id AND user_id = :uid"),
+                {"id": proposal_id, "uid": user_id}
+            ).fetchone()
+            if not proposal:
+                raise HTTPException(status_code=404, detail="Proposal not found.")
+
+            # Update the proposal status
+            connection.execute(
+                text("UPDATE proposals SET status = 'in_review', updated_at = NOW() WHERE id = :id"),
+                {"id": proposal_id}
+            )
+
+            # Add the peer reviewers
+            for reviewer_id in request.user_ids:
+                connection.execute(
+                    text("INSERT INTO proposal_peer (proposal_id, user_id) VALUES (:proposal_id, :user_id)"),
+                    {"proposal_id": proposal_id, "user_id": reviewer_id}
+                )
+
+        return {"message": "Proposal submitted for peer review."}
+    except Exception as e:
+        logger.error(f"[SUBMIT FOR REVIEW ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to submit for review.")
 
 
 @router.delete("/delete-draft/{proposal_id}")
