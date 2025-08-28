@@ -59,8 +59,8 @@ async def generate_and_download_document(
             raise HTTPException(status_code=404, detail="Proposal not found for this user.")
 
         form_data, _, generated_sections, template_name = draft
-        form_data = json.loads(form_data) if form_data else {}
-        generated_sections = json.loads(generated_sections) if generated_sections else {}
+        form_data = form_data if isinstance(form_data, dict) else {}
+        generated_sections = generated_sections if isinstance(generated_sections, dict) else {}
 
         # Load the template to get the correct section order and list.
         if not template_name:

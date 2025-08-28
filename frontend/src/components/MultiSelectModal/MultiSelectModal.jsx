@@ -1,36 +1,44 @@
 import './MultiSelectModal.css'
 
-export default function MultiSelectModal({ isOpen, onClose, options, selectedOptions, onSelectionChange }) {
+export default function MultiSelectModal({ isOpen, onClose, options, selectedOptions, onSelectionChange, title, onConfirm }) {
   if (!isOpen) {
     return null;
   }
 
   const handleCheckboxChange = (option) => {
-    const newSelection = selectedOptions.includes(option)
-      ? selectedOptions.filter(item => item !== option)
-      : [...selectedOptions, option];
+    const optionValue = option.id || option;
+    const newSelection = selectedOptions.includes(optionValue)
+      ? selectedOptions.filter(item => item !== optionValue)
+      : [...selectedOptions, optionValue];
     onSelectionChange(newSelection);
   };
 
   return (
     <div className="modal-overlay">
       <div className="modal-content">
-        <h2>Select Outcomes</h2>
+        <h2>{title || 'Select Options'}</h2>
         <div className="modal-options">
-          {options.map(option => (
-            <div key={option} className="modal-option">
-              <input
-                type="checkbox"
-                id={option}
-                value={option}
-                checked={selectedOptions.includes(option)}
-                onChange={() => handleCheckboxChange(option)}
-              />
-              <label htmlFor={option}>{option}</label>
-            </div>
-          ))}
+          {options.map(option => {
+            const optionValue = option.id || option;
+            const optionLabel = option.name || option;
+            return (
+              <div key={optionValue} className="modal-option">
+                <input
+                  type="checkbox"
+                  id={optionValue}
+                  value={optionValue}
+                  checked={selectedOptions.includes(optionValue)}
+                  onChange={() => handleCheckboxChange(option)}
+                />
+                <label htmlFor={optionValue}>{optionLabel}</label>
+              </div>
+            );
+          })}
         </div>
-        <button onClick={onClose}>Close</button>
+        <div className="modal-actions">
+          <button onClick={onClose}>Close</button>
+          {onConfirm && <button onClick={onConfirm}>Confirm</button>}
+        </div>
       </div>
     </div>
   );
