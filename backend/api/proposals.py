@@ -435,7 +435,7 @@ async def get_proposals_for_review(current_user: dict = Depends(get_current_user
                     SELECT p.id, p.form_data, p.generated_sections, p.created_at, p.updated_at, p.is_accepted
                     FROM proposals p
                     JOIN proposal_peer_reviews pp ON p.id = pp.proposal_id
-                    WHERE pp.user_id = :uid AND pp.status = 'pending'
+                    WHERE pp.reviewer_id = :uid AND pp.status = 'pending'
                     ORDER BY p.updated_at DESC
                 """),
                 {"uid": user_id}

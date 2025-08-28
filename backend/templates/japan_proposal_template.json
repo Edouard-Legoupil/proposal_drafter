@@ -1,0 +1,235 @@
+{
+  "donors": ["Government of Japan"],
+  "project_info": {
+      "section_name": "Project Information",
+      "fields": [
+          {
+            "field": "Project title",
+            "instructions": "Enter a concise title (max 200 characters) that clearly reflects the purpose and scope of the project."
+          },
+          {
+            "field": "Project type",
+            "instructions": "Select the primary sector/cluster relevant to this project, aligned with CERF sector classifications."
+          },
+          {
+            "field": "Secondary project type",
+            "instructions": "Indicate any secondary sector/cluster addressed by the project, if applicable."
+          },
+          {
+            "field": "Geographical Coverage",
+            "instructions": "Specify country and subnational locations (regions, districts, cities) where activities will be implemented."
+          },
+          {
+            "field": "Executing agency",
+            "instructions": "Indicate UNHCR as the executing agency unless otherwise coordinated."
+          },
+          {
+            "field": "Beneficiaries",
+            "instructions": "Provide total number of direct beneficiaries disaggregated by sex (men, women), age (boys, girls), and persons with disabilities. Avoid household or percentage-based figures."
+          },
+          {
+            "field": "Partner(s)",
+            "instructions": "List implementing sub-partners (e.g. NGOs, national/local actors) and describe their role where relevant."
+          },
+          {
+            "field": "Management site",
+            "instructions": "Identify the UNHCR Field or Sub-Office responsible for implementation oversight."
+          },
+          {
+            "field": "Duration",
+            "instructions": "Specify project duration: either 6 months for Rapid Response (RR) or 12 months for Underfunded Emergencies (UFE)."
+          },
+          {
+            "field": "Budget",
+            "instructions": "Indicate total amount requested from CERF and breakdown by sector(s). Budget must match Excel template."
+          }
+      ]
+  },
+  "sections": [
+      {
+          "section_name": "Summary",
+          "word_limit": 2000,
+          "instructions": "Summarize the crisis/emergency context, including the main humanitarian needs of the target population. Detail the target population by specifying who they are, where they are located, and their number. Describe key activities, grouped by sector (e.g., protection, shelter/NFIs). Ensure this summary does not duplicate text from the allocation strategy. Explain how the project will be catalytic/transformational and how its results will be sustainable beyond the CERF allocation period."
+      },
+      {
+          "section_name": "Header Information",
+          "format_type": "table",
+          "instructions": "Complete the header table with precise information: 1) Country name  2) Clear, concise project title reflecting emergency nature 3) Exact budget amount  4) Primary sector/outcome  5) Realistic implementation period (typically 6-12 months) 6) Evidence-based beneficiary count 7) Specific Japanese policy priorities from that align with project",
+          "mandatory": true
+        },
+        {
+          "section_name": "1. Summary of the Project and Background",
+          "format_type": "text",
+          "word_limit": 500,
+          "instructions": "Provide compelling context: 1) Current humanitarian situation with specific data 2) Population needs analysis using {{needs}} variable 3) Clear project objectives 4) Specific activities planned 5) Quantifiable targets and indicators 6) Avoid multi-year planning language. Include the beneficiary table as provided without populating numbers.",
+          "mandatory": true,
+          "additional_content": {
+          "table": {
+              "headers": ["Population Type", "Entire Operation", "GOJ Funded Project"],
+              "rows": [
+              ["Refugees", "", ""],
+              ["Stateless Persons", "", ""],
+              ["Reintegration", "", ""],
+              ["Internally Displaced Persons", "", ""],
+              ["TOTAL:", "", ""]
+              ]
+          }
+          }
+        },
+        {
+          "section_name": "2. Impact and Expected Outcomes",
+          "format_type": "structured_text",
+          "instructions": "Develop results framework: 1) Overall impact statement capturing project essence 2) For each outcome, write one paragraph describing activities and results with beneficiary numbers 3) For each outcome, specify 1-2 outputs with clear deliverables 4) For each output, create SMART indicators (Specific, Measurable, Achievable, Relevant, Time-bound)",
+          "mandatory": true,
+          "subsections": [
+          {
+              "name": "Overall Impact",
+              "instructions": "Craft a powerful impact statement summarizing the transformative change expected from the project"
+          },
+          {
+              "name": "Outcome",
+              "instructions": "For each outcome area, describe activities and expected results with precise beneficiary numbers, following theory of change principles"
+          },
+          {
+              "name": "Output",
+              "instructions": "Define concrete deliverables for each outcome using action-oriented language"
+          },
+          {
+              "name": "Indicator",
+              "instructions": "Create SMART indicators for each output that are specific, measurable, achievable, relevant and time-bound"
+          }
+          ]
+        },
+        {
+          "section_name": "3. Project Justification",
+          "format_type": "text",
+          "word_limit": 1200,
+          "instructions": "Write persuasive justification with minimum 300 words per subsection. Use {{file2}} and {{url2}} for urgency and unpredictability sections. Each subsection must stand alone as a compelling argument for funding.",
+          "mandatory": true,
+          "subsections": [
+          {
+              "name": "3.1. Urgency",
+              "instructions": "Demonstrate urgent need: 1) Recent events/changes in humanitarian situation 2) Data-supported scale and severity 3) Direct impact on population 4) Consequences of inaction 5) Why activities cannot wait for next fiscal year core contributions 6) Use {{file2}} and {{url2}} for context"
+          },
+          {
+              "name": "3.2. Unpredictability",
+              "instructions": "Prove unpredictability: 1) Unforeseen incidents since April 2025 2) Why waiting until April 2026 is not feasible 3) Complex/volatile situation analysis 4) Recent exacerbating developments 5) Future risks and instability factors 6) Need for flexible funding"
+          },
+          {
+              "name": "3.3. Necessity",
+              "instructions": "Align with Japanese priorities: 1) How project advances Japan's {{policy_priorities}} 2) Linkage to Humanitarian-Development Nexus 3) Fit with {{country_assistance_policy}} 4) Focus on contributing to Japan's efforts rather than just alignment"
+          },
+          {
+              "name": "3.4. Un-substitutability",
+              "instructions": "Prove UNHCR's unique role: 1) Why Japanese funding is irreplaceable (use {{FU}} data) 2) UNHCR's government relationships 3) Specialized know-how and capacity 4) Security/access advantages 5) Comparative advantage over other actors"
+          }
+          ]
+        },
+        {
+          "section_name": "4. Linkage with National, Regional and International Frameworks",
+          "format_type": "text",
+          "word_limit": 400,
+          "instructions": "Demonstrate alignment: 1) National strategies and policies 2) Regional frameworks 3) International agreements 4) Host government support and citations 5) Relevant SDGs 6) Avoid repeating GOJ policy priorities",
+          "mandatory": true
+        },
+        {
+          "section_name": "5. Cooperation with Japanese and Other Actors",
+          "format_type": "text",
+          "word_limit": 300,
+          "instructions": "Detail partnerships: 1) Japanese collaboration (JICA, {{staff}}, {{NGO}}, {{company}}) 2) Other partnerships (government, local authorities, NGOs, UN agencies) 3) Coordination mechanisms 4) Value-added of each partnership",
+          "mandatory": true,
+          "subsections": [
+          {
+              "name": "Japanese Actors",
+              "instructions": "Focus on Japanese engagement: JICA collaboration, Japanese staff employment, NGO partnerships, and procurement from Japanese companies"
+          },
+          {
+              "name": "Other Actors",
+              "instructions": "Describe broader partnership ecosystem with governments, local authorities, and international organizations"
+          }
+          ]
+        },
+        {
+          "section_name": "6. Promoting Priority Areas",
+          "format_type": "text",
+          "word_limit": 250,
+          "instructions": "Specifically address how the project supports Japan's {{Priority_Areas}} with concrete examples and clear linkages to Japanese strategic objectives",
+          "mandatory": true
+        },
+        {
+          "section_name": "7. Visibility",
+          "format_type": "text",
+          "word_limit": 200,
+          "instructions": "Outline specific visibility activities that will recognize Japan's contribution: 1) Media engagement 2) Public recognition 3) Reporting requirements 4) Branding guidelines implementation",
+          "mandatory": true
+        },
+        {
+          "section_name": "8. Monitoring, Audit and Reporting",
+          "format_type": "fixed_text",
+          "instructions": "Reproduce the standard text exactly as provided without modification: 1) Monitoring and Evaluation procedures 2) Audit framework 3) Reporting timeline and requirements:
+                **8.1. Monitoring and Evaluation**: UNHCR adheres to a comprehensive annual programme cycle within a multi-year strategy, where monitoring and evaluation are intrinsic parts of the Results-Based Programme Management cycle. Throughout the year, progress of activities is monitored based on the M&E plan, which includes field visits, missions, and regular consultations with community members, partners, service providers, and other stakeholders.
+                **8.2. Audit**: UNHCR is audited in accordance with the UN Financial Regulations and the UNHCR Financial Rules. All financial transactions and related activities covered by these regulations and rules are subject to audit by internal auditors and the United Nations Board of Auditors. UNHCR's annual financial statements are published on the Board of Auditors' website here.
+                **8.3. Reporting**: UNHCR will submit a final narrative report, including a financial component, three months after the completion of the project.",
+          "mandatory": true,
+          "fixed_content": [
+          ]
+        },
+        {
+          "section_name": "9. UNHCR Office",
+          "format_type": "fields",
+          "instructions": "Provide complete office contact information: 1) Full name of responsible officer 2) Official title 3) Exact office name and location",
+          "mandatory": true,
+          "fields": [
+          {"field": "Name", "instructions": "Full name of UNHCR representative"},
+          {"field": "Title", "instructions": "Official position title"},
+          {"field": "Office Name", "instructions": "Complete office designation and location"}
+          ]
+        },
+        {
+          "section_name": "10. Budget",
+          "format_type": "table",
+          "instructions": "Create detailed budget table: 1) Structure by outcome areas 2) List outputs under each outcome 3) Describe activities for each output 4) Assign budget amounts at output level 5) Include {{ISC}} for indirect costs 6) Ensure total matches {{budget}} 7) Right-align all numbers 8) Add coordination levy note",
+          "mandatory": true,
+          "table_structure": {
+          "headers": ["Outcome Area", "Activities", "Budget (USD)", "Estimated Beneficiaries"],
+          "rows": [
+              ["**{{outcome}}**", "", "", ""],
+              ["- <Output 1>", "Description of activities for output 1", "", ""],
+              ["- <Output 2>", "Description of activities for output 2", "", ""],
+              ["- <Output …>", "Description of activities for output ...", "", ""],
+              ["**{{outcome}}**", "", "", ""],
+              ["- <Output 1>", "Description of activities for output 1", "", ""],
+              ["- <Output 2>", "Description of activities for output 2", "", ""],
+              ["- <Output …>", "Description of activities for output ...", "", ""],
+              ["**Total Direct Costs**", "", "", ""],
+              ["**Indirect Support Cost (6.5%)**", "", "{{ISC}}", ""],
+              ["**Grand Total**", "", "", ""]
+          ],
+          "footer": "Include this note 'The 1% coordination levy is not applicable' at the end of the table."
+          }
+        }
+          ],
+          "special_requirements": {
+          "language_restrictions": [
+            "Avoid phrases indicating multi-year planning continuity",
+            "Do not use 'as a continuation from the previous year'",
+            "Do not use 'UNHCR continues to...'",
+            "Emphasize urgency and unpredictability"
+          ],
+          "formatting_requirements": [
+            "Right-align all numerical values in budget table",
+            "Maintain exact table structures as specified",
+            "Use provided variables consistently",
+            "Follow word limits strictly"
+          ],
+          "strategic_emphasis": [
+            "Focus on how project advances Japan's policy priorities",
+            "Demonstrate why Japanese funding is essential",
+            "Highlight urgent and unpredictable nature",
+            "Show UNHCR's unique capacity and access"
+          ]
+          }
+        }
+      }
+  ]
+}
