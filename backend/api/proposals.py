@@ -464,7 +464,8 @@ async def get_proposals_for_review(current_user: dict = Depends(get_current_user
                     "created_at": row[3].isoformat() if row[3] else None,
                     "updated_at": row[4].isoformat() if row[4] else None,
                     "is_accepted": row[5],
-                    "is_sample": False
+                    "is_sample": False,
+                    "form_data": form_data
                 })
         return {"message": "Proposals for review fetched successfully.", "reviews": review_list}
     except Exception as e:
