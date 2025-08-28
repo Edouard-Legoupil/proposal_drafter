@@ -434,7 +434,7 @@ async def get_proposals_for_review(current_user: dict = Depends(get_current_user
                 text("""
                     SELECT p.id, p.form_data, p.generated_sections, p.created_at, p.updated_at, p.is_accepted
                     FROM proposals p
-                    JOIN proposal_peer pp ON p.id = pp.proposal_id
+                    JOIN proposal_peer_reviews pp ON p.id = pp.proposal_id
                     WHERE pp.user_id = :uid AND pp.status = 'pending'
                     ORDER BY p.updated_at DESC
                 """),
@@ -719,7 +719,7 @@ async def submit_review(proposal_id: uuid.UUID, request: SubmitReviewRequest, cu
         with get_engine().begin() as connection:
             # Check if the user is assigned to review this proposal
             review_assignment = connection.execute(
-                text("SELECT id FROM proposal_peer WHERE proposal_id = :proposal_id AND user_id = :user_id AND status = 'pending'"),
+                text("SELECT id FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND user_id = :user_id AND status = 'pending'"),
                 {"proposal_id": proposal_id, "user_id": user_id}
             ).fetchone()
 
@@ -745,9 +745,9 @@ async def submit_review(proposal_id: uuid.UUID, request: SubmitReviewRequest, cu
                 {"reviews": json.dumps(existing_reviews), "id": proposal_id}
             )
 
-            # Update the status in the proposal_peer table
+            # Update the status in the proposal_peer_reviews table
             connection.execute(
-                text("UPDATE proposal_peer SET status = 'completed', updated_at = NOW() WHERE id = :id"),
+                text("UPDATE proposal_peer_reviews SET status = 'completed', updated_at = NOW() WHERE id = :id"),
                 {"id": review_assignment[0]}
             )
 

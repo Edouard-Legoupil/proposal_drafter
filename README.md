@@ -189,6 +189,7 @@ This project was impulsed by [Edouard Legoupil, IOM chief Data Officer](https://
 
 Similar (but Proprietary...) Projects
 
-* [grantassistant](https://www.grantassistant.ai/)
-* [ai-grant-writing-assistant](https://www.grantable.co/features/ai-grant-writing-assistant)
+* [grantassistant](https://www.grantassistant.ai)
+* [ai-grant-writing-assistant](https://www.grantable.co)
+* [bidnexus](https://www.bidnexus.ai)
 
