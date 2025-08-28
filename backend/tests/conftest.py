@@ -27,7 +27,7 @@ from backend.core.security import get_current_user
 @pytest.fixture(scope="session")
 def test_engine():
     """Creates a single, in-memory SQLite engine for the entire test session."""
-    engine = create_engine("sqlite:///:memory:")
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
     with engine.connect() as connection:
         # Use transaction to ensure DDL is committed
         with connection.begin():
@@ -79,7 +79,6 @@ def authenticated_client(client, db_session):
         text("INSERT INTO users (id, email, name, password) VALUES (:id, :email, :name, :password)"),
         {"id": user_id, "email": user_email, "name": "Test User", "password": "password"}
     )
-    db_session.commit()
 
     def get_current_user_override():
         return {"user_id": user_id, "email": user_email, "name": "Test User"}

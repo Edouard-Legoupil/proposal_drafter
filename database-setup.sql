@@ -17,6 +17,9 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Create Proposal Status Enum Type
+CREATE TYPE proposal_status AS ENUM ('draft', 'in_review', 'submission', 'submitted', 'approved');
+
 -- Create Proposals table
 CREATE TABLE IF NOT EXISTS proposals (
     id UUID PRIMARY KEY,
@@ -30,6 +33,18 @@ CREATE TABLE IF NOT EXISTS proposals (
     donor VARCHAR(255),
     field_contexts TEXT[],
     outcome VARCHAR(255),
+    reviews JSONB,
+    status proposal_status DEFAULT 'draft',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create Proposal_Peer table
+CREATE TABLE IF NOT EXISTS proposal_peer (
+    id SERIAL PRIMARY KEY,
+    proposal_id UUID REFERENCES proposals(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    status VARCHAR(50) DEFAULT 'pending',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
@@ -118,6 +133,9 @@ CREATE INDEX IF NOT EXISTS idx_knowledge_cards_donor_id ON knowledge_cards(donor
 CREATE INDEX IF NOT EXISTS idx_knowledge_cards_outcome_id ON knowledge_cards(outcome_id);
 CREATE INDEX IF NOT EXISTS idx_knowledge_cards_field_context_id ON knowledge_cards(field_context_id);
 CREATE INDEX IF NOT EXISTS idx_knowledge_card_references_knowledge_card_id ON knowledge_card_references(knowledge_card_id);
+CREATE INDEX IF NOT EXISTS idx_proposal_peer_proposal_id ON proposal_peer(proposal_id);
+CREATE INDEX IF NOT EXISTS idx_proposal_peer_user_id ON proposal_peer(user_id);
+
 
 -- Grant table permissions to application user
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO <DB_USERNAME>;

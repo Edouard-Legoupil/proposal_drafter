@@ -1,0 +1,44 @@
+{
+  "knowledge_base": {
+    "examples": {
+      "good_example_1": {
+        "id": "EXAMPLE1",
+        "title": "Contributing to a better understanding of human mobility in crisis and enhancing linkages with citizen-driven assistance",
+        "code": "DP.1649",
+        "type": "ECHO",
+        "category": "RESULTS_ARTICULATION_NARRATIVE",
+        "problem_statement": "As documented in the annual Global Report on Internal Displacement (GRID, IDMC), internal displacement persists at a major scale...",
+        "context_analysis": "The vast work done by local actors, be it civil society organizations, entrepreneurs...",
+        "pillars_of_action": "This project is structured around 4 pillars of action...",
+        "strengths": "Sound articulation of project rationale and result chain in narrative form, Clear problem statement with supporting evidence, Well-structured pillars of action with logical flow",
+        "rationale_alignment": "High",
+        "project_description_alignment": "High"
+      },
+      "good_example_2": {
+        "id": "EXAMPLE2",
+        "title": "Support for the National Programme on the Treatment and Handling of Disengaging Combatants in Baidoa and Kismayo",
+        "code": "FC.0126",
+        "type": "Standard",
+        "category": "RESULTS_ARTICULATION_NARRATIVE",
+        "goal_statement": "The long-term goal for IOM's engagement in rehabilitation and reintegration activities is to support peaceful transition in Somalia...",
+        "context_analysis": "Drivers of radicalization/recruitment in Somalia are numerous...",
+        "conflict_resolution": "The project will directly contribute to conflict resolution in multiple ways...",
+        "strengths": "Clear articulation of long-term goal aligned with national program, Strong contextual analysis of conflict drivers",
+        "rationale_alignment": "High",
+        "summary_alignment": "High"
+      },
+      "bad_example_1": {
+        "id": "BADEXAMPLE1",
+        "title": "Support to Syrian Refugees in Turkey through Access to Livelihood Opportunities, Transportation Services and Strengthened Municipal Services",
+        "code": "CS.075",
+        "type": "Standard",
+        "category": "POOR_RESULT_ARTICULATION_AND_MATRIX",
+        "summary_issues": "Lists activities instead of focusing on expected outcomes, No clear articulation of the problem or need",
+        "rationale_issues": "Focuses on policy context without clearly identifying specific problems being addressed",
+        "response_issues": "Overly focused on activity descriptions rather than strategic approach",
+        "weaknesses": "Poor articulation of project rationale and result chain, Weak vertical logic in results matrix, Activity-focused rather than results-oriented approach",
+        "improvement_suggestions": "Clearly state specific problems, Articulate strategic approach rather than listing activities, Include expected outcomes with quantifiable targets"
+      }
+    }
+  }
+}
