@@ -1,82 +1,46 @@
 import './Project.css'
 
-import { useNavigate } from 'react-router-dom'
-import Markdown from 'react-markdown'
-
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
-
-import tripleDots from "../../../../assets/images/dashboard-tripleDots.svg"
-import calendar from "../../../../assets/images/dashboard-calendar.svg"
-import view from "../../../../assets/images/login_showPassword.svg"
-import bin from "../../../../assets/images/delete.svg"
-
-export default function Project (props)
+export default function Project ({ project, date, onClick, isReview = false })
 {
-        const navigate = useNavigate()
-        async function handleDeleteProject ()
-        {
-                const response  = await fetch(`${API_BASE_URL}/delete-draft/${props?.proposal_id}`, {
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include'
-                })
+        const getStatusInfo = (status) => {
+                switch (status) {
+                        case 'draft':
+                                return { text: 'Drafting', className: 'status-draft' };
+                        case 'in_review':
+                                return { text: 'Pending Peer Review', className: 'status-review' };
+                        case 'submission':
+                                return { text: 'Pending Submission', className: 'status-submission' };
+                        case 'submitted':
+                                return { text: 'Submitted', className: 'status-submitted' };
+                        case 'approved':
+                                return { text: 'Approved', className: 'status-approved' };
+                        default:
+                                return { text: 'Drafting', className: 'status-draft' };
+                }
+        };
 
-                if(response.ok)
-                        navigate(0)
-                else if(response.status === 401)
-                {
-                        sessionStorage.setItem("session_expired", "Session expired. Please login again.")
-                        navigate("/login")
-                }
-                else
-                {
-                        navigate(0)
-                }
+        const statusInfo = getStatusInfo(project.status);
+
+        if (isReview) {
+                return (
+                        <article className="card" onClick={onClick}>
+                                <h3 id={`review-${project.proposal_id}`}>{project.project_title}</h3>
+                                <h2>Requester: {project.requester_name || 'N/A'}</h2>
+                                <p><strong>Deadline:</strong> <time dateTime={project.deadline || ''}>{project.deadline || 'N/A'}</time></p>
+                                <p><i className="fa-solid fa-earth-americas field-context" aria-hidden="true"></i> {project.form_data['Country / Location(s)'] || 'N/A'}</p>
+                                <p><i className="fa-solid fa-money-bill-wave donor" aria-hidden="true"></i> {project.form_data['Targeted Donor'] || 'N/A'}</p>
+                                <p><i className="fa-solid fa-bullseye outcome" aria-hidden="true"></i> {project.form_data['Main Outcome']?.join(', ') || 'N/A'}</p>
+                        </article>
+                )
         }
 
-        return  <div className='Dashboard_project' onClick={e => props?.onClick(e, props?.proposal_id)}>
-                <div className='Dashboard_project_title'>
-                        {props?.project_title}
-                        {!props?.sample ?
-                                <button className='Dashboard_project_tripleDotsContainer' popoverTarget={`popover-${props?.projectIndex+1}`} popoverTargetAction="toggle">
-                                        <img className='Dashboard_project_tripleDots' src={tripleDots} />
-                                </button>
-                                :
-                                ""
-                        }
-                </div>
-
-                <div popover="auto" className='Project_optionsPopover' id={`popover-${props?.projectIndex+1}`} >
-                        <div className='Project_optionsPopover_option'>
-                                <img src={view} />
-                                View
-                        </div>
-
-                        <div className='Project_optionsPopover_option' onClick={handleDeleteProject}>
-                                <img className='Project_optionsPopover_option_delete' src={bin} />
-                                Delete
-                        </div>
-                </div>
-
-                <div className='Dashboard_project_description'>
-                        <Markdown>
-                                {props?.children}
-                        </Markdown>
-                        <div className='Dashboard_project_fade' />
-                </div>
-
-                <div className='Dashboard_project_footer'>
-                        <div className='Dashboard_project_date'>
-                                <img src={calendar} />
-                                {props?.date}
-                        </div>
-
-                        <div
-                                className='Dashboard_project_label'
-                                style={{background: props?.status ? "#01A89A" : "#FF671F"}}
-                        >
-                                {props?.status ? "Shared" : "Draft"}
-                        </div>
-                </div>
-        </div>
+        return  <article className="card" onClick={onClick}>
+                        <h3 id={`proj-${project.proposal_id}`}>{project.project_title}</h3>
+                        <p>{project.summary || 'No summary available.'}</p>
+                        <p><span className={`status-badge ${statusInfo.className}`}>{statusInfo.text}</span></p>
+                        <p><i className="fa-solid fa-earth-americas field-context" aria-hidden="true"></i> {project.form_data['Country / Location(s)'] || 'N/A'}</p>
+                        <p><i className="fa-solid fa-money-bill-wave donor" aria-hidden="true"></i> {project.form_data['Targeted Donor'] || 'N/A'}</p>
+                        <p><i className="fa-solid fa-bullseye outcome" aria-hidden="true"></i> {project.form_data['Main Outcome']?.join(', ') || 'N/A'}</p>
+                        <p><small>Last Updated: <time dateTime={date}>{date}</time></small></p>
+                </article>
 }

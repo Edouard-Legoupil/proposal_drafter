@@ -1,17 +1,12 @@
 import './Dashboard.css'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import Base from '../../components/Base/Base'
-import CommonButton from '../../components/CommonButton/CommonButton'
 import Project from './components/Project/Project'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
-
-import createNew from "../../assets/images/dashboard-createnew.svg"
-import fileIcon from "../../assets/images/dashboard-fileIcon.svg"
-import search from "../../assets/images/dashboard-search.svg"
 
 export default function Dashboard ()
 {
@@ -19,7 +14,13 @@ export default function Dashboard ()
 
         const [projects, setProjects] = useState([])
         const [reviews, setReviews] = useState([])
-        const [selectedTab, setSelectedTab] = useState('my_proposals')
+        const [selectedTab, setSelectedTab] = useState('proposals')
+        const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
+
+        const tabRefs = {
+                proposals: useRef(null),
+                reviews: useRef(null),
+        };
 
         async function getProjects ()
         {
@@ -59,14 +60,12 @@ export default function Dashboard ()
 
         async function handleProjectClick(e, proposal_id, isReview = false)
         {
-                if(e.target.className !== "Dashboard_project_tripleDots" && !(e.target.className === "Project_optionsPopover_option_delete" || e.target.className === "Project_optionsPopover_option" && e.target.innerText === "Delete"))
-                {
-                        sessionStorage.setItem("proposal_id", proposal_id)
-                        if (isReview) {
-                                navigate(`/review/${proposal_id}`)
-                        } else {
-                                navigate("/chat")
-                        }
+                // This logic might need to be adapted depending on the final card structure in Project.jsx
+                sessionStorage.setItem("proposal_id", proposal_id)
+                if (isReview) {
+                        navigate(`/review/${proposal_id}`)
+                } else {
+                        navigate("/chat")
                 }
         }
 
@@ -74,86 +73,146 @@ export default function Dashboard ()
         {
                 const cleaned = date.replace(/\.\d+/, "");
                 const data = new Date(cleaned);
-
-                const readable = data.toLocaleString();
+                const readable = data.toISOString().split('T')[0];
                 return readable
         }
 
         const [searchTerm, setSearchTerm] = useState("")
         const [displayProjects, setDisplayProjects] = useState([])
         useEffect(() => {
-                const source = selectedTab === 'my_proposals' ? projects : reviews;
+                const source = selectedTab === 'proposals' ? projects : reviews;
                 if(source && source.length)
                         setDisplayProjects(source.filter(project =>
                                 project.project_title.toLowerCase().includes(searchTerm.toLowerCase())
                 ))
         }, [projects, reviews, searchTerm, selectedTab])
 
+        const activateTab = (tabId) => {
+                setSelectedTab(tabId);
+        }
+
+        const onTabKeydown = (e) => {
+                const tabs = ['proposals', 'reviews'];
+                const i = tabs.indexOf(selectedTab);
+                let nextIndex = i;
+                if (e.key === 'ArrowLeft') nextIndex = (i - 1 + tabs.length) % tabs.length;
+                if (e.key === 'ArrowRight') nextIndex = (i + 1) % tabs.length;
+                if (e.key === 'Home') nextIndex = 0;
+                if (e.key === 'End') nextIndex = tabs.length - 1;
+
+                if (nextIndex !== i) {
+                        const nextTabId = tabs[nextIndex];
+                        activateTab(nextTabId);
+                        tabRefs[nextTabId].current.focus();
+                }
+        }
+
         return  <Base>
                 <div className="Dashboard">
-                        <div className='Dashboard_top'>
+                        <header className="Dashboard_top">
                                 <div className='Dashboard_label'>
-                                        <img className='Dashboard_label_fileIcon' src={fileIcon} />
+                                        <i className="fa-solid fa-file-lines" aria-hidden="true"></i>
                                         Proposals
                                 </div>
-                                <CommonButton icon={createNew} label="Generate New Proposal" onClick={() => navigate("/chat")} />
-                        </div>
+                                <button className="btn" onClick={() => navigate("/chat")}>Start New Proposal</button>
+                        </header>
 
-                        <div className="Dashboard_tabs">
-                                <button
-                                        className={`Dashboard_tab ${selectedTab === 'my_proposals' ? 'active' : ''}`}
-                                        onClick={() => setSelectedTab('my_proposals')}
-                                >
-                                        My Proposals
-                                </button>
-                                <button
-                                        className={`Dashboard_tab ${selectedTab === 'for_review' ? 'active' : ''}`}
-                                        onClick={() => setSelectedTab('for_review')}
-                                >
-                                        For Review
-                                </button>
-                        </div>
-
-                        {displayProjects && displayProjects.filter(project => !project.is_sample).length ?
-                                <div className='Dashboard_search'>
-                                        <img src={search} />
-                                        <input type="text" id="dashboard-search" name="dashboard-search" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className='Dashboard_search_input' placeholder='Search' />
+                        <nav className="tabs" aria-label="Dashboard sections">
+                                <div role="tablist" aria-orientation="horizontal" className="tablist">
+                                        <button
+                                                id="proposals-tab"
+                                                ref={tabRefs.proposals}
+                                                role="tab"
+                                                aria-selected={selectedTab === 'proposals'}
+                                                aria-controls="proposals-panel"
+                                                className="tab"
+                                                data-tab="proposals"
+                                                onClick={() => activateTab('proposals')}
+                                                onKeyDown={onTabKeydown}
+                                                tabIndex={selectedTab === 'proposals' ? 0 : -1}
+                                        >
+                                                My Proposals
+                                        </button>
+                                        <button
+                                                id="reviews-tab"
+                                                ref={tabRefs.reviews}
+                                                role="tab"
+                                                aria-selected={selectedTab === 'reviews'}
+                                                aria-controls="reviews-panel"
+                                                className="tab"
+                                                data-tab="reviews"
+                                                onClick={() => activateTab('reviews')}
+                                                onKeyDown={onTabKeydown}
+                                                tabIndex={selectedTab === 'reviews' ? 0 : -1}
+                                        >
+                                                Pending Reviews
+                                        </button>
                                 </div>
-                                :
-                                <h3 className='Dashboard_sectionHeading'>{selectedTab === 'my_proposals' ? 'Sample proposals' : 'No proposals to review'}</h3>
-                        }
+                        </nav>
 
-                        <div className='Dashboard_projects'>
-                                {displayProjects && displayProjects.filter(project => !project.is_sample).length ?
-                                        displayProjects.filter(project => !project.is_sample).map((project, i) =>
+                        <div className="Dashboard_search" role="search">
+                                <i className="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                                <label htmlFor="quick-search" className="sr-only">Quick search</label>
+                                <input id="quick-search" type="text" placeholder="Quick search..." className="Dashboard_search_input" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                                <button className="filter-btn" id="filter-btn" aria-label="Open filters" onClick={() => setIsFilterModalOpen(true)}>
+                                        <i className="fa-solid fa-sliders"></i>
+                                </button>
+                        </div>
+
+                        <section id="proposals-panel" role="tabpanel" aria-labelledby="proposals-tab" className={`tab-panel ${selectedTab === 'proposals' ? 'active' : ''}`} hidden={selectedTab !== 'proposals'}>
+                                <div className="Dashboard_projects" id="proposals-grid">
+                                        <div className="card card--cta">
+                                                <button className="btn" type="button" aria-label="Start a new proposal" onClick={() => navigate("/chat")}>Start New Proposal</button>
+                                        </div>
+                                        {displayProjects && displayProjects.map((project, i) =>
                                                 <Project
                                                         key={i}
-                                                        projectIndex={i}
-                                                        project_title={project.project_title}
-                                                        proposal_id={project.proposal_id}
+                                                        project={project}
                                                         date={cleanedDate(project.updated_at)}
-                                                        onClick={(e, proposal_id) => handleProjectClick(e, proposal_id, selectedTab === 'for_review')}
-                                                        status={project.is_accepted}
-                                                >
-                                                        {project.summary}
-                                                </Project>
-                                        )
-                                        :
-                                        displayProjects.filter(project => project.is_sample).map((project, i) =>
-                                                <Project
-                                                        key={i}
-                                                        projectIndex={i}
-                                                        project_title={project.project_title}
-                                                        proposal_id={project.proposal_id}
-                                                        date={cleanedDate(project.updated_at)}
-                                                        onClick={(e, proposal_id) => handleProjectClick(e, proposal_id, selectedTab === 'for_review')}
-                                                        status={project.is_accepted}
-                                                        sample
-                                                >
-                                                        {project.summary}
-                                                </Project>
-                                        )
-                                }
+                                                        onClick={(e) => handleProjectClick(e, project.proposal_id, false)}
+                                                />
+                                        )}
+                                </div>
+                        </section>
+
+                        <section id="reviews-panel" role="tabpanel" aria-labelledby="reviews-tab" className={`tab-panel ${selectedTab === 'reviews' ? 'active' : ''}`} hidden={selectedTab !== 'reviews'}>
+                                <div className="Dashboard_projects" id="reviews-grid">
+                                {displayProjects && displayProjects.map((review, i) =>
+                                        <Project
+                                                key={i}
+                                                project={review}
+                                                date={cleanedDate(review.updated_at)}
+                                                onClick={(e) => handleProjectClick(e, review.proposal_id, true)}
+                                                isReview={true}
+                                        />
+                                )}
+                                </div>
+                        </section>
+                </div>
+
+                <div className={`modal ${isFilterModalOpen ? 'active' : ''}`} id="filter-modal" role="dialog" aria-modal="true" aria-labelledby="filter-title">
+                        <div className="modal-content">
+                                <span className="modal-close" onClick={() => setIsFilterModalOpen(false)}>&times;</span>
+                                <h3 id="filter-title">Apply Content Filters</h3>
+
+                                <div className="filter-section" data-tab="proposals" hidden={selectedTab !== 'proposals'}>
+                                        <label htmlFor="status-filter">Status</label>
+                                        <select id="status-filter">
+                                                <option value="">All</option>
+                                                <option value="draft">Drafting</option>
+                                                <option value="review">Pending Review</option>
+                                                <option value="submission">Pending Submission</option>
+                                                <option value="submitted">Submitted</option>
+                                                <option value="approved">Approved</option>
+                                        </select>
+
+                                        {/* Add other filters as needed */}
+                                </div>
+
+                                <div className="filter-section" data-tab="reviews" hidden={selectedTab !== 'reviews'}>
+                                        <label htmlFor="deadline-filter">Deadline before</label>
+                                        <input type="date" id="deadline-filter" />
+                                </div>
                         </div>
                 </div>
         </Base>
