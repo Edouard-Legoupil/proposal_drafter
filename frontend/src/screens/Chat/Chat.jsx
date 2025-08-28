@@ -170,6 +170,7 @@ export default function Chat (props)
                                                         options={options}
                                                         selectedOptions={field.value}
                                                         onSelectionChange={(newSelection) => handleFormInput({ target: { value: newSelection } }, label)}
+                                                        title={`Select ${label}`}
                                                 />
                                         </>
                                 ) : options.length > 0 ? (
