@@ -58,7 +58,6 @@ INSERT INTO donors (id, account_id, name, country, donor_group) VALUES
 (gen_random_uuid(), 'GOV-KR-10643', 'Republic of Korea - Ministry of Foreign Affairs', 'Republic of Korea', 'DRRM Donor Group 4'),
 (gen_random_uuid(), 'GOV-IT-10620', 'Italy - Ministry of Foreign Affairs - DGCS', 'Italy', 'DRRM Donor Group 1'),
 (gen_random_uuid(), 'GOV-JP-10632', 'Japan - Ministry of Foreign Affairs EGA', 'Japan', 'DRRM Donor Group 4'),
-(gen_random_uuid(), 'GOV-NL-10671', 'Netherlands - MFA Migr&Dev Gp–Developmnt Financing', 'Netherlands', 'DRRM Donor Group 6'),
 (gen_random_uuid(), 'GOV-LU-10652', 'Grand Duchy of Luxembourg - Ministry of Foreign Affairs Cooperation and Humanitarian Aid', 'Luxembourg', 'DRRM Donor Group 1'),
 (gen_random_uuid(), 'GOV-IT-10625', 'Italy - Ministry of Foreign Affairs - DGIT', 'Italy', 'DRRM Donor Group 1'),
 (gen_random_uuid(), 'GOV-ES-10539', 'Spain - AECID - Humanitarian Action Office', 'Spain', 'DRRM Donor Group 1'),
