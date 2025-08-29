@@ -6,12 +6,18 @@ GRANT CONNECT ON DATABASE postgres TO <DB_USERNAME>;
 GRANT USAGE ON SCHEMA public TO <DB_USERNAME>;
 
 -- Create Users table
+-- Create Teams table
+CREATE TABLE IF NOT EXISTS teams (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT UNIQUE NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
     name TEXT,
-    team TEXT,
+    team_id UUID REFERENCES teams(id),
     security_questions JSONB,
     session_active BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -133,6 +139,7 @@ CREATE TABLE IF NOT EXISTS proposal_status_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     proposal_id UUID NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
     status proposal_status NOT NULL,
+    generated_sections_snapshot JSONB,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 

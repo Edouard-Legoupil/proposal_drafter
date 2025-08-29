@@ -1,12 +1,18 @@
 -- Clear existing data
-TRUNCATE TABLE users, donors, outcomes, field_contexts, proposals, proposal_donors, proposal_outcomes, proposal_field_contexts, proposal_peer_reviews, proposal_status_history, knowledge_cards, knowledge_card_references RESTART IDENTITY CASCADE;
+TRUNCATE TABLE teams, users, donors, outcomes, field_contexts, proposals, proposal_donors, proposal_outcomes, proposal_field_contexts, proposal_peer_reviews, proposal_status_history, knowledge_cards, knowledge_card_references RESTART IDENTITY CASCADE;
+
+-- Insert Teams
+INSERT INTO teams (id, name) VALUES
+('t0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'DRRM'),
+('t0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12', 'HQ Protection'),
+('t0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13', 'Test');
 
 -- Insert Users
 -- Passwords are all 'password123' -> $2b$12$DwbvI.0M9c.uAiurT9zL9eR3u8vjP.yU/b4L6f/Yt2xY.gC6wzBGS
-INSERT INTO users (id, email, password, name, team) VALUES
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'user1@example.com', '$2b$12$DwbvI.0M9c.uAiurT9zL9eR3u8vjP.yU/b4L6f/Yt2xY.gC6wzBGS', 'Alice', 'Team Alpha'),
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12', 'user2@example.com', '$2b$12$DwbvI.0M9c.uAiurT9zL9eR3u8vjP.yU/b4L6f/Yt2xY.gC6wzBGS', 'Bob', 'Team Alpha'),
-('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13', 'user3@example.com', '$2b$12$DwbvI.0M9c.uAiurT9zL9eR3u8vjP.yU/b4L6f/Yt2xY.gC6wzBGS', 'Charlie', 'Team Bravo');
+INSERT INTO users (id, email, password, name, team_id) VALUES
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'user1@example.com', '$2b$12$DwbvI.0M9c.uAiurT9zL9eR3u8vjP.yU/b4L6f/Yt2xY.gC6wzBGS', 'Alice', 't0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12', 'user2@example.com', '$2b$12$DwbvI.0M9c.uAiurT9zL9eR3u8vjP.yU/b4L6f/Yt2xY.gC6wzBGS', 'Bob', 't0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'),
+('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13', 'user3@example.com', '$2b$12$DwbvI.0M9c.uAiurT9zL9eR3u8vjP.yU/b4L6f/Yt2xY.gC6wzBGS', 'Charlie', 't0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12');
 
 -- Insert Outcomes
 INSERT INTO outcomes (id, name) VALUES
