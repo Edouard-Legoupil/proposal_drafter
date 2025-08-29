@@ -38,6 +38,7 @@ export default function Login (props)
         const [password, setPassword] = useState("")
         const [showPassword, setShowPassword] = useState(false)
 
+        const [team, setTeam] = useState("")
         const [securityQuestion, setSecurityQuestion] = useState("")
         const [securityAnswer, setSecurityAnswer] = useState("")
 
@@ -100,6 +101,7 @@ export default function Login (props)
                                 username,
                                 email,
                                 password,
+                                team,
                                 security_question: securityQuestion,
                                 security_answer: securityAnswer.trim().toLowerCase()
                         })
@@ -120,6 +122,7 @@ export default function Login (props)
                         setUsername("")
                         setEmail("")
                         setPassword("")
+                        setTeam("")
                         setSecurityQuestion("")
                         setSecurityAnswer("")
                         setShowPassword(false)
@@ -146,12 +149,21 @@ export default function Login (props)
                                                 {props?.register ?
                                                         <>
                                                                 <label className='Login-label' htmlFor='Login_nameInput'>Name</label>
+                                                                <label className='Login-label' htmlFor='Login_nameInput'>Name</label>
                                                                 <input
                                                                         type="text"
                                                                         id='Login_nameInput'
                                                                         value={username}
                                                                         placeholder='Your name'
                                                                         onChange={e => /^[A-Za-z\s]{0,16}$/.test(e.target.value) && setUsername(e.target.value)}
+                                                                />
+                                                                <label className='Login-label' htmlFor='Login_teamInput'>Team</label>
+                                                                <input
+                                                                        type="text"
+                                                                        id='Login_teamInput'
+                                                                        value={team}
+                                                                        placeholder='Your team'
+                                                                        onChange={e => setTeam(e.target.value)}
                                                                 />
                                                         </>
                                                         :

@@ -19,6 +19,15 @@ export default function Project ({ project, date, onClick, isReview = false })
                 }
         };
 
+        const trimSummary = (summary) => {
+                if (!summary) return 'No summary available.';
+                const lines = summary.split('\n');
+                if (lines.length > 5) {
+                    return lines.slice(0, 5).join('\n') + '...';
+                }
+                return summary;
+        };
+
         const statusInfo = getStatusInfo(project.status);
 
         if (isReview) {
@@ -27,20 +36,25 @@ export default function Project ({ project, date, onClick, isReview = false })
                                 <h3 id={`review-${project.proposal_id}`}>{project.project_title}</h3>
                                 <h2>Requester: {project.requester_name || 'N/A'}</h2>
                                 <p><strong>Deadline:</strong> <time dateTime={project.deadline || ''}>{project.deadline || 'N/A'}</time></p>
-                                <p><i className="fa-solid fa-earth-americas field-context" aria-hidden="true"></i> {project.form_data?.['Country / Location(s)'] || 'N/A'}</p>
-                                <p><i className="fa-solid fa-money-bill-wave donor" aria-hidden="true"></i> {project.form_data?.['Targeted Donor'] || 'N/A'}</p>
-                                <p><i className="fa-solid fa-bullseye outcome" aria-hidden="true"></i> {project.form_data?.['Main Outcome']?.join(', ') || 'N/A'}</p>
+                                <p><i className="fa-solid fa-earth-americas field-context" aria-hidden="true"></i> {project.country || 'N/A'}</p>
+                                <p><i className="fa-solid fa-money-bill-wave donor" aria-hidden="true"></i> {project.donor || 'N/A'}</p>
+                                <p><i className="fa-solid fa-bullseye outcome" aria-hidden="true"></i> {project.outcomes?.join(', ') || 'N/A'}</p>
                         </article>
                 )
         }
 
         return  <article className="card" onClick={onClick}>
                         <h3 id={`proj-${project.proposal_id}`}>{project.project_title}</h3>
-                        <p><small> {project.summary || 'No summary available.'} </small></p>
+                        <p><small> {trimSummary(project.summary)} </small></p>
                         <p></p>
                         <p><span className={`status-badge ${statusInfo.className}`}>{statusInfo.text}</span> - <small>Last Updated: <time dateTime={date}>{date}</time></small></p>
-                        <p><i className="fa-solid fa-earth-americas field-context" aria-hidden="true"></i> {project.form_data?.['Country / Location(s)'] || 'N/A'} - 
-                        <i className="fa-solid fa-money-bill-wave donor" aria-hidden="true"></i> {project.form_data?.['Targeted Donor'] || 'N/A'} -
-                        <i className="fa-solid fa-bullseye outcome" aria-hidden="true"></i> {project.form_data?.['Main Outcome']?.join(', ') || 'N/A'}</p>
+                        <p>
+                                <i className="fa-solid fa-earth-americas field-context" aria-hidden="true"></i> {project.country || 'N/A'} -
+                                <i className="fa-solid fa-money-bill-wave donor" aria-hidden="true"></i> {project.donor || 'N/A'} -
+                                <i className="fa-solid fa-bullseye outcome" aria-hidden="true"></i> {project.outcomes?.join(', ') || 'N/A'}
+                        </p>
+                        <p>
+                                <i className="fa-solid fa-money-check-dollar" aria-hidden="true"></i> Budget: {project.budget || 'N/A'}
+                        </p>
                 </article>
 }

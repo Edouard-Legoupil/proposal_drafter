@@ -41,6 +41,38 @@ export default function Chat (props)
         const [users, setUsers] = useState([])
         const [selectedUsers, setSelectedUsers] = useState([])
 
+        const [donors, setDonors] = useState([]);
+        const [outcomes, setOutcomes] = useState([]);
+        const [fieldContexts, setFieldContexts] = useState([]);
+
+        useEffect(() => {
+                async function fetchData() {
+                        try {
+                                const [donorsRes, outcomesRes, fieldContextsRes] = await Promise.all([
+                                        fetch(`${API_BASE_URL}/donors`, { credentials: 'include' }),
+                                        fetch(`${API_BASE_URL}/outcomes`, { credentials: 'include' }),
+                                        fetch(`${API_BASE_URL}/field-contexts`, { credentials: 'include' })
+                                ]);
+
+                                if (donorsRes.ok) {
+                                        const data = await donorsRes.json();
+                                        setDonors(data.donors);
+                                }
+                                if (outcomesRes.ok) {
+                                        const data = await outcomesRes.json();
+                                        setOutcomes(data.outcomes);
+                                }
+                                if (fieldContextsRes.ok) {
+                                        const data = await fieldContextsRes.json();
+                                        setFieldContexts(data.field_contexts);
+                                }
+                        } catch (error) {
+                                console.error("Error fetching form data:", error);
+                        }
+                }
+                fetchData();
+        }, []);
+
         async function getUsers () {
                 const response = await fetch(`${API_BASE_URL}/users`, {
                         method: 'GET',
@@ -140,14 +172,33 @@ export default function Chat (props)
                 if (!field) return null;
         
                 const fieldId = toKebabCase(label);
-                const datalistId = `datalist_${fieldId}`;
-                const options = {
-                        "Main Outcome": ["OA1-Access/Documentation", "OA2-Status", "OA3-Protection Policy", "OA4-GBV", "OA5-Child protection", "OA6-Justice", "OA7-Community", "OA8-Well-Being", "OA9-Housing", "OA10-Health", "OA11-Education", "OA12-WASH", "OA13-Livelihoods", "OA14-Return", "OA15-Resettlement", "OA16-Integrate"],
-                        "Duration": ["1 month", "3 months", "6 months", "12 months", "18 months", "24 months", "30 months", "36 months"],
-                        "Targeted Donor": Object.keys(templateConfig),
-                        "Budget Range": ["50k$", "100k$","250k$","500k$","1M$","2M$","5M$","10M$","15M$","25M$"],
-                        "Geographical Scope": ["One Area", "One Country Operation", "Multiple Country","One Region","Route-Based-Approach","Global"],
-                }[label] || [];
+
+                let options = [];
+                switch (label) {
+                        case "Main Outcome":
+                                options = outcomes; // Pass the whole array of objects
+                                break;
+                        case "Targeted Donor":
+                                options = donors;
+                                break;
+                        case "Country / Location(s)":
+                                options = fieldContexts;
+                                break;
+                        case "Geographical Scope":
+                                // Get unique geographic_coverage values and format them for the select
+                                options = [...new Set(fieldContexts.map(fc => fc.geographic_coverage))].filter(Boolean).map(gc => ({ id: gc, name: gc }));
+                                break;
+                        case "Duration":
+                                options = ["1 month", "3 months", "6 months", "12 months", "18 months", "24 months", "30 months", "36 months"].map(d => ({ id: d, name: d }));
+                                break;
+                        case "Budget Range":
+                                options = ["50k$", "100k$","250k$","500k$","1M$","2M$","5M$","10M$","15M$","25M$"].map(b => ({ id: b, name: b }));
+                                break;
+                        default:
+                                options = [];
+                }
+
+                const isSelect = ["Targeted Donor", "Country / Location(s)", "Geographical Scope", "Duration", "Budget Range"].includes(label);
         
                 return (
                         <div key={label} className='Chat_form_inputContainer'>
@@ -162,7 +213,7 @@ export default function Chat (props)
                                 {field.type === 'multiselect' ? (
                                         <>
                                                 <button type="button" className='Chat_form_input' onClick={() => setIsModalOpen(true)}>
-                                                        {field.value.length > 0 ? field.value.join(', ') : `Select ${label}`}
+                                                        {field.value.length > 0 ? field.value.map(id => outcomes.find(o => o.id === id)?.name).join(', ') : `Select ${label}`}
                                                 </button>
                                                 <MultiSelectModal
                                                         isOpen={isModalOpen}
@@ -173,23 +224,19 @@ export default function Chat (props)
                                                         title={`Select ${label}`}
                                                 />
                                         </>
-                                ) : options.length > 0 ? (
-                                        <>
-                                                <input
-                                                        list={datalistId}
-                                                        className='Chat_form_input'
-                                                        id={fieldId}
-                                                        name={fieldId}
-                                                        placeholder={`Enter or select ${label}`}
-                                                        value={field.value}
-                                                        onChange={e => handleFormInput(e, label)}
-                                                />
-                                                <datalist id={datalistId}>
-                                                        {options.map((option, idx) => (
-                                                                <option key={idx} value={option} />
-                                                        ))}
-                                                </datalist>
-                                        </>
+                                ) : isSelect ? (
+                                        <select
+                                                className='Chat_form_input'
+                                                id={fieldId}
+                                                name={fieldId}
+                                                value={field.value}
+                                                onChange={e => handleFormInput(e, label)}
+                                        >
+                                                <option value="" disabled>Select {label}</option>
+                                                {options.map(option => (
+                                                        <option key={option.id} value={option.id}>{option.name}</option>
+                                                ))}
+                                        </select>
                                 ) : (
                                         <input
                                                 type="text"
@@ -280,30 +327,6 @@ export default function Chat (props)
                 }
         // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [sidebarOpen])
-
-        const [templateConfig, setTemplateConfig] = useState({});
-
-        // Fetch template configuration from the backend when the component mounts.
-        useEffect(() => {
-                async function fetchTemplates() {
-                        try {
-                                const response = await fetch(`${API_BASE_URL}/templates`, {
-                                        method: 'GET',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        credentials: 'include'
-                                });
-                                if (response.ok) {
-                                        const data = await response.json();
-                                        setTemplateConfig(data.templates);
-                                } else {
-                                        console.error("Failed to fetch templates");
-                                }
-                        } catch (error) {
-                                console.error("Error fetching templates:", error);
-                        }
-                }
-                fetchTemplates();
-        }, []);
 
         async function handleGenerateClick ()
         {

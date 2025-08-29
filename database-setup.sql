@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
     name TEXT,
+    team TEXT,
     security_questions JSONB,
     session_active BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -127,6 +128,14 @@ CREATE TABLE IF NOT EXISTS proposal_field_contexts (
     PRIMARY KEY (proposal_id, field_context_id)
 );
 
+-- Create Proposal Status History table
+CREATE TABLE IF NOT EXISTS proposal_status_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    proposal_id UUID NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
+    status proposal_status NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create index for faster user lookup
 CREATE INDEX IF NOT EXISTS idx_proposals_user_id ON proposals(user_id);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
@@ -136,6 +145,7 @@ CREATE INDEX IF NOT EXISTS idx_knowledge_cards_field_context_id ON knowledge_car
 CREATE INDEX IF NOT EXISTS idx_knowledge_card_references_knowledge_card_id ON knowledge_card_references(knowledge_card_id);
 CREATE INDEX IF NOT EXISTS idx_proposal_peer_reviews_proposal_id ON proposal_peer_reviews(proposal_id);
 CREATE INDEX IF NOT EXISTS idx_proposal_peer_reviews_reviewer_id ON proposal_peer_reviews(reviewer_id);
+CREATE INDEX IF NOT EXISTS idx_proposal_status_history_proposal_id ON proposal_status_history(proposal_id);
 
  
 
