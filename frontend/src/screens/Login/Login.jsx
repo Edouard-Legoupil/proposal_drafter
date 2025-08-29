@@ -38,9 +38,27 @@ export default function Login (props)
         const [password, setPassword] = useState("")
         const [showPassword, setShowPassword] = useState(false)
 
-        const [team, setTeam] = useState("")
+        const [teamId, setTeamId] = useState("")
+        const [teams, setTeams] = useState([])
         const [securityQuestion, setSecurityQuestion] = useState("")
         const [securityAnswer, setSecurityAnswer] = useState("")
+
+        useEffect(() => {
+                async function fetchTeams() {
+                        try {
+                                const response = await fetch(`${API_BASE_URL}/teams`);
+                                if (response.ok) {
+                                        const data = await response.json();
+                                        setTeams(data.teams);
+                                }
+                        } catch (error) {
+                                console.error("Failed to fetch teams:", error);
+                        }
+                }
+                if (props?.register) {
+                        fetchTeams();
+                }
+        }, [props?.register]);
 
         const [submitButtonText, setSubmitButtonText] = useState(props?.register ? "REGISTER" : "LOGIN")
         const [loading, setLoading] = useState(false)
@@ -101,7 +119,7 @@ export default function Login (props)
                                 username,
                                 email,
                                 password,
-                                team,
+                                team_id: teamId,
                                 security_question: securityQuestion,
                                 security_answer: securityAnswer.trim().toLowerCase()
                         })
@@ -122,7 +140,7 @@ export default function Login (props)
                         setUsername("")
                         setEmail("")
                         setPassword("")
-                        setTeam("")
+                        setTeamId("")
                         setSecurityQuestion("")
                         setSecurityAnswer("")
                         setShowPassword(false)
@@ -158,13 +176,17 @@ export default function Login (props)
                                                                         onChange={e => /^[A-Za-z\s]{0,16}$/.test(e.target.value) && setUsername(e.target.value)}
                                                                 />
                                                                 <label className='Login-label' htmlFor='Login_teamInput'>Team</label>
-                                                                <input
-                                                                        type="text"
-                                                                        id='Login_teamInput'
-                                                                        value={team}
-                                                                        placeholder='Your team'
-                                                                        onChange={e => setTeam(e.target.value)}
-                                                                />
+                                                                <select
+                                                                    id="Login_teamInput"
+                                                                    value={teamId}
+                                                                    onChange={e => setTeamId(e.target.value)}
+                                                                    required
+                                                                >
+                                                                    <option value="" disabled>Select your team</option>
+                                                                    {teams.map(team => (
+                                                                        <option key={team.id} value={team.id}>{team.name}</option>
+                                                                    ))}
+                                                                </select>
                                                         </>
                                                         :
                                                         ""
