@@ -101,12 +101,21 @@ export default function Dashboard ()
         const [searchTerm, setSearchTerm] = useState("")
         const [displayProjects, setDisplayProjects] = useState([])
         useEffect(() => {
-                const source = selectedTab === 'proposals' ? projects : reviews;
-                if(source && source.length)
-                        setDisplayProjects(source.filter(project =>
-                                project.project_title.toLowerCase().includes(searchTerm.toLowerCase())
-                ))
-        }, [projects, reviews, searchTerm, selectedTab])
+                let source = [];
+                if (selectedTab === 'proposals') {
+                    source = projects;
+                } else if (selectedTab === 'reviews') {
+                    source = reviews;
+                }
+
+                if (source && source.length > 0) {
+                    setDisplayProjects(source.filter(project =>
+                        project.project_title.toLowerCase().includes(searchTerm.toLowerCase())
+                    ));
+                } else {
+                    setDisplayProjects([]); // Reset if source is empty or not applicable
+                }
+            }, [projects, reviews, searchTerm, selectedTab]);
 
         const activateTab = (tabId) => {
                 setSelectedTab(tabId);
@@ -199,14 +208,16 @@ export default function Dashboard ()
                                 </div>
                         </nav>
 
-                        <div className="Dashboard_search" role="search">
-                                <i className="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-                                <label htmlFor="quick-search" className="sr-only">Quick search</label>
-                                <input id="quick-search" type="text" placeholder="Quick search..." className="Dashboard_search_input" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-                                <button className="filter-btn" id="filter-btn" aria-label="Open filters" onClick={() => setIsFilterModalOpen(true)}>
-                                        <i className="fa-solid fa-sliders"></i>
-                                </button>
-                        </div>
+                        {selectedTab !== 'metrics' &&
+                                <div className="Dashboard_search" role="search">
+                                        <i className="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                                        <label htmlFor="quick-search" className="sr-only">Quick search</label>
+                                        <input id="quick-search" type="text" placeholder="Quick search..." className="Dashboard_search_input" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                                        <button className="filter-btn" id="filter-btn" aria-label="Open filters" onClick={() => setIsFilterModalOpen(true)}>
+                                                <i className="fa-solid fa-sliders"></i>
+                                        </button>
+                                </div>
+                        }
 
                         <section id="proposals-panel" role="tabpanel" aria-labelledby="proposals-tab" className={`tab-panel ${selectedTab === 'proposals' ? 'active' : ''}`} hidden={selectedTab !== 'proposals'}>
                                 <div className="Dashboard_projects" id="proposals-grid">
