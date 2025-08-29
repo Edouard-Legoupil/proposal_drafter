@@ -101,9 +101,9 @@ async def create_session(request: CreateSessionRequest, current_user: dict = Dep
                 }
             )
 
-            # Log the initial 'draft' status
+            # Log the initial 'draft' status with an empty sections snapshot
             connection.execute(
-                text("INSERT INTO proposal_status_history (proposal_id, status) VALUES (:pid, 'draft')"),
+                text("INSERT INTO proposal_status_history (proposal_id, status, generated_sections_snapshot) VALUES (:pid, 'draft', '{}'::jsonb)"),
                 {"pid": proposal_id}
             )
 
@@ -741,14 +741,20 @@ async def request_submission(proposal_id: uuid.UUID, current_user: dict = Depend
     user_id = current_user["user_id"]
     try:
         with get_engine().begin() as connection:
+            # Get the current sections to create a snapshot
+            sections = connection.execute(
+                text("SELECT generated_sections FROM proposals WHERE id = :id"),
+                {"id": proposal_id}
+            ).scalar() or {}
+
             connection.execute(
                 text("UPDATE proposals SET status = 'submission', updated_at = NOW() WHERE id = :id AND user_id = :uid"),
                 {"id": proposal_id, "uid": user_id}
             )
             # Log the status change
             connection.execute(
-                text("INSERT INTO proposal_status_history (proposal_id, status) VALUES (:pid, 'submission')"),
-                {"pid": proposal_id}
+                text("INSERT INTO proposal_status_history (proposal_id, status, generated_sections_snapshot) VALUES (:pid, 'submission', :snapshot)"),
+                {"pid": proposal_id, "snapshot": json.dumps(sections)}
             )
         return {"message": "Proposal submitted for submission."}
     except Exception as e:
@@ -763,14 +769,20 @@ async def submit_proposal(proposal_id: uuid.UUID, current_user: dict = Depends(g
     user_id = current_user["user_id"]
     try:
         with get_engine().begin() as connection:
+            # Get the current sections to create a snapshot
+            sections = connection.execute(
+                text("SELECT generated_sections FROM proposals WHERE id = :id"),
+                {"id": proposal_id}
+            ).scalar() or {}
+
             connection.execute(
                 text("UPDATE proposals SET status = 'submitted', updated_at = NOW() WHERE id = :id AND user_id = :uid"),
                 {"id": proposal_id, "uid": user_id}
             )
             # Log the status change
             connection.execute(
-                text("INSERT INTO proposal_status_history (proposal_id, status) VALUES (:pid, 'submitted')"),
-                {"pid": proposal_id}
+                text("INSERT INTO proposal_status_history (proposal_id, status, generated_sections_snapshot) VALUES (:pid, 'submitted', :snapshot)"),
+                {"pid": proposal_id, "snapshot": json.dumps(sections)}
             )
         return {"message": "Proposal submitted."}
     except Exception as e:
@@ -784,14 +796,20 @@ async def finalize_proposal(request: FinalizeProposalRequest, current_user: dict
     """
     try:
         with get_engine().begin() as connection:
+            # Get the current sections to create a snapshot
+            sections = connection.execute(
+                text("SELECT generated_sections FROM proposals WHERE id = :id"),
+                {"id": request.proposal_id}
+            ).scalar() or {}
+
             connection.execute(
                 text("UPDATE proposals SET is_accepted = TRUE, status = 'approved', updated_at = NOW() WHERE id = :id AND user_id = :uid"),
                 {"id": request.proposal_id, "uid": current_user["user_id"]}
             )
             # Log the status change
             connection.execute(
-                text("INSERT INTO proposal_status_history (proposal_id, status) VALUES (:pid, 'approved')"),
-                {"pid": request.proposal_id}
+                text("INSERT INTO proposal_status_history (proposal_id, status, generated_sections_snapshot) VALUES (:pid, 'approved', :snapshot)"),
+                {"pid": request.proposal_id, "snapshot": json.dumps(sections)}
             )
         return {"message": "Proposal finalized.", "proposal_id": request.proposal_id, "is_accepted": True}
     except Exception as e:
@@ -863,16 +881,22 @@ async def submit_for_review(proposal_id: uuid.UUID, request: SubmitPeerReviewReq
             if not proposal:
                 raise HTTPException(status_code=404, detail="Proposal not found.")
 
+            # Get the current sections to create a snapshot
+            sections = connection.execute(
+                text("SELECT generated_sections FROM proposals WHERE id = :id"),
+                {"id": proposal_id}
+            ).scalar() or {}
+
             # Update the proposal status
             connection.execute(
                 text("UPDATE proposals SET status = 'in_review', updated_at = NOW() WHERE id = :id"),
                 {"id": proposal_id}
             )
 
-            # Log the status change
+            # Log the status change with the snapshot
             connection.execute(
-                text("INSERT INTO proposal_status_history (proposal_id, status) VALUES (:pid, 'in_review')"),
-                {"pid": proposal_id}
+                text("INSERT INTO proposal_status_history (proposal_id, status, generated_sections_snapshot) VALUES (:pid, 'in_review', :snapshot)"),
+                {"pid": proposal_id, "snapshot": json.dumps(sections)}
             )
 
             # Add the peer reviewers
