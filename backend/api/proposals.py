@@ -545,19 +545,6 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
     user_id = current_user["user_id"]
     draft_list = []
 
-    # Load sample templates from file.
-    try:
-        with open("templates/sample_templates.json", "r", encoding="utf-8") as f:
-            sample_templates = json.load(f)
-        for sample in sample_templates:
-            sample["project_title"] = sample.get("form_data", {}).get("Project title", "Untitled Sample")
-            sample["summary"] = sample.get("generated_sections", {}).get("Summary", "")
-            sample["is_sample"] = True
-        draft_list.extend(sample_templates)
-        logger.info(f"Loaded {len(sample_templates)} sample templates")
-    except Exception as e:
-        logger.error(f"[TEMPLATE LOAD ERROR] {e}")  # Changed print to logger
-
     # Fetch user's drafts from the database.
     try:  # Fixed: This was indented incorrectly (had extra spaces)
         logger.info("Attempting database connection...")
