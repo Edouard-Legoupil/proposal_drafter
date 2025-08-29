@@ -62,7 +62,7 @@ async def create_session(request: CreateSessionRequest, current_user: dict = Dep
     The process is as follows:
     1.  Determine the template name from the form data's "Targeted Donor".
     2.  Generate a new UUID for the proposal.
-    3.  Create an initial record in the 'proposals' database table.
+    3.  Create an initial record in the 'proposals' database table and link relational data.
     4.  Load the full proposal template from the determined file.
     5.  Store all relevant data (form data, template, etc.) in a new Redis session.
     6.  Return the new session_id and proposal_id to the client.
@@ -72,13 +72,21 @@ async def create_session(request: CreateSessionRequest, current_user: dict = Dep
     session_id = str(uuid.uuid4())
 
     try:
-        # 1. Determine the template name from the form data.
         templates_map = get_available_templates()
-        donor = request.form_data.get("Targeted Donor", "Not Yet Specified")
-        template_name = templates_map.get(donor, "unhcr_proposal_template.json")
+        donor_id = request.form_data.get("Targeted Donor")
+        template_name = "unhcr_proposal_template.json"  # Default template
 
-        # 2. Create an initial record in the database.
         with get_engine().begin() as connection:
+            if donor_id:
+                # Get donor name from ID to determine the template
+                donor_name_result = connection.execute(
+                    text("SELECT name FROM donors WHERE id = :id"),
+                    {"id": donor_id}
+                ).scalar()
+                if donor_name_result:
+                    template_name = templates_map.get(donor_name_result, "unhcr_proposal_template.json")
+
+            # Create the main proposal record
             connection.execute(
                 text("""
                     INSERT INTO proposals (id, user_id, form_data, project_description, template_name, generated_sections)
@@ -93,10 +101,41 @@ async def create_session(request: CreateSessionRequest, current_user: dict = Dep
                 }
             )
 
-        # 3. Load the full proposal template.
+            # Log the initial 'draft' status
+            connection.execute(
+                text("INSERT INTO proposal_status_history (proposal_id, status) VALUES (:pid, 'draft')"),
+                {"pid": proposal_id}
+            )
+
+            # Insert into join tables
+            outcome_ids = request.form_data.get("Main Outcome", [])
+            # The frontend might send an ID for "Geographical Scope" or "Country / Location(s)"
+            field_context_id = request.form_data.get("Country / Location(s)") or request.form_data.get("Geographical Scope")
+
+            if donor_id:
+                connection.execute(
+                    text("INSERT INTO proposal_donors (proposal_id, donor_id) VALUES (:pid, :did)"),
+                    {"pid": proposal_id, "did": donor_id}
+                )
+
+            if outcome_ids and isinstance(outcome_ids, list):
+                for outcome_id in outcome_ids:
+                    if outcome_id: # Ensure outcome_id is not empty
+                        connection.execute(
+                            text("INSERT INTO proposal_outcomes (proposal_id, outcome_id) VALUES (:pid, :oid)"),
+                            {"pid": proposal_id, "oid": outcome_id}
+                        )
+
+            if field_context_id:
+                connection.execute(
+                    text("INSERT INTO proposal_field_contexts (proposal_id, field_context_id) VALUES (:pid, :fid)"),
+                    {"pid": proposal_id, "fid": field_context_id}
+                )
+
+        # Load the full proposal template.
         proposal_template = load_proposal_template(template_name)
 
-        # 4. Create the Redis session payload.
+        # Create the Redis session payload.
         redis_payload = {
             "user_id": user_id,
             "proposal_id": str(proposal_id),
@@ -109,10 +148,10 @@ async def create_session(request: CreateSessionRequest, current_user: dict = Dep
             "is_accepted": False
         }
 
-        # 5. Store the payload in Redis.
+        # Store the payload in Redis.
         redis_client.setex(session_id, 3600, json.dumps(redis_payload, default=str))
 
-        # 6. Return the new IDs.
+        # Return the new IDs.
         return {"session_id": session_id, "proposal_id": str(proposal_id), "proposal_template": proposal_template}
 
     except HTTPException as http_exc:
@@ -430,42 +469,66 @@ async def get_proposals_for_review(current_user: dict = Depends(get_current_user
     user_id = current_user["user_id"]
     try:
         with get_engine().connect() as connection:
-            result = connection.execute(
-                text("""
-                    SELECT p.id, p.form_data, p.generated_sections, p.created_at, p.updated_at, p.is_accepted
-                    FROM proposals p
-                    JOIN proposal_peer_reviews pp ON p.id = pp.proposal_id
-                    WHERE pp.reviewer_id = :uid AND pp.status = 'pending'
-                    ORDER BY p.updated_at DESC
-                """),
-                {"uid": user_id}
-            )
-            rows = result.fetchall()
-            review_list = []
-            for row in rows:
-                form_data = row[1]
-                if isinstance(form_data, str):
-                    try:
-                        form_data = json.loads(form_data)
-                    except json.JSONDecodeError:
-                        form_data = {}
+            query = text("""
+                SELECT
+                    p.id,
+                    p.form_data,
+                    p.project_description,
+                    p.status,
+                    p.created_at,
+                    p.updated_at,
+                    p.is_accepted,
+                    d.name AS donor_name,
+                    fc.name AS country_name,
+                    string_agg(o.name, ', ') AS outcome_names,
+                    u.name AS requester_name
+                FROM
+                    proposals p
+                JOIN
+                    proposal_peer_reviews pp ON p.id = pp.proposal_id
+                LEFT JOIN
+                    users u ON p.user_id = u.id
+                LEFT JOIN
+                    proposal_donors pd ON p.id = pd.proposal_id
+                LEFT JOIN
+                    donors d ON pd.donor_id = d.id
+                LEFT JOIN
+                    proposal_field_contexts pfc ON p.id = pfc.proposal_id
+                LEFT JOIN
+                    field_contexts fc ON pfc.field_context_id = fc.id
+                LEFT JOIN
+                    proposal_outcomes po ON p.id = po.proposal_id
+                LEFT JOIN
+                    outcomes o ON po.outcome_id = o.id
+                WHERE
+                    pp.reviewer_id = :uid AND pp.status = 'pending'
+                GROUP BY
+                    p.id, d.name, fc.name, u.name
+                ORDER BY
+                    p.updated_at DESC
+            """)
 
-                sections = row[2]
-                if isinstance(sections, str):
-                    try:
-                        sections = json.loads(sections)
-                    except json.JSONDecodeError:
-                        sections = {}
+            result = connection.execute(query, {"uid": user_id})
+            rows = result.mappings().fetchall()
+            review_list = []
+
+            for row in rows:
+                form_data = json.loads(row['form_data']) if isinstance(row['form_data'], str) else row['form_data']
 
                 review_list.append({
-                    "proposal_id": row[0],
-                    "project_title": form_data.get("Project Draft Short name") or form_data.get("Project title", "Untitled Proposal") if form_data else "Untitled Proposal",
-                    "summary": sections.get("Summary", "") if sections else "",
-                    "created_at": row[3].isoformat() if row[3] else None,
-                    "updated_at": row[4].isoformat() if row[4] else None,
-                    "is_accepted": row[5],
+                    "proposal_id": row['id'],
+                    "project_title": form_data.get("Project Draft Short name") or form_data.get("Project title", "Untitled Proposal"),
+                    "summary": row['project_description'] or "",
+                    "created_at": row['created_at'].isoformat() if row['created_at'] else None,
+                    "updated_at": row['updated_at'].isoformat() if row['updated_at'] else None,
+                    "is_accepted": row['is_accepted'],
+                    "status": row['status'],
+                    "requester_name": row['requester_name'],
                     "is_sample": False,
-                    "form_data": form_data
+                    "donor": row['donor_name'],
+                    "country": row['country_name'],
+                    "outcomes": row['outcome_names'].split(', ') if row['outcome_names'] else [],
+                    "budget": form_data.get("Budget Range", "N/A")
                 })
         return {"message": "Proposals for review fetched successfully.", "reviews": review_list}
     except Exception as e:
@@ -503,39 +566,63 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
         
         with engine.connect() as connection:
             logger.info("Database connection established")
-            result = connection.execute(
-                text("SELECT id, form_data, generated_sections, created_at, updated_at, is_accepted FROM proposals WHERE user_id = :uid ORDER BY updated_at DESC"),
-                {"uid": user_id}
-            )
-            rows = result.fetchall()
+
+            # This query now joins with related tables to fetch names instead of relying on form_data
+            query = text("""
+                SELECT
+                    p.id,
+                    p.form_data,
+                    p.project_description,
+                    p.status,
+                    p.created_at,
+                    p.updated_at,
+                    p.is_accepted,
+                    d.name AS donor_name,
+                    fc.name AS country_name,
+                    string_agg(o.name, ', ') AS outcome_names
+                FROM
+                    proposals p
+                LEFT JOIN
+                    proposal_donors pd ON p.id = pd.proposal_id
+                LEFT JOIN
+                    donors d ON pd.donor_id = d.id
+                LEFT JOIN
+                    proposal_field_contexts pfc ON p.id = pfc.proposal_id
+                LEFT JOIN
+                    field_contexts fc ON pfc.field_context_id = fc.id
+                LEFT JOIN
+                    proposal_outcomes po ON p.id = po.proposal_id
+                LEFT JOIN
+                    outcomes o ON po.outcome_id = o.id
+                WHERE
+                    p.user_id = :uid
+                GROUP BY
+                    p.id, d.name, fc.name
+                ORDER BY
+                    p.updated_at DESC
+            """)
+
+            result = connection.execute(query, {"uid": user_id})
+            rows = result.mappings().fetchall() # Use .mappings() to get dict-like rows
             logger.info(f"Found {len(rows)} drafts in database")
             
             for row in rows:
-                # Handle JSON fields properly - they might be strings or already parsed dicts
-                form_data = row[1]
-                if isinstance(form_data, str):
-                    try:
-                        form_data = json.loads(form_data)
-                    except json.JSONDecodeError:
-                        logger.warning(f"Failed to parse form_data JSON for proposal {row[0]}")
-                        form_data = {}
+                form_data = json.loads(row['form_data']) if isinstance(row['form_data'], str) else row['form_data']
                 
-                sections = row[2]
-                if isinstance(sections, str):
-                    try:
-                        sections = json.loads(sections)
-                    except json.JSONDecodeError:
-                        logger.warning(f"Failed to parse generated_sections JSON for proposal {row[0]}")
-                        sections = {}
-
                 draft_list.append({
-                    "proposal_id": row[0],
-                    "project_title": form_data.get("Project Draft Short name") or form_data.get("Project title", "Untitled Proposal") if form_data else "Untitled Proposal",
-                    "summary": sections.get("Summary", "") if sections else "",
-                    "created_at": row[3].isoformat() if row[3] else None,
-                    "updated_at": row[4].isoformat() if row[4] else None,
-                    "is_accepted": row[5],
-                    "is_sample": False
+                    "proposal_id": row['id'],
+                    "project_title": form_data.get("Project Draft Short name") or form_data.get("Project title", "Untitled Proposal"),
+                    "summary": row['project_description'] or "",
+                    "created_at": row['created_at'].isoformat() if row['created_at'] else None,
+                    "updated_at": row['updated_at'].isoformat() if row['updated_at'] else None,
+                    "is_accepted": row['is_accepted'],
+                    "status": row['status'],
+                    "is_sample": False,
+                    # New relational fields
+                    "donor": row['donor_name'],
+                    "country": row['country_name'],
+                    "outcomes": row['outcome_names'].split(', ') if row['outcome_names'] else [],
+                    "budget": form_data.get("Budget Range", "N/A")
                 })
                 
         logger.info(f"Total drafts (samples + user): {len(draft_list)}")
@@ -671,6 +758,11 @@ async def request_submission(proposal_id: uuid.UUID, current_user: dict = Depend
                 text("UPDATE proposals SET status = 'submission', updated_at = NOW() WHERE id = :id AND user_id = :uid"),
                 {"id": proposal_id, "uid": user_id}
             )
+            # Log the status change
+            connection.execute(
+                text("INSERT INTO proposal_status_history (proposal_id, status) VALUES (:pid, 'submission')"),
+                {"pid": proposal_id}
+            )
         return {"message": "Proposal submitted for submission."}
     except Exception as e:
         logger.error(f"[REQUEST SUBMISSION ERROR] {e}", exc_info=True)
@@ -688,6 +780,11 @@ async def submit_proposal(proposal_id: uuid.UUID, current_user: dict = Depends(g
                 text("UPDATE proposals SET status = 'submitted', updated_at = NOW() WHERE id = :id AND user_id = :uid"),
                 {"id": proposal_id, "uid": user_id}
             )
+            # Log the status change
+            connection.execute(
+                text("INSERT INTO proposal_status_history (proposal_id, status) VALUES (:pid, 'submitted')"),
+                {"pid": proposal_id}
+            )
         return {"message": "Proposal submitted."}
     except Exception as e:
         logger.error(f"[SUBMIT PROPOSAL ERROR] {e}", exc_info=True)
@@ -703,6 +800,11 @@ async def finalize_proposal(request: FinalizeProposalRequest, current_user: dict
             connection.execute(
                 text("UPDATE proposals SET is_accepted = TRUE, status = 'approved', updated_at = NOW() WHERE id = :id AND user_id = :uid"),
                 {"id": request.proposal_id, "uid": current_user["user_id"]}
+            )
+            # Log the status change
+            connection.execute(
+                text("INSERT INTO proposal_status_history (proposal_id, status) VALUES (:pid, 'approved')"),
+                {"pid": request.proposal_id}
             )
         return {"message": "Proposal finalized.", "proposal_id": request.proposal_id, "is_accepted": True}
     except Exception as e:
@@ -780,6 +882,12 @@ async def submit_for_review(proposal_id: uuid.UUID, request: SubmitPeerReviewReq
                 {"id": proposal_id}
             )
 
+            # Log the status change
+            connection.execute(
+                text("INSERT INTO proposal_status_history (proposal_id, status) VALUES (:pid, 'in_review')"),
+                {"pid": proposal_id}
+            )
+
             # Add the peer reviewers
             for reviewer_id in request.user_ids:
                 connection.execute(
@@ -791,6 +899,51 @@ async def submit_for_review(proposal_id: uuid.UUID, request: SubmitPeerReviewReq
     except Exception as e:
         logger.error(f"[SUBMIT FOR REVIEW ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to submit for review.")
+
+
+@router.get("/donors")
+async def get_donors():
+    """
+    Fetches all donors from the database.
+    """
+    try:
+        with get_engine().connect() as connection:
+            result = connection.execute(text("SELECT id, name FROM donors ORDER BY name"))
+            donors = [{"id": str(row[0]), "name": row[1]} for row in result.fetchall()]
+        return {"donors": donors}
+    except Exception as e:
+        logger.error(f"[GET DONORS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch donors.")
+
+
+@router.get("/outcomes")
+async def get_outcomes():
+    """
+    Fetches all outcomes from the database.
+    """
+    try:
+        with get_engine().connect() as connection:
+            result = connection.execute(text("SELECT id, name FROM outcomes ORDER BY name"))
+            outcomes = [{"id": str(row[0]), "name": row[1]} for row in result.fetchall()]
+        return {"outcomes": outcomes}
+    except Exception as e:
+        logger.error(f"[GET OUTCOMES ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch outcomes.")
+
+
+@router.get("/field-contexts")
+async def get_field_contexts():
+    """
+    Fetches all field contexts from the database.
+    """
+    try:
+        with get_engine().connect() as connection:
+            result = connection.execute(text("SELECT id, name, geographic_coverage FROM field_contexts ORDER BY name"))
+            field_contexts = [{"id": str(row[0]), "name": row[1], "geographic_coverage": row[2]} for row in result.fetchall()]
+        return {"field_contexts": field_contexts}
+    except Exception as e:
+        logger.error(f"[GET FIELD CONTEXTS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch field contexts.")
 
 
 @router.delete("/delete-draft/{proposal_id}")

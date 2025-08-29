@@ -1,0 +1,18 @@
+.card-references ul {
+    margin-top: 5px;
+    padding-left: 20px;
+}
+
+.card-references li {
+    font-size: 0.8rem;
+    margin-bottom: 3px;
+}
+
+.card-references a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.card-references a:hover {
+    text-decoration: underline;
+}

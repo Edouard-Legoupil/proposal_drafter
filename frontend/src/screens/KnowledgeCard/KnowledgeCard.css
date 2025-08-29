@@ -1,0 +1,69 @@
+.kc-form-container {
+    padding: 2rem;
+    max-width: 800px;
+    margin: 2rem auto;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.kc-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.kc-form h2 {
+    text-align: center;
+    color: var(--primary-color);
+}
+
+.kc-form label {
+    font-weight: bold;
+    margin-bottom: -0.5rem;
+}
+
+.kc-form input,
+.kc-form textarea,
+.kc-form select {
+    width: 100%;
+    padding: 0.8rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.kc-form textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.kc-reference-item {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.kc-reference-item input {
+    flex-grow: 1;
+}
+
+.kc-reference-item button,
+.kc-form button[type="button"] {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    background-color: #e0e0e0;
+    cursor: pointer;
+}
+
+.kc-reference-item button:hover,
+.kc-form button[type="button"]:hover {
+    background-color: #d0d0d0;
+}
+
+.kc-form-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
+}

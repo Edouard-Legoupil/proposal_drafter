@@ -5,6 +5,8 @@ import { useNavigate } from 'react-router-dom'
 
 import Base from '../../components/Base/Base'
 import Project from './components/Project/Project'
+import KnowledgeCard from './components/KnowledgeCard/KnowledgeCard'
+import MetricsDashboard from './components/MetricsDashboard/MetricsDashboard'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
 
@@ -14,12 +16,15 @@ export default function Dashboard ()
 
         const [projects, setProjects] = useState([])
         const [reviews, setReviews] = useState([])
+        const [knowledgeCards, setKnowledgeCards] = useState([])
         const [selectedTab, setSelectedTab] = useState('proposals')
         const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
 
         const tabRefs = {
                 proposals: useRef(null),
                 reviews: useRef(null),
+                knowledge: useRef(null),
+                metrics: useRef(null)
         };
 
         async function getProjects ()
@@ -52,10 +57,26 @@ export default function Dashboard ()
                 }
         }
 
+        async function getKnowledgeCards ()
+        {
+                const response = await fetch(`${API_BASE_URL}/knowledge-cards`, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include'
+                })
+
+                if(response.ok)
+                {
+                        const data = await response.json()
+                        setKnowledgeCards(data.knowledge_cards)
+                }
+        }
+
         useEffect(() => {
                 sessionStorage.removeItem("proposal_id")
                 getProjects()
                 getReviews()
+                getKnowledgeCards()
         }, [])
 
         async function handleProjectClick(e, proposal_id, isReview = false)
@@ -203,6 +224,21 @@ export default function Dashboard ()
                                 </div>
                         </section>
 
+                        <section id="knowledge-panel" role="tabpanel" aria-labelledby="knowledge-tab" className={`tab-panel ${selectedTab === 'knowledge' ? 'active' : ''}`} hidden={selectedTab !== 'knowledge'}>
+                                <div className="Dashboard_projects" id="knowledge-grid">
+                                        <div className="card card--cta">
+                                                <button className="btn" type="button" aria-label="Start a new knowledge card" onClick={() => navigate("/knowledge-card/new")}>Create New Knowledge Card</button>
+                                        </div>
+                                        {knowledgeCards && knowledgeCards.map((card, i) =>
+                                                <KnowledgeCard
+                                                        key={i}
+                                                        card={card}
+                                                        onClick={() => navigate(`/knowledge-card/${card.id}`)}
+                                                />
+                                        )}
+                                </div>
+                        </section>
+
                         <section id="reviews-panel" role="tabpanel" aria-labelledby="reviews-tab" className={`tab-panel ${selectedTab === 'reviews' ? 'active' : ''}`} hidden={selectedTab !== 'reviews'}>
                                 <div className="Dashboard_projects" id="reviews-grid">
                                 {displayProjects && displayProjects.map((review, i) =>
@@ -215,6 +251,10 @@ export default function Dashboard ()
                                         />
                                 )}
                                 </div>
+                        </section>
+
+                        <section id="metrics-panel" role="tabpanel" aria-labelledby="metrics-tab" className={`tab-panel ${selectedTab === 'metrics' ? 'active' : ''}`} hidden={selectedTab !== 'metrics'}>
+                                <MetricsDashboard />
                         </section>
                 </div>
 

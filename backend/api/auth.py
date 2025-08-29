@@ -38,10 +38,11 @@ async def signup(request: Request):
     name = data.get('username')
     email = data.get('email')
     password = data.get('password')
+    team = data.get('team')
     security_question = data.get('security_question')
     security_answer = data.get('security_answer')
 
-    if not all([name, email, password, security_question, security_answer]):
+    if not all([name, email, password, security_question, security_answer, team]):
         return JSONResponse(status_code=400, content={"error": "All fields are required."})
 
     hashed_password = generate_password_hash(password)
@@ -57,13 +58,14 @@ async def signup(request: Request):
             # Insert the new user into the database.
             connection.execute(
                 text("""
-                    INSERT INTO users (id, email, name, password, security_questions)
-                    VALUES (:id, :email, :name, :password, :security_questions)
+                    INSERT INTO users (id, email, name, team, password, security_questions)
+                    VALUES (:id, :email, :name, :team, :password, :security_questions)
                 """),
                 {
                     'id': str(uuid.uuid4()),
                     'email': email,
                     'name': name,
+                    'team': team,
                     'password': hashed_password,
                     'security_questions': json.dumps(hashed_questions)
                 }
