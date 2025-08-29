@@ -111,11 +111,10 @@ export default function Dashboard ()
                 <div className="Dashboard">
                         <header className="Dashboard_top">
                                 <div className='Dashboard_label'>
-                                        <i className="fa-solid fa-file-lines" aria-hidden="true"></i>
-                                        Proposals
-                                </div>
-                                <button className="btn" onClick={() => navigate("/chat")}>Start New Proposal</button>
-                        </header>
+                                     Draft Smart Proposal with AI, Curated Knowledge and Peer Review. 
+                                         
+                                </div> 
+                        </header>  
 
                         <nav className="tabs" aria-label="Dashboard sections">
                                 <div role="tablist" aria-orientation="horizontal" className="tablist">
@@ -131,7 +130,21 @@ export default function Dashboard ()
                                                 onKeyDown={onTabKeydown}
                                                 tabIndex={selectedTab === 'proposals' ? 0 : -1}
                                         >
-                                                My Proposals
+                                                 <i className="fa-solid fa-file-lines" aria-hidden="true"></i>  My Proposals 
+                                        </button>
+                                        <button
+                                                id="knowledge-tab"
+                                                ref={tabRefs.reviews}
+                                                role="tab"
+                                                aria-selected={selectedTab === 'knowledge'}
+                                                aria-controls="knowledge-panel"
+                                                className="tab"
+                                                data-tab="knowledge"
+                                                onClick={() => activateTab('knowledge')}
+                                                onKeyDown={onTabKeydown}
+                                                tabIndex={selectedTab === 'knowledge' ? 0 : -1}
+                                        >
+                                                <i className="fa-solid fa-book-open" aria-hidden="true"></i>  Knowledge Card 
                                         </button>
                                         <button
                                                 id="reviews-tab"
@@ -145,7 +158,22 @@ export default function Dashboard ()
                                                 onKeyDown={onTabKeydown}
                                                 tabIndex={selectedTab === 'reviews' ? 0 : -1}
                                         >
-                                                Pending Reviews
+                                                <i className="fa-solid fa-magnifying-glass" aria-hidden="true"></i>  Pending Reviews 
+                                        </button>
+
+                                        <button
+                                                id="metrics-tab"
+                                                ref={tabRefs.reviews}
+                                                role="tab"
+                                                aria-selected={selectedTab === 'metrics'}
+                                                aria-controls="metrics-panel"
+                                                className="tab"
+                                                data-tab="metrics"
+                                                onClick={() => activateTab('metrics')}
+                                                onKeyDown={onTabKeydown}
+                                                tabIndex={selectedTab === 'metrics' ? 0 : -1}
+                                        >
+                                                <i className="fa-solid fa-gauge-high" aria-hidden="true"></i>  Metrics 
                                         </button>
                                 </div>
                         </nav>

@@ -25,7 +25,7 @@
       display: flex; align-items: center; justify-content: space-between; gap: 24px;
       padding: 24px 30px; background: var(--surface); box-shadow: var(--shadow);
     }
-    .Dashboard_label { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 24px; }
+    .Dashboard_label { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 18px; }
 
     /* Tabs */
     .tabs { display: flex; gap: 6px; padding: 0 30px; background: var(--surface); border-bottom: 1px solid var(--border); }
