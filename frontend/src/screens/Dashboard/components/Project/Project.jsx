@@ -36,9 +36,12 @@ export default function Project ({ project, date, onClick, isReview = false })
                                 <h3 id={`review-${project.proposal_id}`}>{project.project_title}</h3>
                                 <h2>Requester: {project.requester_name || 'N/A'}</h2>
                                 <p><strong>Deadline:</strong> <time dateTime={project.deadline || ''}>{project.deadline || 'N/A'}</time></p>
-                                <p><i className="fa-solid fa-earth-americas field-context" aria-hidden="true"></i> {project.country || 'N/A'}</p>
-                                <p><i className="fa-solid fa-money-bill-wave donor" aria-hidden="true"></i> {project.donor || 'N/A'}</p>
-                                <p><i className="fa-solid fa-bullseye outcome" aria-hidden="true"></i> {project.outcomes?.join(', ') || 'N/A'}</p>
+                                <p>
+                                        <i className="fa-solid fa-earth-americas field-context" aria-hidden="true"></i> {project.country || 'N/A'} -
+                                        <i className="fa-solid fa-money-bill-wave donor" aria-hidden="true"></i> {project.donor || 'N/A'} -
+                                        <i className="fa-solid fa-bullseye outcome" aria-hidden="true"></i> {project.outcomes?.join(', ') || 'N/A'} -
+                                        <i className="fa-solid fa-money-check-dollar" aria-hidden="true"></i> Budget: {project.budget || 'N/A'}
+                                </p>
                         </article>
                 )
         }
@@ -51,9 +54,7 @@ export default function Project ({ project, date, onClick, isReview = false })
                         <p>
                                 <i className="fa-solid fa-earth-americas field-context" aria-hidden="true"></i> {project.country || 'N/A'} -
                                 <i className="fa-solid fa-money-bill-wave donor" aria-hidden="true"></i> {project.donor || 'N/A'} -
-                                <i className="fa-solid fa-bullseye outcome" aria-hidden="true"></i> {project.outcomes?.join(', ') || 'N/A'}
-                        </p>
-                        <p>
+                                <i className="fa-solid fa-bullseye outcome" aria-hidden="true"></i> {project.outcomes?.join(', ') || 'N/A'} -
                                 <i className="fa-solid fa-money-check-dollar" aria-hidden="true"></i> Budget: {project.budget || 'N/A'}
                         </p>
                 </article>
