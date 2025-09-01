@@ -93,6 +93,16 @@ class SubmitReviewRequest(BaseModel):
     """
     review_data: Dict[str, Any]
 
+class CreateDonorRequest(BaseModel):
+    name: str
+
+class CreateOutcomeRequest(BaseModel):
+    name: str
+
+class CreateFieldContextRequest(BaseModel):
+    name: str
+    geographic_coverage: Optional[str] = None
+
 # class Donor(BaseModel):
 #     id: uuid.UUID
 #     name: str

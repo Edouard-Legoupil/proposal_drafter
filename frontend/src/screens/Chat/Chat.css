@@ -543,6 +543,24 @@
         align-items: center;
         gap: 5px;
     }
+
+.Chat_workflow_status_container {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.status-badge.inactive {
+    background-color: transparent !important;
+    color: #333 !important;
+    border: 1px solid #ccc;
+    opacity: 0.6;
+}
+
+.status-badge:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
     
     .multi-select-tag-close {
         cursor: pointer;
