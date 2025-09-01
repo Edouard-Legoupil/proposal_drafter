@@ -2,6 +2,7 @@ import './Project.css'
 
 export default function Project ({ project, date, onClick, isReview = false })
 {
+        console.log("Project summary:", project.summary);
         const getStatusInfo = (status) => {
                 switch (status) {
                         case 'draft':
@@ -20,12 +21,13 @@ export default function Project ({ project, date, onClick, isReview = false })
         };
 
         const trimSummary = (summary) => {
-                if (!summary) return 'No summary available.';
-                const lines = summary.split('\n');
+                const summaryText = typeof summary === 'string' ? summary : '';
+                if (!summaryText) return 'No summary available.';
+                const lines = summaryText.split('\n');
                 if (lines.length > 5) {
                     return lines.slice(0, 5).join('\n') + '...';
                 }
-                return summary;
+                return summaryText;
         };
 
         const statusInfo = getStatusInfo(project.status);

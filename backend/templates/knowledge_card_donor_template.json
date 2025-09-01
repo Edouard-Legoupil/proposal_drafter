@@ -1,0 +1,21 @@
+{
+    "template_name": "Knowledge Card Donor Template",
+    "description": "A template for generating knowledge cards about donors.",
+    "sections": [
+        {
+            "section_name": "Donor Overview",
+            "instructions": "Provide a brief overview of the donor, including their mission, key areas of focus, and history.",
+            "word_limit": 200
+        },
+        {
+            "section_name": "Funding Priorities",
+            "instructions": "Detail the donor's current funding priorities. Include specific themes, geographical focus, and types of organizations they support.",
+            "word_limit": 300
+        },
+        {
+            "section_name": "Application Process",
+            "instructions": "Describe the donor's application process, including eligibility criteria, deadlines, and key steps.",
+            "word_limit": 250
+        }
+    ]
+}

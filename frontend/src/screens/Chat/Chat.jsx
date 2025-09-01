@@ -8,6 +8,7 @@ import remarkGfm from 'remark-gfm'
 import Base from '../../components/Base/Base'
 import CommonButton from '../../components/CommonButton/CommonButton'
 import MultiSelectModal from '../../components/MultiSelectModal/MultiSelectModal'
+import CreatableSelect from 'react-select/creatable';
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
 
@@ -44,6 +45,11 @@ export default function Chat (props)
         const [donors, setDonors] = useState([]);
         const [outcomes, setOutcomes] = useState([]);
         const [fieldContexts, setFieldContexts] = useState([]);
+        const [newDonors, setNewDonors] = useState([]);
+        const [newOutcomes, setNewOutcomes] = useState([]);
+        const [newFieldContexts, setNewFieldContexts] = useState([]);
+        const [newBudgetRanges, setNewBudgetRanges] = useState([]);
+        const [newDurations, setNewDurations] = useState([]);
 
         useEffect(() => {
                 async function fetchData() {
@@ -70,7 +76,11 @@ export default function Chat (props)
                                 console.error("Error fetching form data:", error);
                         }
                 }
-                fetchData();
+                fetchData().then(() => {
+                        if (sessionStorage.getItem("proposal_id")) {
+                                getContent();
+                        }
+                });
         }, []);
 
         async function getUsers () {
@@ -173,32 +183,57 @@ export default function Chat (props)
         
                 const fieldId = toKebabCase(label);
 
-                let options = [];
-                switch (label) {
-                        case "Main Outcome":
-                                options = outcomes; // Pass the whole array of objects
-                                break;
-                        case "Targeted Donor":
-                                options = donors;
-                                break;
-                        case "Country / Location(s)":
-                                options = fieldContexts;
-                                break;
-                        case "Geographical Scope":
-                                // Get unique geographic_coverage values and format them for the select
-                                options = [...new Set(fieldContexts.map(fc => fc.geographic_coverage))].filter(Boolean).map(gc => ({ id: gc, name: gc }));
-                                break;
-                        case "Duration":
-                                options = ["1 month", "3 months", "6 months", "12 months", "18 months", "24 months", "30 months", "36 months"].map(d => ({ id: d, name: d }));
-                                break;
-                        case "Budget Range":
-                                options = ["50k$", "100k$","250k$","500k$","1M$","2M$","5M$","10M$","15M$","25M$"].map(b => ({ id: b, name: b }));
-                                break;
-                        default:
-                                options = [];
-                }
+                const getOptions = (label) => {
+                        switch (label) {
+                                case "Main Outcome":
+                                        return [...outcomes, ...newOutcomes].map(o => ({ value: o.id, label: o.name }));
+                                case "Targeted Donor":
+                                        return [...donors, ...newDonors].map(d => ({ value: d.id, label: d.name }));
+                                case "Country / Location(s)":
+                                        return [...fieldContexts, ...newFieldContexts].map(fc => ({ value: fc.id, label: fc.name }));
+                                case "Geographical Scope":
+                                        const geoOptions = [...new Set(fieldContexts.map(fc => fc.geographic_coverage))].filter(Boolean);
+                                        return geoOptions.map(gc => ({ value: gc, label: gc }));
+                                case "Duration":
+                                        const durationOptions = ["1 month", "3 months", "6 months", "12 months", "18 months", "24 months", "30 months", "36 months"];
+                                        return [...durationOptions.map(d => ({ value: d, label: d })), ...newDurations.map(d => ({ value: d.id, label: d.name }))];
+                                case "Budget Range":
+                                        const budgetOptions = ["50k$", "100k$","250k$","500k$","1M$","2M$","5M$","10M$","15M$","25M$"];
+                                        return [...budgetOptions.map(b => ({ value: b, label: b })), ...newBudgetRanges.map(b => ({ value: b.id, label: b.name }))];
+                                default:
+                                        return [];
+                        }
+                };
 
-                const isSelect = ["Targeted Donor", "Country / Location(s)", "Geographical Scope", "Duration", "Budget Range"].includes(label);
+                const handleCreate = (inputValue, label) => {
+                        const newOption = { id: `new_${inputValue}`, name: inputValue };
+                        switch (label) {
+                                case "Main Outcome":
+                                        setNewOutcomes(prev => [...prev, newOption]);
+                                        handleFormInput({ target: { value: [...field.value, newOption.id] } }, label);
+                                        break;
+                                case "Targeted Donor":
+                                        setNewDonors(prev => [...prev, newOption]);
+                                        handleFormInput({ target: { value: newOption.id } }, label);
+                                        break;
+                                case "Country / Location(s)":
+                                        setNewFieldContexts(prev => [...prev, newOption]);
+                                        handleFormInput({ target: { value: newOption.id } }, label);
+                                        break;
+                                case "Duration":
+                                        setNewDurations(prev => [...prev, newOption]);
+                                        handleFormInput({ target: { value: newOption.id } }, label);
+                                        break;
+                                case "Budget Range":
+                                        setNewBudgetRanges(prev => [...prev, newOption]);
+                                        handleFormInput({ target: { value: newOption.id } }, label);
+                                        break;
+                        }
+                };
+
+                const isCreatableSelect = ["Targeted Donor", "Country / Location(s)", "Duration", "Budget Range"].includes(label);
+                const isCreatableMultiSelect = label === "Main Outcome";
+                const isNormalSelect = label === "Geographical Scope";
         
                 return (
                         <div key={label} className='Chat_form_inputContainer'>
@@ -210,21 +245,23 @@ export default function Chat (props)
                                         </div>
                                 </label>
         
-                                {field.type === 'multiselect' ? (
-                                        <>
-                                                <button type="button" className='Chat_form_input' onClick={() => setIsModalOpen(true)}>
-                                                        {field.value.length > 0 ? field.value.map(id => outcomes.find(o => o.id === id)?.name).join(', ') : `Select ${label}`}
-                                                </button>
-                                                <MultiSelectModal
-                                                        isOpen={isModalOpen}
-                                                        onClose={() => setIsModalOpen(false)}
-                                                        options={options}
-                                                        selectedOptions={field.value}
-                                                        onSelectionChange={(newSelection) => handleFormInput({ target: { value: newSelection } }, label)}
-                                                        title={`Select ${label}`}
-                                                />
-                                        </>
-                                ) : isSelect ? (
+                                {isCreatableSelect ? (
+                                        <CreatableSelect
+                                                isClearable
+                                                onChange={option => handleFormInput({ target: { value: option ? option.value : "" } }, label)}
+                                                onCreateOption={inputValue => handleCreate(inputValue, label)}
+                                                options={getOptions(label)}
+                                                value={getOptions(label).find(o => o.value === field.value)}
+                                        />
+                                ) : isCreatableMultiSelect ? (
+                                        <CreatableSelect
+                                                isMulti
+                                                onChange={options => handleFormInput({ target: { value: options ? options.map(o => o.value) : [] } }, label)}
+                                                onCreateOption={inputValue => handleCreate(inputValue, label)}
+                                                options={getOptions(label)}
+                                                value={field.value.map(v => getOptions(label).find(o => o.value === v)).filter(Boolean)}
+                                        />
+                                ) : isNormalSelect ? (
                                         <select
                                                 className='Chat_form_input'
                                                 id={fieldId}
@@ -233,8 +270,8 @@ export default function Chat (props)
                                                 onChange={e => handleFormInput(e, label)}
                                         >
                                                 <option value="" disabled>Select {label}</option>
-                                                {options.map(option => (
-                                                        <option key={option.id} value={option.id}>{option.name}</option>
+                                                {getOptions(label).map(option => (
+                                                        <option key={option.value} value={option.value}>{option.label}</option>
                                                 ))}
                                         </select>
                                 ) : (
@@ -334,13 +371,39 @@ export default function Chat (props)
                 setFormExpanded(false);
 
                 try {
+                        const updatedFormData = { ...Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])) };
+
+                        const createNewOption = async (endpoint, value) => {
+                                const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ name: value.substring(4) }),
+                                        credentials: 'include'
+                                });
+                                if (!response.ok) throw new Error(`Failed to create new ${endpoint}`);
+                                const data = await response.json();
+                                return data.id;
+                        };
+
+                        if (updatedFormData["Targeted Donor"] && updatedFormData["Targeted Donor"].startsWith("new_")) {
+                                updatedFormData["Targeted Donor"] = await createNewOption("donors", updatedFormData["Targeted Donor"]);
+                        }
+                        if (updatedFormData["Country / Location(s)"] && updatedFormData["Country / Location(s)"].startsWith("new_")) {
+                                updatedFormData["Country / Location(s)"] = await createNewOption("field-contexts", updatedFormData["Country / Location(s)"]);
+                        }
+                        if (updatedFormData["Main Outcome"]) {
+                                updatedFormData["Main Outcome"] = await Promise.all(
+                                        updatedFormData["Main Outcome"].map(o => o.startsWith("new_") ? createNewOption("outcomes", o) : o)
+                                );
+                        }
+
                         // Call the new, streamlined endpoint to create the session and initial draft.
                         const response = await fetch(`${API_BASE_URL}/create-session`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
                                         project_description: userPrompt,
-                                        form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])),
+                                        form_data: updatedFormData,
                                 }),
                                 credentials: 'include'
                         });
@@ -569,11 +632,6 @@ export default function Chat (props)
                 }
         }
         
-        useEffect(() => {
-                getContent()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        }, [])
-
         async function handleExport (format)
         {
                 
@@ -794,30 +852,39 @@ export default function Chat (props)
                                                                 <img src={word_icon} />
                                                                 Download Document
                                                         </button>
-                                                        <button
-                                                                type="button"
-                                                                className={`status-${proposalStatus}`}
-                                                                onClick={() => {
-                                                                        if (proposalStatus === 'draft') {
-                                                                                setIsPeerReviewModalOpen(true);
-                                                                        } else if (proposalStatus === 'in_review') {
-                                                                                handleRequestSubmission();
-                                                                        } else if (proposalStatus === 'submission') {
-                                                                                handleSubmit();
-                                                                        } else if (proposalStatus === 'submitted') {
-                                                                                handleApprove();
-                                                                        }
-                                                                }}
-                                                                disabled={proposalStatus === 'approved'}
-                                                        >
-                                                                {
-                                                                        proposalStatus === 'draft' ? 'Submit for Peer Review' :
-                                                                        proposalStatus === 'in_review' ? 'Request Submission' :
-                                                                        proposalStatus === 'submission' ? 'Submit' :
-                                                                        proposalStatus === 'submitted' ? 'Approve' :
-                                                                        'Approved'
-                                                                }
-                                                        </button>
+                                                        <div className="Chat_workflow_status_container">
+                                                                {['draft', 'in_review', 'submission', 'submitted', 'approved'].map(status => {
+                                                                        const statusDetails = {
+                                                                                draft: { text: 'Drafting', className: 'status-draft' },
+                                                                                in_review: { text: 'Peer Review', className: 'status-review' },
+                                                                                submission: { text: 'Submission', className: 'status-submission' },
+                                                                                submitted: { text: 'Submitted', className: 'status-submitted' },
+                                                                                approved: { text: 'Approved', className: 'status-approved' }
+                                                                        };
+                                                                        const isActive = proposalStatus === status;
+                                                                        const isClickable = (proposalStatus === 'draft' && status === 'in_review') ||
+                                                                                                (proposalStatus === 'in_review' && status === 'submission') ||
+                                                                                                (proposalStatus === 'submission' && status === 'submitted') ||
+                                                                                                (proposalStatus === 'submitted' && status === 'approved');
+
+                                                                        return (
+                                                                                <button
+                                                                                        key={status}
+                                                                                        type="button"
+                                                                                        className={`status-badge ${statusDetails[status].className} ${isActive ? 'active' : 'inactive'}`}
+                                                                                        onClick={() => {
+                                                                                                if (status === 'in_review' && proposalStatus === 'draft') setIsPeerReviewModalOpen(true);
+                                                                                                if (status === 'submission' && proposalStatus === 'in_review') handleRequestSubmission();
+                                                                                                if (status === 'submitted' && proposalStatus === 'submission') handleSubmit();
+                                                                                                if (status === 'approved' && proposalStatus === 'submitted') handleApprove();
+                                                                                        }}
+                                                                                        disabled={!isClickable && !isActive}
+                                                                                >
+                                                                                        {statusDetails[status].text}
+                                                                                </button>
+                                                                        );
+                                                                })}
+                                                        </div>
                                                 </div> : ""}
                                         </div>
 

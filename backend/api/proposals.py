@@ -24,7 +24,10 @@ from backend.models.schemas import (
     CreateSessionRequest,
     UpdateSectionRequest,
     SubmitPeerReviewRequest,
-    SubmitReviewRequest
+    SubmitReviewRequest,
+    CreateDonorRequest,
+    CreateOutcomeRequest,
+    CreateFieldContextRequest
 )
 from backend.utils.proposal_logic import regenerate_section_logic
 from backend.utils.crew import ProposalCrew
@@ -902,8 +905,8 @@ async def submit_for_review(proposal_id: uuid.UUID, request: SubmitPeerReviewReq
             # Add the peer reviewers
             for reviewer_id in request.user_ids:
                 connection.execute(
-                    text("INSERT INTO proposal_peer (proposal_id, user_id) VALUES (:proposal_id, :user_id)"),
-                    {"proposal_id": proposal_id, "user_id": reviewer_id}
+                    text("INSERT INTO proposal_peer_reviews (proposal_id, reviewer_id) VALUES (:proposal_id, :reviewer_id)"),
+                    {"proposal_id": proposal_id, "reviewer_id": reviewer_id}
                 )
 
         return {"message": "Proposal submitted for peer review."}
@@ -919,7 +922,7 @@ async def get_donors():
     """
     try:
         with get_engine().connect() as connection:
-            result = connection.execute(text("SELECT id, name FROM donors ORDER BY name"))
+            result = connection.execute(text("SELECT id, name FROM donors ORDER BY id"))
             donors = [{"id": str(row[0]), "name": row[1]} for row in result.fetchall()]
         return {"donors": donors}
     except Exception as e:
@@ -934,7 +937,7 @@ async def get_outcomes():
     """
     try:
         with get_engine().connect() as connection:
-            result = connection.execute(text("SELECT id, name FROM outcomes ORDER BY name"))
+            result = connection.execute(text("SELECT id, name FROM outcomes ORDER BY id"))
             outcomes = [{"id": str(row[0]), "name": row[1]} for row in result.fetchall()]
         return {"outcomes": outcomes}
     except Exception as e:
@@ -949,12 +952,64 @@ async def get_field_contexts():
     """
     try:
         with get_engine().connect() as connection:
-            result = connection.execute(text("SELECT id, name, geographic_coverage FROM field_contexts ORDER BY name"))
+            result = connection.execute(text("SELECT id, name, geographic_coverage FROM field_contexts ORDER BY id"))
             field_contexts = [{"id": str(row[0]), "name": row[1], "geographic_coverage": row[2]} for row in result.fetchall()]
         return {"field_contexts": field_contexts}
     except Exception as e:
         logger.error(f"[GET FIELD CONTEXTS ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch field contexts.")
+
+
+@router.post("/donors", status_code=201)
+async def create_donor(request: CreateDonorRequest, current_user: dict = Depends(get_current_user)):
+    """
+    Creates a new donor.
+    """
+    new_id = uuid.uuid4()
+    try:
+        with get_engine().begin() as connection:
+            connection.execute(
+                text("INSERT INTO donors (id, name, created_by) VALUES (:id, :name, :user_id)"),
+                {"id": new_id, "name": request.name, "user_id": current_user["user_id"]}
+            )
+        return {"id": str(new_id), "name": request.name}
+    except Exception as e:
+        logger.error(f"[CREATE DONOR ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to create donor.")
+
+@router.post("/outcomes", status_code=201)
+async def create_outcome(request: CreateOutcomeRequest, current_user: dict = Depends(get_current_user)):
+    """
+    Creates a new outcome.
+    """
+    new_id = uuid.uuid4()
+    try:
+        with get_engine().begin() as connection:
+            connection.execute(
+                text("INSERT INTO outcomes (id, name, created_by) VALUES (:id, :name, :user_id)"),
+                {"id": new_id, "name": request.name, "user_id": current_user["user_id"]}
+            )
+        return {"id": str(new_id), "name": request.name}
+    except Exception as e:
+        logger.error(f"[CREATE OUTCOME ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to create outcome.")
+
+@router.post("/field-contexts", status_code=201)
+async def create_field_context(request: CreateFieldContextRequest, current_user: dict = Depends(get_current_user)):
+    """
+    Creates a new field context.
+    """
+    new_id = uuid.uuid4()
+    try:
+        with get_engine().begin() as connection:
+            connection.execute(
+                text("INSERT INTO field_contexts (id, name, geographic_coverage, created_by) VALUES (:id, :name, :geo, :user_id)"),
+                {"id": new_id, "name": request.name, "geo": request.geographic_coverage, "user_id": current_user["user_id"]}
+            )
+        return {"id": str(new_id), "name": request.name, "geographic_coverage": request.geographic_coverage}
+    except Exception as e:
+        logger.error(f"[CREATE FIELD CONTEXT ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to create field context.")
 
 
 @router.delete("/delete-draft/{proposal_id}")
