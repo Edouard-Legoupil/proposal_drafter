@@ -95,10 +95,8 @@ export default function KnowledgeCard() {
         setReferences(newReferences);
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    const handleSave = async () => {
         setLoading(true);
-
         let finalLinkedId = linkedId;
         if (linkedId && linkedId.startsWith('new_')) {
             const endpointMap = {
@@ -141,19 +139,32 @@ export default function KnowledgeCard() {
             body: JSON.stringify(payload),
             credentials: 'include'
         });
+        setLoading(false);
 
         if (response.ok) {
-            const data = await response.json();
-            const cardId = id || data.knowledge_card_id;
+            alert(`Knowledge card ${id ? 'updated' : 'created'} successfully!`);
+            if (!id) {
+                const data = await response.json();
+                navigate(`/knowledge-card/${data.knowledge_card_id}`);
+            }
+        } else {
+            const error = await response.json();
+            alert(`Error ${id ? 'updating' : 'creating'} knowledge card: ${error.detail}`);
+        }
+        return response;
+    };
 
-            // Now, trigger the content generation
+    const handlePopulate = async (e) => {
+        e.preventDefault();
+        const saveResponse = await handleSave();
+        if (saveResponse.ok) {
+            const cardId = id || (await saveResponse.json()).knowledge_card_id;
+            setLoading(true);
             const genResponse = await fetch(`${API_BASE_URL}/knowledge-cards/${cardId}/generate`, {
                 method: 'POST',
                 credentials: 'include'
             });
-
             setLoading(false);
-
             if (genResponse.ok) {
                 const genData = await genResponse.json();
                 setGeneratedSections(genData.generated_sections);
@@ -162,18 +173,14 @@ export default function KnowledgeCard() {
                 const error = await genResponse.json();
                 alert(`Error populating card content: ${error.detail}`);
             }
-        } else {
-            setLoading(false);
-            const error = await response.json();
-            alert(`Error ${id ? 'updating' : 'creating'} knowledge card: ${error.detail}`);
         }
-    };
+    }
 
     return (
         <Base>
             <div className="kc-container">
                 <div className="kc-form-container">
-                    <form onSubmit={handleSubmit} className="kc-form">
+                    <form onSubmit={handlePopulate} className="kc-form">
                         <h2>{id ? 'View/Edit Knowledge Card' : 'Create New Knowledge Card'}</h2>
 
                         <label htmlFor="kc-link-type">Link To</label>
@@ -207,7 +214,7 @@ export default function KnowledgeCard() {
                         <label htmlFor="kc-title">Title*</label>
                         <input id="kc-title" type="text" value={title} onChange={e => setTitle(e.target.value)} required />
 
-                        <label htmlFor="kc-summary">Summary</label>
+                    <label htmlFor="kc-summary">Description</label>
                         <textarea id="kc-summary" value={summary} onChange={e => setSummary(e.target.value)} />
 
                         <div className="kc-form-actions">
@@ -225,6 +232,7 @@ export default function KnowledgeCard() {
                         <button type="button" onClick={addReference}>Add Reference</button>
 
                         <div className="kc-form-actions">
+                            <CommonButton type="button" onClick={() => handleSave()} label="Save Card" loading={loading} disabled={loading || !title} />
                             <CommonButton type="submit" label="Populate Card Content" loading={loading} disabled={loading || !title} />
                         </div>
                     </form>
