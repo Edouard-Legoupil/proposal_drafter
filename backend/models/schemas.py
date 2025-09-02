@@ -80,11 +80,17 @@ class UpdateSectionRequest(BaseModel):
     content: str
 
 
+from datetime import datetime
+
+class PeerReviewerInfo(BaseModel):
+    user_id: uuid.UUID
+    deadline: Optional[datetime] = None
+
 class SubmitPeerReviewRequest(BaseModel):
     """
     Schema for submitting a proposal for peer review.
     """
-    user_ids: list[uuid.UUID]
+    reviewers: list[PeerReviewerInfo]
 
 
 class SubmitReviewRequest(BaseModel):
@@ -102,6 +108,9 @@ class CreateOutcomeRequest(BaseModel):
 class CreateFieldContextRequest(BaseModel):
     name: str
     geographic_coverage: Optional[str] = None
+
+class UpdateProposalStatusRequest(BaseModel):
+    status: str
 
 # class Donor(BaseModel):
 #     id: uuid.UUID

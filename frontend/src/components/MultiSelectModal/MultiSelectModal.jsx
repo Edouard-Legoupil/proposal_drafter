@@ -1,9 +1,17 @@
 import './MultiSelectModal.css'
 
-export default function MultiSelectModal({ isOpen, onClose, options, selectedOptions, onSelectionChange, title, onConfirm }) {
+import { useState } from 'react';
+
+export default function MultiSelectModal({ isOpen, onClose, options, selectedOptions, onSelectionChange, title, onConfirm, showDeadline = false }) {
+  const [deadline, setDeadline] = useState('');
+
   if (!isOpen) {
     return null;
   }
+
+  const handleConfirm = () => {
+    onConfirm({ selectedUsers: selectedOptions, deadline });
+  };
 
   const handleCheckboxChange = (option) => {
     const optionValue = option.id || option;
@@ -35,9 +43,15 @@ export default function MultiSelectModal({ isOpen, onClose, options, selectedOpt
             );
           })}
         </div>
+        {showDeadline && (
+          <div className="modal-deadline">
+            <label htmlFor="deadline">Deadline:</label>
+            <input type="date" id="deadline" value={deadline} onChange={e => setDeadline(e.target.value)} />
+          </div>
+        )}
         <div className="modal-actions">
           <button onClick={onClose}>Close</button>
-          {onConfirm && <button onClick={onConfirm}>Confirm</button>}
+          {onConfirm && <button onClick={handleConfirm}>Confirm</button>}
         </div>
       </div>
     </div>

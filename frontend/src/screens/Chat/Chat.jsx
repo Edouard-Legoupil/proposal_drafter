@@ -192,8 +192,7 @@ export default function Chat (props)
                                 case "Country / Location(s)":
                                         return [...fieldContexts, ...newFieldContexts].map(fc => ({ value: fc.id, label: fc.name }));
                                 case "Geographical Scope":
-                                        const geoOptions = [...new Set(fieldContexts.map(fc => fc.geographic_coverage))].filter(Boolean);
-                                        return geoOptions.map(gc => ({ value: gc, label: gc }));
+                                        return ["One Area", "One Country Operation", "Multiple Country","One Region","Route-Based-Approach","Global"].map(gc => ({ value: gc, label: gc }));
                                 case "Duration":
                                         const durationOptions = ["1 month", "3 months", "6 months", "12 months", "18 months", "24 months", "30 months", "36 months"];
                                         return [...durationOptions.map(d => ({ value: d, label: d })), ...newDurations.map(d => ({ value: d.id, label: d.name }))];
@@ -689,6 +688,21 @@ export default function Chat (props)
                 }
         }
 
+        async function handleSetStatus(status) {
+                const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/status`, {
+                        method: "PUT",
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: status }),
+                        credentials: "include"
+                });
+
+                if (response.ok) {
+                        await getContent();
+                } else {
+                        console.error("Failed to update status");
+                }
+        }
+
         async function handleSubmit ()
         {
                 const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/submit`, {
@@ -728,12 +742,13 @@ export default function Chat (props)
                 }
         }
 
-        async function handleSubmitForPeerReview ()
+        async function handleSubmitForPeerReview ({ selectedUsers, deadline })
         {
+                const reviewers = selectedUsers.map(user_id => ({ user_id, deadline }));
                 const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/submit-for-review`, {
                         method: "POST",
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ user_ids: selectedUsers }),
+                        body: JSON.stringify({ reviewers }),
                         credentials: "include"
                 })
 
@@ -759,6 +774,7 @@ export default function Chat (props)
                                 onSelectionChange={setSelectedUsers}
                                 onConfirm={handleSubmitForPeerReview}
                                 title="Select Users for Peer Review"
+                                showDeadline={true}
                         />
                         {sidebarOpen ? <aside>
                                 <ul className='Chat_sidebar'>
@@ -864,6 +880,7 @@ export default function Chat (props)
                                                                         const isActive = proposalStatus === status;
                                                                         const isClickable = (proposalStatus === 'draft' && status === 'in_review') ||
                                                                                                 (proposalStatus === 'in_review' && status === 'submission') ||
+                                                                                                (proposalStatus === 'in_review' && status === 'draft') ||
                                                                                                 (proposalStatus === 'submission' && status === 'submitted') ||
                                                                                                 (proposalStatus === 'submitted' && status === 'approved');
 
@@ -874,6 +891,7 @@ export default function Chat (props)
                                                                                         className={`status-badge ${statusDetails[status].className} ${isActive ? 'active' : 'inactive'}`}
                                                                                         onClick={() => {
                                                                                                 if (status === 'in_review' && proposalStatus === 'draft') setIsPeerReviewModalOpen(true);
+                                                                                                if (status === 'draft' && proposalStatus === 'in_review') handleSetStatus('draft');
                                                                                                 if (status === 'submission' && proposalStatus === 'in_review') handleRequestSubmission();
                                                                                                 if (status === 'submitted' && proposalStatus === 'submission') handleSubmit();
                                                                                                 if (status === 'approved' && proposalStatus === 'submitted') handleApprove();
