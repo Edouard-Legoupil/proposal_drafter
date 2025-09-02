@@ -197,6 +197,7 @@ export default function KnowledgeCard() {
                                 <CreatableSelect
                                     isClearable
                                     id="kc-linked-id"
+                                    name="kc-linked-id"
                                     value={linkOptions.find(o => o.id === linkedId) ? { value: linkedId, label: linkOptions.find(o => o.id === linkedId).name } : null}
                                     onChange={option => setLinkedId(option ? option.id : '')}
                                     onCreateOption={inputValue => {

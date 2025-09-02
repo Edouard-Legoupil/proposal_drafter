@@ -508,7 +508,7 @@ async def get_proposals_for_review(current_user: dict = Depends(get_current_user
                 WHERE
                     pp.reviewer_id = :uid AND pp.status = 'pending'
                 GROUP BY
-                    p.id, pp.deadline, d.name, fc.name, u.name
+                    p.id, pp.deadline, d.name, fc.name, u.name, p.form_data, p.project_description, p.status, p.created_at, p.updated_at, p.is_accepted
                 ORDER BY
                     p.updated_at DESC
             """)
