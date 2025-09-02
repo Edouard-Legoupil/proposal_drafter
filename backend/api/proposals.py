@@ -909,7 +909,14 @@ async def submit_for_review(proposal_id: uuid.UUID, request: SubmitPeerReviewReq
             # Add the peer reviewers
             for reviewer_info in request.reviewers:
                 connection.execute(
-                    text("INSERT INTO proposal_peer_reviews (proposal_id, reviewer_id, deadline) VALUES (:proposal_id, :reviewer_id, :deadline)"),
+                    text("""
+                        INSERT INTO proposal_peer_reviews (proposal_id, reviewer_id, deadline, status)
+                        VALUES (:proposal_id, :reviewer_id, :deadline, 'pending')
+                        ON CONFLICT (proposal_id, reviewer_id) DO UPDATE SET
+                            deadline = EXCLUDED.deadline,
+                            status = 'pending',
+                            updated_at = NOW()
+                    """),
                     {"proposal_id": proposal_id, "reviewer_id": reviewer_info.user_id, "deadline": reviewer_info.deadline}
                 )
 

@@ -34,10 +34,15 @@
   gap: 10px;
 }
 
-.modal-content button {
-
-  font-family: "Noto";
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
   margin-top: 20px;
+}
+
+.modal-content button {
+  font-family: "Noto";
   padding: 10px 20px;
   border: none;
   background-color: #0072bc;

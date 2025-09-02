@@ -754,6 +754,7 @@ export default function Chat (props)
 
                 if(response.ok)
                 {
+                        setProposalStatus('in_review');
                         await getContent()
                         setIsPeerReviewModalOpen(false)
                 }
