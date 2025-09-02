@@ -67,7 +67,7 @@ async def create_knowledge_card(card: KnowledgeCardIn, current_user: dict = Depe
                     connection.execute(
                         text("""
                             INSERT INTO knowledge_card_references (knowledge_card_id, url, reference_type)
-                            VALUES (:kcid, :url, :type)
+                            VALUES (:kcid, :url, :reference_type)
                         """),
                         {"kcid": card_id, "url": ref.url, "reference_type": ref.reference_type}
                     )
@@ -217,7 +217,7 @@ async def update_knowledge_card(card_id: uuid.UUID, card: KnowledgeCardIn, curre
                     connection.execute(
                         text("""
                             INSERT INTO knowledge_card_references (knowledge_card_id, url, reference_type)
-                            VALUES (:kcid, :url, :type)
+                            VALUES (:kcid, :url, :reference_type)
                         """),
                         {"kcid": card_id, "url": ref.url, "reference_type": ref.reference_type}
                     )
