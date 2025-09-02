@@ -27,7 +27,8 @@ from backend.models.schemas import (
     SubmitReviewRequest,
     CreateDonorRequest,
     CreateOutcomeRequest,
-    CreateFieldContextRequest
+    CreateFieldContextRequest,
+    UpdateProposalStatusRequest
 )
 from backend.utils.proposal_logic import regenerate_section_logic
 from backend.utils.crew import ProposalCrew
@@ -481,6 +482,7 @@ async def get_proposals_for_review(current_user: dict = Depends(get_current_user
                     p.created_at,
                     p.updated_at,
                     p.is_accepted,
+                    pp.deadline,
                     d.name AS donor_name,
                     fc.name AS country_name,
                     string_agg(o.name, ', ') AS outcome_names,
@@ -527,6 +529,7 @@ async def get_proposals_for_review(current_user: dict = Depends(get_current_user
                     "is_accepted": row['is_accepted'],
                     "status": row['status'],
                     "requester_name": row['requester_name'],
+                    "deadline": row['deadline'].isoformat() if row['deadline'] else None,
                     "is_sample": False,
                     "donor": row['donor_name'],
                     "country": row['country_name'],
@@ -670,7 +673,7 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
                 draft = conn.execute(
                     text("""
                         SELECT template_name, form_data, generated_sections, project_description,
-                               is_accepted, created_at, updated_at
+                               is_accepted, created_at, updated_at, status
                         FROM proposals
                         WHERE id = :id AND user_id = :uid
                     """),
@@ -679,21 +682,22 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
                 if not draft:
                     raise HTTPException(status_code=404, detail="Draft not found.")
 
-                template_name = draft[0] or "unhcr_proposal_template.json" # Default if null
+                template_name = draft.template_name or "unhcr_proposal_template.json" # Default if null
                 proposal_template = load_proposal_template(template_name)
                 section_names = [s.get("section_name") for s in proposal_template.get("sections", [])]
 
-                form_data = draft[1] if draft[1] else {}
-                sections = draft[2] if draft[2] else {}
-                project_description = draft[3]
+                form_data = draft.form_data if draft.form_data else {}
+                sections = draft.generated_sections if draft.generated_sections else {}
+                project_description = draft.project_description
                 
                 data_to_load = {
                     "form_data": form_data,
                     "project_description": project_description,
                     "generated_sections": {sec: sections.get(sec) for sec in section_names},
-                    "is_accepted": draft[4],
-                    "created_at": draft[5].isoformat() if draft[5] else None,
-                    "updated_at": draft[6].isoformat() if draft[6] else None,
+                    "is_accepted": draft.is_accepted,
+                    "status": draft.status,
+                    "created_at": draft.created_at.isoformat() if draft.created_at else None,
+                    "updated_at": draft.updated_at.isoformat() if draft.updated_at else None,
                     "is_sample": False,
                     "template_name": template_name,
                     "proposal_template": proposal_template,
@@ -903,16 +907,123 @@ async def submit_for_review(proposal_id: uuid.UUID, request: SubmitPeerReviewReq
             )
 
             # Add the peer reviewers
-            for reviewer_id in request.user_ids:
+            for reviewer_info in request.reviewers:
                 connection.execute(
-                    text("INSERT INTO proposal_peer_reviews (proposal_id, reviewer_id) VALUES (:proposal_id, :reviewer_id)"),
-                    {"proposal_id": proposal_id, "reviewer_id": reviewer_id}
+                    text("INSERT INTO proposal_peer_reviews (proposal_id, reviewer_id, deadline) VALUES (:proposal_id, :reviewer_id, :deadline)"),
+                    {"proposal_id": proposal_id, "reviewer_id": reviewer_info.user_id, "deadline": reviewer_info.deadline}
                 )
 
         return {"message": "Proposal submitted for peer review."}
     except Exception as e:
         logger.error(f"[SUBMIT FOR REVIEW ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to submit for review.")
+
+
+@router.put("/proposals/{proposal_id}/status")
+async def update_proposal_status(proposal_id: uuid.UUID, request: UpdateProposalStatusRequest, current_user: dict = Depends(get_current_user)):
+    """
+    Updates the status of a proposal.
+    """
+    user_id = current_user["user_id"]
+    new_status = request.status
+    # Add validation for allowed statuses if needed
+    allowed_statuses = ['draft', 'in_review', 'submission', 'submitted', 'approved']
+    if new_status not in allowed_statuses:
+        raise HTTPException(status_code=400, detail="Invalid status value.")
+
+    try:
+        with get_engine().begin() as connection:
+            # Check if the proposal exists and belongs to the user
+            proposal = connection.execute(
+                text("SELECT status FROM proposals WHERE id = :id AND user_id = :uid"),
+                {"id": proposal_id, "uid": user_id}
+            ).fetchone()
+            if not proposal:
+                raise HTTPException(status_code=404, detail="Proposal not found.")
+
+            # Add logic here to restrict status transitions, e.g., cannot revert from "approved"
+            if proposal.status == 'approved':
+                raise HTTPException(status_code=403, detail="Cannot change status of an approved proposal.")
+
+            # Get the current sections to create a snapshot
+            sections = connection.execute(
+                text("SELECT generated_sections FROM proposals WHERE id = :id"),
+                {"id": proposal_id}
+            ).scalar() or {}
+
+            # Update the proposal status
+            connection.execute(
+                text("UPDATE proposals SET status = :status, updated_at = NOW() WHERE id = :id"),
+                {"status": new_status, "id": proposal_id}
+            )
+
+            # Log the status change
+            connection.execute(
+                text("INSERT INTO proposal_status_history (proposal_id, status, generated_sections_snapshot) VALUES (:pid, :status, :snapshot)"),
+                {"pid": proposal_id, "status": new_status, "snapshot": json.dumps(sections)}
+            )
+
+        return {"message": f"Proposal status updated to {new_status}."}
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        logger.error(f"[UPDATE STATUS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to update proposal status.")
+
+
+@router.get("/review-proposal/{proposal_id}")
+async def get_proposal_for_review(proposal_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
+    """
+    Fetches a proposal for a user assigned to review it.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().connect() as connection:
+            # Check if the user is assigned to review this proposal
+            review_assignment = connection.execute(
+                text("SELECT id FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND status = 'pending'"),
+                {"proposal_id": proposal_id, "user_id": user_id}
+            ).fetchone()
+
+            if not review_assignment:
+                raise HTTPException(status_code=403, detail="You are not assigned to review this proposal or the review is already completed.")
+
+            # Fetch the proposal data
+            draft = connection.execute(
+                text("""
+                    SELECT template_name, form_data, generated_sections, project_description,
+                           is_accepted, created_at, updated_at, status
+                    FROM proposals
+                    WHERE id = :id
+                """),
+                {"id": proposal_id}
+            ).fetchone()
+
+            if not draft:
+                raise HTTPException(status_code=404, detail="Proposal not found.")
+
+            template_name = draft.template_name or "unhcr_proposal_template.json"
+            proposal_template = load_proposal_template(template_name)
+            section_names = [s.get("section_name") for s in proposal_template.get("sections", [])]
+
+            form_data = draft.form_data if draft.form_data else {}
+            sections = draft.generated_sections if draft.generated_sections else {}
+
+            data_to_load = {
+                "form_data": form_data,
+                "project_description": draft.project_description,
+                "generated_sections": {sec: sections.get(sec) for sec in section_names},
+                "is_accepted": draft.is_accepted,
+                "status": draft.status,
+                "created_at": draft.created_at.isoformat() if draft.created_at else None,
+                "updated_at": draft.updated_at.isoformat() if draft.updated_at else None,
+            }
+        return data_to_load
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        logger.error(f"[GET PROPOSAL FOR REVIEW ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch proposal for review.")
 
 
 @router.get("/donors")

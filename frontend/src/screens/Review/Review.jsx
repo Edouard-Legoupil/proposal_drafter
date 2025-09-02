@@ -19,7 +19,7 @@ export default function Review ()
         const [reviewComments, setReviewComments] = useState({})
 
         async function getProposal() {
-                const response = await fetch(`${API_BASE_URL}/load-draft/${proposal_id}`, {
+                const response = await fetch(`${API_BASE_URL}/review-proposal/${proposal_id}`, {
                         method: "GET",
                         headers: { 'Content-Type': 'application/json' },
                         credentials: "include"

@@ -62,6 +62,24 @@ async def generate_and_download_document(
         form_data = form_data if isinstance(form_data, dict) else {}
         generated_sections = generated_sections if isinstance(generated_sections, dict) else {}
 
+        # Resolve UUIDs to names
+        with get_engine().connect() as connection:
+            if form_data.get("Targeted Donor"):
+                donor_id = form_data["Targeted Donor"]
+                donor_name = connection.execute(text("SELECT name FROM donors WHERE id = :id"), {"id": donor_id}).scalar()
+                form_data["Targeted Donor"] = donor_name or form_data["Targeted Donor"]
+
+            if form_data.get("Main Outcome"):
+                outcome_ids = form_data["Main Outcome"]
+                if outcome_ids:
+                    outcome_names = connection.execute(text("SELECT name FROM outcomes WHERE id = ANY(:ids)"), {"ids": outcome_ids}).scalars().all()
+                    form_data["Main Outcome"] = ", ".join(outcome_names) if outcome_names else form_data["Main Outcome"]
+
+            if form_data.get("Country / Location(s)"):
+                fc_id = form_data["Country / Location(s)"]
+                fc_name = connection.execute(text("SELECT name FROM field_contexts WHERE id = :id"), {"id": fc_id}).scalar()
+                form_data["Country / Location(s)"] = fc_name or form_data["Country / Location(s)"]
+
         # Load the template to get the correct section order and list.
         if not template_name:
             # Fallback to a default if no template is stored with the proposal.

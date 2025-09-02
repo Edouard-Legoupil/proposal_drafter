@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS proposal_peer_reviews (
     proposal_id UUID NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
     reviewer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     status VARCHAR(50) DEFAULT 'pending',
+    deadline TIMESTAMPTZ,
     review_text TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
