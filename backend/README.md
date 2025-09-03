@@ -169,8 +169,40 @@ These endpoints handle the lifecycle of a proposal.
     -   **What it needs**: The ID of the proposal and a list of reviewers.
     -   **What it returns**: A confirmation message.
 
+-   **`PUT /proposals/{proposal_id}/delete`**: Marks a proposal as "deleted".
+    -   **What it needs**: The ID of the proposal.
+    -   **What it returns**: A confirmation message.
+
+-   **`PUT /proposals/{proposal_id}/transfer`**: Transfers ownership of a proposal.
+    -   **What it needs**: The ID of the proposal and the ID of the new owner.
+    -   **What it returns**: A confirmation message.
+
+-   **`PUT /proposals/{proposal_id}/revert-to-status/{status}`**: Reverts a proposal to a previous status.
+    -   **What it needs**: The ID of the proposal and the status to revert to.
+    -   **What it returns**: A confirmation message.
+
+-   **`GET /proposals/{proposal_id}/status-history`**: Gets the status history for a proposal.
+    -   **What it needs**: The ID of the proposal.
+    -   **What it returns**: A list of statuses the proposal has been in.
+
+-   **`POST /proposals/{proposal_id}/upload-approved-document`**: Uploads the final approved document for a proposal.
+    -   **What it needs**: The ID of the proposal and the file to upload.
+    -   **What it returns**: A confirmation message.
+
+### Peer Reviews (`/api/proposals.py`)
+
+These endpoints handle the peer review process.
+
+-   **`GET /proposals/{proposal_id}/peer-reviews`**: Fetches all peer reviews for a proposal.
+    -   **What it needs**: The ID of the proposal.
+    -   **What it returns**: A list of reviews for the proposal.
+
 -   **`POST /proposals/{proposal_id}/review`**: Submits a peer review for a proposal.
-    -   **What it needs**: The ID of the proposal and the review data.
+    -   **What it needs**: The ID of the proposal and a list of comments, each with a section name, review text, type of comment, and severity.
+    -   **What it returns**: A confirmation message.
+
+-   **`PUT /peer-reviews/{review_id}/response`**: Saves the author's response to a peer review.
+    -   **What it needs**: The ID of the review and the response text.
     -   **What it returns**: A confirmation message.
 
 ### Session (`/api/session.py`)

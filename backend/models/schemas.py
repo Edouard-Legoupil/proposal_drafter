@@ -93,11 +93,17 @@ class SubmitPeerReviewRequest(BaseModel):
     reviewers: list[PeerReviewerInfo]
 
 
+class ReviewComment(BaseModel):
+    section_name: str
+    review_text: str
+    type_of_comment: str
+    severity: str
+
 class SubmitReviewRequest(BaseModel):
     """
     Schema for submitting a peer review.
     """
-    review_data: Dict[str, Any]
+    comments: list[ReviewComment]
 
 class CreateDonorRequest(BaseModel):
     name: str
@@ -111,6 +117,12 @@ class CreateFieldContextRequest(BaseModel):
 
 class UpdateProposalStatusRequest(BaseModel):
     status: str
+
+class TransferOwnershipRequest(BaseModel):
+    new_owner_id: uuid.UUID
+
+class AuthorResponseRequest(BaseModel):
+    author_response: str
 
 # class Donor(BaseModel):
 #     id: uuid.UUID

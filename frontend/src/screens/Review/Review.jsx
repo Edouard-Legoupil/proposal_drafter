@@ -31,7 +31,11 @@ export default function Review ()
                         setProposal(data)
                         const initialComments = {}
                         Object.keys(data.generated_sections).forEach(section => {
-                                initialComments[section] = ""
+                            initialComments[section] = {
+                                review_text: "",
+                                type_of_comment: "General",
+                                severity: "Medium"
+                            }
                         })
                         setReviewComments(initialComments)
                 }
@@ -46,18 +50,26 @@ export default function Review ()
                 getProposal()
         }, [proposal_id])
 
-        function handleCommentChange(section, text) {
+        function handleCommentChange(section, field, value) {
                 setReviewComments(prev => ({
                         ...prev,
-                        [section]: text
+                        [section]: {
+                                ...prev[section],
+                                [field]: value
+                        }
                 }))
         }
 
         async function handleSubmitReview() {
+                const comments = Object.entries(reviewComments).map(([section_name, comment_data]) => ({
+                        section_name,
+                        ...comment_data
+                }));
+
                 const response = await fetch(`${API_BASE_URL}/proposals/${proposal_id}/review`, {
                         method: "POST",
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ review_data: reviewComments }),
+                        body: JSON.stringify({ comments }),
                         credentials: "include"
                 })
 
@@ -89,11 +101,24 @@ export default function Review ()
                                                 <div className="Review_section_content">
                                                         <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
                                                 </div>
+                                                <div className="Review_comment_controls">
+                                                    <select value={reviewComments[section]?.type_of_comment || 'General'} onChange={e => handleCommentChange(section, 'type_of_comment', e.target.value)}>
+                                                        <option value="General">General</option>
+                                                        <option value="Clarity">Clarity</option>
+                                                        <option value="Compliance">Compliance</option>
+                                                        <option value="Impact">Impact</option>
+                                                    </select>
+                                                    <select value={reviewComments[section]?.severity || 'Medium'} onChange={e => handleCommentChange(section, 'severity', e.target.value)}>
+                                                        <option value="Low">Low</option>
+                                                        <option value="Medium">Medium</option>
+                                                        <option value="High">High</option>
+                                                    </select>
+                                                </div>
                                                 <textarea
                                                         className="Review_comment_textarea"
                                                         placeholder={`Your comments for ${section}...`}
-                                                        value={reviewComments[section] || ""}
-                                                        onChange={e => handleCommentChange(section, e.target.value)}
+                                                        value={reviewComments[section]?.review_text || ""}
+                                                        onChange={e => handleCommentChange(section, 'review_text', e.target.value)}
                                                 />
                                         </div>
                                 ))}

@@ -102,6 +102,22 @@
 
 .kc-form-actions {
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
+    align-items: center;
     margin-top: 1rem;
+}
+
+.kc-form-actions-left {
+    display: flex;
+    justify-content: flex-start;
+    gap: 1rem;
+}
+
+.kc-form-actions-right {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.squared-btn {
+    border-radius: 4px !important;
 }

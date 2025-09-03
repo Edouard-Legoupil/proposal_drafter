@@ -7,7 +7,7 @@ import logging
 from typing import Optional
 
 #  Third-Party Libraries
-from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError 
 
@@ -28,7 +28,9 @@ from backend.models.schemas import (
     CreateDonorRequest,
     CreateOutcomeRequest,
     CreateFieldContextRequest,
-    UpdateProposalStatusRequest
+    UpdateProposalStatusRequest,
+    TransferOwnershipRequest,
+    AuthorResponseRequest
 )
 from backend.utils.proposal_logic import regenerate_section_logic
 from backend.utils.crew import ProposalCrew
@@ -588,7 +590,7 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
                 LEFT JOIN
                     outcomes o ON po.outcome_id = o.id
                 WHERE
-                    p.user_id = :uid
+                    p.user_id = :uid AND p.status != 'deleted'
                 GROUP BY
                     p.id, d.name, fc.name
                 ORDER BY
@@ -827,43 +829,49 @@ async def finalize_proposal(request: FinalizeProposalRequest, current_user: dict
 @router.post("/proposals/{proposal_id}/review")
 async def submit_review(proposal_id: uuid.UUID, request: SubmitReviewRequest, current_user: dict = Depends(get_current_user)):
     """
-    Submits a peer review for a proposal.
+    Submits a peer review for a proposal, with comments for each section.
     """
     user_id = current_user["user_id"]
     try:
         with get_engine().begin() as connection:
             # Check if the user is assigned to review this proposal
-            review_assignment = connection.execute(
-                text("SELECT id FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND user_id = :user_id AND status = 'pending'"),
+            reviewer_id_from_db = connection.execute(
+                text("SELECT reviewer_id FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND status = 'pending'"),
                 {"proposal_id": proposal_id, "user_id": user_id}
-            ).fetchone()
+            ).scalar()
 
-            if not review_assignment:
-                raise HTTPException(status_code=403, detail="You are not assigned to review this proposal.")
+            if not reviewer_id_from_db:
+                raise HTTPException(status_code=403, detail="You are not assigned to review this proposal or the review is already completed.")
 
-            # Get existing reviews and append the new one
-            existing_reviews = connection.execute(
-                text("SELECT reviews FROM proposals WHERE id = :id"),
-                {"id": proposal_id}
-            ).scalar() or []
+            # Get the latest 'in_review' status history ID
+            history_id = connection.execute(
+                text("SELECT id FROM proposal_status_history WHERE proposal_id = :pid AND status = 'in_review' ORDER BY created_at DESC LIMIT 1"),
+                {"pid": proposal_id}
+            ).scalar()
 
-            new_review = {
-                "reviewer_id": user_id,
-                "review_data": request.review_data,
-                "created_at": datetime.utcnow().isoformat()
-            }
-            existing_reviews.append(new_review)
+            # Insert each comment as a new row
+            for comment in request.comments:
+                if comment.review_text: # Only save comments that have text
+                    connection.execute(
+                        text("""
+                            INSERT INTO proposal_peer_reviews (proposal_id, reviewer_id, proposal_status_history_id, section_name, review_text, type_of_comment, severity, status)
+                            VALUES (:pid, :rid, :hid, :section, :text, :type, :severity, 'completed')
+                        """),
+                        {
+                            "pid": proposal_id,
+                            "rid": user_id,
+                            "hid": history_id,
+                            "section": comment.section_name,
+                            "text": comment.review_text,
+                            "type": comment.type_of_comment,
+                            "severity": comment.severity
+                        }
+                    )
 
-            # Update the reviews in the proposals table
+            # Mark the original review request as completed by deleting it, since comments are now individual rows
             connection.execute(
-                text("UPDATE proposals SET reviews = :reviews, updated_at = NOW() WHERE id = :id"),
-                {"reviews": json.dumps(existing_reviews), "id": proposal_id}
-            )
-
-            # Update the status in the proposal_peer_reviews table
-            connection.execute(
-                text("UPDATE proposal_peer_reviews SET status = 'completed', updated_at = NOW() WHERE id = :id"),
-                {"id": review_assignment[0]}
+                text("DELETE FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND status = 'pending'"),
+                {"proposal_id": proposal_id, "user_id": user_id}
             )
 
         return {"message": "Review submitted successfully."}
@@ -1064,13 +1072,19 @@ async def get_outcomes():
 
 
 @router.get("/field-contexts")
-async def get_field_contexts():
+async def get_field_contexts(geographic_coverage: Optional[str] = None):
     """
-    Fetches all field contexts from the database.
+    Fetches field contexts from the database, optionally filtered by geographic coverage.
     """
     try:
         with get_engine().connect() as connection:
-            result = connection.execute(text("SELECT id, name, geographic_coverage FROM field_contexts ORDER BY id"))
+            if geographic_coverage:
+                query = text("SELECT id, name, geographic_coverage FROM field_contexts WHERE geographic_coverage = :geo ORDER BY id")
+                result = connection.execute(query, {"geo": geographic_coverage})
+            else:
+                query = text("SELECT id, name, geographic_coverage FROM field_contexts ORDER BY id")
+                result = connection.execute(query)
+
             field_contexts = [{"id": str(row[0]), "name": row[1], "geographic_coverage": row[2]} for row in result.fetchall()]
         return {"field_contexts": field_contexts}
     except Exception as e:
@@ -1149,3 +1163,263 @@ async def delete_draft(proposal_id: uuid.UUID, current_user: dict = Depends(get_
     except Exception as e:
         logger.error(f"[DELETE DRAFT ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to delete draft.")
+
+
+@router.put("/proposals/{proposal_id}/delete")
+async def delete_proposal(proposal_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
+    """
+    Marks a proposal as 'deleted' but does not remove it from the database.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().begin() as connection:
+            result = connection.execute(
+                text("UPDATE proposals SET status = 'deleted', updated_at = NOW() WHERE id = :id AND user_id = :uid RETURNING id"),
+                {"id": proposal_id, "uid": user_id}
+            )
+            if not result.fetchone():
+                raise HTTPException(status_code=404, detail="Proposal not found.")
+        return {"message": f"Proposal '{proposal_id}' marked as deleted."}
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        logger.error(f"[DELETE PROPOSAL ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to mark proposal as deleted.")
+
+
+@router.put("/proposals/{proposal_id}/transfer")
+async def transfer_ownership(proposal_id: uuid.UUID, request: TransferOwnershipRequest, current_user: dict = Depends(get_current_user)):
+    """
+    Transfers ownership of a proposal to another user.
+    """
+    user_id = current_user["user_id"]
+    new_owner_id = request.new_owner_id
+
+    try:
+        with get_engine().begin() as connection:
+            # First, check if the new owner exists
+            new_owner_exists = connection.execute(
+                text("SELECT id FROM users WHERE id = :id"),
+                {"id": new_owner_id}
+            ).scalar()
+
+            if not new_owner_exists:
+                raise HTTPException(status_code=404, detail="New owner not found.")
+
+            # Then, update the proposal's user_id
+            result = connection.execute(
+                text("UPDATE proposals SET user_id = :new_owner_id, updated_at = NOW() WHERE id = :id AND user_id = :uid RETURNING id"),
+                {"new_owner_id": new_owner_id, "id": proposal_id, "uid": user_id}
+            )
+
+            if not result.fetchone():
+                raise HTTPException(status_code=404, detail="Proposal not found or you don't have permission to transfer it.")
+
+        return {"message": f"Proposal '{proposal_id}' transferred to user '{new_owner_id}'."}
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        logger.error(f"[TRANSFER OWNERSHIP ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to transfer ownership.")
+
+
+@router.put("/proposals/{proposal_id}/revert-to-status/{status}")
+async def revert_to_status(proposal_id: uuid.UUID, status: str, current_user: dict = Depends(get_current_user)):
+    """
+    Reverts a proposal to a previous status and its corresponding content.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().begin() as connection:
+            # Find the most recent snapshot for the given status
+            history_entry = connection.execute(
+                text("""
+                    SELECT generated_sections_snapshot
+                    FROM proposal_status_history
+                    WHERE proposal_id = :pid AND status = :status
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                """),
+                {"pid": proposal_id, "status": status}
+            ).fetchone()
+
+            if not history_entry:
+                raise HTTPException(status_code=404, detail=f"No history found for status '{status}'.")
+
+            snapshot = history_entry[0]
+
+            # Update the proposal with the snapshot
+            connection.execute(
+                text("""
+                    UPDATE proposals
+                    SET status = :status, generated_sections = :snapshot, updated_at = NOW()
+                    WHERE id = :id AND user_id = :uid
+                """),
+                {"status": status, "snapshot": json.dumps(snapshot), "id": proposal_id, "uid": user_id}
+            )
+
+        return {"message": f"Proposal reverted to '{status}'."}
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        logger.error(f"[REVERT STATUS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to revert proposal status.")
+
+
+@router.get("/proposals/{proposal_id}/status-history")
+async def get_status_history(proposal_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
+    """
+    Gets the list of available statuses for a proposal from its history.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().connect() as connection:
+            # First, verify the user has access to the proposal
+            proposal_owner = connection.execute(
+                text("SELECT user_id FROM proposals WHERE id = :id"),
+                {"id": proposal_id}
+            ).scalar()
+
+            if not proposal_owner or proposal_owner != user_id:
+                raise HTTPException(status_code=403, detail="You do not have permission to view this proposal's history.")
+
+            # Get distinct statuses from the history
+            result = connection.execute(
+                text("""
+                    SELECT DISTINCT status
+                    FROM proposal_status_history
+                    WHERE proposal_id = :pid
+                """),
+                {"pid": proposal_id}
+            )
+            statuses = [row[0] for row in result.fetchall()]
+            return {"statuses": statuses}
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        logger.error(f"[GET STATUS HISTORY ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to get status history.")
+
+
+@router.get("/proposals/{proposal_id}/peer-reviews")
+async def get_peer_reviews(proposal_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
+    """
+    Fetches all peer reviews for a given proposal.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().connect() as connection:
+            # Verify user has access
+            proposal_owner = connection.execute(
+                text("SELECT user_id FROM proposals WHERE id = :id"),
+                {"id": proposal_id}
+            ).scalar()
+            if not proposal_owner or proposal_owner != user_id:
+                raise HTTPException(status_code=403, detail="You do not have permission to view this proposal's reviews.")
+
+            query = text("""
+                SELECT
+                    pr.id,
+                    pr.section_name,
+                    pr.review_text,
+                    pr.author_response,
+                    u.name as reviewer_name
+                FROM
+                    proposal_peer_reviews pr
+                JOIN
+                    users u ON pr.reviewer_id = u.id
+                WHERE
+                    pr.proposal_id = :pid
+            """)
+            result = connection.execute(query, {"pid": proposal_id})
+            reviews = [
+                {
+                    "id": row.id,
+                    "section_name": row.section_name,
+                    "review_text": row.review_text,
+                    "author_response": row.author_response,
+                    "reviewer_name": row.reviewer_name
+                }
+                for row in result.mappings()
+            ]
+            return {"reviews": reviews}
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        logger.error(f"[GET PEER REVIEWS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch peer reviews.")
+
+
+@router.put("/peer-reviews/{review_id}/response")
+async def save_author_response(review_id: uuid.UUID, request: AuthorResponseRequest, current_user: dict = Depends(get_current_user)):
+    """
+    Saves the author's response to a peer review.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().begin() as connection:
+            # Verify that the user is the author of the proposal
+            proposal_id = connection.execute(
+                text("SELECT proposal_id FROM proposal_peer_reviews WHERE id = :rid"),
+                {"rid": review_id}
+            ).scalar()
+
+            if not proposal_id:
+                raise HTTPException(status_code=404, detail="Review not found.")
+
+            proposal_owner = connection.execute(
+                text("SELECT user_id FROM proposals WHERE id = :pid"),
+                {"pid": proposal_id}
+            ).scalar()
+
+            if not proposal_owner or proposal_owner != user_id:
+                raise HTTPException(status_code=403, detail="You do not have permission to respond to this review.")
+
+            # Update the author_response
+            connection.execute(
+                text("UPDATE proposal_peer_reviews SET author_response = :response, updated_at = NOW() WHERE id = :rid"),
+                {"response": request.author_response, "rid": review_id}
+            )
+
+        return {"message": "Response saved successfully."}
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        logger.error(f"[SAVE AUTHOR RESPONSE ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to save author response.")
+
+
+@router.post("/proposals/{proposal_id}/upload-approved-document")
+async def upload_approved_document(proposal_id: uuid.UUID, file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
+    """
+    Uploads the final approved document for a proposal.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().connect() as connection:
+            # Verify that the user is the author of the proposal and it is approved
+            proposal = connection.execute(
+                text("SELECT user_id, status FROM proposals WHERE id = :id"),
+                {"id": proposal_id}
+            ).fetchone()
+
+            if not proposal:
+                raise HTTPException(status_code=404, detail="Proposal not found.")
+
+            if proposal.user_id != user_id:
+                raise HTTPException(status_code=403, detail="You do not have permission to upload documents for this proposal.")
+
+            if proposal.status != 'approved':
+                raise HTTPException(status_code=400, detail="Proposal is not approved yet.")
+
+            # In a real application, you would save the file to a secure location (e.g., S3)
+            # and store the path/URL in the database.
+            # For this example, we'll just return a success message.
+            # a new column would be needed in the proposals table to store the document path.
+
+        return {"message": f"File '{file.filename}' uploaded successfully for proposal '{proposal_id}'."}
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        logger.error(f"[UPLOAD DOCUMENT ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to upload document.")

@@ -1,8 +1,16 @@
 import './Project.css'
+import { useState } from 'react';
 
-export default function Project ({ project, date, onClick, isReview = false })
+import view from '../../../../assets/images/dashboard-fileIcon.svg';
+import bin from '../../../../assets/images/delete.svg';
+import transfer from '../../../../assets/images/prop.svg';
+import tripleDots from '../../../../assets/images/dashboard-tripleDots.svg';
+
+
+export default function Project ({ project, date, onClick, isReview = false, projectIndex, handleDeleteProject, handleTransferOwnership })
 {
-        console.log("Project summary:", project.summary);
+        const [popoverVisible, setPopoverVisible] = useState(false);
+
         const getStatusInfo = (status) => {
                 switch (status) {
                         case 'draft':
@@ -18,6 +26,11 @@ export default function Project ({ project, date, onClick, isReview = false })
                         default:
                                 return { text: 'Drafting', className: 'status-draft' };
                 }
+        };
+
+        const togglePopover = (e) => {
+                e.stopPropagation(); // Prevent card's onClick from firing
+                setPopoverVisible(!popoverVisible);
         };
 
         const trimSummary = (summary) => {
@@ -48,16 +61,38 @@ export default function Project ({ project, date, onClick, isReview = false })
                 )
         }
 
-        return  <article className="card" onClick={onClick}>
-                        <h3 id={`proj-${project.proposal_id}`}>{project.project_title}</h3>
-                        <p><small> {trimSummary(project.summary)} </small></p>
-                        <p></p>
-                        <p><span className={`status-badge ${statusInfo.className}`}>{statusInfo.text}</span> - <small>Last Updated: <time dateTime={date}>{date}</time></small></p>
-                        <p>
-                                <i className="fa-solid fa-earth-americas field-context" aria-hidden="true"></i> {project.country || 'N/A'} -
-                                <i className="fa-solid fa-money-bill-wave donor" aria-hidden="true"></i> {project.donor || 'N/A'} -
-                                <i className="fa-solid fa-bullseye outcome" aria-hidden="true"></i> {project.outcomes?.join(', ') || 'N/A'} -
-                                <i className="fa-solid fa-money-check-dollar" aria-hidden="true"></i> Budget: {project.budget || 'N/A'}
-                        </p>
+        return  <article className={`Dashboard_project ${popoverVisible ? 'popover-active' : ''}`} onClick={onClick}>
+                        <div className="Dashboard_project_title">
+                                <h3 id={`proj-${project.proposal_id}`}>{project.project_title}</h3>
+                                <button className="Dashboard_project_tripleDotsContainer" onClick={togglePopover} aria-haspopup="true" aria-expanded={popoverVisible}>
+                                        <img src={tripleDots} alt="Options" />
+                                </button>
+                                {popoverVisible && (
+                                        <div popover="auto" className='Project_optionsPopover' id={`popover-${projectIndex+1}`} >
+                                                <div className='Project_optionsPopover_option' onClick={(e) => { e.stopPropagation(); onClick(e); }}>
+                                                        <img src={view} alt="View" />
+                                                        View
+                                                </div>
+                                                <div className='Project_optionsPopover_option' onClick={(e) => { e.stopPropagation(); handleTransferOwnership(project.proposal_id); }}>
+                                                        <img className='Project_optionsPopover_option_transfer' src={transfer} alt="Transfer" />
+                                                        Transfer
+                                                </div>
+                                                <div className='Project_optionsPopover_option' onClick={(e) => { e.stopPropagation(); handleDeleteProject(project.proposal_id); }}>
+                                                        <img className='Project_optionsPopover_option_delete' src={bin} alt="Delete" />
+                                                        Delete
+                                                </div>
+                                        </div>
+                                )}
+                        </div>
+                        <div className="Dashboard_project_description">
+                            <div className="Dashboard_project_fade"></div>
+                            <p><small> {trimSummary(project.summary)} </small></p>
+                        </div>
+                        <div className="Dashboard_project_footer">
+                            <span className={`Dashboard_project_label ${statusInfo.className}`}>{statusInfo.text}</span>
+                            <span className="Dashboard_project_date">
+                                Last Updated: <time dateTime={date}>{date}</time>
+                            </span>
+                        </div>
                 </article>
 }

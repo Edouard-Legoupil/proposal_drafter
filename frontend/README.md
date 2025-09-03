@@ -27,6 +27,10 @@ The core of the user experience is handled by two main screen components:
 -   **User Flow**:
     -   A user can click "Generate New Proposal" to navigate to the `/chat` screen to start a new proposal.
     -   A user can click on an existing draft, which stores the `proposal_id` in `sessionStorage` and navigates to the `/chat` screen to load it for editing.
+-   **New Features**:
+    -   **Project Options**: Each project card now has a popover menu with options to "View", "Delete", or "Transfer Ownership".
+    -   **Soft Delete**: The "Delete" option performs a soft delete by updating the proposal's status to "deleted" in the backend.
+    -   **Transfer Ownership**: The "Transfer Ownership" option opens a modal to select a new owner for the proposal.
 
 ### `screens/Chat/Chat.jsx`
 
@@ -46,6 +50,12 @@ The core of the user experience is handled by two main screen components:
     5.  **Saving Manual Edits**:
         - When a user manually edits a section and clicks "Save", the component calls the `POST /api/update-section-content` endpoint.
         - This provides a direct, fast way to save content without involving the AI generation process.
+-   **New Features**:
+    -   **Workflow Badges**: The status badges have been updated to be more sequential and are now grouped in a "Workflow Stage" box. "Submission" has been renamed to "Pre-Submission", and each badge has a descriptive tooltip.
+    -   **Version Switching**: Users can revert a proposal to a previous status by clicking the "Revert" button next to an inactive status badge.
+    -   **Restricted Editing**: The proposal form and generation buttons are disabled if the proposal's status is not "Drafting".
+    -   **Pre-Submission View**: When a proposal is in the "Pre-Submission" stage, peer review comments are displayed under each section, along with a form for the author to respond.
+    -   **Approved View**: When a proposal is "Approved", an "Upload approved document version" button is displayed.
 
 ### `screens/KnowledgeCard/KnowledgeCard.jsx`
 
@@ -54,6 +64,10 @@ The core of the user experience is handled by two main screen components:
     -   A user can create a new knowledge card by providing a title, a summary, and linking it to a donor, outcome, or field context.
     -   After a knowledge card is created, its content can be populated by an AI agent.
     -   The information from knowledge cards can be used to enrich the content of proposals.
+-   **New Features**:
+    -   **Updated Form**: The "Reference Type" field is now a compulsory dropdown at the top of the form. When "Field Context" is selected as the link type, a "Geographic Coverage" dropdown appears to filter the items.
+    -   **Restyled Buttons**: The buttons have been restyled and realigned as per the user's request.
+    -   **Save and Navigate**: The "Save Card" button now saves the card and navigates the user back to the "Knowledge Card" tab on the dashboard.
 
 ### `screens/Review/Review.jsx`
 
@@ -62,6 +76,9 @@ The core of the user experience is handled by two main screen components:
     -   A user navigates to this screen by clicking on a proposal that has been assigned to them for review on their dashboard.
     -   The user can view the proposal content section by section and provide comments in a dedicated text area for each section.
     -   Once the review is complete, the user can submit their feedback by clicking the "Review Completed" button.
+-   **New Features**:
+    -   **Scrollable View**: The review screen is now scrollable to accommodate long proposals.
+    -   **Enhanced Comments**: The review form for each section now includes dropdowns for "Type of Comment" and "Severity".
 
 ## Running the Application
 
