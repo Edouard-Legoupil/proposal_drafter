@@ -47,6 +47,22 @@ The core of the user experience is handled by two main screen components:
         - When a user manually edits a section and clicks "Save", the component calls the `POST /api/update-section-content` endpoint.
         - This provides a direct, fast way to save content without involving the AI generation process.
 
+### `screens/KnowledgeCard/KnowledgeCard.jsx`
+
+-   **Responsibility**: This screen allows users to create and manage "Knowledge Cards". These are reusable pieces of information that can be linked to donors, outcomes, or field contexts.
+-   **User Flow**:
+    -   A user can create a new knowledge card by providing a title, a summary, and linking it to a donor, outcome, or field context.
+    -   After a knowledge card is created, its content can be populated by an AI agent.
+    -   The information from knowledge cards can be used to enrich the content of proposals.
+
+### `screens/Review/Review.jsx`
+
+-   **Responsibility**: This screen is used for the peer review process. It allows a user to review a proposal that has been submitted to them for feedback.
+-   **User Flow**:
+    -   A user navigates to this screen by clicking on a proposal that has been assigned to them for review on their dashboard.
+    -   The user can view the proposal content section by section and provide comments in a dedicated text area for each section.
+    -   Once the review is complete, the user can submit their feedback by clicking the "Review Completed" button.
+
 ## Running the Application
 
 For detailed instructions on running the application locally, please refer to the main `CICD-SETUP.md` file in the root of the project.
