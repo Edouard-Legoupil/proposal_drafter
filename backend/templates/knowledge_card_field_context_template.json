@@ -1,0 +1,62 @@
+{
+    "template_type": "Knowledge Card",
+    "template_name": "Humanitarian Field Context Knowledge Card",
+    "description": "A template for creating a comprehensive knowledge card that provides a structured overview of a humanitarian field context.",
+    "sections": [
+        {
+            "section_name": "Context",
+            "instructions": "Answer a series of questions to provide a comprehensive analysis of the national environment, institutional framework, population profile, socio-economic status, and key stakeholders. The questions cover: key national economic indicators (employment, inflation, GDP growth); security conditions (conflict hotspots, crime levels, border controls); primary national institutions and their effectiveness; specific rights most constrained (freedom of movement, work, education); age, gender, and origin distribution of populations; predominant ethnicities, languages, and cultural affiliations; education levels and professional skills; income sources and socio-economic comparison with host communities; recent movement trends (influxes, returns); and the roles and leverage of principal stakeholders.",
+            "questions": [
+                "What are the key national economic indicators (employment, inflation, GDP growth) most relevant to forcibly displaced and stateless people?",
+                "How do prevailing security conditions (conflict hotspots, crime levels, border controls) affect the safety and mobility of forcibly displaced and stateless people?",
+                "Which national institutions (ministries, courts, local authorities) hold primary responsibility for protection and assistance, and how effective are they?",
+                "Which specific rights—such as freedom of movement, work, and education—are most constrained by the current environment?",
+                "What is the age and gender distribution of forcibly displaced and stateless populations?",
+                "What are the main countries or places of origin represented among these populations?",
+                "Which ethnicities, languages, or cultural affiliations are most prevalent among forcibly displaced and stateless people?",
+                "What are the predominant education levels and professional skills of forcibly displaced and stateless people?",
+                "How do income sources and overall socio-economic status of displaced populations compare with those of host communities?",
+                "What recent trends (influxes, returns, secondary movements) have been observed over the past 1–3 years?",
+                "Who are the principal stakeholders—government entities, international organizations, NGOs, donors, private sector, and community leaders—and what leverage do they hold over protection and solutions?"
+            ]
+        },
+        {
+            "section_name": "Protection and Solutions",
+            "instructions": "Address a set of questions that detail the legal framework, access to rights and services, protection risks, and opportunities for durable solutions. The questions cover: legal provisions for asylum, statelessness, and refugee status; accessibility of civil documentation; labor-market regulations and socio-economic policies; availability of social-protection schemes; predominant protection risks (violence, exploitation, discrimination); impact of freedom-of-movement restrictions; barriers to health care, education, and legal aid; critical unmet basic needs (shelter, WASH, food security); legal or policy gaps hindering durable solutions; and opportunities for partnerships and complementary pathways.",
+            "questions": [
+                "What legal provisions govern asylum, statelessness determination, and refugee status in the country?",
+                "How accessible are civil-documentation and legal-identity processes for forcibly displaced and stateless people?",
+                "What labour-market regulations and socio-economic policies shape refugees’ and stateless persons’ access to work and self-reliance?",
+                "Which social-protection schemes or safety nets are available to forcibly displaced and stateless populations?",
+                "What forms of violence, exploitation, or discrimination pose the greatest protection risks to these populations?",
+                "How do restrictions on freedom of movement impact access to services and livelihoods?",
+                "What are the primary barriers to health care, education, and legal aid for forcibly displaced and stateless people?",
+                "Which unmet basic needs—such as shelter, WASH, or food security—remain most critical?",
+                "What legal or policy gaps most hinder durable solutions such as voluntary return, local integration, and resettlement?",
+                "Where are the main opportunities for partnerships, complementary pathways, or innovative approaches to expand protection and solutions?"
+            ]
+        },
+        {
+            "section_name": "Planning Scenarios",
+            "instructions": "Provide a forward-looking analysis by answering questions about potential future developments. The questions cover: how shifts in stakeholder roles, funding, or partnerships could affect UNHCR's strategy; projected resettlement quotas and complementary pathways; conditions in countries of origin for voluntary return; likely evolution of asylum policies; demographic shifts (birth rates, aging); anticipated inflows, outflows, or internal movements; and political, security, or environmental developments that could alter displacement patterns.",
+            "questions": [
+                "How could shifts in stakeholder roles, funding landscapes, or partnerships affect UNHCR’s comparative advantage and strategic priorities?",
+                "What are the projected resettlement quotas and prospects for complementary pathways such as education, labour mobility, and family reunification?",
+                "What conditions in countries or places of origin could enable voluntary return of forcibly displaced and stateless people?",
+                "How are asylum policies and overall protection space in the host country likely to evolve?",
+                "How might demographic factors—birth rates, aging, family reunification—shift population profiles?",
+                "What inflows, outflows, returns, or internal movements of forcibly displaced and stateless people are anticipated over the strategy period?",
+                "What political, security, or environmental developments could alter displacement patterns over the strategy period?"
+            ]
+        },
+        {
+            "section_name": "Narrative Summaries",
+            "instructions": "Craft three separate, cohesive narratives (each approximately 1,200 words) in UNHCR's professional style. Each narrative must synthesize the answers from the corresponding sections ('Context', 'Protection and Solutions', 'Planning Scenarios') into a single, comprehensive paragraph-based summary. Each summary must explicitly cover all the required elements and include numbered inline citations linked to a matching numbered reference list appended at the end. The citations and reference list should always start from 1 for each summary.",
+            "questions": [
+                "Context Summary Prompt: Craft a single, cohesive narrative of approximately 1,200 words that addresses all 11 questions from the 'Context' section. Present the analysis in paragraph form, employing UNHCR’s professional tone. Ensure every element is explicitly covered and include numbered inline citations and a corresponding reference list.",
+                "Protection and Solutions Summary Prompt: Write an integrated, roughly 1,200-word paragraph-style summary that comprehensively answers all 10 questions from the 'Protection and Solutions' section. Employ UNHCR language and include numbered inline citations and a corresponding reference list.",
+                "Planning Scenario Summary Prompt: Produce a single, approximately 1,200-word narrative that responds to all 7 questions from the 'Planning Scenarios' section. Address all required elements in UNHCR’s professional style, including numbered inline citations and a corresponding reference list."
+            ]
+        }
+    ]
+}

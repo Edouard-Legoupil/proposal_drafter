@@ -1,5 +1,6 @@
 {
-    "donors": ["UNHCR Default"],
+  "template_type": "Proposal",
+  "donors": ["UNHCR Default"],
   "project_info": {
     "section_name": "Project Information",
     "fields": [

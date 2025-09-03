@@ -1,4 +1,5 @@
 {
+    "template_type": "Proposal",
     "donors": ["CERF"],
     "project_info": {
       "section_name": "Project Information",

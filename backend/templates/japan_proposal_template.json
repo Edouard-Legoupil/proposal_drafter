@@ -1,4 +1,5 @@
 {
+  "template_type": "Proposal",
   "donors": ["Government of Japan"],
   "project_info": {
       "section_name": "Project Information",
@@ -104,12 +105,12 @@
           "section_name": "3. Project Justification",
           "format_type": "text",
           "word_limit": 1200,
-          "instructions": "Write persuasive justification with minimum 300 words per subsection. Use {{file2}} and {{url2}} for urgency and unpredictability sections. Each subsection must stand alone as a compelling argument for funding.",
+          "instructions": "Write persuasive justification with minimum 300 words per subsection. Each subsection must stand alone as a compelling argument for funding.",
           "mandatory": true,
           "subsections": [
           {
               "name": "3.1. Urgency",
-              "instructions": "Demonstrate urgent need: 1) Recent events/changes in humanitarian situation 2) Data-supported scale and severity 3) Direct impact on population 4) Consequences of inaction 5) Why activities cannot wait for next fiscal year core contributions 6) Use {{file2}} and {{url2}} for context"
+              "instructions": "Demonstrate urgent need: 1) Recent events/changes in humanitarian situation 2) Data-supported scale and severity 3) Direct impact on population 4) Consequences of inaction 5) Why activities cannot wait for next fiscal year core contributions"
           },
           {
               "name": "3.2. Unpredictability",
@@ -117,11 +118,11 @@
           },
           {
               "name": "3.3. Necessity",
-              "instructions": "Align with Japanese priorities: 1) How project advances Japan's {{policy_priorities}} 2) Linkage to Humanitarian-Development Nexus 3) Fit with {{country_assistance_policy}} 4) Focus on contributing to Japan's efforts rather than just alignment"
+              "instructions": "Align with Japanese priorities: 1) How project advances Japan's {{policy_priorities}} 2) Linkage to Humanitarian-Development Nexus 3) Focus on contributing to Japan's efforts rather than just alignment"
           },
           {
               "name": "3.4. Un-substitutability",
-              "instructions": "Prove UNHCR's unique role: 1) Why Japanese funding is irreplaceable (use {{FU}} data) 2) UNHCR's government relationships 3) Specialized know-how and capacity 4) Security/access advantages 5) Comparative advantage over other actors"
+              "instructions": "Prove UNHCR's unique role: 1) Why Japanese funding is irreplaceable 2) UNHCR's government relationships 3) Specialized know-how and capacity 4) Security/access advantages 5) Comparative advantage over other actors"
           }
           ]
         },
@@ -136,7 +137,7 @@
           "section_name": "5. Cooperation with Japanese and Other Actors",
           "format_type": "text",
           "word_limit": 300,
-          "instructions": "Detail partnerships: 1) Japanese collaboration (JICA, {{staff}}, {{NGO}}, {{company}}) 2) Other partnerships (government, local authorities, NGOs, UN agencies) 3) Coordination mechanisms 4) Value-added of each partnership",
+          "instructions": "Detail partnerships: 1) Japanese collaboration (JICA, Japanese staff, NGO, company) 2) Other partnerships (government, local authorities, NGOs, UN agencies) 3) Coordination mechanisms 4) Value-added of each partnership",
           "mandatory": true,
           "subsections": [
           {
@@ -153,7 +154,7 @@
           "section_name": "6. Promoting Priority Areas",
           "format_type": "text",
           "word_limit": 250,
-          "instructions": "Specifically address how the project supports Japan's {{Priority_Areas}} with concrete examples and clear linkages to Japanese strategic objectives",
+          "instructions": "Specifically address how the project supports Japan's Priority_Areas with concrete examples and clear linkages to Japanese strategic objectives",
           "mandatory": true
         },
         {
@@ -188,7 +189,7 @@
         {
           "section_name": "10. Budget",
           "format_type": "table",
-          "instructions": "Create detailed budget table: 1) Structure by outcome areas 2) List outputs under each outcome 3) Describe activities for each output 4) Assign budget amounts at output level 5) Include {{ISC}} for indirect costs 6) Ensure total matches {{budget}} 7) Right-align all numbers 8) Add coordination levy note",
+          "instructions": "Create detailed budget table: 1) Structure by outcome areas 2) List outputs under each outcome 3) Describe activities for each output 4) Assign budget amounts at output level 5) Include ISC  indirect support costs 6) Ensure total matches budget 7) Right-align all numbers 8) Add coordination levy note",
           "mandatory": true,
           "table_structure": {
           "headers": ["Outcome Area", "Activities", "Budget (USD)", "Estimated Beneficiaries"],
@@ -202,7 +203,7 @@
               ["- <Output 2>", "Description of activities for output 2", "", ""],
               ["- <Output …>", "Description of activities for output ...", "", ""],
               ["**Total Direct Costs**", "", "", ""],
-              ["**Indirect Support Cost (6.5%)**", "", "{{ISC}}", ""],
+              ["**Indirect Support Cost (6.5%)**", "", "ISC", ""],
               ["**Grand Total**", "", "", ""]
           ],
           "footer": "Include this note 'The 1% coordination levy is not applicable' at the end of the table."

@@ -1,0 +1,37 @@
+{
+    "template_type": "Knowledge Card",
+    "template_name": "Humanitarian Outcome Knowledge Card",
+    "description": "A template for creating a knowledge card that synthesizes evidence on the effectiveness of humanitarian interventions to achieve specific outcomes.",
+    "sections": [
+        {
+            "section_name": "Outcome Definition & Rationale",
+            "instructions": "Define the specific humanitarian outcome. Explain its relevance and importance in a humanitarian context, citing core policies, strategies, and guidance documents from leading humanitarian bodies.",
+            "word_limit": 150
+        },
+        {
+            "section_name": "Evidence-Based Interventions",
+            "instructions": "List and describe interventions that have strong, clear evidence of contributing to this outcome. For each intervention, use the PICO framework - P: Population & Problem Statement /I: Intervention Description / C: Comparison / O: Outcome & Evidence Synthesis. Provide a brief summary of the evidence base. Include key findings from past evaluations, meta-analyses, or research studies. Use bullet points for readability. Include reference to the Evaluation reports where this evidence has been referenced.",
+            "word_limit": 2000
+        },
+        {
+            "section_name": "Implementation Guidance & Best Practices",
+            "instructions": "Provide practical, actionable guidance on how to effectively implement the listed interventions. Include best practices, lessons learned, and recommendations from related past evaluations, policies and guidance (Include reference). Highlight critical success factors and common pitfalls to avoid.",
+            "word_limit": 250
+        },
+        {
+            "section_name": "Key Performance Indicators (KPIs)",
+            "instructions": "Identify a set of robust and measurable KPIs for both output and outcome from UNHCR Result Framework that can be used to track progress and measure the achievement of this outcome. Explain why each indicator is a good proxy for measuring success.",
+            "word_limit": 150
+        },
+        {
+            "section_name": "Cross-Cutting Considerations",
+            "instructions": "Describe important cross-cutting issues that impact this outcome, such as gender equality, disability inclusion, and environmental sustainability. Explain how these should be integrated into program design and implementation.",
+            "word_limit": 150
+        },
+        {
+            "section_name": "Challenges & Future Directions",
+            "instructions": "Summarize the major challenges or knowledge gaps related to achieving this outcome. Suggest areas for further research, pilot programs, or policy development based on the lessons learned from previous interventions.",
+            "word_limit": 150
+        }
+    ]
+}

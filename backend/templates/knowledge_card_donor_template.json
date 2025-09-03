@@ -1,21 +1,42 @@
-{
-    "template_name": "Knowledge Card Donor Template",
-    "description": "A template for generating knowledge cards about donors.",
+{    
+    "template_type": "Knowledge Card",
+    "template_name": "Humanitarian Donor Knowledge Card",
+    "description": "A comprehensive template for creating detailed knowledge cards about humanitarian donors.",
     "sections": [
         {
             "section_name": "Donor Overview",
-            "instructions": "Provide a brief overview of the donor, including their mission, key areas of focus, and history.",
+            "instructions": "Provide a concise summary of the donor's mission, key areas of focus, and their historical role in humanitarian aid. Include publishing dates and any known contact points or related partners. Mention any recent shifts in strategy or funding patterns.",
             "word_limit": 200
         },
         {
-            "section_name": "Funding Priorities",
-            "instructions": "Detail the donor's current funding priorities. Include specific themes, geographical focus, and types of organizations they support.",
-            "word_limit": 300
+            "section_name": "Key Players",
+            "instructions": "List and describe the key individuals or departments within the donor organization responsible for humanitarian funding decisions. If known, include their titles and specific areas of responsibility.",
+            "word_limit": 450
         },
         {
-            "section_name": "Application Process",
-            "instructions": "Describe the donor's application process, including eligibility criteria, deadlines, and key steps.",
-            "word_limit": 250
+            "section_name": "Thematic Priorities",
+            "instructions": "Detail the donor's current thematic funding priorities, such as health, education, or protection. Mention any specific sub-themes they are particularly interested in.",
+            "word_limit": 600
+        },
+        {
+            "section_name": "Geographic Priorities",
+            "instructions": "Identify the geographical regions or countries where the donor primarily allocates its humanitarian funding. Note any specific contexts, such as protracted crises or sudden-onset emergencies, they prioritize.",
+            "word_limit": 450
+        },
+        {
+            "section_name": "Funding Cycle and Opportunities",
+            "instructions": "Describe the typical application or funding cycle. Include information on eligibility criteria, deadlines, and the type of funding opportunities they offer (e.g., open calls for proposals, pre-identified partners). Highlight any multi-year funding opportunities.",
+            "word_limit": 450
+        },
+        {
+            "section_name": "Strategic Alignment",
+            "instructions": "Analyze and describe how the donor's logical framework and priorities align with humanitarian frameworks, such as that of UNHCR. Identify areas of overlap and potential synergies for collaboration. This is a critical step in tailoring your proposals. ",
+            "word_limit": 750
+        },
+        {
+            "section_name": "Engagement and Talking Points",
+            "instructions": "Provide 2-3 key engagement tips for approaching this donor. Include advice such as 'contact the PSP focal point before approaching the donor' and suggest potential talking points that resonate with the donor's specific mission and priorities. Emphasize the importance of transparency, tailored communication, and relationship-building.",
+            "word_limit": 800
         }
     ]
 }

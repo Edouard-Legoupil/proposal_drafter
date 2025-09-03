@@ -1,6 +1,7 @@
 {
+    "template_type": "Proposal",
     "donors": ["ECHO"],
-  "project_info": {
+    "project_info": {
       "section_name": "Project Information",
       "fields": [
           {
