@@ -54,3 +54,52 @@ For detailed instructions on running the application locally, please refer to th
 ## Environment Variables
 
 The application uses environment variables for configuration. The primary variable is `VITE_BACKEND_URL`, which should point to the URL of the running backend API. Refer to `.env.example` for details.
+
+## Testing with Playwright
+
+This project uses [Playwright](https://playwright.dev/) for end-to-end testing. The tests are located in the `frontend/tests` directory.
+
+### Prerequisites
+
+-   [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/)
+-   [Node.js](https://nodejs.org/) and [npm](https://www.npmjs.com/)
+-   `psql` client (you can install it with `sudo apt-get update && sudo apt-get install -y postgresql-client`)
+
+### Setting up the Environment
+
+1.  **Create a `.env` file** in the root of the project by copying the `.env.example` file:
+    ```bash
+    cp .env.example .env
+    ```
+    Make sure to fill in the required environment variables in the `.env` file.
+
+2.  **Start the application** using the local Docker Compose file from the root of the project:
+    ```bash
+    sudo docker compose -f docker-compose-local.yml up --build -d
+    ```
+
+3.  **Set up the database** by running the following commands from the root of the project:
+    ```bash
+    # Wait for the database to be ready
+    sleep 20
+
+    # Set up the database schema
+    psql postgresql://postgres:postgres@localhost:5432/proposalgen -f database-setup.sql
+
+    # Load the test data
+    psql postgresql://postgres:postgres@localhost:5432/proposalgen -f frontend/tests/test-data.sql
+    ```
+
+### Running the Tests
+
+To run the Playwright tests, navigate to the `frontend` directory and run the following command:
+
+```bash
+npx playwright test
+```
+
+This will run all the tests in the `tests` directory. You can also run a specific test file:
+
+```bash
+npx playwright test tests/auth.spec.js
+```
