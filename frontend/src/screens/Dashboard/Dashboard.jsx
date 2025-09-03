@@ -7,6 +7,7 @@ import Base from '../../components/Base/Base'
 import Project from './components/Project/Project'
 import KnowledgeCard from './components/KnowledgeCard/KnowledgeCard'
 import MetricsDashboard from './components/MetricsDashboard/MetricsDashboard'
+import SingleSelectUserModal from '../../components/SingleSelectUserModal/SingleSelectUserModal'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
 
@@ -19,6 +20,9 @@ export default function Dashboard ()
         const [knowledgeCards, setKnowledgeCards] = useState([])
         const [selectedTab, setSelectedTab] = useState('proposals')
         const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
+        const [isTransferModalOpen, setIsTransferModalOpen] = useState(false)
+        const [transferProposalId, setTransferProposalId] = useState(null)
+        const [users, setUsers] = useState([])
 
         const tabRefs = {
                 proposals: useRef(null),
@@ -72,11 +76,32 @@ export default function Dashboard ()
                 }
         }
 
+        async function getUsers ()
+        {
+                const response = await fetch(`${API_BASE_URL}/users`, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include'
+                })
+
+                if(response.ok)
+                {
+                        const data = await response.json()
+                        setUsers(data.users.map(user => ({id: user.id, name: user.name})))
+                }
+        }
+
         useEffect(() => {
+                const savedTab = sessionStorage.getItem('selectedDashboardTab');
+                if (savedTab) {
+                    setSelectedTab(savedTab);
+                    sessionStorage.removeItem('selectedDashboardTab');
+                }
                 sessionStorage.removeItem("proposal_id")
                 getProjects()
                 getReviews()
                 getKnowledgeCards()
+                getUsers()
         }, [])
 
         async function handleProjectClick(e, proposal_id, isReview = false)
@@ -87,6 +112,43 @@ export default function Dashboard ()
                         navigate(`/review/${proposal_id}`)
                 } else {
                         navigate("/chat")
+                }
+        }
+
+        async function handleDeleteProject (proposal_id)
+        {
+                const response = await fetch(`${API_BASE_URL}/proposals/${proposal_id}/delete`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include'
+                })
+
+                if(response.ok)
+                {
+                        getProjects()
+                }
+        }
+
+        function handleTransferOwnership (proposal_id)
+        {
+                setTransferProposalId(proposal_id)
+                setIsTransferModalOpen(true)
+        }
+
+        async function confirmTransfer (new_owner_id)
+        {
+                const response = await fetch(`${API_BASE_URL}/proposals/${transferProposalId}/transfer`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ new_owner_id }),
+                        credentials: 'include'
+                })
+
+                if(response.ok)
+                {
+                        getProjects()
+                        setIsTransferModalOpen(false)
+                        setTransferProposalId(null)
                 }
         }
 
@@ -227,9 +289,12 @@ export default function Dashboard ()
                                         {displayProjects && displayProjects.map((project, i) =>
                                                 <Project
                                                         key={i}
+                                                        projectIndex={i}
                                                         project={project}
                                                         date={cleanedDate(project.updated_at)}
                                                         onClick={(e) => handleProjectClick(e, project.proposal_id, false)}
+                                                        handleDeleteProject={handleDeleteProject}
+                                                        handleTransferOwnership={handleTransferOwnership}
                                                 />
                                         )}
                                 </div>
@@ -294,5 +359,12 @@ export default function Dashboard ()
                                 </div>
                         </div>
                 </div>
+                <SingleSelectUserModal
+                        isOpen={isTransferModalOpen}
+                        onClose={() => setIsTransferModalOpen(false)}
+                        options={users}
+                        title="Transfer Proposal Ownership"
+                        onConfirm={confirmTransfer}
+                />
         </Base>
 }

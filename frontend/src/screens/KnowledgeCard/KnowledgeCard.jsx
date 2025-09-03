@@ -22,6 +22,8 @@ export default function KnowledgeCard() {
     const [donors, setDonors] = useState([]);
     const [outcomes, setOutcomes] = useState([]);
     const [fieldContexts, setFieldContexts] = useState([]);
+    const [geographicCoverages, setGeographicCoverages] = useState([]);
+    const [selectedGeoCoverage, setSelectedGeoCoverage] = useState('');
     const [linkOptions, setLinkOptions] = useState([]);
     const [newDonors, setNewDonors] = useState([]);
     const [newOutcomes, setNewOutcomes] = useState([]);
@@ -30,14 +32,21 @@ export default function KnowledgeCard() {
     useEffect(() => {
         async function fetchData() {
             try {
-                const [donorsRes, outcomesRes, fieldContextsRes] = await Promise.all([
+                const [donorsRes, outcomesRes] = await Promise.all([
                     fetch(`${API_BASE_URL}/donors`, { credentials: 'include' }),
-                    fetch(`${API_BASE_URL}/outcomes`, { credentials: 'include' }),
-                    fetch(`${API_BASE_URL}/field-contexts`, { credentials: 'include' })
+                    fetch(`${API_BASE_URL}/outcomes`, { credentials: 'include' })
                 ]);
                 if (donorsRes.ok) setDonors((await donorsRes.json()).donors);
                 if (outcomesRes.ok) setOutcomes((await outcomesRes.json()).outcomes);
-                if (fieldContextsRes.ok) setFieldContexts((await fieldContextsRes.json()).field_contexts);
+
+                // Fetch all field contexts initially to populate the geographic coverage dropdown
+                const allFieldContextsRes = await fetch(`${API_BASE_URL}/field-contexts`, { credentials: 'include' });
+                if (allFieldContextsRes.ok) {
+                    const allContexts = (await allFieldContextsRes.json()).field_contexts;
+                    const uniqueGeos = [...new Set(allContexts.map(fc => fc.geographic_coverage))];
+                    setGeographicCoverages(uniqueGeos);
+                }
+
 
                 if (id) {
                     const cardRes = await fetch(`${API_BASE_URL}/knowledge-cards/${id}`, { credentials: 'include' });
@@ -70,15 +79,40 @@ export default function KnowledgeCard() {
     }, [id, navigate]);
 
     useEffect(() => {
-        if (linkType === 'donor') setLinkOptions([...donors, ...newDonors]);
-        else if (linkType === 'outcome') setLinkOptions([...outcomes, ...newOutcomes]);
-        else if (linkType === 'field_context') setLinkOptions([...fieldContexts, ...newFieldContexts]);
-        else setLinkOptions([]);
+        async function fetchFieldContexts() {
+            let url = `${API_BASE_URL}/field-contexts`;
+            if (selectedGeoCoverage) {
+                url += `?geographic_coverage=${encodeURIComponent(selectedGeoCoverage)}`;
+            }
+            const res = await fetch(url, { credentials: 'include' });
+            if (res.ok) {
+                setFieldContexts((await res.json()).field_contexts);
+            }
+        }
+        if (linkType === 'field_context') {
+            fetchFieldContexts();
+        }
+    }, [selectedGeoCoverage, linkType]);
+
+    useEffect(() => {
+        if (linkType === 'donor') {
+            setLinkOptions([...donors, ...newDonors]);
+        } else if (linkType === 'outcome') {
+            setLinkOptions([...outcomes, ...newOutcomes]);
+        } else if (linkType === 'field_context') {
+            let filteredContexts = [...fieldContexts, ...newFieldContexts];
+            if (selectedGeoCoverage) {
+                filteredContexts = filteredContexts.filter(fc => fc.geographic_coverage === selectedGeoCoverage);
+            }
+            setLinkOptions(filteredContexts);
+        } else {
+            setLinkOptions([]);
+        }
 
         if (!id) { // Only reset linkedId in create mode
             setLinkedId('');
         }
-    }, [linkType, donors, outcomes, fieldContexts, newDonors, newOutcomes, newFieldContexts, id]);
+    }, [linkType, donors, outcomes, fieldContexts, newDonors, newOutcomes, newFieldContexts, id, selectedGeoCoverage]);
 
     const handleReferenceChange = (index, field, value) => {
         const newReferences = [...references];
@@ -143,10 +177,8 @@ export default function KnowledgeCard() {
 
         if (response.ok) {
             alert(`Knowledge card ${id ? 'updated' : 'created'} successfully!`);
-            if (!id) {
-                const data = await response.json();
-                navigate(`/knowledge-card/${data.knowledge_card_id}`);
-            }
+            sessionStorage.setItem('selectedDashboardTab', 'knowledge');
+            navigate('/dashboard');
         } else {
             const error = await response.json();
             alert(`Error ${id ? 'updating' : 'creating'} knowledge card: ${error.detail}`);
@@ -183,6 +215,30 @@ export default function KnowledgeCard() {
                     <form onSubmit={handlePopulate} className="kc-form">
                         <h2>{id ? 'View/Edit Knowledge Card' : 'Create New Knowledge Card'}</h2>
 
+                        <h3>References</h3>
+                        {references.map((ref, index) => (
+                            <div key={index} className="kc-reference-item">
+                                <label htmlFor={`kc-reference-type-${index}`}>Reference Type*</label>
+                                <select id={`kc-reference-type-${index}`} value={ref.reference_type} onChange={e => handleReferenceChange(index, 'reference_type', e.target.value)} required>
+                                    <option value="">Select Type...</option>
+                                    <option value="UNHCR Operation Page">UNHCR Operation Page</option>
+                                    <option value="Donor Content">Donor Content</option>
+                                    <option value="Humanitarian Partner Content">Humanitarian Partner Content</option>
+                                    <option value="Statistics">Statistics</option>
+                                    <option value="Needs Assessment">Needs Assessment</option>
+                                    <option value="Evaluation Report">Evaluation Report</option>
+                                    <option value="Policies">Policies</option>
+                                </select>
+                                <input type="url" placeholder="https://example.com" value={ref.url} onChange={e => handleReferenceChange(index, 'url', e.target.value)} />
+                                <button type="button" onClick={() => removeReference(index)}>Remove</button>
+                            </div>
+                        ))}
+                        <button type="button" onClick={addReference}>Add Reference</button>
+
+                        <div className="kc-form-actions-left">
+                            <CommonButton type="button" label="Identify References" />
+                        </div>
+
                         <label htmlFor="kc-link-type">Link To</label>
                         <select id="kc-link-type" value={linkType} onChange={e => setLinkType(e.target.value)}>
                             <option value="">Select Type...</option>
@@ -190,6 +246,16 @@ export default function KnowledgeCard() {
                             <option value="outcome">Outcome</option>
                             <option value="field_context">Field Context</option>
                         </select>
+
+                        {linkType === 'field_context' && (
+                            <>
+                                <label htmlFor="kc-geo-coverage">Geographic Coverage</label>
+                                <select id="kc-geo-coverage" value={selectedGeoCoverage} onChange={e => setSelectedGeoCoverage(e.target.value)}>
+                                    <option value="">All</option>
+                                    {geographicCoverages.map(geo => <option key={geo} value={geo}>{geo}</option>)}
+                                </select>
+                            </>
+                        )}
 
                         {linkType && (
                             <>
@@ -215,26 +281,16 @@ export default function KnowledgeCard() {
                         <label htmlFor="kc-title">Title*</label>
                         <input id="kc-title" type="text" value={title} onChange={e => setTitle(e.target.value)} required />
 
-                    <label htmlFor="kc-summary">Description</label>
+                        <label htmlFor="kc-summary">Description</label>
                         <textarea id="kc-summary" value={summary} onChange={e => setSummary(e.target.value)} />
 
                         <div className="kc-form-actions">
-                            <CommonButton type="button" label="Identify References" />
-                        </div>
-
-                        <h3>References</h3>
-                        {references.map((ref, index) => (
-                            <div key={index} className="kc-reference-item">
-                                <input type="url" placeholder="https://example.com" value={ref.url} onChange={e => handleReferenceChange(index, 'url', e.target.value)} />
-                                <input type="text" placeholder="Reference Type" value={ref.reference_type} onChange={e => handleReferenceChange(index, 'reference_type', e.target.value)} />
-                                <button type="button" onClick={() => removeReference(index)}>Remove</button>
+                            <div className="kc-form-actions-left">
+                                <CommonButton type="submit" label="Populate Card Content" loading={loading} disabled={loading || !title} />
                             </div>
-                        ))}
-                        <button type="button" onClick={addReference}>Add Reference</button>
-
-                        <div className="kc-form-actions">
-                            <CommonButton type="button" onClick={() => handleSave()} label="Save Card" loading={loading} disabled={loading || !title} />
-                            <CommonButton type="submit" label="Populate Card Content" loading={loading} disabled={loading || !title} />
+                            <div className="kc-form-actions-right">
+                                <CommonButton type="button" onClick={() => handleSave()} label="Save Card" loading={loading} disabled={loading || !title} className="squared-btn" />
+                            </div>
                         </div>
                     </form>
                 </div>

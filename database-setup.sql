@@ -82,16 +82,22 @@ CREATE TABLE IF NOT EXISTS proposals (
 );
 
 -- Create Proposal Peer Reviews table  
+-- AGENT_NOTE: Added section_name and author_response columns to this table.
+-- AGENT_NOTE: Added type_of_comment, severity, and proposal_status_history_id columns. Removed unique constraint to allow multiple comments per section.
 CREATE TABLE IF NOT EXISTS proposal_peer_reviews (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     proposal_id UUID NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
     reviewer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    proposal_status_history_id UUID REFERENCES proposal_status_history(id),
+    section_name TEXT,
     status VARCHAR(50) DEFAULT 'pending',
     deadline TIMESTAMPTZ,
     review_text TEXT,
+    author_response TEXT,
+    type_of_comment TEXT,
+    severity TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (proposal_id, reviewer_id)
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create Knowledge Cards table

@@ -1,5 +1,9 @@
 .Review {
     padding: 2rem;
+    height: calc(100vh - 65px); /* Full height minus header */
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
 }
 
 .Review_header {
@@ -31,6 +35,18 @@
 .Review_comment_textarea {
     width: 100%;
     min-height: 100px;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.Review_comment_controls {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.Review_comment_controls select {
     padding: 0.5rem;
     border: 1px solid #ccc;
     border-radius: 4px;

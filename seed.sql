@@ -189,4 +189,21 @@ BEGIN
     INSERT INTO proposal_status_history (proposal_id, status, created_at) VALUES (proposal2_id, 'submission', NOW() - INTERVAL '10 days');
     INSERT INTO proposal_status_history (proposal_id, status, created_at) VALUES (proposal2_id, 'submitted', NOW() - INTERVAL '5 days');
     INSERT INTO proposal_status_history (proposal_id, status, created_at) VALUES (proposal2_id, 'approved', NOW() - INTERVAL '2 days');
+
+    -- Insert Proposal 3 for Pre-Submission view
+    DECLARE
+        proposal3_id uuid := '00000000-0000-4000-8000-000000000203';
+        charlie_id uuid := 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    BEGIN
+        INSERT INTO proposals (id, user_id, template_name, form_data, project_description, status, created_at, updated_at) VALUES
+        (proposal3_id, alice_id, 'unhcr_proposal_template.json', '{"Project Draft Short name": "Zimbabwe Livelihoods", "Budget Range": "250k$"}', 'A project for livelihoods in Zimbabwe.', 'submission', NOW() - INTERVAL '3 days', NOW() - INTERVAL '1 day');
+
+        INSERT INTO proposal_donors (proposal_id, donor_id) VALUES (proposal3_id, donor1_id);
+        INSERT INTO proposal_outcomes (proposal_id, outcome_id) VALUES (proposal3_id, outcome2_id);
+        INSERT INTO proposal_field_contexts (proposal_id, field_context_id) VALUES (proposal3_id, '00000000-0000-4000-8000-000000000165');
+        INSERT INTO proposal_peer_reviews (proposal_id, reviewer_id, status, section_name, review_text) VALUES (proposal3_id, bob_id, 'completed', 'Executive Summary', 'This section needs more detail on the target population.');
+        INSERT INTO proposal_status_history (proposal_id, status, created_at) VALUES (proposal3_id, 'draft', NOW() - INTERVAL '3 days');
+        INSERT INTO proposal_status_history (proposal_id, status, created_at) VALUES (proposal3_id, 'in_review', NOW() - INTERVAL '2 days');
+        INSERT INTO proposal_status_history (proposal_id, status, created_at) VALUES (proposal3_id, 'submission', NOW() - INTERVAL '1 day');
+    END;
 END $$;

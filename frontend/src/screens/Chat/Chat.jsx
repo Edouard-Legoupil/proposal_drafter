@@ -177,7 +177,7 @@ export default function Chat (props)
                 return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
         };
 
-        const renderFormField = (label) => {
+        const renderFormField = (label, disabled) => {
                 const field = formData[label];
                 if (!field) return null;
         
@@ -251,6 +251,7 @@ export default function Chat (props)
                                                 onCreateOption={inputValue => handleCreate(inputValue, label)}
                                                 options={getOptions(label)}
                                                 value={getOptions(label).find(o => o.value === field.value)}
+                                                 isDisabled={disabled}
                                         />
                                 ) : isCreatableMultiSelect ? (
                                         <CreatableSelect
@@ -259,6 +260,7 @@ export default function Chat (props)
                                                 onCreateOption={inputValue => handleCreate(inputValue, label)}
                                                 options={getOptions(label)}
                                                 value={field.value.map(v => getOptions(label).find(o => o.value === v)).filter(Boolean)}
+                                                 isDisabled={disabled}
                                         />
                                 ) : isNormalSelect ? (
                                         <select
@@ -267,6 +269,7 @@ export default function Chat (props)
                                                 name={fieldId}
                                                 value={field.value}
                                                 onChange={e => handleFormInput(e, label)}
+                                                 disabled={disabled}
                                         >
                                                 <option value="" disabled>Select {label}</option>
                                                 {getOptions(label).map(option => (
@@ -282,6 +285,7 @@ export default function Chat (props)
                                                 placeholder={`Enter ${label}`}
                                                 value={field.value}
                                                 onChange={e => handleFormInput(e, label)}
+                                                 disabled={disabled}
                                         />
                                 )}
                         </div>
@@ -583,6 +587,36 @@ export default function Chat (props)
 
         const [isApproved, setIsApproved] = useState(false)
         const [proposalStatus, setProposalStatus] = useState("draft")
+        const [statusHistory, setStatusHistory] = useState([])
+        const [reviews, setReviews] = useState([])
+
+        async function getPeerReviews() {
+                if (sessionStorage.getItem("proposal_id")) {
+                        const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/peer-reviews`, {
+                                method: "GET",
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: "include"
+                        });
+                        if (response.ok) {
+                                const data = await response.json();
+                                setReviews(data.reviews);
+                        }
+                }
+        }
+
+        async function getStatusHistory() {
+                if (sessionStorage.getItem("proposal_id")) {
+                        const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/status-history`, {
+                                method: "GET",
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: "include"
+                        });
+                        if (response.ok) {
+                                const data = await response.json();
+                                setStatusHistory(data.statuses);
+                        }
+                }
+        }
 
         async function getContent()         {
 
@@ -622,6 +656,10 @@ export default function Chat (props)
                                 setIsApproved(data.is_accepted)
                                 setProposalStatus(data.status)
                                 setSidebarOpen(true)
+                                getStatusHistory()
+                                if(data.status === 'submission') {
+                                    getPeerReviews()
+                                }
                         }
                         else if(response.status === 401)
                         {
@@ -686,6 +724,58 @@ export default function Chat (props)
                         sessionStorage.setItem("session_expired", "Session expired. Please login again.")
                         navigate("/login")
                 }
+        }
+
+        async function handleRevert (status)
+        {
+                const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/revert-to-status/${status}`, {
+                        method: "PUT",
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: "include"
+                });
+
+                if (response.ok) {
+                        await getContent();
+                } else {
+                        console.error("Failed to revert status");
+                }
+        }
+
+        async function handleSaveResponse(reviewId, responseText) {
+            const response = await fetch(`${API_BASE_URL}/peer-reviews/${reviewId}/response`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ author_response: responseText }),
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                getPeerReviews(); // Refresh reviews to show the new response
+            } else {
+                console.error("Failed to save response");
+            }
+        }
+
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/upload-approved-document`, {
+                method: 'POST',
+                body: formData,
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                alert('File uploaded successfully');
+            } else {
+                alert('File upload failed');
+            }
         }
 
         async function handleSetStatus(status) {
@@ -809,12 +899,15 @@ export default function Chat (props)
                                                 </div>
 
                                                 <div className="Chat_inputArea">
-                                                        {renderFormField("Project Draft Short name")}
-                                                        <textarea id="main-prompt" name="main-prompt" value={userPrompt} onChange={e => setUserPrompt(e.target.value)} placeholder='Provide as much details as possible on your initial project idea!' className='Chat_inputArea_prompt' />
+                                                        {renderFormField("Project Draft Short name", proposalStatus !== 'draft')}
+                                                        <textarea id="main-prompt" name="main-prompt" value={userPrompt} onChange={e => setUserPrompt(e.target.value)} placeholder='Provide as much details as possible on your initial project idea!' className='Chat_inputArea_prompt' disabled={proposalStatus !== 'draft'} />
 
-                                                        <span onClick={() => setFormExpanded(p => !p)} className={`Chat_inputArea_additionalDetails ${form_expanded && "expanded"}`}>
-                                                                Specify Parameters
-                                                                <img src={arrow} alt="Arrow" />
+                                                        <span
+                                                            onClick={() => proposalStatus === 'draft' && setFormExpanded(p => !p)}
+                                                            className={`Chat_inputArea_additionalDetails ${form_expanded && "expanded"} ${proposalStatus !== 'draft' ? 'disabled' : ''}`}
+                                                        >
+                                                            Specify Parameters
+                                                            <img src={arrow} alt="Arrow" />
                                                         </span>
 
                                                         {form_expanded ?
@@ -824,32 +917,32 @@ export default function Chat (props)
                                                                                         <h3 className='Chat_form_group_title'>Identify Potential Interventions</h3>
                                                                                         <span className="tooltip-text">surface Relevant Policies, Strategies and past Evaluation Recommendations</span>
                                                                                 </div>
-                                                                                {renderFormField("Main Outcome")}
-                                                                                {renderFormField("Beneficiaries Profile")}
-                                                                                {renderFormField("Potential Implementing Partner")}
+                                                                                {renderFormField("Main Outcome", proposalStatus !== 'draft')}
+                                                                                {renderFormField("Beneficiaries Profile", proposalStatus !== 'draft')}
+                                                                                {renderFormField("Potential Implementing Partner", proposalStatus !== 'draft')}
                                                                         </div>
                                                                         <div className='Chat_form_group'>
                                                                                 <div className="tooltip-container">
                                                                                         <h3 className='Chat_form_group_title'>Define Field Context</h3>
                                                                                         <span className="tooltip-text">surface Situation Analysis and Needs Assessment</span>
                                                                                 </div>
-                                                                                {renderFormField("Geographical Scope")}
-                                                                                {renderFormField("Country / Location(s)")}
+                                                                                {renderFormField("Geographical Scope", proposalStatus !== 'draft')}
+                                                                                {renderFormField("Country / Location(s)", proposalStatus !== 'draft')}
                                                                         </div>
                                                                         <div className='Chat_form_group'>
                                                                                 <div className="tooltip-container">
                                                                                         <h3 className='Chat_form_group_title'>Tailor Funding Request</h3>
                                                                                         <span className="tooltip-text">surface Donor profile and apply Formal Requirement for Submission</span>
                                                                                 </div>
-                                                                                {renderFormField("Budget Range")}
-                                                                                {renderFormField("Duration")}
-                                                                                {renderFormField("Targeted Donor")}
+                                                                                {renderFormField("Budget Range", proposalStatus !== 'draft')}
+                                                                                {renderFormField("Duration", proposalStatus !== 'draft')}
+                                                                                {renderFormField("Targeted Donor", proposalStatus !== 'draft')}
                                                                         </div>
                                                                 </form> : ""
                                                         }
 
                                                         <div className="Chat_inputArea_buttonContainer">
-                                                                <CommonButton onClick={handleGenerateClick} icon={generateIcon} label={generateLabel} loading={generateLoading} loadingLabel={generateLabel === "Generate" ? "Generating" : "Regenerating"} disabled={!buttonEnable}/>
+                                                                <CommonButton onClick={handleGenerateClick} icon={generateIcon} label={generateLabel} loading={generateLoading} loadingLabel={generateLabel === "Generate" ? "Generating" : "Regenerating"} disabled={!buttonEnable || proposalStatus !== 'draft'}/>
                                                         </div>
                                                 </div>
                                         </>
@@ -870,48 +963,72 @@ export default function Chat (props)
                                                                 Download Document
                                                         </button>
                                                         <div className="Chat_workflow_status_container">
-                                                                {['draft', 'in_review', 'submission', 'submitted', 'approved'].map(status => {
-                                                                        const statusDetails = {
-                                                                                draft: { text: 'Drafting', className: 'status-draft' },
-                                                                                in_review: { text: 'Peer Review', className: 'status-review' },
-                                                                                submission: { text: 'Submission', className: 'status-submission' },
-                                                                                submitted: { text: 'Submitted', className: 'status-submitted' },
-                                                                                approved: { text: 'Approved', className: 'status-approved' }
-                                                                        };
-                                                                        const isActive = proposalStatus === status;
-                                                                        const isClickable = (proposalStatus === 'draft' && status === 'in_review') ||
-                                                                                                (proposalStatus === 'in_review' && status === 'submission') ||
-                                                                                                (proposalStatus === 'in_review' && status === 'draft') ||
-                                                                                                (proposalStatus === 'submission' && status === 'submitted') ||
-                                                                                                (proposalStatus === 'submitted' && status === 'approved');
+                                                            <div className="workflow-stage-box">
+                                                                <span className="workflow-stage-label">Workflow Stage</span>
+                                                                <div className="workflow-badges">
+                                                                    {['draft', 'in_review', 'submission', 'submitted', 'approved'].map(status => {
+                                                                            const statusDetails = {
+                                                                                    draft: { text: 'Drafting', className: 'status-draft', message: "Initial drafting stage - Author + AI" },
+                                                                                    in_review: { text: 'Peer Review', className: 'status-review', message: "Wait while proposal sent for quality review to other users" },
+                                                                                    submission: { text: 'Pre-Submission', className: 'status-submission', message: "Edit to address the comments from all your reviewers" },
+                                                                                    submitted: { text: 'Submitted', className: 'status-submitted', message: "Non editable Record of Initial version as submitted to donor" },
+                                                                                    approved: { text: 'Approved', className: 'status-approved', message: "Non editable uploaded record of the Final version as approved by donor" }
+                                                                            };
+                                                                            const isActive = proposalStatus === status;
+                                                                            const isClickable = (proposalStatus === 'draft' && status === 'in_review') ||
+                                                                                                    (proposalStatus === 'in_review' && status === 'submission') ||
+                                                                                                    (proposalStatus === 'in_review' && status === 'draft') ||
+                                                                                                    (proposalStatus === 'submission' && status === 'submitted') ||
+                                                                                                    (proposalStatus === 'submitted' && status === 'approved');
 
-                                                                        return (
-                                                                                <button
-                                                                                        key={status}
-                                                                                        type="button"
-                                                                                        className={`status-badge ${statusDetails[status].className} ${isActive ? 'active' : 'inactive'}`}
-                                                                                        onClick={() => {
-                                                                                                if (status === 'in_review' && proposalStatus === 'draft') setIsPeerReviewModalOpen(true);
-                                                                                                if (status === 'draft' && proposalStatus === 'in_review') handleSetStatus('draft');
-                                                                                                if (status === 'submission' && proposalStatus === 'in_review') handleRequestSubmission();
-                                                                                                if (status === 'submitted' && proposalStatus === 'submission') handleSubmit();
-                                                                                                if (status === 'approved' && proposalStatus === 'submitted') handleApprove();
-                                                                                        }}
-                                                                                        disabled={!isClickable && !isActive}
-                                                                                >
-                                                                                        {statusDetails[status].text}
-                                                                                </button>
-                                                                        );
-                                                                })}
+                                                                            return (
+                                                                                <div key={status} className="status-badge-container">
+                                                                                    <button
+                                                                                            type="button"
+                                                                                            title={statusDetails[status].message}
+                                                                                            className={`status-badge ${statusDetails[status].className} ${isActive ? 'active' : 'inactive'}`}
+                                                                                            onClick={() => {
+                                                                                                    if (status === 'in_review' && proposalStatus === 'draft') setIsPeerReviewModalOpen(true);
+                                                                                                    if (status === 'draft' && proposalStatus === 'in_review') handleSetStatus('draft');
+                                                                                                    if (status === 'submission' && proposalStatus === 'in_review') handleRequestSubmission();
+                                                                                                    if (status === 'submitted' && proposalStatus === 'submission') handleSubmit();
+                                                                                                    if (status === 'approved' && proposalStatus === 'submitted') handleApprove();
+                                                                                            }}
+                                                                                            disabled={!isClickable && !isActive}
+                                                                                    >
+                                                                                            {statusDetails[status].text}
+                                                                                    </button>
+                                                                                    {statusHistory.includes(status) && !isActive && (
+                                                                                        <button className="revert-btn" onClick={() => handleRevert(status)}>
+                                                                                            Revert
+                                                                                        </button>
+                                                                                    )}
+                                                                                </div>
+                                                                            );
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                             {proposalStatus === 'approved' && (
+                                                                <div className="upload-approved-container">
+                                                                    <label htmlFor="approved-doc-upload" className="upload-label">
+                                                                        Upload Approved Document
+                                                                    </label>
+                                                                    <input id="approved-doc-upload" type="file" onChange={handleFileUpload} />
+                                                                </div>
+                                                             )}
                                                         </div>
                                                 </div> : ""}
                                         </div>
 
                                         <div ref={proposalRef} className="Chat_proposalContainer">
-                                                {Object.entries(proposal).map((sectionObj, i) =>
+                                                 {Object.entries(proposal).map((sectionObj, i) => {
+                                                     const sectionName = sectionObj[0];
+                                                     const sectionReviews = reviews.filter(r => r.section_name === sectionName);
+
+                                                     return (
                                                         <div key={i} className="Chat_proposalSection">
                                                                 <div className="Chat_sectionHeader">
-                                                                        <div className="Chat_sectionTitle">{sectionObj[0]}</div>
+                                                                         <div className="Chat_sectionTitle">{sectionName}</div>
 
                                                                         {!generateLoading && sectionObj[1].content && sectionObj[1].open && !isApproved ? <div className="Chat_sectionOptions" data-testid={`section-options-${i}`}>
                                                                                 {!isEdit || (selectedSection === i && isEdit) ? <button type="button" onClick={() => handleEditClick(i)} style={(selectedSection === i && isEdit && regenerateSectionLoading) ? {pointerEvents: "none"} : {}} aria-label={`edit-section-${i}`}>
@@ -931,7 +1048,7 @@ export default function Chat (props)
                                                                                                         <span>{(selectedSection === i && isCopied) ? "Copied" : "Copy"}</span>
                                                                                                 </button>
 
-                                                                                                <button type="button" className='Chat_sectionOptions_regenerate' onClick={() => handleRegenerateIconClick(i)} >
+                                                                                                <button type="button" className='Chat_sectionOptions_regenerate' onClick={() => handleRegenerateIconClick(i)} disabled={proposalStatus !== 'draft'} >
                                                                                                         <img src={regenerate} />
                                                                                                         <span>Regenerate</span>
                                                                                                 </button>
@@ -957,8 +1074,27 @@ export default function Chat (props)
                                                                                 </div>
                                                                         }
                                                                 </div> : ""}
+
+                                                                 {proposalStatus === 'submission' && sectionReviews.length > 0 && (
+                                                                     <div className="reviews-container">
+                                                                         <h4>Peer Reviews</h4>
+                                                                         {sectionReviews.map(review => (
+                                                                             <div key={review.id} className="review">
+                                                                                 <p><strong>{review.reviewer_name}:</strong> {review.review_text}</p>
+                                                                                 <div className="author-response">
+                                                                                     <textarea
+                                                                                         placeholder="Respond to this review..."
+                                                                                         defaultValue={review.author_response || ''}
+                                                                                         onBlur={(e) => handleSaveResponse(review.id, e.target.value)}
+                                                                                     />
+                                                                                 </div>
+                                                                             </div>
+                                                                         ))}
+                                                                     </div>
+                                                                 )}
                                                         </div>
-                                                )}
+                                                     )
+                                                 })}
                                         </div>
                                 </> : ""}
                         </main>
