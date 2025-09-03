@@ -1,9 +1,8 @@
 -- Database setup for Proposal Drafter application
--- IMORTANT ! REPLACE <DB_USERNAME> with ACTUAL DB_USERNAME
 
 -- Grant necessary privileges to the application user
-GRANT CONNECT ON DATABASE postgres TO <DB_USERNAME>;
-GRANT USAGE ON SCHEMA public TO <DB_USERNAME>;
+GRANT CONNECT ON DATABASE postgres TO postgres;
+GRANT USAGE ON SCHEMA public TO postgres;
 
 -- Create Users table
 -- Create Teams table
@@ -59,7 +58,12 @@ CREATE TABLE IF NOT EXISTS field_contexts (
 );
 
 -- Create Proposal Status Enum Type
-CREATE TYPE proposal_status AS ENUM ('draft', 'in_review', 'submission', 'submitted', 'approved');
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'proposal_status') THEN
+        CREATE TYPE proposal_status AS ENUM ('draft', 'in_review', 'submission', 'submitted', 'approved');
+    END IF;
+END$$;
 
 -- Create Proposals table
 CREATE TABLE IF NOT EXISTS proposals (
@@ -161,5 +165,5 @@ CREATE INDEX IF NOT EXISTS idx_proposal_status_history_proposal_id ON proposal_s
  
 
 -- Grant table permissions to application user
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO <DB_USERNAME>;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO <DB_USERNAME>;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO postgres;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO postgres;

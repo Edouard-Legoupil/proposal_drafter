@@ -33,6 +33,12 @@ The backend code is organized into the following modules:
 
 -   **`tests/`**: This directory contains the tests for the backend application.
 
+## Testing
+
+The backend API is tested using a suite of end-to-end tests written with Playwright. These tests are located in the `frontend/tests` directory and cover the main user journeys of the application, ensuring that the API endpoints are functioning correctly.
+
+For more details on how to run these tests, please refer to the "Testing with Playwright" section in the `frontend/README.md` file.
+
 ## Proposal Generation Workflow
 
 The backend follows a specific workflow for creating and generating a new proposal, designed to be robust and ensure data consistency.
