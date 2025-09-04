@@ -6,23 +6,23 @@ def run(playwright):
     page = context.new_page()
 
     # Login
-    page.goto("http://localhost:8503/login")
+    page.goto("http://localhost:8502/login")
     page.get_by_label("Email").fill("user1@example.com")
     page.get_by_label("Password").fill("password")
-    page.screenshot(path="jules-scratch/verification/login_before_click.png")
+    page.screenshot(path="playwright/login_before_click.png")
     page.get_by_role("button", name="LOGIN").click(timeout=60000)
-    page.wait_for_url("http://localhost:8503/dashboard")
+    page.wait_for_url("http://localhost:8502/dashboard")
 
     # Dashboard screenshot
     page.click('button[aria-label="Options"]')
-    page.screenshot(path="jules-scratch/verification/dashboard.png")
+    page.screenshot(path="playwright/dashboard.png")
 
     # Navigate to approved proposal
     page.get_by_text("Child Protection Ukraine").click()
-    page.wait_for_url("http://localhost:8503/chat")
+    page.wait_for_url("http://localhost:8502/chat")
 
     # Chat page screenshot
-    page.screenshot(path="jules-scratch/verification/chat_approved.png")
+    page.screenshot(path="playwright/chat_approved.png")
 
     context.close()
     browser.close()

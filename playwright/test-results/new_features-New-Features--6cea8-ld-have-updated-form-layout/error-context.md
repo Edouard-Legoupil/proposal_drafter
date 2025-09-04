@@ -1,0 +1,41 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - generic [ref=e5]:
+    - img "Proposal Gen logo" [ref=e7]
+    - generic [ref=e8]:
+      - heading "Login" [level=3] [ref=e9]
+      - generic [ref=e10]: Email
+      - textbox "Email" [ref=e11]
+      - generic [ref=e12]: Password
+      - textbox "Password" [ref=e13]
+      - link "Forgot Password?" [ref=e14] [cursor=pointer]:
+        - /url: /forgotpassword
+      - button "LOGIN" [disabled] [ref=e15]
+      - generic [ref=e16]:
+        - text: Don't have an account?
+        - link "Sign up" [ref=e17] [cursor=pointer]:
+          - /url: /register
+    - generic [ref=e18]:
+      - generic [ref=e19]:
+        - img [ref=e20]: 
+        - paragraph [ref=e22]: Draft Initial Project Proposal with AI
+      - generic [ref=e23]:
+        - img [ref=e24]: 
+        - paragraph [ref=e26]: Leverage Curated Knowledge on Donors, Field Context and Interventions
+      - generic [ref=e27]:
+        - img [ref=e28]: 
+        - paragraph [ref=e30]: Organize Peer Review for Continuous Learning
+  - paragraph [ref=e32]:
+    - text: This
+    - link "application" [ref=e33] [cursor=pointer]:
+      - /url: https://github.com/edouard-legoupil/proposal_drafter/
+    - text: complies with the
+    - link "UN Open Source Principles" [ref=e34] [cursor=pointer]:
+      - /url: https://unite.un.org/news/osi-first-endorse-united-nations-open-source-principles
+    - text: . With your help, we can make it even better! If you detect an issue or a bug of if you have ideas for improvement,
+    - link "report them here" [ref=e35] [cursor=pointer]:
+      - /url: https://github.com/edouard-legoupil/proposal_drafter/issues/new
+    - text: .
+```

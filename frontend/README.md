@@ -123,16 +123,3 @@ This project uses [Playwright](https://playwright.dev/) for end-to-end testing. 
     psql postgresql://postgres:postgres@localhost:5432/proposalgen -f frontend/tests/test-data.sql
     ```
 
-### Running the Tests
-
-To run the Playwright tests, navigate to the `frontend` directory and run the following command:
-
-```bash
-npx playwright test
-```
-
-This will run all the tests in the `tests` directory. You can also run a specific test file:
-
-```bash
-npx playwright test tests/auth.spec.js
-```

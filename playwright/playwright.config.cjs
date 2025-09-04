@@ -7,7 +7,7 @@ const config = {
   use: {
     browserName: 'chromium',
     headless: true,
-    baseURL: 'http://localhost:8503',
+    baseURL: 'http://localhost:8502',
   },
 };
 

@@ -1,28 +1,83 @@
+# Environment variable management - loads .env files into environment variables
 python-dotenv
+
+# ASGI web framework for building high-performance APIs with Python
 fastapi
+
+# In-memory data structure store used as database, cache, and message broker
 redis
-crewai>=0.1.48
+
+# Framework for orchestrating role-playing AI agents to collaborate on tasks
+crewai>=0.48
+
+# Unified interface to call various LLM APIs (OpenAI, Anthropic, etc.) with consistent formatting
 litellm>=1.73.7
+
+# Official Python library for OpenAI API (limited to versions below 1.99.9)
 openai<1.99.9
+
+# Library for reading and writing Microsoft Word (.docx) files
 python-docx
+
+# Markdown parser with plugin system for extending functionality
 markdown-it-py
+
+# Optional dependencies for markdown-it-py: link detection and plugin support
 markdown-it-py[linkify,plugins]
+
+# Additional plugins for markdown-it-py Markdown parser
 mdit-py-plugins>=0.3.5
+
+# Framework for developing applications powered by language models
 langchain
+
+# LangChain integration for OpenAI models
 langchain-openai
+
+# Third-party integrations for LangChain (community-supported components)
 langchain-community
+
+# SQL toolkit and Object Relational Mapper (ORM) for Python
 sqlalchemy
+
+# PostgreSQL database adapter for Python (binary version)
 psycopg2-binary
-python-dotenv
+
+# Form data parsing support for FastAPI/Starlette
+python-multipart
+
+# JSON Web Token implementation for authentication/authorization
 PyJWT
+
+# WSGI utility library containing request/response handling utilities
 werkzeug
+
+# PDF document generation library
 reportlab
+
+# Task scheduling library for running jobs at specified intervals
 apscheduler
+
+# ASGI server implementation with enhanced performance (standard extras)
 uvicorn[standard]
+
+# Async PostgreSQL connector for Google Cloud SQL
 cloud-sql-python-connector[asyncpg]
+
+# Alternative PostgreSQL connector for Google Cloud SQL (pg8000 driver)
 cloud-sql-python-connector[pg8000]
+
+# Google Cloud service for managing secret material (API keys, passwords, etc.)
 google-cloud-secret-manager
+
+# Testing framework for writing and running unit tests
 pytest
+
+# Pytest plugin for testing asyncio components
 pytest-asyncio
+
+# Pytest plugin for mocking objects during tests
 pytest-mock
+
+# Cross-platform process and system utilization monitoring library
 psutil

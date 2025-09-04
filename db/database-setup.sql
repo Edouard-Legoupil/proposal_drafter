@@ -1,16 +1,16 @@
 -- Database setup for Proposal Drafter application
+-- IMORTANT ! REPLACE <DB_USERNAME> with ACTUAL DB_USERNAME
 
 -- Grant necessary privileges to the application user
-GRANT CONNECT ON DATABASE postgres TO postgres;
-GRANT USAGE ON SCHEMA public TO postgres;
-
--- Create Users table
+GRANT CONNECT ON DATABASE postgres TO <DB_USERNAME>;
+GRANT USAGE ON SCHEMA public TO <DB_USERNAME>;
 -- Create Teams table
 CREATE TABLE IF NOT EXISTS teams (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT UNIQUE NOT NULL
 );
 
+-- Create Users table
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
@@ -64,6 +64,13 @@ BEGIN
         CREATE TYPE proposal_status AS ENUM ('draft', 'in_review', 'submission', 'submitted', 'approved');
     END IF;
 END$$;
+-- Add 'deleted' to the proposal_status enum if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumtypid = 'proposal_status'::regtype AND enumlabel = 'deleted') THEN
+        ALTER TYPE proposal_status ADD VALUE 'deleted';
+    END IF;
+END$$;
 
 -- Create Proposals table
 CREATE TABLE IF NOT EXISTS proposals (
@@ -73,7 +80,6 @@ CREATE TABLE IF NOT EXISTS proposals (
     form_data JSONB NOT NULL,
     project_description TEXT NOT NULL,
     generated_sections JSONB,
-    initial_generation JSONB,
     reviews JSONB,
     is_accepted BOOLEAN DEFAULT FALSE,
     status proposal_status DEFAULT 'draft',
@@ -81,9 +87,18 @@ CREATE TABLE IF NOT EXISTS proposals (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create Proposal Peer Reviews table  
--- AGENT_NOTE: Added section_name and author_response columns to this table.
--- AGENT_NOTE: Added type_of_comment, severity, and proposal_status_history_id columns. Removed unique constraint to allow multiple comments per section.
+
+-- Create Proposal Status History table
+CREATE TABLE IF NOT EXISTS proposal_status_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    proposal_id UUID NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
+    status proposal_status NOT NULL,
+    generated_sections_snapshot JSONB,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- Create Proposal Peer Reviews table   
 CREATE TABLE IF NOT EXISTS proposal_peer_reviews (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     proposal_id UUID NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
@@ -148,15 +163,6 @@ CREATE TABLE IF NOT EXISTS proposal_field_contexts (
     PRIMARY KEY (proposal_id, field_context_id)
 );
 
--- Create Proposal Status History table
-CREATE TABLE IF NOT EXISTS proposal_status_history (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    proposal_id UUID NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
-    status proposal_status NOT NULL,
-    generated_sections_snapshot JSONB,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
 -- Create index for faster user lookup
 CREATE INDEX IF NOT EXISTS idx_proposals_user_id ON proposals(user_id);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
@@ -169,7 +175,8 @@ CREATE INDEX IF NOT EXISTS idx_proposal_peer_reviews_reviewer_id ON proposal_pee
 CREATE INDEX IF NOT EXISTS idx_proposal_status_history_proposal_id ON proposal_status_history(proposal_id);
 
  
+ 
 
 -- Grant table permissions to application user
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO postgres;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO postgres;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO <DB_USERNAME>;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO <DB_USERNAME>;
