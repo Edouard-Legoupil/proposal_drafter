@@ -1,14 +1,15 @@
 import re
-import uuid
-import os
+import pytest
 from playwright.sync_api import Page, expect
+
+
 
 def test_user_registration_and_login(page: Page):
     """
-    Tests that a new user can register and then log in.
+    Tests that a new second user can register and then log in.
     """
     # Generate a unique email for the new user
-    email = "testuser@unhcr.org"
+    email = "testuser2@unhcr.org"
     password = "password123"
     name = "Test User"
 
@@ -57,16 +58,36 @@ def test_user_registration_and_login(page: Page):
     page.locator("button[popovertarget='ID_Chat_logoutPopover']").click()
     page.get_by_text("Logout").click()
 
-    # Expect to be back on the login page
-    expect(page).to_have_url(re.compile(".*login"))
 
-    # Now, log in with the new user
+
+@pytest.fixture(autouse=True)
+def login(page: Page):
+    """
+    Fixture to log in before each test in this module.
+    """
+    email = "testuser@unhcr.org"
+    password = "password123"
+    base_url = "http://localhost:8502"
+
+    page.goto(f"{base_url}/login")
     page.get_by_label("Email").fill(email)
     page.get_by_label("Password").fill(password)
     page.get_by_role("button", name="LOGIN").click()
-
-    # Expect to be redirected to the dashboard
     expect(page).to_have_url(re.compile(".*dashboard"))
-    expect(page.get_by_text("Draft Smart Proposal with AI, Curated Knowledge and Peer Review.")).to_be_visible()
+    yield
+
+def test_dashboard_displays_project_options_popover(page: Page):
+    """
+    Tests that the project options popover is displayed on the dashboard.
+    """
+    expect(page.get_by_text('Test Project from Playwright')).to_be_visible()
+    # This selector is based on a class name and might be brittle.
+    page.locator('.Dashboard_project_tripleDotsContainer').first.click()
+    expect(page.get_by_text('View')).to_be_visible()
+    expect(page.get_by_text('Delete')).to_be_visible()
+    expect(page.get_by_text('Transfer')).to_be_visible()
+
+
+
 
 

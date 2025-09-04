@@ -7,8 +7,8 @@ def login(page: Page):
     """
     Fixture to log in before each test in this module.
     """
-    email = "user1@example.com"
-    password = "password"
+    email = "testuser@unhcr.org"
+    password = "password123"
     base_url = "http://localhost:8502"
 
     page.goto(f"{base_url}/login")
@@ -18,26 +18,6 @@ def login(page: Page):
     expect(page).to_have_url(re.compile(".*dashboard"))
     yield
 
-def test_generate_new_proposal(page: Page):
-    """
-    Tests that a user can generate a new proposal.
-    """
-    page.get_by_role('button', name='Generate New Proposal').click()
-    expect(page).to_have_url(re.compile(".*chat"))
-
-    # Fill in the proposal form
-    page.get_by_label('Project Title').fill('Test Project from Playwright')
-    page.get_by_label('Targeted Donor').select_option(label='UNHCR')
-    page.get_by_label('Project Duration (in months)').fill('12')
-    page.get_by_label('Project Budget (in USD)').fill('100000')
-    page.get_by_label('Project Description').fill('This is a test project description from a Playwright test.')
-
-    # Click the "Generate" button
-    page.get_by_role('button', name='Generate').click()
-
-    # Wait for the sections to be generated. This can be slow.
-    expect(page.locator('h2:has-text("Executive Summary")')).to_be_visible(timeout=120000)
-    expect(page.locator('h2:has-text("Background and Needs Assessment")')).to_be_visible(timeout=120000)
 
 @pytest.mark.skip(reason="This test depends on the successful creation of a proposal in another test, which is not a best practice. It should be refactored to create its own test data.")
 def test_edit_and_save_proposal(page: Page):

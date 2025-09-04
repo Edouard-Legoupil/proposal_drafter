@@ -65,3 +65,12 @@ def test_knowledge_card_has_updated_form_layout(page: Page):
     expect(page.get_by_label('Reference Type*')).to_be_visible()
     # This selector is based on a class name and might be brittle.
     expect(page.locator('.squared-btn')).to_be_visible()
+
+
+def test_knowledge_card_displays_correct_icon_on_dashboard(page: Page):
+    """
+    Tests that the correct icon is displayed for knowledge cards on the dashboard.
+    """
+    page.get_by_role('tab', name='Knowledge Card').click()
+    # This selector is based on a class name and might be brittle.
+    expect(page.locator('.fa-money-bill-wave')).to_be_visible()
