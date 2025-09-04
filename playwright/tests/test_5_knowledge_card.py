@@ -55,3 +55,13 @@ def test_create_new_knowledge_card(page: Page):
     # After saving, the user should be redirected to the knowledge card list
     expect(page).to_have_url(re.compile(".*knowledge-cards"))
     expect(page.get_by_text("Test Knowledge Card from Playwright")).to_be_visible()
+
+def test_knowledge_card_has_updated_form_layout(page: Page):
+    """
+    Tests that the knowledge card form has the updated layout.
+    """
+    page.get_by_role('tab', name='Knowledge Card').click()
+    page.get_by_role('button', name='Create New Knowledge Card').click()
+    expect(page.get_by_label('Reference Type*')).to_be_visible()
+    # This selector is based on a class name and might be brittle.
+    expect(page.locator('.squared-btn')).to_be_visible()

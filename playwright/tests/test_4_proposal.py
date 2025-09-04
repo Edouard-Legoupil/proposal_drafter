@@ -89,3 +89,39 @@ def test_download_proposal(page: Page):
 
     # download = download_info.value
     # expect(download.suggested_filename).to_contain('.pdf')
+
+def test_chat_displays_updated_workflow_badges(page: Page):
+    """
+    Tests that the updated workflow badges are displayed on the chat page.
+    """
+    page.get_by_text('Child Protection Ukraine').click()
+    expect(page).to_have_url(re.compile(".*chat"))
+    expect(page.get_by_text('Workflow Stage')).to_be_visible()
+    expect(page.get_by_text('Pre-Submission')).to_be_visible()
+    expect(page.get_by_title('Initial drafting stage - Author + AI')).to_be_visible()
+
+def test_chat_displays_revert_buttons_for_past_statuses(page: Page):
+    """
+    Tests that revert buttons for past statuses are displayed on the chat page.
+    """
+    page.get_by_text('Child Protection Ukraine').click()
+    expect(page).to_have_url(re.compile(".*chat"))
+    expect(page.get_by_role('button', name='Revert')).to_be_visible()
+
+def test_chat_displays_pre_submission_review_comments(page: Page):
+    """
+    Tests that pre-submission review comments are displayed on the chat page.
+    """
+    page.get_by_text('Colombia Shelter Project').click()
+    expect(page).to_have_url(re.compile(".*chat"))
+    expect(page.get_by_text('Peer Reviews')).to_be_visible()
+    expect(page.get_by_text('Bob:')).to_be_visible()
+    expect(page.get_by_placeholder('Respond to this review...')).to_be_visible()
+
+def test_chat_displays_upload_button_for_approved_proposals(page: Page):
+    """
+    Tests that the upload button for approved proposals is displayed on the chat page.
+    """
+    page.get_by_text('Child Protection Ukraine').click()
+    expect(page).to_have_url(re.compile(".*chat"))
+    expect(page.get_by_label('Upload Approved Document')).to_be_visible()
