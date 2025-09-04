@@ -2,12 +2,12 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-@pytest.fixture(autouse=True)
-def login(page: Page):
+def test_edit_and_save_proposal(page: Page):
     """
-    Fixture to log in before each test in this module.
+    Tests that a user can edit and save a proposal.
+    NOTE: This test is not independent and depends on a proposal existing on the dashboard.
     """
-    email = "testuser@unhcr.org"
+        email = "testuser@unhcr.org"
     password = "password123"
     base_url = "http://localhost:8502"
 
@@ -16,15 +16,7 @@ def login(page: Page):
     page.get_by_label("Password").fill(password)
     page.get_by_role("button", name="LOGIN").click()
     expect(page).to_have_url(re.compile(".*dashboard"))
-    yield
 
-
-@pytest.mark.skip(reason="This test depends on the successful creation of a proposal in another test, which is not a best practice. It should be refactored to create its own test data.")
-def test_edit_and_save_proposal(page: Page):
-    """
-    Tests that a user can edit and save a proposal.
-    NOTE: This test is not independent and depends on a proposal existing on the dashboard.
-    """
     # Click on the first proposal in the list
     # This selector is based on a class name and might be brittle.
     page.locator('.proposal-card').first.click()
@@ -37,6 +29,9 @@ def test_edit_and_save_proposal(page: Page):
     edited_text = 'This is an edited executive summary from a Playwright test.'
     executive_summary_editor.fill(edited_text)
 
+   # Take screenshot 
+    page.screenshot(path="playwright/test-results/6_edit_section.png")
+    
     # Click the save button
     page.get_by_role('button', name='Save').click()
 
@@ -92,7 +87,7 @@ def test_chat_displays_pre_submission_review_comments(page: Page):
     """
     Tests that pre-submission review comments are displayed on the chat page.
     """
-    page.get_by_text('Colombia Shelter Project').click()
+    page.get_by_text('Test Project from Playwright').click()
     expect(page).to_have_url(re.compile(".*chat"))
     expect(page.get_by_text('Peer Reviews')).to_be_visible()
     expect(page.get_by_text('Bob:')).to_be_visible()

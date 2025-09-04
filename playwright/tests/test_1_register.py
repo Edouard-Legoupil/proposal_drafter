@@ -17,7 +17,7 @@ def test_user_registration_and_login(page: Page):
 
 
     # Take screenshot landinf 
-    page.screenshot(path="playwright/test-results/0_landing.png")
+    page.screenshot(path="playwright/test-results/1_landing.png")
 
     # Navigate to the registration page
     # Assuming the registration page is at /register
