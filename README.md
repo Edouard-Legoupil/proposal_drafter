@@ -64,7 +64,7 @@ A complete proposal document including:
 
 ## 🛠️ Installation
 
-Refer to [CICD-SETUP.md](https://github.com/iom/proposal_drafter/blob/main/CICD-SETUP.md)
+Refer to [doc_running_local.md](https://github.com/iom/proposal_drafter/blob/main/doc_running_local.md)
 
 
 ## 🤝 Contributing

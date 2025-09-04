@@ -229,11 +229,7 @@ These endpoints handle user and team management.
     -   **What it needs**: Nothing.
     -   **What it returns**: A list of all users in the system, excluding the current user.
 
-## Testing
-
-The backend API is tested using a suite of end-to-end tests written with Playwright. These tests are located in the `frontend/tests` directory and cover the main user journeys of the application, ensuring that the API endpoints are functioning correctly.
-
-For more details on how to run these tests, please refer to the "Testing with Playwright" section in the `frontend/README.md` file.
+ 
 
 ## Proposal Generation Workflow
 
@@ -287,10 +283,4 @@ Example:
 }
 ```
 
-## Running the Application
 
-For detailed instructions on running the application locally (with and without Docker) and deploying to Azure, please refer to the main `CICD-SETUP.md` file in the root of the project.
-
-## Environment Variables
-
-The application uses environment variables for configuration. You can find a list of the required variables in `.env.example`. Create a `.env` file in this directory with your own values when running locally.

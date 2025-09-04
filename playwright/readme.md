@@ -1,5 +1,8 @@
 ### Running the Tests
 
+This project uses [Playwright](https://playwright.dev/) for end-to-end testing. The tests are located in the `frontend/tests` directory.
+
+
 Install playwrithgt with:
 
 ```bash

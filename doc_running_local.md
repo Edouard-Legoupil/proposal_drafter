@@ -5,17 +5,17 @@ This guide walks you through progressive steps for setting up the **Proposal Dra
 
 1. **Local development (no Docker)**
 2. **Docker-based development**
-3. **Azure cloud deployment**
-4. **CI/CD with GitHub Actions**
 
----
+
+ 
+
+
 
 ## 🧱 Application Overview
 
 The app has four core components:
 - 🖼 **Frontend** – React + Vite
 - 🧠 **Backend** – FastAPI (Python)
-- 🌐 **Nginx** – Reverse proxy
 - 🗃 **Database** – PostgreSQL
 
 ---
@@ -46,18 +46,27 @@ cd proposal_drafter
 
 You can use a local [PostgreSQL](https://www.postgresql.org/download/).
 
+`psql` client will be then required (you can install it with `sudo apt-get update && sudo apt-get install -y postgresql-client`)
+
 Once installed, Run setup script:
 
 ```bash
-psql postgresql://postgres:postgres@localhost:5432/proposalgen -f database-setup.sql
+psql postgresql://postgres:postgres@localhost:5432/proposalgen -f db/database-setup.sql
+
+# Load the test data
+psql postgresql://postgres:postgres@localhost:5432/proposalgen -f db/seed.sql
 ```
 
 
-### Step 3: Set environment variables
+### Step 3: Set Environment Variables
+
+ 
+
+The application uses environment variables for configuration. You can find a list of the required variables in `backend/.env.example`. Create a `.env` file in this directory with your own values when running locally.
+ 
 
 Create a `.env` file in the `backend` directory - see `.env.example` for reference:
 
-```bash
 
 ```env
 # OpenAI settings
@@ -100,7 +109,17 @@ npm install
 npm run dev
 ```
 
-The application should now be running at http://localhost:8503 
+The application should now be running at http://localhost:8503
+
+### Running everything together
+
+for further deployment, it is easier if both frontend and backend run on the same fastapi process. To do so the frontend is loaded as static page within fastapi. This part is managed through a provided `start.sh` script that you can laumch with:
+
+```bash
+./start.sh
+```
+
+The application should now be running at http://localhost:8502 
 
 ---
 
@@ -136,257 +155,8 @@ sleep 10
 psql postgresql://postgres:postgres@localhost:5432/proposalgen -f database-setup.sql
 ```
 
----
+Congrat if you have everything working locally, you can go to the next step - getting this on the cloud: 
 
-# 3️⃣ Azure Deployment (first Manual Steps)
+For cloud deployement, see the  `doc_cloud-deployment.md`
 
-## Step 1: Log into Azure and create resources
-
-We create an Azure Container Registry (ACR) where the Docker images will be stored. We also need an Azure App Service (Linux, Multi-Container) where the app will be hosted. It will be configured it to pull images from ACR. Last, the App Service Plan defines the compute resources (CPU, memory), region, and pricing tier that host your apps. 
-
-Below is a script that automates the creation of these resources:
-
-```bash
-az login
-
-# ──────────────────────────────
-# ✅ CONFIGURE THESE VARIABLES
-# ──────────────────────────────
-RESOURCE_GROUP="proposalgen-rg"
-LOCATION="eastus"
-ACR_NAME="proposalgenacr"                    # Must be globally unique
-APP_SERVICE_PLAN="proposalgen-plan"
-WEBAPP_NAME="proposalgen-app"
-SERVICE_PRINCIPAL_NAME="gh-deploy-sp"
-DOCKER_COMPOSE_FILE="docker-compose.yml"
-SUBSCRIPTION_ID=$(az account show --query id -o tsv)
-
-# ──────────────────────────────
-# 1. Create Resource Group
-# ──────────────────────────────
-echo "Creating resource group..."
-az group create --name $RESOURCE_GROUP --location $LOCATION
-
-# ──────────────────────────────
-# 2. Create Azure Container Registry (ACR)
-# ──────────────────────────────
-echo "Creating Azure Container Registry..."
-az acr create --name $ACR_NAME --resource-group $RESOURCE_GROUP --sku Basic --admin-enabled true
-
-# ──────────────────────────────
-# 3. Create App Service Plan (Linux)
-# ──────────────────────────────
-echo "Creating App Service Plan..."
-az appservice plan create \
-  --name $APP_SERVICE_PLAN \
-  --resource-group $RESOURCE_GROUP \
-  --sku B1 \
-  --is-linux
-
-# ──────────────────────────────
-# 4. Create Web App (Linux, Multi-Container)
-# ──────────────────────────────
-echo "Creating Azure Web App..."
-az webapp create \
-  --resource-group $RESOURCE_GROUP \
-  --plan $APP_SERVICE_PLAN \
-  --name $WEBAPP_NAME \
-  --multicontainer-config-type compose \
-  --multicontainer-config-file $DOCKER_COMPOSE_FILE
-
-# ──────────────────────────────
-# 5. Enable Managed Identity for App Service
-# ──────────────────────────────
-echo "Enabling Managed Identity..."
-az webapp identity assign \
-  --name $WEBAPP_NAME \
-  --resource-group $RESOURCE_GROUP
-
-PRINCIPAL_ID=$(az webapp show \
-  --name $WEBAPP_NAME \
-  --resource-group $RESOURCE_GROUP \
-  --query identity.principalId \
-  --output tsv)
-
-# ──────────────────────────────
-# 6. Grant ACR Pull Permissions to App Service
-# ──────────────────────────────
-echo "Granting 'AcrPull' role to App Service identity..."
-ACR_ID=$(az acr show --name $ACR_NAME --query id --output tsv)
-
-az role assignment create \
-  --assignee $PRINCIPAL_ID \
-  --role "AcrPull" \
-  --scope $ACR_ID
-
-# ──────────────────────────────
-# 7. Create Service Principal for GitHub Actions
-# ──────────────────────────────
-echo "Creating Service Principal for GitHub Actions..."
-az ad sp create-for-rbac \
-  --name $SERVICE_PRINCIPAL_NAME \
-  --role contributor \
-  --scopes /subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP \
-  --sdk-auth > azure-credentials.json
-
-echo ""
-echo "🔑 Service Principal credentials written to azure-credentials.json"
-echo "👉 Add this file content to GitHub Secrets as AZURE_CREDENTIALS"
-echo ""
-```
-
-
-
-
-
-## Step 2: Build & Push Docker Images
-
-```bash
-# Backend
-docker build -t proposalgen2acr.azurecr.io/proposalgen-backend:latest ./backend
-docker push proposalgen2acr.azurecr.io/proposalgen-backend:latest
-
-# Frontend
-docker build -t proposalgen2acr.azurecr.io/proposalgen-frontend:latest --build-arg VITE_BACKEND_URL=/api ./frontend
-docker push proposalgen2acr.azurecr.io/proposalgen-frontend:latest
-
-# Nginx
-docker build -t proposalgen2acr.azurecr.io/proposalgen-nginx:latest ./nginx-proxy
-docker push proposalgen2acr.azurecr.io/proposalgen-nginx:latest
-```
-
-## Step 3: Deploy infrastructure using Bicep
-
-```bash
-az deployment group create \
-  --resource-group proposalgen-rg \
-  --template-file azure-resources.bicep \
-  --parameters \
-    baseName=proposalgen \
-    dockerRegistryServerUrl=proposalgen2acr.azurecr.io \
-    dockerRegistryServerUsername=proposalgen2acr \
-    dockerRegistryServerPassword=<ACR-PASSWORD> \
-    azureOpenAiEndpoint=<YOUR-OPENAI-ENDPOINT> \
-    azureOpenAiApiKey=<YOUR-OPENAI-KEY> \
-    openAiApiVersion=<YOUR-OPENAI-API-VERSION> \
-    azureDeploymentName=<YOUR-DEPLOYMENT-NAME> \
-    secretKey=<YOUR-SECRET-KEY> 
-```
-
-## Step 4: Set up Azure database
-
-```bash
-bash azure-db-setup.sh
-```
-
----
-
-# 4️⃣ GitHub CI/CD Workflow Automation
-
-This section sets up a CI/CD pipeline using GitHub Actions to automate deployments to Azure whenever you push changes to the repository.
-
-### Step 1: Set up GitHub Secrets
-
-In your GitHub repo, go to **Settings > Secrets and Variables > Actions**, and add the elemnts defining the target Azure Infrastructure::
-
-- `AZURE_CREDENTIALS` (from `az ad sp create-for-rbac`)
-- `REGISTRY_LOGIN_SERVER` -- # Must end with .azurecr.io
-- `REGISTRY_USERNAME` -- az acr credential show --name <your-acr-name> --query "{username: username, password: passwords[0].value}"
-- `REGISTRY_PASSWORD` -- same as above
-- `AZURE_WEBAPP_PUBLISH_PROFILE`  -- you can get this from the Azure Portal > App Service > Get Publish Profile
-- `AZURE_WEBAPP_NAME` -- the name of your Azure Web App
-
-
-
-### Step 2: Application Settings (Environment Variables)
-
-In the Azure Portal > App Service > Configuration, add the same environment variables you have in your Docker Compose file:
-and the internal environment variables used in the app:
-
-- `AZURE_OPENAI_ENDPOINT`
-- `AZURE_OPENAI_API_KEY`
-- `OPENAI_API_VERSION`
-- `AZURE_DEPLOYMENT_NAME`
-- `SECRET_KEY`
-- `DB_USERNAME`
-- `DB_PASSWORD`
-- `DB_NAME`
-- `DB_HOST`
-- `DB_PORT`
-
-### Step 3: GitHub Actions workflow file
-
-The script `.github/workflows/deploy.yml` orchestrates the CI/CD pipeline.
-
-Note that you main need to verify that the `docker-compose.yml` file is correctly set up to use the environment variables defined in the Azure App Service and check that you container registry can be accessed by Github Actions.
-az acr update --name <your-acr-name> --public-network-enabled true  
-
-### Step 4: Push to GitHub
-
-```bash
-git remote add origin https://github.com/iom/proposal_drafter.git
-git push -u origin main
-```
-
-
-If the workflow is set up correctly, it will automatically build and deploy the application to Azure whenever you push changes to the `main` branch.
-
-If the target application in azure does not start correctly, you can check the logs in the Azure Portal > App Service > Log Stream.
-
-
-```bash
-## check the log of the app service using the Azure CLI:
-az webapp log tail --name <your-app-name> --resource-group <your-resource-group>
-## Check if it is actually deployed
-az webapp config container show \
-  --name <your-app-name> \
-  --resource-group <your-resource-group> \
-  --query "[name, image]"
-```
-
-## 🧪 Verification Checklist
-
-| Task | Expected Output |
-|------|------------------|
-| Frontend | http://localhost:8503 |
-| Backend health | http://localhost:8502/api/health_check |
-| PostgreSQL | Tables created |
-| Azure App | Live app URL after deployment |
-| CI/CD | Auto-deploys on `git push` |
-
----
-
-## 🛠 Troubleshooting
-
-### 🧱 SSL Error in Docker Build
-
-**Error**: `CERTIFICATE_VERIFY_FAILED`  
-**Fix**: Inside your Dockerfile, add:
-
-```Dockerfile
-RUN apt-get update && apt-get install -y ca-certificates && update-ca-certificates
-ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
-```
-
-### 🔥 Nginx Not Routing
-
-1. Run `docker logs <nginx-container-id>`
-2. Ensure backend URL is correct in `proxy_pass`
-3. Remove trailing slash from `proxy_pass` (important!)
-
-### 🧩 Database Connection
-
-Test connection manually:
-
-```bash
-psql postgresql://<username>:<password>@<host>:<port>/<dbname>
-```
-
----
-
-## 🔁 Updating the App
-
-```bash
-git pull
-docker-compose -f docker-compose-local.yml up -d --build
-```
+Note that you can also run all the built-in test with playwright, see the doc `pplaywright/readme.md`
