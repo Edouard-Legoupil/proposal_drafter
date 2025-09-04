@@ -1,0 +1,8 @@
+[0;32m[INFO][0m 🤖 Starting Proposal Generator...
+[0;32m[INFO][0m Startup log: logs/startup_20250904_075448.log
+[2025-09-04 07:54:48] [DEBUG] Debug mode: false
+[2025-09-04 07:54:48] [DEBUG] System: Linux devbox 6.8.0 #1 SMP PREEMPT_DYNAMIC Thu Aug  7 22:13:44 UTC 2025 x86_64 x86_64 x86_64 GNU/Linux
+[2025-09-04 07:54:48] [DEBUG] Shell: /bin/bash
+[2025-09-04 07:54:48] [DEBUG] User: jules
+[2025-09-04 07:54:48] [DEBUG] Working directory: /app
+[0;32m[INFO][0m 📋 Checking prerequisites...
