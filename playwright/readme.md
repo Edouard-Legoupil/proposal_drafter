@@ -93,3 +93,22 @@ To run a specific test file:
 pytest playwright/tests/test_1_register.py --headed
 ```
 
+##  Recording user Journey with Codegen Tool
+
+Command to launch a new browser window and a separate Playwright Inspector window.
+
+```bash
+python3 -m playwright codegen  http://localhost:8502 --test-id-attribute data-testid
+```
+
+The frontend has been adjusted to include specific attribute `data-testid` allowing for robust tracking
+
+Once the browser window appears, user can start interacting with the application. The Playwright Inspector window will display the generated Python code in real time as actions are performed:
+
+ * Navigating: The script will record page.goto('url').
+
+ * Clicking: Clicks on buttons, links, and other elements will be recorded as page.click('selector').
+
+ * Typing: Typing into a text field will be recorded as page.fill('selector', 'text').
+
+In the Playwright Inspector, a live preview of the Python test script is generated. Once finished interacting with the website, close the browser window that was opened by the codegen tool to stop the recording process. The complete Python script can be then copied Playwright Inspector window into a new file with a .py extension (e.g., test_my_app.py).

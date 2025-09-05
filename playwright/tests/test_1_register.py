@@ -8,7 +8,7 @@ def test_user_registration_and_login(page: Page):
     Tests that a new user can register and then log in.
     """
     # Generate a unique email for the new user
-    email = "testuser@unhcr.org"
+    email = "test_user@unhcr.org"
     password = "password123"
     name = "Test User"
 
