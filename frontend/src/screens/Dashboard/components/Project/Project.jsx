@@ -11,8 +11,11 @@ export default function Project ({ project, date, onClick, isReview = false, pro
 {
         const [popoverVisible, setPopoverVisible] = useState(false);
 
-        const getStatusInfo = (status) => {
-                switch (status) {
+        const getStatusInfo = (project) => {
+                if (project.is_accepted) {
+                        return { text: 'Shared', className: 'status-shared' };
+                }
+                switch (project.status) {
                         case 'draft':
                                 return { text: 'Drafting', className: 'status-draft' };
                         case 'in_review':
@@ -43,11 +46,11 @@ export default function Project ({ project, date, onClick, isReview = false, pro
                 return summaryText;
         };
 
-        const statusInfo = getStatusInfo(project.status);
+        const statusInfo = getStatusInfo(project);
 
         if (isReview) {
                 return (
-                        <article className="card" onClick={onClick}>
+                        <article className="card" onClick={onClick} data-testid="review-card">
                                 <h3 id={`review-${project.proposal_id}`}>{project.project_title}</h3>
                                 <h2>Requester: {project.requester_name || 'N/A'}</h2>
                                 <p><strong>Deadline:</strong> <time dateTime={project.deadline || ''}>{project.deadline ? new Date(project.deadline).toLocaleDateString() : 'N/A'}</time></p>
@@ -61,23 +64,23 @@ export default function Project ({ project, date, onClick, isReview = false, pro
                 )
         }
 
-        return  <article className={`Dashboard_project ${popoverVisible ? 'popover-active' : ''}`} onClick={onClick}>
+        return  <article className={`Dashboard_project ${popoverVisible ? 'popover-active' : ''}`} onClick={onClick} data-testid="project-card">
                         <div className="Dashboard_project_title">
                                 <h3 id={`proj-${project.proposal_id}`}>{project.project_title}</h3>
-                                <button className="Dashboard_project_tripleDotsContainer" onClick={togglePopover} aria-haspopup="true" aria-expanded={popoverVisible}>
+                                <button className="Dashboard_project_tripleDotsContainer" onClick={togglePopover} aria-haspopup="true" aria-expanded={popoverVisible} data-testid="project-options-button">
                                         <img src={tripleDots} alt="Options" />
                                 </button>
                                 {popoverVisible && (
                                         <div popover="auto" className='Project_optionsPopover' id={`popover-${projectIndex+1}`} >
-                                                <div className='Project_optionsPopover_option' onClick={(e) => { e.stopPropagation(); onClick(e); }}>
+                                                <div className='Project_optionsPopover_option' onClick={(e) => { e.stopPropagation(); onClick(e); }} data-testid="project-view-button">
                                                         <img src={view} alt="View" />
                                                         View
                                                 </div>
-                                                <div className='Project_optionsPopover_option' onClick={(e) => { e.stopPropagation(); handleTransferOwnership(project.proposal_id); }}>
+                                                <div className='Project_optionsPopover_option' onClick={(e) => { e.stopPropagation(); handleTransferOwnership(project.proposal_id); }} data-testid="project-transfer-button">
                                                         <img className='Project_optionsPopover_option_transfer' src={transfer} alt="Transfer" />
                                                         Transfer
                                                 </div>
-                                                <div className='Project_optionsPopover_option' onClick={(e) => { e.stopPropagation(); handleDeleteProject(project.proposal_id); }}>
+                                                <div className='Project_optionsPopover_option' onClick={(e) => { e.stopPropagation(); handleDeleteProject(project.proposal_id); }} data-testid="project-delete-button">
                                                         <img className='Project_optionsPopover_option_delete' src={bin} alt="Delete" />
                                                         Delete
                                                 </div>

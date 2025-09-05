@@ -76,10 +76,10 @@ export default function Base (props)
         return  <div className='Base'>
                 <header className='Header'>
                         <span className='Header_logoContainer'>
-                                <img className='Header_iomLogo' src={masterlogo} onClick={handleLogoClick} alt="IOM - UN Migration" />
+                                <img className='Header_iomLogo' src={masterlogo} onClick={handleLogoClick} alt="IOM - UN Migration" data-testid="logo" />
                         </span>
 
-                        <button className='User' popoverTarget='ID_Chat_logoutPopover'>
+                        <button className='User' popoverTarget='ID_Chat_logoutPopover' data-testid="user-menu-button">
                                 <div className="Displaypicture">{userDetails.name && userDetails.name.split('')[0].toUpperCase()}</div>
 
                                 <div className='Identity'>
@@ -91,7 +91,7 @@ export default function Base (props)
 
                         </button>
 
-                        <div popover='auto' id="ID_Chat_logoutPopover" className='Chat_logoutPopover' onClick={handleLogoutClick}>
+                        <div popover='auto' id="ID_Chat_logoutPopover" className='Chat_logoutPopover' onClick={handleLogoutClick} data-testid="logout-button">
                                 <img src={logout_icon} />
                                 Logout
                         </div>

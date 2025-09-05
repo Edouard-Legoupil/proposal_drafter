@@ -56,7 +56,7 @@ export default function MetricsDashboard() {
                 <h2>Proposal Metrics</h2>
                 <div className="metrics-filter">
                     <label htmlFor="metrics-filter-select">Filter by: </label>
-                    <select id="metrics-filter-select" value={filter} onChange={e => setFilter(e.target.value)}>
+                    <select id="metrics-filter-select" value={filter} onChange={e => setFilter(e.target.value)} data-testid="metrics-filter-select">
                         <option value="all">All Proposals</option>
                         <option value="team">My Team</option>
                         <option value="user">My Proposals</option>

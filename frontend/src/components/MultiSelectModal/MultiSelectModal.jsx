@@ -37,6 +37,7 @@ export default function MultiSelectModal({ isOpen, onClose, options, selectedOpt
                   value={optionValue}
                   checked={selectedOptions.includes(optionValue)}
                   onChange={() => handleCheckboxChange(option)}
+                  data-testid={`user-select-checkbox-${optionValue}`}
                 />
                 <label htmlFor={optionValue}>{optionLabel}</label>
               </div>
@@ -46,12 +47,12 @@ export default function MultiSelectModal({ isOpen, onClose, options, selectedOpt
         {showDeadline && (
           <div className="modal-deadline">
             <label htmlFor="deadline">Deadline:</label>
-            <input type="date" id="deadline" value={deadline} onChange={e => setDeadline(e.target.value)} />
+            <input type="date" id="deadline" value={deadline} onChange={e => setDeadline(e.target.value)} data-testid="deadline-input" />
           </div>
         )}
         <div className="modal-actions">
-          <button onClick={onClose}>Close</button>
-          {onConfirm && <button onClick={handleConfirm}>Confirm</button>}
+          <button onClick={onClose} data-testid="close-button">Close</button>
+          {onConfirm && <button onClick={handleConfirm} data-testid="confirm-button">Confirm</button>}
         </div>
       </div>
     </div>
