@@ -221,6 +221,7 @@ export default function Dashboard ()
                                                 onClick={() => activateTab('proposals')}
                                                 onKeyDown={onTabKeydown}
                                                 tabIndex={selectedTab === 'proposals' ? 0 : -1}
+                                                data-testid="proposals-tab"
                                         >
                                                  <i className="fa-solid fa-file-lines" aria-hidden="true"></i>  My Proposals 
                                         </button>
@@ -235,6 +236,7 @@ export default function Dashboard ()
                                                 onClick={() => activateTab('knowledge')}
                                                 onKeyDown={onTabKeydown}
                                                 tabIndex={selectedTab === 'knowledge' ? 0 : -1}
+                                                data-testid="knowledge-tab"
                                         >
                                                 <i className="fa-solid fa-book-open" aria-hidden="true"></i>  Knowledge Card 
                                         </button>
@@ -249,6 +251,7 @@ export default function Dashboard ()
                                                 onClick={() => activateTab('reviews')}
                                                 onKeyDown={onTabKeydown}
                                                 tabIndex={selectedTab === 'reviews' ? 0 : -1}
+                                                data-testid="reviews-tab"
                                         >
                                                 <i className="fa-solid fa-magnifying-glass" aria-hidden="true"></i>  Pending Reviews 
                                         </button>
@@ -264,6 +267,7 @@ export default function Dashboard ()
                                                 onClick={() => activateTab('metrics')}
                                                 onKeyDown={onTabKeydown}
                                                 tabIndex={selectedTab === 'metrics' ? 0 : -1}
+                                                data-testid="metrics-tab"
                                         >
                                                 <i className="fa-solid fa-gauge-high" aria-hidden="true"></i>  Metrics 
                                         </button>
@@ -274,17 +278,17 @@ export default function Dashboard ()
                                 <div className="Dashboard_search" role="search">
                                         <i className="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
                                         <label htmlFor="quick-search" className="sr-only">Quick search</label>
-                                        <input id="quick-search" type="text" placeholder="Quick search..." className="Dashboard_search_input" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-                                        <button className="filter-btn" id="filter-btn" aria-label="Open filters" onClick={() => setIsFilterModalOpen(true)}>
+                                        <input id="quick-search" type="text" placeholder="Quick search..." className="Dashboard_search_input" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} data-testid="search-input" />
+                                        <button className="filter-btn" id="filter-btn" aria-label="Open filters" onClick={() => setIsFilterModalOpen(true)} data-testid="filter-button">
                                                 <i className="fa-solid fa-sliders"></i>
                                         </button>
                                 </div>
                         }
 
-                        <section id="proposals-panel" role="tabpanel" aria-labelledby="proposals-tab" className={`tab-panel ${selectedTab === 'proposals' ? 'active' : ''}`} hidden={selectedTab !== 'proposals'}>
+                        <section id="proposals-panel" data-testid="proposals-panel" role="tabpanel" aria-labelledby="proposals-tab" className={`tab-panel ${selectedTab === 'proposals' ? 'active' : ''}`} hidden={selectedTab !== 'proposals'}>
                                 <div className="Dashboard_projects" id="proposals-grid">
                                         <div className="card card--cta">
-                                                <button className="btn" type="button" aria-label="Start a new proposal" onClick={() => navigate("/chat")}>Start New Proposal</button>
+                                                <button className="btn" type="button" aria-label="Start a new proposal" onClick={() => navigate("/chat")} data-testid="new-proposal-button">Start New Proposal</button>
                                         </div>
                                         {displayProjects && displayProjects.map((project, i) =>
                                                 <Project
@@ -303,7 +307,7 @@ export default function Dashboard ()
                         <section id="knowledge-panel" role="tabpanel" aria-labelledby="knowledge-tab" className={`tab-panel ${selectedTab === 'knowledge' ? 'active' : ''}`} hidden={selectedTab !== 'knowledge'}>
                                 <div className="Dashboard_projects" id="knowledge-grid">
                                         <div className="card card--cta">
-                                                <button className="btn" type="button" aria-label="Start a new knowledge card" onClick={() => navigate("/knowledge-card/new")}>Create New Knowledge Card</button>
+                                                <button className="btn" type="button" aria-label="Start a new knowledge card" onClick={() => navigate("/knowledge-card/new")} data-testid="new-knowledge-card-button">Create New Knowledge Card</button>
                                         </div>
                                         {knowledgeCards && knowledgeCards.map((card, i) =>
                                                 <KnowledgeCard
@@ -336,12 +340,12 @@ export default function Dashboard ()
 
                 <div className={`modal ${isFilterModalOpen ? 'active' : ''}`} id="filter-modal" role="dialog" aria-modal="true" aria-labelledby="filter-title">
                         <div className="modal-content">
-                                <span className="modal-close" onClick={() => setIsFilterModalOpen(false)}>&times;</span>
+                                <span className="modal-close" onClick={() => setIsFilterModalOpen(false)} data-testid="filter-modal-close-button">&times;</span>
                                 <h3 id="filter-title">Apply Content Filters</h3>
 
                                 <div className="filter-section" data-tab="proposals" hidden={selectedTab !== 'proposals'}>
                                         <label htmlFor="status-filter">Status</label>
-                                        <select id="status-filter">
+                                        <select id="status-filter" data-testid="status-filter">
                                                 <option value="">All</option>
                                                 <option value="draft">Drafting</option>
                                                 <option value="review">Pending Review</option>
@@ -355,7 +359,7 @@ export default function Dashboard ()
 
                                 <div className="filter-section" data-tab="reviews" hidden={selectedTab !== 'reviews'}>
                                         <label htmlFor="deadline-filter">Deadline before</label>
-                                        <input type="date" id="deadline-filter" />
+                                        <input type="date" id="deadline-filter" data-testid="deadline-filter" />
                                 </div>
                         </div>
                 </div>

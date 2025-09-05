@@ -30,7 +30,7 @@ export default function KnowledgeCard({ card, onClick }) {
 
 
     return (
-        <article className="card" onClick={onClick}>
+        <article className="card" onClick={onClick} data-testid="knowledge-card">
             <h3 id={`kc-${card.id}`}>{card.title}</h3>
             <p><small>{card.summary || 'No summary.'}</small></p>
             {linked_to_element}

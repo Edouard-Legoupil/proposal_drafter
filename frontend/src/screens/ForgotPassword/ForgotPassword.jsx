@@ -124,7 +124,7 @@ export default function ForgotPassword (props)
         }
 
         return  <form className='Login-form'>
-                <button className="ForgotPassword_back" onClick={handleBackClick}>
+                <button className="ForgotPassword_back" onClick={handleBackClick} data-testid="back-button">
                         <img src={downarrow} alt="Back" />
                         Back
                 </button>
@@ -138,6 +138,7 @@ export default function ForgotPassword (props)
                                         value={email}
                                         placeholder='Enter your email here'
                                         onChange={e => /^[a-zA-Z0-9@._%+-]*$/.test(e.target.value) && setEmail(e.target.value.toLowerCase())}
+                                        data-testid="email-input"
                                 />
 
                                 <button
@@ -145,6 +146,7 @@ export default function ForgotPassword (props)
                                         className="Login-submit Register-submit"
                                         disabled={!email}
                                         onClick={handleEmailSubmitClick}
+                                        data-testid="submit-email-button"
                                 >
                                         {loading ? "SUBMITTING" : "SUBMIT"}
                                         {loading ? <span className='submitButtonSpinner' /> : ""}
@@ -165,6 +167,7 @@ export default function ForgotPassword (props)
                                         value={securityAnswer}
                                         placeholder="Answer to the security question"
                                         onChange={e => setSecurityAnswer(e.target.value)}
+                                        data-testid="security-answer-input"
                                 />
 
                                 <button
@@ -172,6 +175,7 @@ export default function ForgotPassword (props)
                                         className="Login-submit Register-submit"
                                         disabled={!securityAnswer}
                                         onClick={handleVerifyClick}
+                                        data-testid="verify-button"
                                 >
                                         {loading ? "VERIFYING" : "VERIFY"}
                                         {loading ? <span className='submitButtonSpinner' /> : ""}
@@ -191,9 +195,10 @@ export default function ForgotPassword (props)
                                         value={password}
                                         placeholder='Enter your new password here'
                                         onChange={e => setPassword(e.target.value)}
+                                        data-testid="password-input"
                                 />
                                 {password ? <div className="Login_showPasswordToggleContainer">
-                                        <img className='Login_passwordShowToggle' src={showPassword ? hide : show} onClick={() => setShowPassword(p => !p)}/>
+                                        <img className='Login_passwordShowToggle' src={showPassword ? hide : show} onClick={() => setShowPassword(p => !p)} data-testid="show-password-toggle"/>
                                 </div> : ""}
 
                                 <button
@@ -201,6 +206,7 @@ export default function ForgotPassword (props)
                                         className="Login-submit Register-submit"
                                         disabled={password.length < 8}
                                         onClick={handleResetPasswordSubmit}
+                                        data-testid="reset-password-button"
                                 >
                                         {loading ? "RESETTING PASSWORD" : "RESET PASSWORD"}
                                         {loading ? <span className='submitButtonSpinner' /> : ""}
