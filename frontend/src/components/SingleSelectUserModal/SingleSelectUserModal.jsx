@@ -31,6 +31,7 @@ export default function SingleSelectUserModal({ isOpen, onClose, options, title,
                   value={optionValue}
                   checked={selectedUser === optionValue}
                   onChange={() => setSelectedUser(optionValue)}
+                  data-testid={`user-select-radio-${optionValue}`}
                 />
                 <label htmlFor={optionValue}>{optionLabel}</label>
               </div>
@@ -38,8 +39,8 @@ export default function SingleSelectUserModal({ isOpen, onClose, options, title,
           })}
         </div>
         <div className="modal-actions">
-          <button onClick={onClose}>Close</button>
-          <button onClick={handleConfirm} disabled={!selectedUser}>Confirm</button>
+          <button onClick={onClose} data-testid="close-button">Close</button>
+          <button onClick={handleConfirm} disabled={!selectedUser} data-testid="confirm-button">Confirm</button>
         </div>
       </div>
     </div>

@@ -147,11 +147,11 @@ export default function Login (props)
                 }
         }
 
-        return  <div className="Login_container">
+        return  <div className="Login_container" data-testid="login-container">
                 <div className='Login'>
-                        <div popover="auto" className='Login-errorPopover' ref={errorPopover}>
+                        <div popover="auto" className='Login-errorPopover' ref={errorPopover} data-testid="error-popover">
                                 <span>🛇 {errorText}</span>
-                                <span onClick={() => errorPopover.current.hidePopover()} style={{ cursor: "pointer" }}>✖</span>
+                                <span onClick={() => errorPopover.current.hidePopover()} style={{ cursor: "pointer" }} data-testid="error-popover-close">✖</span>
                         </div>
                         <div className='Login-left'>
                                 <div className="Login-appLogo">
@@ -167,13 +167,13 @@ export default function Login (props)
                                                 {props?.register ?
                                                         <>
                                                                 <label className='Login-label' htmlFor='Login_nameInput'>Name</label>
-                                                                <label className='Login-label' htmlFor='Login_nameInput'>Name</label>
                                                                 <input
                                                                         type="text"
                                                                         id='Login_nameInput'
                                                                         value={username}
                                                                         placeholder='Your name'
                                                                         onChange={e => /^[A-Za-z\s]{0,16}$/.test(e.target.value) && setUsername(e.target.value)}
+                                                                        data-testid="name-input"
                                                                 />
                                                                 <label className='Login-label' htmlFor='Login_teamInput'>Team</label>
                                                                 <select
@@ -181,6 +181,7 @@ export default function Login (props)
                                                                     value={teamId}
                                                                     onChange={e => setTeamId(e.target.value)}
                                                                     required
+                                                                    data-testid="team-select"
                                                                 >
                                                                     <option value="" disabled>Select your team</option>
                                                                     {teams.map(team => (
@@ -198,6 +199,7 @@ export default function Login (props)
                                                         value={email}
                                                         placeholder={props?.register ? 'example@email.com' : 'Enter your email here'}
                                                         onChange={e => /^[a-zA-Z0-9@._%+-]*$/.test(e.target.value) && setEmail(e.target.value.toLowerCase())}
+                                                        data-testid="email-input"
                                                 />
                                                 <label className='Login-label' htmlFor='Login_passwordInput'>Password</label>
                                                 <input
@@ -208,9 +210,10 @@ export default function Login (props)
                                                         placeholder={props?.register ? 'At least 8 characters' : 'Enter your password here'}
                                                         onChange={e => setPassword(e.target.value)}
                                                         autoComplete="current-password"
+                                                        data-testid="password-input"
                                                 />
                                                 {password ? <div className="Login_showPasswordToggleContainer">
-                                                        <img className='Login_passwordShowToggle' src={showPassword ? hide : show} onClick={() => setShowPassword(p => !p)}/>
+                                                        <img className='Login_passwordShowToggle' src={showPassword ? hide : show} onClick={() => setShowPassword(p => !p)} data-testid="show-password-toggle"/>
                                                 </div> : ""}
                                                 {props?.register ?
                                                         <>
@@ -220,6 +223,7 @@ export default function Login (props)
                                                                         value={securityQuestion}
                                                                         onChange={e => setSecurityQuestion(e.target.value)}
                                                                         style={securityQuestion === "" ? {color: "rgb(117, 117, 117)"} : {}}
+                                                                        data-testid="security-question-select"
                                                                 >
                                                                         <option value="" disabled>Select security question</option>
                                                                         <option>Favourite animal?</option>
@@ -234,29 +238,31 @@ export default function Login (props)
                                                                         value={securityAnswer}
                                                                         placeholder="Answer to the security question"
                                                                         onChange={e => setSecurityAnswer(e.target.value)}
+                                                                        data-testid="security-answer-input"
                                                                 />
                                                         </>
                                                         :
                                                         ""
                                                 }
-                                                {!props?.register ? <a href='/forgotpassword' className='Login-forgotpw'>Forgot Password?</a> : ""}
+                                                {!props?.register ? <a href='/forgotpassword' className='Login-forgotpw' data-testid="forgot-password-link">Forgot Password?</a> : ""}
                                                 <CommonButton
                                                         type="submit"
                                                         disabled={(props?.register && !username) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length >= 255 || password.length < 8 || (props?.register && !securityAnswer)}
                                                         label={submitButtonText}
                                                         loading={loading}
                                                         style={{ marginTop: "20px" }}
+                                                        data-testid="submit-button"
                                                 />
                                                 <div className='Login-register'>
                                                         {props?.register ?
                                                                 <>
                                                                         Already have an account?
-                                                                        <a href="/login"> Log in</a>
+                                                                        <a href="/login" data-testid="login-link"> Log in</a>
                                                                 </>
                                                                 :
                                                                 <>
                                                                         Don't have an account?
-                                                                        <a href="/register"> Sign up</a>
+                                                                        <a href="/register" data-testid="register-link"> Sign up</a>
                                                                 </>
                                                         }
                                                 </div>

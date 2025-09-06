@@ -92,7 +92,7 @@ export default function Review ()
                 <div className="Review">
                         <div className="Review_header">
                                 <h1>Reviewing: {proposal.form_data['Project Draft Short name']}</h1>
-                                <CommonButton label="Review Completed" onClick={handleSubmitReview} />
+                                <CommonButton label="Review Completed" onClick={handleSubmitReview} data-testid="review-completed-button-header" />
                         </div>
                         <div className="Review_proposal">
                                 {Object.entries(proposal.generated_sections).map(([section, content]) => (
@@ -102,13 +102,13 @@ export default function Review ()
                                                         <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
                                                 </div>
                                                 <div className="Review_comment_controls">
-                                                    <select value={reviewComments[section]?.type_of_comment || 'General'} onChange={e => handleCommentChange(section, 'type_of_comment', e.target.value)}>
+                                                    <select value={reviewComments[section]?.type_of_comment || 'General'} onChange={e => handleCommentChange(section, 'type_of_comment', e.target.value)} data-testid={`comment-type-select-${section}`}>
                                                         <option value="General">General</option>
                                                         <option value="Clarity">Clarity</option>
                                                         <option value="Compliance">Compliance</option>
                                                         <option value="Impact">Impact</option>
                                                     </select>
-                                                    <select value={reviewComments[section]?.severity || 'Medium'} onChange={e => handleCommentChange(section, 'severity', e.target.value)}>
+                                                    <select value={reviewComments[section]?.severity || 'Medium'} onChange={e => handleCommentChange(section, 'severity', e.target.value)} data-testid={`severity-select-${section}`}>
                                                         <option value="Low">Low</option>
                                                         <option value="Medium">Medium</option>
                                                         <option value="High">High</option>
@@ -119,12 +119,13 @@ export default function Review ()
                                                         placeholder={`Your comments for ${section}...`}
                                                         value={reviewComments[section]?.review_text || ""}
                                                         onChange={e => handleCommentChange(section, 'review_text', e.target.value)}
+                                                        data-testid={`comment-textarea-${section}`}
                                                 />
                                         </div>
                                 ))}
                         </div>
                         <div className="Review_footer">
-                                <CommonButton label="Review Completed" onClick={handleSubmitReview} />
+                                <CommonButton label="Review Completed" onClick={handleSubmitReview} data-testid="review-completed-button-footer" />
                         </div>
                 </div>
         </Base>

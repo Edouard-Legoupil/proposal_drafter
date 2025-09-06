@@ -219,7 +219,7 @@ export default function KnowledgeCard() {
                         {references.map((ref, index) => (
                             <div key={index} className="kc-reference-item">
                                 <label htmlFor={`kc-reference-type-${index}`}>Reference Type*</label>
-                                <select id={`kc-reference-type-${index}`} value={ref.reference_type} onChange={e => handleReferenceChange(index, 'reference_type', e.target.value)} required>
+                                <select id={`kc-reference-type-${index}`} value={ref.reference_type} onChange={e => handleReferenceChange(index, 'reference_type', e.target.value)} required data-testid={`reference-type-select-${index}`}>
                                     <option value="">Select Type...</option>
                                     <option value="UNHCR Operation Page">UNHCR Operation Page</option>
                                     <option value="Donor Content">Donor Content</option>
@@ -229,18 +229,18 @@ export default function KnowledgeCard() {
                                     <option value="Evaluation Report">Evaluation Report</option>
                                     <option value="Policies">Policies</option>
                                 </select>
-                                <input type="url" placeholder="https://example.com" value={ref.url} onChange={e => handleReferenceChange(index, 'url', e.target.value)} />
-                                <button type="button" onClick={() => removeReference(index)}>Remove</button>
+                                <input type="url" placeholder="https://example.com" value={ref.url} onChange={e => handleReferenceChange(index, 'url', e.target.value)} data-testid={`reference-url-input-${index}`} />
+                                <button type="button" onClick={() => removeReference(index)} data-testid={`remove-reference-button-${index}`}>Remove</button>
                             </div>
                         ))}
-                        <button type="button" onClick={addReference}>Add Reference</button>
+                        <button type="button" onClick={addReference} data-testid="add-reference-button">Add Reference</button>
 
                         <div className="kc-form-actions-left">
-                            <CommonButton type="button" label="Identify References" />
+                            <CommonButton type="button" label="Identify References" data-testid="identify-references-button" />
                         </div>
 
                         <label htmlFor="kc-link-type">Link To</label>
-                        <select id="kc-link-type" value={linkType} onChange={e => setLinkType(e.target.value)}>
+                        <select id="kc-link-type" value={linkType} onChange={e => setLinkType(e.target.value)} data-testid="link-type-select">
                             <option value="">Select Type...</option>
                             <option value="donor">Donor</option>
                             <option value="outcome">Outcome</option>
@@ -250,7 +250,7 @@ export default function KnowledgeCard() {
                         {linkType === 'field_context' && (
                             <>
                                 <label htmlFor="kc-geo-coverage">Geographic Coverage</label>
-                                <select id="kc-geo-coverage" value={selectedGeoCoverage} onChange={e => setSelectedGeoCoverage(e.target.value)}>
+                                <select id="kc-geo-coverage" value={selectedGeoCoverage} onChange={e => setSelectedGeoCoverage(e.target.value)} data-testid="geo-coverage-select">
                                     <option value="">All</option>
                                     {geographicCoverages.map(geo => <option key={geo} value={geo}>{geo}</option>)}
                                 </select>
@@ -274,22 +274,23 @@ export default function KnowledgeCard() {
                                         setLinkedId(newOption.id);
                                     }}
                                     options={linkOptions.map(o => ({ ...o, value: o.id, label: o.name }))}
+                                    data-testid="linked-item-select"
                                 />
                             </>
                         )}
 
                         <label htmlFor="kc-title">Title*</label>
-                        <input id="kc-title" type="text" value={title} onChange={e => setTitle(e.target.value)} required />
+                        <input id="kc-title" type="text" value={title} onChange={e => setTitle(e.target.value)} required data-testid="title-input" />
 
                         <label htmlFor="kc-summary">Description</label>
-                        <textarea id="kc-summary" value={summary} onChange={e => setSummary(e.target.value)} />
+                        <textarea id="kc-summary" value={summary} onChange={e => setSummary(e.target.value)} data-testid="summary-textarea" />
 
                         <div className="kc-form-actions">
                             <div className="kc-form-actions-left">
-                                <CommonButton type="submit" label="Populate Card Content" loading={loading} disabled={loading || !title} />
+                                <CommonButton type="submit" label="Populate Card Content" loading={loading} disabled={loading || !title} data-testid="populate-card-button" />
                             </div>
                             <div className="kc-form-actions-right">
-                                <CommonButton type="button" onClick={() => handleSave()} label="Save Card" loading={loading} disabled={loading || !title} className="squared-btn" />
+                                <CommonButton type="button" onClick={() => handleSave()} label="Save Card" loading={loading} disabled={loading || !title} className="squared-btn" data-testid="save-card-button" />
                             </div>
                         </div>
                     </form>
@@ -302,8 +303,8 @@ export default function KnowledgeCard() {
                                 <h3>{section}</h3>
                                 <p>{content}</p>
                                 <div className="kc-section-actions">
-                                    <button>Edit</button>
-                                    <button>Regenerate</button>
+                                    <button data-testid={`edit-section-button-${section}`}>Edit</button>
+                                    <button data-testid={`regenerate-section-button-${section}`}>Regenerate</button>
                                 </div>
                             </div>
                         ))}
