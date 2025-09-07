@@ -245,23 +245,31 @@ export default function Chat (props)
                                 </label>
         
                                 {isCreatableSelect ? (
-                                        <CreatableSelect
-                                                isClearable
-                                                onChange={option => handleFormInput({ target: { value: option ? option.value : "" } }, label)}
-                                                onCreateOption={inputValue => handleCreate(inputValue, label)}
-                                                options={getOptions(label)}
-                                                value={getOptions(label).find(o => o.value === field.value)}
-                                                 isDisabled={disabled}
-                                        />
+                                        <div data-testid={`creatable-select-container-${toKebabCase(label)}`}>
+                                                <CreatableSelect
+                                                        isClearable
+                                                        aria-label={label}
+                                                        classNamePrefix={toKebabCase(label)}
+                                                        onChange={option => handleFormInput({ target: { value: option ? option.value : "" } }, label)}
+                                                        onCreateOption={inputValue => handleCreate(inputValue, label)}
+                                                        options={getOptions(label)}
+                                                        value={getOptions(label).find(o => o.value === field.value)}
+                                                        isDisabled={disabled}
+                                                />
+                                        </div>
                                 ) : isCreatableMultiSelect ? (
-                                        <CreatableSelect
-                                                isMulti
-                                                onChange={options => handleFormInput({ target: { value: options ? options.map(o => o.value) : [] } }, label)}
-                                                onCreateOption={inputValue => handleCreate(inputValue, label)}
-                                                options={getOptions(label)}
-                                                value={field.value.map(v => getOptions(label).find(o => o.value === v)).filter(Boolean)}
-                                                 isDisabled={disabled}
-                                        />
+                                        <div data-testid={`creatable-multiselect-container-${toKebabCase(label)}`}>
+                                                <CreatableSelect
+                                                        isMulti
+                                                        aria-label={label}
+                                                        classNamePrefix={toKebabCase(label)}
+                                                        onChange={options => handleFormInput({ target: { value: options ? options.map(o => o.value) : [] } }, label)}
+                                                        onCreateOption={inputValue => handleCreate(inputValue, label)}
+                                                        options={getOptions(label)}
+                                                        value={field.value.map(v => getOptions(label).find(o => o.value === v)).filter(Boolean)}
+                                                        isDisabled={disabled}
+                                                />
+                                        </div>
                                 ) : isNormalSelect ? (
                                         <select
                                                 className='Chat_form_input'
@@ -270,6 +278,7 @@ export default function Chat (props)
                                                 value={field.value}
                                                 onChange={e => handleFormInput(e, label)}
                                                  disabled={disabled}
+                                                data-testid={fieldId}
                                         >
                                                 <option value="" disabled>Select {label}</option>
                                                 {getOptions(label).map(option => (
@@ -286,6 +295,7 @@ export default function Chat (props)
                                                 value={field.value}
                                                 onChange={e => handleFormInput(e, label)}
                                                  disabled={disabled}
+                                                data-testid={fieldId}
                                         />
                                 )}
                         </div>
