@@ -1,10 +1,12 @@
 import './AssociateKnowledgeModal.css'
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 
 export default function AssociateKnowledgeModal({ isOpen, onClose, onConfirm, donorId, outcomeId, fieldContextId }) {
+  const navigate = useNavigate();
   const [options, setOptions] = useState([]);
   const [selectedOptions, setSelectedOptions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -74,8 +76,11 @@ export default function AssociateKnowledgeModal({ isOpen, onClose, onConfirm, do
           )}
         </div>
         <div className="modal-actions">
-          <button onClick={onClose}>Cancel</button>
-          {onConfirm && <button onClick={handleConfirm} disabled={selectedOptions.length === 0}>Confirm</button>}
+          <button onClick={() => navigate('/knowledge-card/new')}>Create New Knowledge Card</button>
+          <div>
+            <button onClick={onClose}>Cancel</button>
+            {onConfirm && <button onClick={handleConfirm} disabled={selectedOptions.length === 0}>Confirm</button>}
+          </div>
         </div>
       </div>
     </div>

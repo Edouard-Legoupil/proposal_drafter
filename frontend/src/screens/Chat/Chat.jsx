@@ -1019,14 +1019,14 @@ export default function Chat (props)
                                                                                 {renderFormField("Duration", proposalStatus !== 'draft')}
                                                                                 {renderFormField("Targeted Donor", proposalStatus !== 'draft')}
                                                                         </div>
-                                                                        <div className='Chat_form_group'>
-                                                                                <CommonButton onClick={() => setIsAssociateKnowledgeModalOpen(true)} label="Associate Knowledge" disabled={proposalStatus !== 'draft'}/>
-                                                                        </div>
                                                                 </form> : ""
                                                         }
 
                                                         <div className="Chat_inputArea_buttonContainer">
                                                                 <CommonButton onClick={handleGenerateClick} icon={generateIcon} label={generateLabel} loading={generateLoading} loadingLabel={generateLabel === "Generate" ? "Generating" : "Regenerating"} disabled={!buttonEnable || proposalStatus !== 'draft'}/>
+                                                                <div style={{ marginLeft: 'auto' }}>
+                                                                        <CommonButton onClick={() => setIsAssociateKnowledgeModalOpen(true)} label="Associate Knowledge" disabled={proposalStatus !== 'draft'} icon={<i className="fa-solid fa-book-open"></i>}/>
+                                                                </div>
                                                         </div>
                                                 </div>
                                         </>

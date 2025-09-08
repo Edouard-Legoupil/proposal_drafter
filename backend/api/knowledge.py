@@ -130,7 +130,7 @@ async def get_knowledge_cards(
                 params["field_context_id"] = field_context_id
 
             if filters:
-                base_query += " WHERE " + " OR ".join(filters)
+                base_query += " WHERE " + " AND ".join(filters)
 
             base_query += " ORDER BY kc.updated_at DESC"
 
