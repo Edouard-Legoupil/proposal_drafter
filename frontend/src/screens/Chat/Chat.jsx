@@ -220,7 +220,7 @@ export default function Chat (props)
                                 case "Country / Location(s)":
                                         return [...filteredFieldContexts, ...newFieldContexts].map(fc => ({ value: fc.id, label: fc.name }));
                                 case "Geographical Scope":
-                                        return ["One Area", "One Country Operation", "Multiple Country","One Region","Route-Based-Approach","Global"].map(gc => ({ value: gc, label: gc }));
+                                        return [ "One Country Operation", "Multiple Country","One Region","Route-Based-Approach", "Area-Based-Approach","Global Coverage"].map(gc => ({ value: gc, label: gc }));
                                 case "Duration":
                                         const durationOptions = ["1 month", "3 months", "6 months", "12 months", "18 months", "24 months", "30 months", "36 months"];
                                         return [...durationOptions.map(d => ({ value: d, label: d })), ...newDurations.map(d => ({ value: d.id, label: d.name }))];
