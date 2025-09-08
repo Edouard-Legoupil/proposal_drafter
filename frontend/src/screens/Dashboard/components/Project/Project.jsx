@@ -58,15 +58,15 @@ export default function Project ({ project, date, onClick, isReview = false, pro
                                         </button>
                                         {popoverVisible && (
                                                 <div popover="auto" className='Project_optionsPopover' id={`popover-${projectIndex+1}`} >
-                                                        <div className='Project_optionsPopover_option' onClick={(e) => { e.stopPropagation(); onClick(e); }} data-testid="project-view-button">
+                                                        <div className={`Project_optionsPopover_option ${project.status === 'in_review' ? 'disabled' : ''}`} onClick={(e) => { e.stopPropagation(); if(project.status !== 'in_review') {onClick(e)} }} data-testid="project-view-button">
                                                                 <img src={view} alt="View" />
                                                                 View
                                                         </div>
-                                                        <div className='Project_optionsPopover_option' onClick={(e) => { e.stopPropagation(); handleTransferOwnership(project.proposal_id); }} data-testid="project-transfer-button">
+                                                        <div className={`Project_optionsPopover_option ${project.status === 'in_review' ? 'disabled' : ''}`} onClick={(e) => { e.stopPropagation(); if(project.status !== 'in_review') {handleTransferOwnership(project.proposal_id)} }} data-testid="project-transfer-button">
                                                                 <img className='Project_optionsPopover_option_transfer' src={transfer} alt="Transfer" />
                                                                 Transfer
                                                         </div>
-                                                        <div className='Project_optionsPopover_option' onClick={(e) => { e.stopPropagation(); handleDeleteProject(project.proposal_id); }} data-testid="project-delete-button">
+                                                        <div className={`Project_optionsPopover_option ${project.status === 'in_review' ? 'disabled' : ''}`} onClick={(e) => { e.stopPropagation(); if(project.status !== 'in_review') {handleDeleteProject(project.proposal_id)} }} data-testid="project-delete-button">
                                                                 <img className='Project_optionsPopover_option_delete' src={bin} alt="Delete" />
                                                                 Delete
                                                         </div>
@@ -85,7 +85,7 @@ export default function Project ({ project, date, onClick, isReview = false, pro
                 )
         }
 
-        return  <article className={`Dashboard_project ${popoverVisible ? 'popover-active' : ''}`} onClick={onClick} data-testid="project-card">
+        return  <article className={`Dashboard_project ${popoverVisible ? 'popover-active' : ''} ${project.status === 'in_review' ? 'disabled' : ''}`} onClick={() => project.status !== 'in_review' && onClick()} data-testid="project-card">
                         <div className="Dashboard_project_title">
                                 <h3 id={`proj-${project.proposal_id}`}>{project.project_title}</h3>
                                 <button className="Dashboard_project_tripleDotsContainer" onClick={togglePopover} aria-haspopup="true" aria-expanded={popoverVisible} data-testid="project-options-button">
@@ -93,15 +93,15 @@ export default function Project ({ project, date, onClick, isReview = false, pro
                                 </button>
                                 {popoverVisible && (
                                         <div popover="auto" className='Project_optionsPopover' id={`popover-${projectIndex+1}`} >
-                                                <div className='Project_optionsPopover_option' onClick={(e) => { e.stopPropagation(); onClick(e); }} data-testid="project-view-button">
+                                                <div className={`Project_optionsPopover_option ${project.status === 'in_review' ? 'disabled' : ''}`} onClick={(e) => { e.stopPropagation(); if(project.status !== 'in_review') {onClick(e)} }} data-testid="project-view-button">
                                                         <img src={view} alt="View" />
                                                         View
                                                 </div>
-                                                <div className='Project_optionsPopover_option' onClick={(e) => { e.stopPropagation(); handleTransferOwnership(project.proposal_id); }} data-testid="project-transfer-button">
+                                                <div className={`Project_optionsPopover_option ${project.status === 'in_review' ? 'disabled' : ''}`} onClick={(e) => { e.stopPropagation(); if(project.status !== 'in_review') {handleTransferOwnership(project.proposal_id)} }} data-testid="project-transfer-button">
                                                         <img className='Project_optionsPopover_option_transfer' src={transfer} alt="Transfer" />
                                                         Transfer
                                                 </div>
-                                                <div className='Project_optionsPopover_option' onClick={(e) => { e.stopPropagation(); handleDeleteProject(project.proposal_id); }} data-testid="project-delete-button">
+                                                <div className={`Project_optionsPopover_option ${project.status === 'in_review' ? 'disabled' : ''}`} onClick={(e) => { e.stopPropagation(); if(project.status !== 'in_review') {handleDeleteProject(project.proposal_id)} }} data-testid="project-delete-button">
                                                         <img className='Project_optionsPopover_option_delete' src={bin} alt="Delete" />
                                                         Delete
                                                 </div>

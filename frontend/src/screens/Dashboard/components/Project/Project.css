@@ -24,6 +24,11 @@
     z-index: 10;
 }
 
+.Dashboard_project.disabled {
+    cursor: not-allowed;
+    background-color: #f9f9f9;
+}
+
 .Dashboard_project_title {
         display: flex;
         justify-content: space-between;
@@ -85,6 +90,16 @@
 
 .Project_optionsPopover_option > img {
         height: 16px;
+}
+
+.Project_optionsPopover_option.disabled {
+    color: #ccc;
+    cursor: not-allowed;
+    background-color: #f9f9f9;
+}
+
+.Project_optionsPopover_option.disabled:hover {
+    background-color: #f9f9f9;
 }
 
 .Dashboard_project_description {
