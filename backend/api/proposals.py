@@ -849,6 +849,12 @@ async def submit_review(proposal_id: uuid.UUID, request: SubmitReviewRequest, cu
                 {"pid": proposal_id}
             ).scalar()
 
+            # Mark the original review request as completed by deleting it, since comments are now individual rows
+            connection.execute(
+                text("DELETE FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND status = 'pending'"),
+                {"proposal_id": proposal_id, "user_id": user_id}
+            )
+
             # Insert each comment as a new row
             for comment in request.comments:
                 if comment.review_text: # Only save comments that have text
@@ -867,12 +873,6 @@ async def submit_review(proposal_id: uuid.UUID, request: SubmitReviewRequest, cu
                             "severity": comment.severity
                         }
                     )
-
-            # Mark the original review request as completed by deleting it, since comments are now individual rows
-            connection.execute(
-                text("DELETE FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND status = 'pending'"),
-                {"proposal_id": proposal_id, "user_id": user_id}
-            )
 
         return {"message": "Review submitted successfully."}
     except Exception as e:
@@ -916,17 +916,34 @@ async def submit_for_review(proposal_id: uuid.UUID, request: SubmitPeerReviewReq
 
             # Add the peer reviewers
             for reviewer_info in request.reviewers:
-                connection.execute(
+                # Check if a pending review already exists for this reviewer and proposal
+                pending_review = connection.execute(
                     text("""
-                        INSERT INTO proposal_peer_reviews (proposal_id, reviewer_id, deadline, status)
-                        VALUES (:proposal_id, :reviewer_id, :deadline, 'pending')
-                        ON CONFLICT (proposal_id, reviewer_id) DO UPDATE SET
-                            deadline = EXCLUDED.deadline,
-                            status = 'pending',
-                            updated_at = NOW()
+                        SELECT id FROM proposal_peer_reviews
+                        WHERE proposal_id = :proposal_id AND reviewer_id = :reviewer_id AND status = 'pending'
                     """),
-                    {"proposal_id": proposal_id, "reviewer_id": reviewer_info.user_id, "deadline": reviewer_info.deadline}
-                )
+                    {"proposal_id": proposal_id, "reviewer_id": reviewer_info.user_id}
+                ).fetchone()
+
+                if pending_review:
+                    # If a pending review exists, update its deadline
+                    connection.execute(
+                        text("""
+                            UPDATE proposal_peer_reviews
+                            SET deadline = :deadline, updated_at = NOW()
+                            WHERE id = :id
+                        """),
+                        {"deadline": reviewer_info.deadline, "id": pending_review.id}
+                    )
+                else:
+                    # Otherwise, insert a new pending review
+                    connection.execute(
+                        text("""
+                            INSERT INTO proposal_peer_reviews (proposal_id, reviewer_id, deadline, status)
+                            VALUES (:proposal_id, :reviewer_id, :deadline, 'pending')
+                        """),
+                        {"proposal_id": proposal_id, "reviewer_id": reviewer_info.user_id, "deadline": reviewer_info.deadline}
+                    )
 
         return {"message": "Proposal submitted for peer review."}
     except Exception as e:
