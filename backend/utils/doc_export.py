@@ -4,6 +4,7 @@ import re
 from typing import Dict
 
 # Third-Party Libraries
+import openpyxl
 from docx import Document
 from docx.shared import Pt, RGBColor
 from markdown_it import MarkdownIt
@@ -184,6 +185,69 @@ def create_word_from_sections(form_data: Dict, ordered_sections: Dict) -> Docume
     return doc
 
 
+def create_excel_from_sections(ordered_sections: Dict) -> bytes:
+    """
+    Generates an .xlsx document from proposal data, with each table in a separate sheet.
+
+    Args:
+        ordered_sections: A dictionary of the proposal sections and their content.
+
+    Returns:
+        A byte stream containing the generated .xlsx file.
+    """
+    workbook = openpyxl.Workbook()
+    workbook.remove(workbook.active)  # Remove the default sheet
+
+    md = MarkdownIt().use(front_matter_plugin).enable('table')
+    table_count = 0
+
+    for section, content in ordered_sections.items():
+        if not content:
+            continue
+
+        tokens = md.parse(content)
+        i = 0
+        while i < len(tokens):
+            token = tokens[i]
+            if token.type == "table_open":
+                table_count += 1
+                headers = []
+                rows = []
+                i += 1  # Move to thead_open
+
+                while i < len(tokens) and tokens[i].type != "table_close":
+                    if tokens[i].type == "tr_open":
+                        row_data = []
+                        i += 1
+                        while i < len(tokens) and tokens[i].type != "tr_close":
+                            if tokens[i].type in ("th_open", "td_open"):
+                                i += 1
+                                if i < len(tokens) and tokens[i].type == "inline":
+                                    cell_text = tokens[i].content
+                                    row_data.append(cell_text.strip())
+                                i += 1  # Move past closing tag
+                            i += 1
+                        if not headers:
+                            headers = row_data
+                        else:
+                            rows.append(row_data)
+                    i += 1
+
+                if headers:
+                    sheet_title = f"Table {table_count}"
+                    # Truncate sheet title if it's too long
+                    if len(sheet_title) > 31:
+                        sheet_title = sheet_title[:31]
+                    worksheet = workbook.create_sheet(title=sheet_title)
+                    worksheet.append(headers)
+                    for row in rows:
+                        worksheet.append(row)
+            i += 1
+
+    excel_buffer = io.BytesIO()
+    workbook.save(excel_buffer)
+    excel_buffer.seek(0)
+    return excel_buffer.read()
 
 
 def create_pdf_from_sections(form_data: Dict, ordered_sections: Dict) -> bytes:

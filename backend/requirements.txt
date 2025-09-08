@@ -55,6 +55,9 @@ werkzeug
 # PDF document generation library
 reportlab
 
+# Library for reading and writing Excel 2010 xlsx/xlsm files
+openpyxl
+
 # Task scheduling library for running jobs at specified intervals
 apscheduler
 

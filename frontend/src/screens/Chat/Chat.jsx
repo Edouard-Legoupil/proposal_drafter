@@ -765,6 +765,42 @@ export default function Chat (props)
                         throw new Error(`Download failed: ${response.status} ${response.statusText}`);
         }
 
+        async function handleExportTables ()
+        {
+                const proposalId = sessionStorage.getItem("proposal_id");
+
+                if (!proposalId || proposalId === "undefined") {
+                        setErrorMessage("No draft available to export. Please create or load a draft first.");
+                        return;
+                }
+
+                const response = await fetch(`${API_BASE_URL}/generate-tables/${sessionStorage.getItem("proposal_id")}`, {
+                        method: "GET",
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: "include"
+                })
+
+                if(response.ok)
+                {
+                        const blob = await response.blob();
+                        const link = document.createElement('a');
+                        link.href = URL.createObjectURL(blob);
+                        link.download = formData["Project Draft Short name"].value ?? "proposal" + "_tables.xlsx";
+                        document.body.appendChild(link);
+                        link.click();
+                        link.remove();
+
+                        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+                }
+                else if(response.status === 401)
+                {
+                        sessionStorage.setItem("session_expired", "Session expired. Please login again.")
+                        navigate("/login")
+                }
+                else
+                        throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+        }
+
         async function handleRequestSubmission ()
         {
                 const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/request-submission`, {
@@ -1045,6 +1081,10 @@ export default function Chat (props)
                                                         <button type="button" onClick={() => handleExport("docx")}>
                                                                 <img src={word_icon} />
                                                                 Download Document
+                                                        </button>
+                                                        <button type="button" onClick={() => handleExportTables()}>
+                                                                <img src={word_icon} />
+                                                                Download Tables
                                                         </button>
                                                         <div className="Chat_workflow_status_container">
                                                             <div className="workflow-stage-box">
