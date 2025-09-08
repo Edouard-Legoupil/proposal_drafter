@@ -24,10 +24,6 @@
     z-index: 10;
 }
 
-.Dashboard_project.disabled {
-    cursor: not-allowed;
-    background-color: #f9f9f9;
-}
 
 .Dashboard_project_title {
         display: flex;
@@ -52,6 +48,7 @@
 }
 
 .Project_optionsPopover {
+        display: none;
         width: 105px;
 
         position: absolute;
@@ -59,8 +56,8 @@
         margin: 0;
         inset: auto;
 
-        top: anchor(top);
-        right: anchor(right);
+        top: 24px;
+        right: 0;
 
         margin-top: 24px;
 
@@ -69,6 +66,12 @@
         border: none;
 
         border-radius: 8px;
+        background-color: white;
+        z-index: 20;
+}
+
+.Project_optionsPopover.visible {
+    display: block;
 }
 
 .Project_optionsPopover_option {

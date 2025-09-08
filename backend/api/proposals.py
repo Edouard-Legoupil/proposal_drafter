@@ -1152,9 +1152,15 @@ async def create_field_context(request: CreateFieldContextRequest, current_user:
     try:
         with get_engine().begin() as connection:
             connection.execute(
-                text("INSERT INTO field_contexts (id, title, name, geographic_coverage, created_by) VALUES (:id, :title, :name, :geo, :user_id)"),
-                {"id": new_id, "title": request.name, "name": request.name, "geo": request.geographic_coverage, "user_id": current_user["user_id"]}
-
+                text("INSERT INTO field_contexts (id, title, name, category, geographic_coverage, created_by) VALUES (:id, :title, :name, :category, :geo, :user_id)"),
+                {
+                    "id": new_id,
+                    "title": request.name,
+                    "name": request.name,
+                    "category": request.category,
+                    "geo": request.geographic_coverage,
+                    "user_id": current_user["user_id"]
+                }
             )
         return {"id": str(new_id), "name": request.name, "geographic_coverage": request.geographic_coverage}
     except Exception as e:
