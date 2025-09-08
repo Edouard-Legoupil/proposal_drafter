@@ -15,13 +15,16 @@ def test_user_registration_and_login(page: Page):
     # Base URL for the application
     base_url = "http://localhost:8502"
 
+    page.goto(f"{base_url}")
 
     # Take screenshot landinf 
     page.screenshot(path="playwright/test-results/1_landing.png")
 
     # Navigate to the registration page
+
+    page.get_by_test_id("register-link").click()
     # Assuming the registration page is at /register
-    page.goto(f"{base_url}/register")
+
 
     # Fill out the registration form
     # These are common labels, but might need adjustment

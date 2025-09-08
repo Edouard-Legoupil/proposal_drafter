@@ -112,7 +112,8 @@ CREATE TABLE IF NOT EXISTS proposal_peer_reviews (
     type_of_comment TEXT,
     severity TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (proposal_id, reviewer_id)
 );
 
 -- Create Knowledge Cards table

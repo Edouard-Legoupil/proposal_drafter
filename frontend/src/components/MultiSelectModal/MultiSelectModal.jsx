@@ -11,6 +11,7 @@ export default function MultiSelectModal({ isOpen, onClose, options, selectedOpt
 
   const handleConfirm = () => {
     onConfirm({ selectedUsers: selectedOptions, deadline });
+    onClose();
   };
 
   const handleCheckboxChange = (option) => {
@@ -51,8 +52,7 @@ export default function MultiSelectModal({ isOpen, onClose, options, selectedOpt
           </div>
         )}
         <div className="modal-actions">
-          <button onClick={onClose} data-testid="close-button">Close</button>
-          {onConfirm && <button onClick={handleConfirm} data-testid="confirm-button">Confirm</button>}
+          {onConfirm && <button onClick={handleConfirm} disabled={selectedOptions.length === 0} data-testid="confirm-button">Confirm</button>}
         </div>
       </div>
     </div>

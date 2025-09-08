@@ -13,3 +13,4 @@ backend/log/app.log
 backend/log/generate_proposal_log.txt
 backend/log/generate_proposal_log.txt
 /frontend/node_modules/
+logs/*

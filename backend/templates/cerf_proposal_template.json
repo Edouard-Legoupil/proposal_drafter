@@ -1,6 +1,6 @@
 {
     "template_type": "Proposal",
-    "donors": ["CERF"],
+    "donors": ["CERF Rapid Response", "CERF Underfunded Emergencies"],
     "project_info": {
       "section_name": "Project Information",
       "fields": [
