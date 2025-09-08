@@ -967,7 +967,7 @@ export default function Chat (props)
                                                         Results
                                                 </div>
 
-                                                {Object.values(proposal).some(section => section.content) ? <div className='Chat_exportButtons'>
+                                                {Object.keys(proposal).length > 0 && Object.values(proposal).every(section => section.content) ? <div className='Chat_exportButtons'>
                                                         <button type="button" onClick={() => handleExport("docx")}>
                                                                 <img src={word_icon} />
                                                                 Download Document
@@ -1041,7 +1041,7 @@ export default function Chat (props)
                                                                          <div className="Chat_sectionTitle">{sectionName}</div>
 
                                                                         {!generateLoading && sectionObj[1].content && sectionObj[1].open && !isApproved ? <div className="Chat_sectionOptions" data-testid={`section-options-${i}`}>
-                                                                                {!isEdit || (selectedSection === i && isEdit) ? <button type="button" onClick={() => handleEditClick(i)} style={(selectedSection === i && isEdit && regenerateSectionLoading) ? {pointerEvents: "none"} : {}} aria-label={`edit-section-${i}`}>
+                                                                                {!isEdit || (selectedSection === i && isEdit) ? <button type="button" onClick={() => handleEditClick(i)} style={(selectedSection === i && isEdit && regenerateSectionLoading) ? {pointerEvents: "none"} : {}} aria-label={`edit-section-${i}`} disabled={proposalStatus === 'in_review'}>
                                                                                         <img src={(selectedSection === i && isEdit) ? save : edit} />
                                                                                         <span>{(selectedSection === i && isEdit) ? "Save" : "Edit"}</span>
                                                                                 </button> : "" }

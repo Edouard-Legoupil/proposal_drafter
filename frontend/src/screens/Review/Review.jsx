@@ -75,6 +75,7 @@ export default function Review ()
 
                 if(response.ok)
                 {
+                        sessionStorage.setItem('selectedDashboardTab', 'reviews');
                         navigate("/dashboard")
                 }
                 else if(response.status === 401)

@@ -1292,13 +1292,21 @@ async def get_status_history(proposal_id: uuid.UUID, current_user: dict = Depend
     user_id = current_user["user_id"]
     try:
         with get_engine().connect() as connection:
-            # First, verify the user has access to the proposal
+            # Verify the user has access to the proposal (owner or reviewer)
             proposal_owner = connection.execute(
                 text("SELECT user_id FROM proposals WHERE id = :id"),
                 {"id": proposal_id}
             ).scalar()
 
-            if not proposal_owner or proposal_owner != user_id:
+            is_reviewer = connection.execute(
+                text("SELECT 1 FROM proposal_peer_reviews WHERE proposal_id = :pid AND reviewer_id = :rid"),
+                {"pid": proposal_id, "rid": user_id}
+            ).scalar()
+
+            if not proposal_owner:
+                raise HTTPException(status_code=404, detail="Proposal not found.")
+
+            if proposal_owner != user_id and not is_reviewer:
                 raise HTTPException(status_code=403, detail="You do not have permission to view this proposal's history.")
 
             # Get distinct statuses from the history
