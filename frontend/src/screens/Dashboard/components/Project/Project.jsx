@@ -51,7 +51,28 @@ export default function Project ({ project, date, onClick, isReview = false, pro
         if (isReview) {
                 return (
                         <article className="card" onClick={onClick} data-testid="review-card">
-                                <h3 id={`review-${project.proposal_id}`}>{project.project_title}</h3>
+                                <div className="Dashboard_project_title">
+                                        <h3 id={`review-${project.proposal_id}`}>{project.project_title}</h3>
+                                        <button className="Dashboard_project_tripleDotsContainer" onClick={togglePopover} aria-haspopup="true" aria-expanded={popoverVisible} data-testid="project-options-button">
+                                                <img src={tripleDots} alt="Options" />
+                                        </button>
+                                        {popoverVisible && (
+                                                <div popover="auto" className='Project_optionsPopover' id={`popover-${projectIndex+1}`} >
+                                                        <div className='Project_optionsPopover_option' onClick={(e) => { e.stopPropagation(); onClick(e); }} data-testid="project-view-button">
+                                                                <img src={view} alt="View" />
+                                                                View
+                                                        </div>
+                                                        <div className='Project_optionsPopover_option' onClick={(e) => { e.stopPropagation(); handleTransferOwnership(project.proposal_id); }} data-testid="project-transfer-button">
+                                                                <img className='Project_optionsPopover_option_transfer' src={transfer} alt="Transfer" />
+                                                                Transfer
+                                                        </div>
+                                                        <div className='Project_optionsPopover_option' onClick={(e) => { e.stopPropagation(); handleDeleteProject(project.proposal_id); }} data-testid="project-delete-button">
+                                                                <img className='Project_optionsPopover_option_delete' src={bin} alt="Delete" />
+                                                                Delete
+                                                        </div>
+                                                </div>
+                                        )}
+                                </div>
                                 <h2>Requester: {project.requester_name || 'N/A'}</h2>
                                 <p><strong>Deadline:</strong> <time dateTime={project.deadline || ''}>{project.deadline ? new Date(project.deadline).toLocaleDateString() : 'N/A'}</time></p>
                                 <p>
