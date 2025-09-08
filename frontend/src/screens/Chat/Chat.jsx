@@ -45,6 +45,7 @@ export default function Chat (props)
         const [donors, setDonors] = useState([]);
         const [outcomes, setOutcomes] = useState([]);
         const [fieldContexts, setFieldContexts] = useState([]);
+        const [filteredFieldContexts, setFilteredFieldContexts] = useState([]);
         const [newDonors, setNewDonors] = useState([]);
         const [newOutcomes, setNewOutcomes] = useState([]);
         const [newFieldContexts, setNewFieldContexts] = useState([]);
@@ -70,7 +71,9 @@ export default function Chat (props)
                                 }
                                 if (fieldContextsRes.ok) {
                                         const data = await fieldContextsRes.json();
-                                        setFieldContexts(data.field_contexts);
+                                        const sortedFieldContexts = data.field_contexts.sort((a, b) => a.name.localeCompare(b.name));
+                                        setFieldContexts(sortedFieldContexts);
+                                        setFilteredFieldContexts(sortedFieldContexts);
                                 }
                         } catch (error) {
                                 console.error("Error fetching form data:", error);
@@ -100,6 +103,20 @@ export default function Chat (props)
         useEffect(() => {
                 getUsers()
         }, [])
+
+        useEffect(() => {
+                const scope = formData['Geographical Scope'].value;
+                if (scope) {
+                        const filtered = fieldContexts.filter(fc => fc.geographic_coverage === scope);
+                        setFilteredFieldContexts(filtered);
+                } else {
+                        setFilteredFieldContexts(fieldContexts);
+                }
+
+                if (formData['Country / Location(s)'].value) {
+                    handleFormInput({ target: { value: "" } }, "Country / Location(s)");
+                }
+        }, [formData['Geographical Scope'].value, fieldContexts]);
 
         const [form_expanded, setFormExpanded] = useState(true)
         const [formData, setFormData] = useState({
@@ -190,7 +207,7 @@ export default function Chat (props)
                                 case "Targeted Donor":
                                         return [...donors, ...newDonors].map(d => ({ value: d.id, label: d.name }));
                                 case "Country / Location(s)":
-                                        return [...fieldContexts, ...newFieldContexts].map(fc => ({ value: fc.id, label: fc.name }));
+                                        return [...filteredFieldContexts, ...newFieldContexts].map(fc => ({ value: fc.id, label: fc.name }));
                                 case "Geographical Scope":
                                         return ["One Area", "One Country Operation", "Multiple Country","One Region","Route-Based-Approach","Global"].map(gc => ({ value: gc, label: gc }));
                                 case "Duration":
@@ -387,13 +404,25 @@ export default function Chat (props)
                         const updatedFormData = { ...Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])) };
 
                         const createNewOption = async (endpoint, value) => {
+                                let body = { name: value.substring(4) };
+                                if (endpoint === 'field-contexts') {
+                                    body.geographic_coverage = formData['Geographical Scope'].value;
+                                    body.category = 'Country'; // Default category
+                                }
+
                                 const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ name: value.substring(4) }),
+                                        body: JSON.stringify(body),
                                         credentials: 'include'
                                 });
-                                if (!response.ok) throw new Error(`Failed to create new ${endpoint}`);
+
+                                if (!response.ok) {
+                                    const errorData = await response.json();
+                                    console.error("Failed to create new option:", errorData);
+                                    throw new Error(`Failed to create new ${endpoint}`);
+                                }
+
                                 const data = await response.json();
                                 return data.id;
                         };

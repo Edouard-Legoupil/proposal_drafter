@@ -114,6 +114,7 @@ class CreateOutcomeRequest(BaseModel):
 class CreateFieldContextRequest(BaseModel):
     name: str
     geographic_coverage: Optional[str] = None
+    category: str
 
 class UpdateProposalStatusRequest(BaseModel):
     status: str
