@@ -5,6 +5,7 @@ from typing import Dict
 
 # Third-Party Libraries
 import openpyxl
+from openpyxl.styles import Font, PatternFill
 from docx import Document
 from docx.shared import Pt, RGBColor
 from markdown_it import MarkdownIt
@@ -201,6 +202,9 @@ def create_excel_from_sections(ordered_sections: Dict) -> bytes:
     md = MarkdownIt().use(front_matter_plugin).enable('table')
     table_count = 0
 
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+
     for section, content in ordered_sections.items():
         if not content:
             continue
@@ -235,13 +239,35 @@ def create_excel_from_sections(ordered_sections: Dict) -> bytes:
 
                 if headers:
                     sheet_title = f"Table {table_count}"
-                    # Truncate sheet title if it's too long
                     if len(sheet_title) > 31:
                         sheet_title = sheet_title[:31]
+
                     worksheet = workbook.create_sheet(title=sheet_title)
                     worksheet.append(headers)
                     for row in rows:
                         worksheet.append(row)
+
+                    # Apply formatting
+                    for cell in worksheet[1]:
+                        cell.font = header_font
+                        cell.fill = header_fill
+
+                    # Auto-adjust column widths
+                    for col in worksheet.columns:
+                        max_length = 0
+                        column = col[0].column_letter
+                        for cell in col:
+                            try:
+                                if len(str(cell.value)) > max_length:
+                                    max_length = len(cell.value)
+                            except:
+                                pass
+                        adjusted_width = (max_length + 2)
+                        worksheet.column_dimensions[column].width = adjusted_width
+
+                    # Add autofilter
+                    worksheet.auto_filter.ref = worksheet.dimensions
+
             i += 1
 
     excel_buffer = io.BytesIO()
