@@ -8,6 +8,7 @@ import remarkGfm from 'remark-gfm'
 import Base from '../../components/Base/Base'
 import CommonButton from '../../components/CommonButton/CommonButton'
 import MultiSelectModal from '../../components/MultiSelectModal/MultiSelectModal'
+import AssociateKnowledgeModal from '../../components/AssociateKnowledgeModal/AssociateKnowledgeModal'
 import CreatableSelect from 'react-select/creatable';
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
@@ -50,6 +51,7 @@ export default function Chat (props)
 
         const [isModalOpen, setIsModalOpen] = useState(false)
         const [isPeerReviewModalOpen, setIsPeerReviewModalOpen] = useState(false)
+        const [isAssociateKnowledgeModalOpen, setIsAssociateKnowledgeModalOpen] = useState(false)
         const [users, setUsers] = useState([])
         const [selectedUsers, setSelectedUsers] = useState([])
 
@@ -911,6 +913,18 @@ export default function Chat (props)
                 }
         }
 
+        function handleAssociateKnowledgeConfirm(selectedCards) {
+                let sectionsContent = "";
+                selectedCards.forEach(card => {
+                        if (card.generated_sections) {
+                                for (const [section, content] of Object.entries(card.generated_sections)) {
+                                        sectionsContent += `## ${section}\n\n${content}\n\n`;
+                                }
+                        }
+                });
+                setUserPrompt(prev => `${prev}\n\n${sectionsContent}`);
+        }
+
         return  <Base>
                 <div className={`Chat ${isMobile && isMobileMenuOpen ? 'mobile-menu-open' : ''}`}>
                         <MultiSelectModal
@@ -922,6 +936,14 @@ export default function Chat (props)
                                 onConfirm={handleSubmitForPeerReview}
                                 title="Select Users for Peer Review"
                                 showDeadline={true}
+                        />
+                        <AssociateKnowledgeModal
+                                isOpen={isAssociateKnowledgeModalOpen}
+                                onClose={() => setIsAssociateKnowledgeModalOpen(false)}
+                                onConfirm={handleAssociateKnowledgeConfirm}
+                                donorId={formData["Targeted Donor"].value}
+                                outcomeId={Array.isArray(formData["Main Outcome"].value) ? formData["Main Outcome"].value[0] : formData["Main Outcome"].value}
+                                fieldContextId={formData["Country / Location(s)"].value}
                         />
                         {((!isMobile && sidebarOpen) || (isMobile && isMobileMenuOpen)) && <aside>
                                 <ul className='Chat_sidebar'>
@@ -996,6 +1018,9 @@ export default function Chat (props)
                                                                                 {renderFormField("Budget Range", proposalStatus !== 'draft')}
                                                                                 {renderFormField("Duration", proposalStatus !== 'draft')}
                                                                                 {renderFormField("Targeted Donor", proposalStatus !== 'draft')}
+                                                                        </div>
+                                                                        <div className='Chat_form_group'>
+                                                                                <CommonButton onClick={() => setIsAssociateKnowledgeModalOpen(true)} label="Associate Knowledge" disabled={proposalStatus !== 'draft'}/>
                                                                         </div>
                                                                 </form> : ""
                                                         }

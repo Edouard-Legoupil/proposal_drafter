@@ -80,13 +80,18 @@ async def create_knowledge_card(card: KnowledgeCardIn, current_user: dict = Depe
 
 
 @router.get("/knowledge-cards")
-async def get_knowledge_cards(current_user: dict = Depends(get_current_user)):
+async def get_knowledge_cards(
+    donor_id: Optional[uuid.UUID] = None,
+    outcome_id: Optional[uuid.UUID] = None,
+    field_context_id: Optional[uuid.UUID] = None,
+    current_user: dict = Depends(get_current_user)
+):
     """
-    Fetches all knowledge cards from the database.
+    Fetches knowledge cards from the database, with optional filtering.
     """
     try:
         with get_engine().connect() as connection:
-            query = text("""
+            base_query = """
                 SELECT
                     kc.id,
                     kc.title,
@@ -95,6 +100,7 @@ async def get_knowledge_cards(current_user: dict = Depends(get_current_user)):
                     kc.status,
                     kc.created_at,
                     kc.updated_at,
+                    kc.generated_sections,
                     d.name as donor_name,
                     o.name as outcome_name,
                     fc.name as field_context_name,
@@ -109,14 +115,35 @@ async def get_knowledge_cards(current_user: dict = Depends(get_current_user)):
                     outcomes o ON kc.outcome_id = o.id
                 LEFT JOIN
                     field_contexts fc ON kc.field_context_id = fc.id
-                ORDER BY
-                    kc.updated_at DESC
-            """)
-            result = connection.execute(query)
+            """
+
+            filters = []
+            params = {}
+            if donor_id:
+                filters.append("kc.donor_id = :donor_id")
+                params["donor_id"] = donor_id
+            if outcome_id:
+                filters.append("kc.outcome_id = :outcome_id")
+                params["outcome_id"] = outcome_id
+            if field_context_id:
+                filters.append("kc.field_context_id = :field_context_id")
+                params["field_context_id"] = field_context_id
+
+            if filters:
+                base_query += " WHERE " + " OR ".join(filters)
+
+            base_query += " ORDER BY kc.updated_at DESC"
+
+            query = text(base_query)
+            result = connection.execute(query, params)
             cards = [dict(row) for row in result.mappings().fetchall()]
             for card in cards:
                 if card.get('references') is None:
                     card['references'] = []
+                if card.get('generated_sections'):
+                    card['generated_sections'] = json.loads(card['generated_sections'])
+                else:
+                    card['generated_sections'] = {}
             return {"knowledge_cards": cards}
     except Exception as e:
         logger.error(f"[GET KNOWLEDGE CARDS ERROR] {e}", exc_info=True)
@@ -139,6 +166,7 @@ async def get_knowledge_card(card_id: uuid.UUID, current_user: dict = Depends(ge
                     kc.status,
                     kc.created_at,
                     kc.updated_at,
+                    kc.generated_sections,
                     kc.donor_id,
                     kc.outcome_id,
                     kc.field_context_id,
@@ -167,6 +195,10 @@ async def get_knowledge_card(card_id: uuid.UUID, current_user: dict = Depends(ge
             card_dict = dict(card)
             if card_dict.get('references') is None:
                 card_dict['references'] = []
+            if card_dict.get('generated_sections'):
+                card_dict['generated_sections'] = json.loads(card_dict['generated_sections'])
+            else:
+                card_dict['generated_sections'] = {}
 
             return {"knowledge_card": card_dict}
     except HTTPException as http_exc:
