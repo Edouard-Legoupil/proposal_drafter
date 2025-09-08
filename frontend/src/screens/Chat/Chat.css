@@ -5,16 +5,45 @@
         overflow: hidden;
 }
 
+.Chat_menuButton {
+    display: none;
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 1001;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+}
+
 .Chat_sidebar {
         background: #17223B;
-
         list-style-type: none;
-
         width: 200px;
         height: 100%;
         overflow-y: auto;
-
         padding-top: 20px;
+        transition: transform 0.3s ease-in-out;
+}
+
+@media (max-width: 768px) {
+    .Chat_menuButton {
+        display: block;
+    }
+
+    .Chat_sidebar {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        transform: translateX(-100%);
+        z-index: 1000;
+    }
+
+    .mobile-menu-open .Chat_sidebar {
+        transform: translateX(0);
+    }
 }
 
 .Chat_sidebarOption {

@@ -31,7 +31,18 @@ export default function Chat (props)
 {
         const navigate = useNavigate()
 
-        const [sidebarOpen, setSidebarOpen] = useState(false)
+        const [sidebarOpen, setSidebarOpen] = useState(false);
+        const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+        const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+        useEffect(() => {
+            function handleResize() {
+                setIsMobile(window.innerWidth < 768);
+            }
+
+            window.addEventListener('resize', handleResize);
+            return () => window.removeEventListener('resize', handleResize);
+        }, []);
 
         const [titleName, setTitleName] = useState(props?.title ?? "Generate Draft Proposal")
 
@@ -104,20 +115,6 @@ export default function Chat (props)
                 getUsers()
         }, [])
 
-        useEffect(() => {
-                const scope = formData['Geographical Scope'].value;
-                if (scope) {
-                        const filtered = fieldContexts.filter(fc => fc.geographic_coverage === scope);
-                        setFilteredFieldContexts(filtered);
-                } else {
-                        setFilteredFieldContexts(fieldContexts);
-                }
-
-                if (formData['Country / Location(s)'].value) {
-                    handleFormInput({ target: { value: "" } }, "Country / Location(s)");
-                }
-        }, [formData['Geographical Scope'].value, fieldContexts]);
-
         const [form_expanded, setFormExpanded] = useState(true)
         const [formData, setFormData] = useState({
                 "Project Draft Short name": {
@@ -158,6 +155,20 @@ export default function Chat (props)
                         value: ""
                 }
         })
+
+        useEffect(() => {
+                const scope = formData['Geographical Scope'].value;
+                if (scope) {
+                        const filtered = fieldContexts.filter(fc => fc.geographic_coverage === scope);
+                        setFilteredFieldContexts(filtered);
+                } else {
+                        setFilteredFieldContexts(fieldContexts);
+                }
+
+                if (formData['Country / Location(s)'].value) {
+                    handleFormInput({ target: { value: "" } }, "Country / Location(s)");
+                }
+        }, [formData['Geographical Scope'].value, fieldContexts]);
         function handleFormInput (e, label) {
                 setFormData(p => ({
                         ...p,
@@ -394,6 +405,12 @@ export default function Chat (props)
                 }
         // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [sidebarOpen])
+
+        useEffect(() => {
+                if (!generateLoading && proposal && Object.values(proposal).every(section => section.content)) {
+                        topRef.current?.scrollIntoView({ behavior: "smooth" });
+                }
+        }, [generateLoading, proposal]);
 
         async function handleGenerateClick ()
         {
@@ -895,7 +912,7 @@ export default function Chat (props)
         }
 
         return  <Base>
-                <div className="Chat">
+                <div className={`Chat ${isMobile && isMobileMenuOpen ? 'mobile-menu-open' : ''}`}>
                         <MultiSelectModal
                                 isOpen={isPeerReviewModalOpen}
                                 onClose={() => setIsPeerReviewModalOpen(false)}
@@ -906,7 +923,7 @@ export default function Chat (props)
                                 title="Select Users for Peer Review"
                                 showDeadline={true}
                         />
-                        {sidebarOpen ? <aside>
+                        {((!isMobile && sidebarOpen) || (isMobile && isMobileMenuOpen)) && <aside>
                                 <ul className='Chat_sidebar'>
                                         <li
                                                 className={`Chat_sidebarOption ${selectedSection === -1 ? "selectedSection" : ""}`}
@@ -925,9 +942,12 @@ export default function Chat (props)
                                                 </li>
                                         )}
                                 </ul>
-                        </aside> : ""}
+                        </aside>}
 
                         <main className="Chat_right" ref={topRef}>
+                                <button className="Chat_menuButton" onClick={() => setIsMobileMenuOpen(p => !p)}>
+                                        <i className="fa-solid fa-bars"></i>
+                                </button>
                                 {!isApproved ?
                                         <>
                                                 <div className='Dashboard_top'>

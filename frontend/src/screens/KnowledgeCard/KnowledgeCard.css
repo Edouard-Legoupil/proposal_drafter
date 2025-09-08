@@ -4,21 +4,29 @@
     padding: 2rem;
 }
 
-.kc-form-container {
-    flex: 1;
-    padding: 2rem;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    align-self: flex-start;
-}
-
+.kc-form-container,
 .kc-content-container {
     flex: 1;
     padding: 2rem;
     background: #fff;
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    max-height: calc(100vh - 160px);
+    overflow-y: auto;
+}
+
+.kc-form-container {
+    align-self: flex-start;
+}
+
+@media (max-width: 900px) {
+    .kc-container {
+        flex-direction: column;
+    }
+    .kc-form-container,
+    .kc-content-container {
+        max-height: none;
+    }
 }
 
 .kc-section {

@@ -215,29 +215,7 @@ export default function KnowledgeCard() {
                     <form onSubmit={handlePopulate} className="kc-form">
                         <h2>{id ? 'View/Edit Knowledge Card' : 'Create New Knowledge Card'}</h2>
 
-                        <h3>References</h3>
-                        {references.map((ref, index) => (
-                            <div key={index} className="kc-reference-item">
-                                <label htmlFor={`kc-reference-type-${index}`}>Reference Type*</label>
-                                <select id={`kc-reference-type-${index}`} value={ref.reference_type} onChange={e => handleReferenceChange(index, 'reference_type', e.target.value)} required data-testid={`reference-type-select-${index}`}>
-                                    <option value="">Select Type...</option>
-                                    <option value="UNHCR Operation Page">UNHCR Operation Page</option>
-                                    <option value="Donor Content">Donor Content</option>
-                                    <option value="Humanitarian Partner Content">Humanitarian Partner Content</option>
-                                    <option value="Statistics">Statistics</option>
-                                    <option value="Needs Assessment">Needs Assessment</option>
-                                    <option value="Evaluation Report">Evaluation Report</option>
-                                    <option value="Policies">Policies</option>
-                                </select>
-                                <input type="url" placeholder="https://example.com" value={ref.url} onChange={e => handleReferenceChange(index, 'url', e.target.value)} data-testid={`reference-url-input-${index}`} />
-                                <button type="button" onClick={() => removeReference(index)} data-testid={`remove-reference-button-${index}`}>Remove</button>
-                            </div>
-                        ))}
-                        <button type="button" onClick={addReference} data-testid="add-reference-button">Add Reference</button>
 
-                        <div className="kc-form-actions-left">
-                            <CommonButton type="button" label="Identify References" data-testid="identify-references-button" />
-                        </div>
 
                         <label htmlFor="kc-link-type">Link To</label>
                         <select id="kc-link-type" value={linkType} onChange={e => setLinkType(e.target.value)} data-testid="link-type-select">
@@ -285,13 +263,41 @@ export default function KnowledgeCard() {
                         <label htmlFor="kc-summary">Description</label>
                         <textarea id="kc-summary" value={summary} onChange={e => setSummary(e.target.value)} data-testid="summary-textarea" />
 
+                        <h3>References</h3>
+                        {references.map((ref, index) => (
+                            <div key={index} className="kc-reference-item">
+                                <label htmlFor={`kc-reference-type-${index}`}>Reference Type*</label>
+                                <select id={`kc-reference-type-${index}`} value={ref.reference_type} onChange={e => handleReferenceChange(index, 'reference_type', e.target.value)} required data-testid={`reference-type-select-${index}`}>
+                                    <option value="">Select Type...</option>
+                                    <option value="UNHCR Operation Page">UNHCR Operation Page</option>
+                                    <option value="Donor Content">Donor Content</option>
+                                    <option value="Humanitarian Partner Content">Humanitarian Partner Content</option>
+                                    <option value="Statistics">Statistics</option>
+                                    <option value="Needs Assessment">Needs Assessment</option>
+                                    <option value="Evaluation Report">Evaluation Report</option>
+                                    <option value="Policies">Policies</option>
+                                </select>
+                                <input type="url" placeholder="https://example.com" value={ref.url} onChange={e => handleReferenceChange(index, 'url', e.target.value)} data-testid={`reference-url-input-${index}`} />
+                                <button type="button" onClick={() => removeReference(index)} data-testid={`remove-reference-button-${index}`}>Remove</button>
+                            </div>
+                        ))}
+                        <button type="button" onClick={addReference} data-testid="add-reference-button">Add Reference</button>
+
+                        <div className="kc-form-actions-left">
+                            <CommonButton type="button" onClick={() => handleSave()}  label="Identify References"  className="squared-btn" data-testid="identify-references-button" />
+                        </div>
+
+
                         <div className="kc-form-actions">
+
                             <div className="kc-form-actions-left">
-                                <CommonButton type="submit" label="Populate Card Content" loading={loading} disabled={loading || !title} data-testid="populate-card-button" />
+                                <CommonButton type="submit" onClick={() => handleSave()}  label="Populate Card Content" loading={loading} disabled={loading || !title} className="squared-btn" data-testid="populate-card-button" />
                             </div>
+
                             <div className="kc-form-actions-right">
-                                <CommonButton type="button" onClick={() => handleSave()} label="Save Card" loading={loading} disabled={loading || !title} className="squared-btn" data-testid="save-card-button" />
+                                <CommonButton type="button" onClick={() => handleSave()} label="Save Card" loading={loading} disabled={loading || !title}  data-testid="save-card-button" />
                             </div>
+
                         </div>
                     </form>
                 </div>

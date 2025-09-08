@@ -4,14 +4,17 @@ import { useState } from 'react';
 
 export default function MultiSelectModal({ isOpen, onClose, options, selectedOptions, onSelectionChange, title, onConfirm, showDeadline = false }) {
   const [deadline, setDeadline] = useState('');
+  const today = new Date().toISOString().split('T')[0];
 
   if (!isOpen) {
     return null;
   }
 
   const handleConfirm = () => {
-    onConfirm({ selectedUsers: selectedOptions, deadline });
-    onClose();
+    if (new Date(deadline) > new Date()) {
+      onConfirm({ selectedUsers: selectedOptions, deadline });
+      onClose();
+    }
   };
 
   const handleCheckboxChange = (option) => {
@@ -48,11 +51,11 @@ export default function MultiSelectModal({ isOpen, onClose, options, selectedOpt
         {showDeadline && (
           <div className="modal-deadline">
             <label htmlFor="deadline">Deadline:</label>
-            <input type="date" id="deadline" value={deadline} onChange={e => setDeadline(e.target.value)} data-testid="deadline-input" />
+            <input type="date" id="deadline" value={deadline} min={today} onChange={e => setDeadline(e.target.value)} data-testid="deadline-input" />
           </div>
         )}
         <div className="modal-actions">
-          {onConfirm && <button onClick={handleConfirm} disabled={selectedOptions.length === 0} data-testid="confirm-button">Confirm</button>}
+          {onConfirm && <button onClick={handleConfirm} disabled={selectedOptions.length === 0 || !deadline || new Date(deadline) <= new Date()} data-testid="confirm-button">Confirm</button>}
         </div>
       </div>
     </div>
