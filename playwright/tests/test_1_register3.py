@@ -14,12 +14,10 @@ def test_user_registration_and_login(page: Page):
 
 
     # Generate a unique email for the new user
-    email = "test_user_bis@unhcr.org"   
-    name = "Test User bis"
-   
+    email = "test_user_bis_repetita@unhcr.org"   
+    name = "User Repetita"
+    
     password = "password123"
-
- 
 
     # Base URL for the application
     base_url = "http://localhost:8502"
@@ -46,7 +44,7 @@ def test_user_registration_and_login(page: Page):
     page.get_by_test_id("user-menu-button").click()
     page.get_by_test_id("logout-button").click()
 
-   
+    
     # ---------------------
     #context.close()
     #browser.close()
