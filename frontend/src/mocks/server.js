@@ -95,6 +95,30 @@ export const server = setupServer(
                 })
         }),
 
+        http.get(`${API_BASE_URL}/outcomes`, () => {
+                return HttpResponse.json({
+                        outcomes: [
+                                { id: '1', name: 'OA1-Access/Documentation' },
+                                { id: '2', name: 'OA2-Something Else' },
+                        ]
+                })
+        }),
+
+        http.post(`${API_BASE_URL}/donors`, async ({ request }) => {
+                const { name } = await request.json()
+                return HttpResponse.json({ id: `new_${name}`, name: name })
+        }),
+
+        http.post(`${API_BASE_URL}/field-contexts`, async ({ request }) => {
+                const { name } = await request.json()
+                return HttpResponse.json({ id: `new_${name}`, name: name })
+        }),
+
+        http.post(`${API_BASE_URL}/outcomes`, async ({ request }) => {
+                const { name } = await request.json()
+                return HttpResponse.json({ id: `new_${name}`, name: name })
+        }),
+
         http.get(`${API_BASE_URL}/proposals/reviews`, () => {
                 return HttpResponse.json({
                         reviews: [
@@ -148,7 +172,7 @@ export const server = setupServer(
                         //         Evaluation: '',
                         //         'Results Matrix': '',
                         //         'Work Plan': '',
-                        //         Budget: '',
+                        //         'Budget': '',
                         //         'Annex 1. Risk Assessment Plan': ''
                         // },
                         is_accepted: isAccepted
