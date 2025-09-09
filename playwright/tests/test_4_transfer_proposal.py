@@ -49,7 +49,7 @@ def test_user_registration_and_login(page: Page):
     # Expect to be redirected to the dashboard
     expect(page).to_have_url(re.compile(".*dashboard"))
     # The dashboard heading might be different
-    expect(page.get_by_text("Draft Smart Proposal with AI, Curated Knowledge and Peer Review.")).to_be_visible()
+    expect(page.get_by_text("Draft Smart Project Proposals with AI, Curated Knowledge and Peer Review.")).to_be_visible()
 
     # Take screenshot after clicking register
     page.screenshot(path="playwright/test-results/3_register_page_after_submit.png")

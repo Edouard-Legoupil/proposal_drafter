@@ -205,7 +205,7 @@ export default function Dashboard ()
                 <div className="Dashboard">
                         <header className="Dashboard_top">
                                 <div className='Dashboard_label'>
-                                     Draft Smart Proposal with AI, Curated Knowledge and Peer Review. 
+                                     Draft Smart Project Proposals with AI, Curated Knowledge and Peer Review. 
                                          
                                 </div> 
                         </header>  
@@ -371,7 +371,7 @@ export default function Dashboard ()
                         isOpen={isTransferModalOpen}
                         onClose={() => setIsTransferModalOpen(false)}
                         options={users}
-                        title="Transfer Proposal Ownership"
+                        title="Transfer Proposal Ownership to another Focal Point"
                         onConfirm={confirmTransfer}
                 />
         </Base>

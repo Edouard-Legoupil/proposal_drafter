@@ -15,3 +15,5 @@ backend/log/generate_proposal_log.txt
 /frontend/node_modules/
 logs/*
 playwright/tests/__pycache__/*
+playwright/tests/__pycache__/test_1_register.cpython-310-pytest-8.4.1.pyc
+playwright/tests/__pycache__/test_2_create_proposal.cpython-310-pytest-8.4.1.pyc
