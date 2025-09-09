@@ -16,6 +16,7 @@ const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
 import fileIcon from "../../assets/images/chat-titleIcon.svg"
 import arrow from "../../assets/images/expanderArrow.svg"
 import generateIcon from "../../assets/images/generateIcon.svg"
+import knowIcon from "../../assets/images/knowIcon.svg"
 import resultsIcon from "../../assets/images/Chat_resultsIcon.svg"
 import edit from "../../assets/images/Chat_edit.svg"
 import save from "../../assets/images/Chat_save.svg"
@@ -25,6 +26,7 @@ import tick from "../../assets/images/Chat_copiedTick.svg"
 import regenerate from "../../assets/images/Chat_regenerate.svg"
 import regenerateClose from "../../assets/images/Chat_regenerateClose.svg"
 import word_icon from "../../assets/images/word.svg"
+import excel_icon from "../../assets/images/excel.svg"
 import pdf_icon from "../../assets/images/pdf.svg"
 import approved_icon from "../../assets/images/Chat_approved.svg"
 
@@ -1059,9 +1061,10 @@ export default function Chat (props)
                                                         }
 
                                                         <div className="Chat_inputArea_buttonContainer">
-                                                                <CommonButton onClick={handleGenerateClick} icon={generateIcon} label={generateLabel} loading={generateLoading} loadingLabel={generateLabel === "Generate" ? "Generating" : "Regenerating"} disabled={!buttonEnable || proposalStatus !== 'draft'}/>
+                                                                <CommonButton onClick={() => setIsAssociateKnowledgeModalOpen(true)} label="Associate Knowledge" disabled={proposalStatus !== 'draft'} icon={knowIcon}/>
+                                                                
                                                                 <div style={{ marginLeft: 'auto' }}>
-                                                                        <CommonButton onClick={() => setIsAssociateKnowledgeModalOpen(true)} label="Associate Knowledge" disabled={proposalStatus !== 'draft'} icon={<i className="fa-solid fa-book-open"></i>}/>
+                                                                <CommonButton onClick={handleGenerateClick} icon={generateIcon} label={generateLabel} loading={generateLoading} loadingLabel={generateLabel === "Generate" ? "Generating" : "Regenerating"} disabled={!buttonEnable || proposalStatus !== 'draft'}/>
                                                                 </div>
                                                         </div>
                                                 </div>
@@ -1083,7 +1086,7 @@ export default function Chat (props)
                                                                 Download Document
                                                         </button>
                                                         <button type="button" onClick={() => handleExportTables()}>
-                                                                <img src={word_icon} />
+                                                                <img src={excel_icon} />
                                                                 Download Tables
                                                         </button>
                                                         <div className="Chat_workflow_status_container">
