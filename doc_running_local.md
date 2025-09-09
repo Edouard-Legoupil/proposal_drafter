@@ -38,7 +38,7 @@ Install these tools before you begin:
 ### Step 1: Clone the repository
 
 ```bash
-git clone https://github.com/iom/proposal_drafter.git
+git clone https://github.com/edouard-legoupil/proposal_drafter.git
 cd proposal_drafter
 ```
 

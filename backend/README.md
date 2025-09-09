@@ -277,7 +277,7 @@ Each proposal template is a `.json` file located in the `templates/` directory. 
 Example:
 ```json
 {
-  "donors": ["UNHCR", "IOM"],
+  "donors": ["UNHCR"],
   "project_info": { ... },
   "sections": [ ... ]
 }

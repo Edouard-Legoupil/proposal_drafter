@@ -190,7 +190,7 @@ az acr update --name <your-acr-name> --public-network-enabled true
 ### Step 4: Push to GitHub
 
 ```bash
-git remote add origin https://github.com/iom/proposal_drafter.git
+git remote add origin https://github.com/edouard-legoupil/proposal_drafter.git
 git push -u origin main
 ```
 

@@ -27,8 +27,6 @@ The landing page is the first thing you'll see. From here, you can navigate to a
 
 ![Landing Page](playwright/test-results/1_landing.png)
 
-## 2. User Registration
-
 To get started, you'll need to register for an account. Click on the "Register" button on the landing page to go to the registration form.
 
 Fill in your details in the __registration form__ as shown below.
@@ -82,13 +80,13 @@ Each agent is powered by an LLM and follows a role-specific prompt and toolset.
 
 The key configuration files are in `backend/config/agents.yaml` and `backend/config/tasks.yaml`, which define the agents' roles, prompts, and tasks.
  
-![AI Agent Crew Description](https://raw.githubusercontent.com/iom/proposal_drafter/refs/heads/main/img/crew.png) 
+![AI Agent Crew Description](https://raw.githubusercontent.com/edouard-legoupil/proposal_drafter/refs/heads/main/img/crew.png) 
 
 
 
 ## 🛠️ Installation
 
-Refer to [doc_running_local.md](https://github.com/iom/proposal_drafter/blob/main/doc_running_local.md)
+Refer to [doc_running_local.md](https://github.com/edouard-legoupilproposal_drafter/blob/main/doc_running_local.md)
 
 ## 🔒 Security
 
@@ -104,7 +102,7 @@ This project prioritizes security to ensure the safe handling of sensitive infor
 
 > 🚧 This project is licensed under the MIT License. It is in active development. Contributions are welcome!
 
-The system uses IOM-standard proposal structures and can be definitely adapted to other UN Humanitarian agencies (e.g., UNHCR, OCHA, UNICEF, WFP).
+The system uses multiple proposal structures and can be definitely adapted to other UN Humanitarian agencies (e.g., UNHCR, OCHA, UNICEF, WFP).
 
 If you can contribute to the project, please follow these steps:
 1. Fork the repo
@@ -131,58 +129,11 @@ This project is committed to upholding the [UN Open Source Principles](https://u
 
 ## 🔮 Future Development: Strategic AI Enhancements
 
-To further elevate the capabilities and value of the this Project Proposal Generator, the following future modules are planned, each targeting critical pain points in the project development cycle. These future developments aim to transform this initial Proposal Generator into a comprehensive **AI-powered Project Development Suite**, aligning creativity with institutional wisdom and real-time intelligence to drive measurable impact.
-
-### 1. 🤝 Donor Intelligence Solution
-
-**Pain Point:**  
-Project developers often lack timely access to strategic donor information, making it challenging to tailor proposals to specific funding priorities.  
-
-**Solution:**  
-A dedicated tools capable of parsing donor websites, strategic plans, and funding announcements in real-time. It should organize and summarize insights, generate donor profiles, and suggest alignment strategies for concept notes and proposals. This ensures developers can respond more quickly and strategically to funding opportunities.
-
-**Added Benefits:**  
-- Reduces manual effort and time tracking donor priorities  
-- Frees up time for creative, strategic work  
-- Improves alignment with donor expectations  
-- Enhances IOM's strategic positioning, fundraising coherence, and institutional knowledge sharing  
-- Supports IOM's branding and communication through accurate, timely engagement materials  
+To further elevate the capabilities and value of the this Project Proposal Generator, the following potential enhancement could be delivered, each targeting critical pain points in the project development cycle. These future developments aim to transform this initial Proposal Generator into a comprehensive **AI-powered Project Management Suite**, aligning creativity with institutional wisdom and real-time intelligence to drive measurable impact.
 
 ---
 
-### 2. 📊 Results-Matrix Generator
-
-**Pain Point:**  
-Many staff find it challenging to develop SMART indicators and logically linked results frameworks, especially under tight deadlines. Knowledge is fragmented, and lessons from past projects are not easily accessible.
-
-**Solution:**  
-A results-matrix generator that translates narrative goals and problem statements into structured results chains. It suggests indicators, verification sources, and assumptions based on context and thematic focus, enhancing clarity and alignment.
-
-**Added Benefits:**  
-- Streamlines complex framework design  
-- Improves quality and consistency of M&E planning  
-- Enables knowledge transfer through reusable logic models  
-- Strengthens institutional M&E standards and reporting quality  
-
----
-
-### 3. 📚 Knowledge Injection from Evaluation Recommendations
-
-**Pain Point:**  
-Lessons learned from evaluations are not consistently integrated into new proposals. These insights are scattered across reports and often overlooked due to time constraints, limited access, or lack of awareness.
-
-**Solution:**  
-An intelligent extraction engine that analyzes and summarizes key findings, recommendations, and good practices from evaluation and monitoring reports. It embeds these insights contextually into the proposal writing process.
-
-**Added Benefits:**  
-- Ensures use of real-world learning to improve design  
-- Reduces repeated mistakes by surfacing relevant recommendations  
-- Strengthens adaptive management and institutional memory  
-- Enhances proposal credibility and quality with evidence-backed design
-
----
-
-### 4. 💰 AI-Powered Budget Builder with Calibrated Costing Tool
+###  💰 AI-Powered Budget Builder with Calibrated Costing Tool
 
 **Pain Point:**  
 Developing budgets that align with real costs and institutional norms is time-consuming and error-prone. There is often inconsistency in pricing across proposals and a lack of reference to standard costing.
@@ -198,23 +149,7 @@ An AI agent that generates budget lines using a calibrated costing tool referenc
 
 ---
 
-### 5. ✅ Project Development Validation Workflow
-
-**Pain Point:**  
-Project proposals often move through inconsistent or unclear validation processes. Responsibilities and checkpoints vary across missions, leading to delays, miscommunication, or insufficient quality control.
-
-**Solution:**  
-A structured validation workflow supported by AI agents that route proposals through pre-defined quality assurance steps. These may include thematic peer review, budgeting checks, risk scanning, and senior management approval.
-
-**Added Benefits:**  
-- Increases clarity and accountability in project design  
-- Strengthens institutional quality standards  
-- Reduces rework and improves time to submission  
-- Builds team collaboration and internal buy-in  
-
----
-
-### 6. 📝 AI-Supported Reporting & Documentation Toolkit
+### 📝 AI-Supported Reporting & Documentation Toolkit
 
 **Pain Point:**  
 Project teams often struggle with reporting due to inconsistent formats, fragmented data sources, and unclear requirements. Generating accurate, timely, and donor-compliant reports can be burdensome, especially when field data is lacking or not well-structured.
@@ -232,9 +167,11 @@ An integrated module that provides tailored reporting templates aligned with don
 
 --------
 
-## 📚 References
+## 📚 Project Background & References
 
-This project was impulsed by [Edouard Legoupil, IOM chief Data Officer](https://www.linkedin.com/in/edouardlegoupil/recent-activity/all/) and jointly developped with [Datamatics](). It is building on the [IOM Project Handbook](https://publications.iom.int/system/files/pdf/iom_project_handbook_6feb2012.pdf) 
+This project was initially impulsed by [Edouard Legoupil](https://www.linkedin.com/in/edouardlegoupil/recent-activity/all/) during his secondment to IOM as Chief Data Officer. The [first version](https://github.com/iom/proposal_drafter) was developped with [Datamatics](https://www.datamatics.com/) through an initial seed funding from IOM, building on the [IOM Project Handbook](https://publications.iom.int/system/files/pdf/iom_project_handbook_6feb2012.pdf). 
+
+The last current releases and new features are developped to support the needs of UNHCR.
 
 Similar (but Proprietary...) Projects
 

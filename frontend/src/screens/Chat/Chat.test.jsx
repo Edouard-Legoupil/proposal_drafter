@@ -10,7 +10,7 @@ describe('Proposal Drafter – Form validation', () => {
         it('disables the Generate button until all required inputs are filled', async () => {
                 server.use(
                         http.get('http://localhost:8502/api/templates', () => {
-                                return HttpResponse.json({ templates: { "UNHCR": {}, "IOM": {} } })
+                                return HttpResponse.json({ templates: { "UNHCR": {} } })
                         }),
                         http.get('http://localhost:8502/api/profile', () => {
                                 return HttpResponse.json({ user: { "email": "test@test.com", "name": "Test User" } })
@@ -66,7 +66,7 @@ describe('Proposal Drafter – Form validation', () => {
 describe('Proposal Drafter – One‑Section Generation Flow', () => {
         it('calls process_section with session and body, renders all cards', async () => {
                 server.use(
-                        http.get('http://localhost:8502/api/templates', () => HttpResponse.json({ templates: { "UNHCR": {}, "IOM": {} } })),
+                        http.get('http://localhost:8502/api/templates', () => HttpResponse.json({ templates: { "UNHCR": {} } })),
                         http.get('http://localhost:8502/api/profile', () => HttpResponse.json({ user: { "email": "test@test.com", "name": "Test User" } })),
                         http.post('http://localhost:8502/api/create-session', () => {
                                 return HttpResponse.json({
@@ -115,7 +115,7 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
 
         it('allows editing Summary content', async () => {
                 server.use(
-                        http.get('http://localhost:8502/api/templates', () => HttpResponse.json({ templates: { "UNHCR": {}, "IOM": {} } })),
+                        http.get('http://localhost:8502/api/templates', () => HttpResponse.json({ templates: { "UNHCR": {} } })),
                         http.get('http://localhost:8502/api/profile', () => HttpResponse.json({ user: { "email": "test@test.com", "name": "Test User" } })),
                         http.post('http://localhost:8502/api/create-session', () => {
                                 return HttpResponse.json({
@@ -185,7 +185,7 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
 
         it('hides the input form when a finalized proposal is loaded', async () => {
                 server.use(
-                        http.get('http://localhost:8502/api/templates', () => HttpResponse.json({ templates: { "UNHCR": {}, "IOM": {} } })),
+                        http.get('http://localhost:8502/api/templates', () => HttpResponse.json({ templates: { "UNHCR": {} } })),
                         http.get('http://localhost:8502/api/profile', () => HttpResponse.json({ user: { "email": "test@test.com", "name": "Test User" } })),
                         http.get('http://localhost:8502/api/load-draft/:proposal_id', () => {
                                 return HttpResponse.json({

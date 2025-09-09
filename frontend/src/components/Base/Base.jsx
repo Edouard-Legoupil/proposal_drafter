@@ -76,7 +76,7 @@ export default function Base (props)
         return  <div className='Base'>
                 <header className='Header'>
                         <span className='Header_logoContainer'>
-                                <img className='Header_iomLogo' src={masterlogo} onClick={handleLogoClick} alt="IOM - UN Migration" data-testid="logo" />
+                                <img className='Header_orgLogo' src={masterlogo} onClick={handleLogoClick} alt="Organisation" data-testid="logo" />
                         </span>
 
                         <button className='User' popoverTarget='ID_Chat_logoutPopover' data-testid="user-menu-button">
