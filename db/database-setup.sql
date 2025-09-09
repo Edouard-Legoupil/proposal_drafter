@@ -70,6 +70,12 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumtypid = 'proposal_status'::regtype AND enumlabel = 'deleted') THEN
         ALTER TYPE proposal_status ADD VALUE 'deleted';
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumtypid = 'proposal_status'::regtype AND enumlabel = 'generating_sections') THEN
+        ALTER TYPE proposal_status ADD VALUE 'generating_sections';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumtypid = 'proposal_status'::regtype AND enumlabel = 'failed') THEN
+        ALTER TYPE proposal_status ADD VALUE 'failed';
+    END IF;
 END$$;
 
 -- Create Proposals table
