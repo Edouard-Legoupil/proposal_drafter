@@ -340,68 +340,6 @@ export default function Chat (props)
         const isGenerating = useRef(false);
 
         useEffect(() => {
-                const generateAllSections = async () => {
-                        // Use a ref to prevent this function from running again if it's already in progress.
-                        if (isGenerating.current) return;
-                        isGenerating.current = true;
-
-                        const sectionKeys = Object.keys(proposal);
-                        for (let i = 0; i < sectionKeys.length; i++) {
-                                const sectionKey = sectionKeys[i];
-
-                                // Check for content again inside the loop, as state might have changed.
-                                if (proposal[sectionKey]?.content) {
-                                        continue;
-                                }
-                                
-                                try {
-                                        setSelectedSection(i);
-                                        const el = proposalRef.current?.children[i];
-                                        if (typeof el?.scrollIntoView === 'function') {
-                                                el.scrollIntoView({ behavior: 'smooth' });
-                                        }
-
-                                        const response = await fetch(`${API_BASE_URL}/process_section/${sessionStorage.getItem("session_id")}`, {
-                                                method: "POST",
-                                                headers: { 'Content-Type': 'application/json' },
-                                                body: JSON.stringify({
-                                                        section: sectionKey,
-                                                        proposal_id: sessionStorage.getItem("proposal_id"),
-                                                        form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])),
-                                                        project_description: userPrompt
-                                                }),
-                                                credentials: 'include'
-                                        });
-
-                                        if (response.ok) {
-                                                const data = await response.json();
-                                                setProposal(prev => ({
-                                                        ...prev,
-                                                        [sectionKey]: { ...prev[sectionKey], content: data.generated_text }
-                                                }));
-                                        } else {
-                                                console.error(`Failed to generate section: ${sectionKey}`);
-                                                break; // Exit loop on failure
-                                        }
-                                } catch (error) {
-                                        console.error(`An error occurred while generating section ${sectionKey}:`, error);
-                                        break; // Exit loop on error
-                                }
-                        }
-
-                        // Reset the guard and loading state when the process is complete or has failed.
-                        isGenerating.current = false;
-                        setGenerateLoading(false);
-                        setGenerateLabel("Regenerate");
-                };
-
-                // Trigger the generation process only when loading is enabled and sections are present.
-                if (generateLoading && proposal && Object.keys(proposal).length > 0) {
-                        generateAllSections();
-                }
-        }, [generateLoading, proposal, formData, userPrompt]); // Dependencies are now correctly listed.
-
-        useEffect(() => {
                 if(sidebarOpen)
                 {
                         if(titleName === "Generate Draft Proposal")
@@ -415,6 +353,39 @@ export default function Chat (props)
                         topRef.current?.scrollIntoView({ behavior: "smooth" });
                 }
         }, [generateLoading, proposal]);
+
+        useEffect(() => {
+                const pollStatus = async () => {
+                        const proposalId = sessionStorage.getItem("proposal_id");
+                        if (!proposalId || !generateLoading) return;
+
+                        try {
+                                const response = await fetch(`${API_BASE_URL}/proposals/${proposalId}/status`, { credentials: 'include' });
+                                if (response.ok) {
+                                        const data = await response.json();
+                                        if (data.status !== 'generating_sections') {
+                                                setGenerateLoading(false);
+                                                setGenerateLabel("Regenerate");
+                                                const sectionState = {};
+                                                Object.entries(data.generated_sections).forEach(([key, value]) => {
+                                                        sectionState[key] = {
+                                                                content: value,
+                                                                open: true
+                                                        };
+                                                });
+                                                setProposal(sectionState);
+                                        }
+                                }
+                        } catch (error) {
+                                console.error("Error polling for status:", error);
+                                setGenerateLoading(false);
+                        }
+                };
+
+                const intervalId = setInterval(pollStatus, 5000); // Poll every 5 seconds
+
+                return () => clearInterval(intervalId);
+        }, [generateLoading]);
 
         async function handleGenerateClick ()
         {
@@ -494,7 +465,16 @@ export default function Chat (props)
                         
                         setProposal(sectionState);
                         setSidebarOpen(true);
-                        // The getSections() call will be triggered by the useEffect that depends on `proposal`.
+
+                        // Trigger the background generation
+                        const generateResponse = await fetch(`${API_BASE_URL}/generate-proposal-sections/${data.session_id}`, {
+                                method: 'POST',
+                                credentials: 'include'
+                        });
+
+                        if (!generateResponse.ok) {
+                                throw new Error("Failed to start proposal generation.");
+                        }
 
                 } catch (error) {
                         console.error("Error during proposal generation:", error);
