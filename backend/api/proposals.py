@@ -7,7 +7,7 @@ import logging
 from typing import Optional
 
 #  Third-Party Libraries
-from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File, BackgroundTasks
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError 
 
@@ -166,6 +166,103 @@ async def create_session(request: CreateSessionRequest, current_user: dict = Dep
     except Exception as e:
         logger.error(f"[CREATE SESSION ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to create a new proposal session.")
+
+
+async def generate_all_sections_background(session_id: str, proposal_id: str, user_id: str):
+    """
+    Runs the proposal generation process for all sections in the background.
+    """
+    logger.info(f"Starting background generation for proposal {proposal_id}")
+    try:
+        with get_engine().begin() as connection:
+            connection.execute(
+                text("UPDATE proposals SET status = 'generating_sections', updated_at = NOW() WHERE id = :id"),
+                {"id": proposal_id}
+            )
+
+        session_data_str = redis_client.get(session_id)
+        if not session_data_str:
+            raise Exception("Session data not found in Redis.")
+
+        session_data = json.loads(session_data_str)
+        proposal_template = session_data.get("proposal_template")
+        if not proposal_template or "sections" not in proposal_template:
+            raise Exception("Proposal template or sections not found in session.")
+
+        form_data = session_data["form_data"]
+        project_description = session_data["project_description"]
+        all_sections = {}
+
+        for section_config in proposal_template["sections"]:
+            section_name = section_config["section_name"]
+            logger.info(f"Generating section: {section_name} for proposal {proposal_id}")
+
+            crew_instance = ProposalCrew().generate_proposal_crew()
+            result = crew_instance.kickoff(inputs={
+                "section": section_name,
+                "form_data": form_data,
+                "project_description": project_description,
+                "instructions": section_config.get("instructions", ""),
+                "word_limit": section_config.get("word_limit", 350)
+            })
+
+            try:
+                raw_output = result.raw if hasattr(result, 'raw') and result.raw else ""
+                clean_output = re.sub(r'[`\x00-\x1F\x7F]', '', raw_output)
+                parsed = json.loads(clean_output)
+            except (AttributeError, json.JSONDecodeError) as e:
+                logger.error(f"[CREWAI PARSE ERROR] for section {section_name}: {e}")
+                # Skip this section and continue with the next
+                continue
+
+            generated_text = parsed.get("generated_content", "").strip()
+            evaluation_status = parsed.get("evaluation_status", "")
+            feedback = parsed.get("feedback", "")
+
+            if evaluation_status.lower() == "flagged" and feedback:
+                generated_text = regenerate_section_logic(
+                    session_id, section_name, feedback, proposal_id
+                )
+
+            all_sections[section_name] = generated_text
+
+        with get_engine().begin() as connection:
+            connection.execute(
+                text("UPDATE proposals SET generated_sections = :sections, status = 'draft', updated_at = NOW() WHERE id = :id"),
+                {"sections": json.dumps(all_sections), "id": proposal_id}
+            )
+        logger.info(f"Successfully generated all sections for proposal {proposal_id}")
+
+    except Exception as e:
+        logger.error(f"Error during background proposal generation for {proposal_id}: {e}", exc_info=True)
+        try:
+            with get_engine().begin() as connection:
+                connection.execute(
+                    text("UPDATE proposals SET status = 'failed', updated_at = NOW() WHERE id = :id"),
+                    {"id": proposal_id}
+                )
+        except Exception as db_error:
+            logger.error(f"Failed to update proposal status to 'failed' for {proposal_id}: {db_error}", exc_info=True)
+
+@router.post("/generate-proposal-sections/{session_id}", status_code=202)
+async def generate_proposal_sections(session_id: str, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
+    """
+    Triggers the asynchronous generation of all proposal sections in the background.
+    """
+    session_data_str = redis_client.get(session_id)
+    if not session_data_str:
+        raise HTTPException(status_code=404, detail="Session not found.")
+
+    session_data = json.loads(session_data_str)
+    proposal_id = session_data.get("proposal_id")
+    user_id = current_user["user_id"]
+
+    if not proposal_id:
+        raise HTTPException(status_code=400, detail="Proposal ID not found in session.")
+
+    background_tasks.add_task(generate_all_sections_background, session_id, proposal_id, user_id)
+
+    return {"message": "Proposal generation started."}
 
 
 @router.post("/process_section/{session_id}")
@@ -1001,6 +1098,32 @@ async def update_proposal_status(proposal_id: uuid.UUID, request: UpdateProposal
     except Exception as e:
         logger.error(f"[UPDATE STATUS ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to update proposal status.")
+
+
+@router.get("/proposals/{proposal_id}/status")
+async def get_proposal_status(proposal_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
+    """
+    Gets the current status and generated sections of a proposal.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().connect() as connection:
+            result = connection.execute(
+                text("SELECT status, generated_sections FROM proposals WHERE id = :id AND user_id = :uid"),
+                {"id": proposal_id, "uid": user_id}
+            ).fetchone()
+
+            if not result:
+                raise HTTPException(status_code=404, detail="Proposal not found.")
+
+            status, generated_sections = result
+            return {"status": status, "generated_sections": generated_sections or {}}
+
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        logger.error(f"[GET PROPOSAL STATUS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to get proposal status.")
 
 
 @router.get("/review-proposal/{proposal_id}")
