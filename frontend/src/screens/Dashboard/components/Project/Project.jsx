@@ -104,6 +104,12 @@ export default function Project ({ project, date, onClick, isReview = false, pro
                                     </div>
                                 </div>
                         </div>
+                        <p>
+                                <i className="fa-solid fa-earth-americas field-context" aria-hidden="true"></i> {project.country || 'N/A'} -
+                                <i className="fa-solid fa-money-bill-wave donor" aria-hidden="true"></i> {project.donor || 'N/A'} -
+                                <i className="fa-solid fa-bullseye outcome" aria-hidden="true"></i> {project.outcomes?.join(', ') || 'N/A'} -
+                                <i className="fa-solid fa-money-check-dollar" aria-hidden="true"></i> Budget: {project.budget || 'N/A'}
+                        </p>
                         <div className="Dashboard_project_description">
                             <div className="Dashboard_project_fade"></div>
                             <p><small> {trimSummary(project.summary)} </small></p>
