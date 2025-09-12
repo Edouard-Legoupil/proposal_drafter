@@ -3,7 +3,7 @@ import json
 import uuid
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Body
-from sqlalchemy import text
+from sqlalchemy import text, or_
 from pydantic import BaseModel, Field, validator
 from typing import List, Optional
 
@@ -130,7 +130,7 @@ async def get_knowledge_cards(
                 params["field_context_id"] = field_context_id
 
             if filters:
-                base_query += " WHERE " + " AND ".join(filters)
+                base_query += " WHERE " + " OR ".join(filters)
 
             base_query += " ORDER BY kc.updated_at DESC"
 
