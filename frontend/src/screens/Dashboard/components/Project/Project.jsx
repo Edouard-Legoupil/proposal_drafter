@@ -53,23 +53,6 @@ export default function Project ({ project, date, onClick, isReview = false, pro
                         <article className="card" onClick={onClick} data-testid="review-card">
                                 <div className="Dashboard_project_title">
                                         <h3 id={`review-${project.proposal_id}`}>{project.project_title}</h3>
-                                        <button className="Dashboard_project_tripleDotsContainer" onClick={togglePopover} aria-haspopup="true" aria-expanded={popoverVisible} data-testid="project-options-button">
-                                                <img src={tripleDots} alt="Options" />
-                                        </button>
-                                        <div className={`Project_optionsPopover ${popoverVisible ? 'visible' : ''}`} id={`popover-${projectIndex+1}`} >
-                                            <div className={`Project_optionsPopover_option`} onClick={(e) => { e.stopPropagation(); onClick(e); }} data-testid="project-view-button">
-                                                    <img src={view} alt="View" />
-                                                    View
-                                            </div>
-                                            <div className={`Project_optionsPopover_option ${project.status === 'in_review' ? 'disabled' : ''}`} onClick={(e) => { e.stopPropagation(); if(project.status !== 'in_review') {handleTransferOwnership(project.proposal_id)} }} data-testid="project-transfer-button">
-                                                    <img className='Project_optionsPopover_option_transfer' src={transfer} alt="Transfer" />
-                                                    Transfer
-                                            </div>
-                                            <div className={`Project_optionsPopover_option ${project.status === 'in_review' ? 'disabled' : ''}`} onClick={(e) => { e.stopPropagation(); if(project.status !== 'in_review') {handleDeleteProject(project.proposal_id)} }} data-testid="project-delete-button">
-                                                    <img className='Project_optionsPopover_option_delete' src={bin} alt="Delete" />
-                                                    Delete
-                                            </div>
-                                        </div>
                                 </div>
                                 <h2>Requester: {project.requester_name || 'N/A'}</h2>
                                 <p><strong>Deadline:</strong> <time dateTime={project.deadline || ''}>{project.deadline ? new Date(project.deadline).toLocaleDateString() : 'N/A'}</time></p>
@@ -79,6 +62,16 @@ export default function Project ({ project, date, onClick, isReview = false, pro
                                         <i className="fa-solid fa-bullseye outcome" aria-hidden="true"></i> {project.outcomes?.join(', ') || 'N/A'} -
                                         <i className="fa-solid fa-money-check-dollar" aria-hidden="true"></i> Budget: {project.budget || 'N/A'}
                                 </p>
+                                {project.review_status === 'completed' && (
+                                        <div className="Dashboard_project_footer">
+                                                <span className="Dashboard_project_label status-approved">
+                                                        Review completed
+                                                </span>
+                                                <span className="Dashboard_project_date">
+                                                        {new Date(project.review_completed_at).toLocaleDateString()}
+                                                </span>
+                                        </div>
+                                )}
                         </article>
                 )
         }
