@@ -960,7 +960,7 @@ export default function Chat (props)
                                 onClose={() => setIsAssociateKnowledgeModalOpen(false)}
                                 onConfirm={handleAssociateKnowledgeConfirm}
                                 donorId={formData["Targeted Donor"].value}
-                                outcomeId={Array.isArray(formData["Main Outcome"].value) ? formData["Main Outcome"].value[0] : formData["Main Outcome"].value}
+                                outcomeId={formData["Main Outcome"].value}
                                 fieldContextId={formData["Country / Location(s)"].value}
                         />
                         {((!isMobile && sidebarOpen) || (isMobile && isMobileMenuOpen)) && <aside>

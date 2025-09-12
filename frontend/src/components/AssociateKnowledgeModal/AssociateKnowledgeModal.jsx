@@ -16,7 +16,11 @@ export default function AssociateKnowledgeModal({ isOpen, onClose, onConfirm, do
       setIsLoading(true);
       const queryParams = new URLSearchParams();
       if (donorId) queryParams.append('donor_id', donorId);
-      if (outcomeId) queryParams.append('outcome_id', outcomeId);
+      if (Array.isArray(outcomeId)) {
+        outcomeId.forEach(id => id && queryParams.append('outcome_id', id));
+      } else if (outcomeId) {
+        queryParams.append('outcome_id', outcomeId);
+      }
       if (fieldContextId) queryParams.append('field_context_id', fieldContextId);
 
       fetch(`${API_BASE_URL}/knowledge-cards?${queryParams.toString()}`, {
