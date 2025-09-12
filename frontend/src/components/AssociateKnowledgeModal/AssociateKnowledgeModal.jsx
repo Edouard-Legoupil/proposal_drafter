@@ -72,7 +72,15 @@ export default function AssociateKnowledgeModal({ isOpen, onClose, onConfirm, do
                   checked={selectedOptions.includes(option.id)}
                   onChange={() => handleCheckboxChange(option.id)}
                 />
-                <label htmlFor={option.id}>{option.title}</label>
+                <div>
+                  <label htmlFor={option.id}><strong>{option.title}</strong></label>
+                  <div className="linked-element">
+                    {option.donor_name && <span>Donor: {option.donor_name}</span>}
+                    {option.outcome_name && <span>Outcome: {option.outcome_name}</span>}
+                    {option.field_context_name && <span>Field Context: {option.field_context_name}</span>}
+                  </div>
+                  <p>{option.summary}</p>
+                </div>
               </div>
             ))
           ) : (

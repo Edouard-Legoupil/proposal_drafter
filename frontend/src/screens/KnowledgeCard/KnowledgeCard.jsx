@@ -186,6 +186,30 @@ export default function KnowledgeCard() {
         return response;
     };
 
+    const handleIdentifyReferences = async () => {
+        setLoading(true);
+        const response = await fetch(`${API_BASE_URL}/knowledge-cards/identify-references`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                title,
+                summary,
+                linked_element: linkType,
+            }),
+            credentials: 'include'
+        });
+        setLoading(false);
+
+        if (response.ok) {
+            const data = await response.json();
+            const newReferences = data.references.map(url => ({ url, reference_type: '' }));
+            setReferences(newReferences);
+        } else {
+            const error = await response.json();
+            alert(`Error identifying references: ${error.detail}`);
+        }
+    };
+
     const handlePopulate = async (e) => {
         e.preventDefault();
         const saveResponse = await handleSave();
@@ -284,7 +308,7 @@ export default function KnowledgeCard() {
                         <button type="button" onClick={addReference} data-testid="add-reference-button">Add Reference</button>
 
                         <div className="kc-form-actions-left">
-                            <CommonButton type="button" onClick={() => handleSave()}  label="Identify References"  className="squared-btn" data-testid="identify-references-button" />
+                            <CommonButton type="button" onClick={handleIdentifyReferences}  label="Identify References"  className="squared-btn" data-testid="identify-references-button" />
                         </div>
 
 

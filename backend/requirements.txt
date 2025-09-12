@@ -88,3 +88,4 @@ psutil
 # Playwright is a Python library to automate Chromium, Firefox and WebKit browsers with a single API.
 playwright
 pytest-playwright
+googlesearch-python
