@@ -10,6 +10,7 @@ from typing import List, Optional
 from backend.core.db import get_engine
 from backend.core.security import get_current_user
 from backend.core.config import load_proposal_template
+from googlesearch import search
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -18,6 +19,11 @@ logger = logging.getLogger(__name__)
 class KnowledgeCardReferenceIn(BaseModel):
     url: str
     reference_type: str
+
+class IdentifyReferencesIn(BaseModel):
+    title: str
+    summary: Optional[str] = None
+    linked_element: Optional[str] = None
 
 class KnowledgeCardIn(BaseModel):
     title: str
@@ -307,3 +313,29 @@ async def generate_knowledge_card_content(card_id: uuid.UUID, current_user: dict
     except Exception as e:
         logger.error(f"[GENERATE KC CONTENT ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to generate knowledge card content.")
+
+@router.post("/knowledge-cards/identify-references")
+async def identify_references(data: IdentifyReferencesIn, current_user: dict = Depends(get_current_user)):
+    """
+    Identifies references for a knowledge card based on its title, summary, and linked element.
+    """
+    query = f"{data.title} {data.linked_element} {data.summary}"
+
+    authoritative_domains = ["un.org", "gov", "ec.europa.eu", "oecd.org", "worldbank.org"]
+
+    try:
+        # Perform Google search
+        search_results = list(search(query, num_results=10))
+
+        # Rerank results to prioritize authoritative domains
+        reranked_results = sorted(
+            search_results,
+            key=lambda url: any(domain in url for domain in authoritative_domains),
+            reverse=True
+        )
+
+        # Return the top 5 results
+        return {"references": reranked_results[:5]}
+    except Exception as e:
+        logger.error(f"[IDENTIFY REFERENCES ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to identify references.")
