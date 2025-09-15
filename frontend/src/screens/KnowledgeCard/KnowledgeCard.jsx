@@ -316,6 +316,7 @@ export default function KnowledgeCard() {
                                     <option value="Needs Assessment">Needs Assessment</option>
                                     <option value="Evaluation Report">Evaluation Report</option>
                                     <option value="Policies">Policies</option>
+                                    <option value="Social Media">Social Media</option>
                                 </select>
                                 <input type="url" placeholder="https://example.com" value={ref.url} onChange={e => handleReferenceChange(index, 'url', e.target.value)} data-testid={`reference-url-input-${index}`} />
                                 <button type="button" onClick={() => removeReference(index)} data-testid={`remove-reference-button-${index}`}>Remove</button>

@@ -122,7 +122,8 @@ def get_reference_identification_crew(link_type, topic):
     crew = Crew(
         agents=[researcher],
         tasks=[research_task],
-        verbose=2
+        verbose=True,
+        output_log_file='log/app.log'
     )
 
     return crew
