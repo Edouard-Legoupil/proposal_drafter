@@ -127,7 +127,7 @@ class ReferenceIdentificationCrew:
             agents=[self.researcher()],
             tasks=[self.research_task()],
             verbose=True,
-            output_log_file='log/app.log'
+            output_log_file='log/app_ref_search.log'
         )
 
     def kickoff(self, link_type: str, topic: str):
