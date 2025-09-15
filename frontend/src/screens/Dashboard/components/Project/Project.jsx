@@ -55,7 +55,9 @@ export default function Project ({ project, date, onClick, isReview = false, pro
                                         <h3 id={`review-${project.proposal_id}`}>{project.project_title}</h3>
                                 </div>
                                 <h2>Requester: {project.requester_name || 'N/A'}</h2>
-                                <p><strong>Deadline:</strong> <time dateTime={project.deadline || ''}>{project.deadline ? new Date(project.deadline).toLocaleDateString() : 'N/A'}</time></p>
+                                {project.review_status !== 'completed' && project.deadline && (
+                                    <p><strong>Deadline:</strong> <time dateTime={project.deadline}>{new Date(project.deadline).toLocaleDateString()}</time></p>
+                                )}
                                 <p>
                                         <i className="fa-solid fa-earth-americas field-context" aria-hidden="true"></i> {project.country || 'N/A'} -
                                         <i className="fa-solid fa-money-bill-wave donor" aria-hidden="true"></i> {project.donor || 'N/A'} -

@@ -1136,19 +1136,21 @@ async def get_proposal_status(proposal_id: uuid.UUID, current_user: dict = Depen
 @router.get("/review-proposal/{proposal_id}")
 async def get_proposal_for_review(proposal_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
     """
-    Fetches a proposal for a user assigned to review it.
+    Fetches a proposal for a user assigned to review it, allowing access to both pending and completed reviews.
     """
     user_id = current_user["user_id"]
     try:
         with get_engine().connect() as connection:
-            # Check if the user is assigned to review this proposal
+            # Check if the user is assigned to review this proposal, regardless of status
             review_assignment = connection.execute(
-                text("SELECT id FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND status = 'pending'"),
+                text("SELECT status FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id LIMIT 1"),
                 {"proposal_id": proposal_id, "user_id": user_id}
             ).fetchone()
 
             if not review_assignment:
-                raise HTTPException(status_code=403, detail="You are not assigned to review this proposal or the review is already completed.")
+                raise HTTPException(status_code=403, detail="You are not assigned to review this proposal.")
+
+            review_status = review_assignment.status
 
             # Fetch the proposal data
             draft = connection.execute(
@@ -1179,6 +1181,7 @@ async def get_proposal_for_review(proposal_id: uuid.UUID, current_user: dict = D
                 "status": draft.status,
                 "created_at": draft.created_at.isoformat() if draft.created_at else None,
                 "updated_at": draft.updated_at.isoformat() if draft.updated_at else None,
+                "review_status": review_status
             }
         return data_to_load
     except HTTPException as http_exc:
