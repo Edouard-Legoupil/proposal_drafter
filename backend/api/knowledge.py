@@ -11,6 +11,7 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 
 from backend.core.db import get_engine
+from backend.core.redis import redis_client
 from backend.core.security import get_current_user
 from backend.core.config import load_proposal_template
 from backend.utils.reference_identification_crew import ReferenceIdentificationCrew
@@ -407,39 +408,32 @@ async def upload_pdf_reference(reference_id: uuid.UUID, file: UploadFile = File(
         raise HTTPException(status_code=500, detail="Failed to process PDF file.")
 
 
-def _add_log_entry(connection, card_id: uuid.UUID, message: str, status: str = "in_progress"):
-    entry = {"timestamp": datetime.utcnow().isoformat(), "message": message, "status": status}
-    connection.execute(
-        text("UPDATE knowledge_cards SET generation_log = generation_log || :entry::jsonb WHERE id = :id"),
-        {"entry": json.dumps(entry), "id": card_id}
-    )
+def _update_progress(card_id: uuid.UUID, message: str, progress: int):
+    redis_client.set(f"knowledge_card_generation:{card_id}", json.dumps({"message": message, "progress": progress}))
 
 async def generate_content_background(card_id: uuid.UUID):
     try:
         with get_engine().begin() as connection:
-            # Clear previous log and set status to generating
+            _update_progress(card_id, "Starting content generation...", 0)
             connection.execute(
-                text("UPDATE knowledge_cards SET status = 'generating_sections', generation_log = '[]'::jsonb WHERE id = :id"),
+                text("UPDATE knowledge_cards SET status = 'generating_sections' WHERE id = :id"),
                 {"id": card_id}
             )
-            _add_log_entry(connection, card_id, "Starting content generation...")
 
-            # Ingest content
             references = connection.execute(
                 text("SELECT id, url FROM knowledge_card_references WHERE knowledge_card_id = :card_id"),
                 {"card_id": card_id}
             ).fetchall()
 
+            num_references = len(references)
             for i, ref in enumerate(references):
-                _add_log_entry(connection, card_id, f"Processing reference {i+1}/{len(references)}: {ref.url}")
+                progress = int(((i + 1) / (num_references + 1)) * 50)
+                _update_progress(card_id, f"Processing reference {i+1}/{num_references}: {ref.url}", progress)
                 result = await ingest_reference_content(ref.id)
                 if result["status"] == "error":
-                    _add_log_entry(connection, card_id, f"Failed to scrape {ref.url}. Please upload a PDF.", status="requires_action")
-                    # We will continue with other references, and let the user decide to retry later
-                else:
-                    _add_log_entry(connection, card_id, f"Finished processing reference {i+1}/{len(references)}.")
+                    _update_progress(card_id, f"Failed to scrape {ref.url}. Please upload a PDF.", progress)
+                    # For now, we will just log and continue. A more robust solution would be to wait for user action.
 
-            # Generate content
             card = connection.execute(
                 text("SELECT donor_id, outcome_id, field_context_id FROM knowledge_cards WHERE id = :id"),
                 {"id": card_id}
@@ -456,12 +450,14 @@ async def generate_content_background(card_id: uuid.UUID):
 
             template = load_proposal_template(template_name)
             generated_sections = {}
-
             crew = ContentGenerationCrew()
+
+            num_sections = len(template.get("sections", []))
             for i, section in enumerate(template.get("sections", [])):
+                progress = 50 + int(((i + 1) / num_sections) * 50)
                 section_name = section.get("section_name")
                 instructions = section.get("instructions")
-                _add_log_entry(connection, card_id, f"Generating section {i+1}/{len(template.get('sections', []))}: {section_name}")
+                _update_progress(card_id, f"Generating section {i+1}/{num_sections}: {section_name}", progress)
 
                 inputs = {
                     "section_name": section_name,
@@ -472,16 +468,15 @@ async def generate_content_background(card_id: uuid.UUID):
                 result = crew.create_crew().kickoff(inputs=inputs)
                 generated_sections[section_name] = result
 
-            # Save the generated sections and update status
-            _add_log_entry(connection, card_id, "Content generation complete.", status="completed")
+            _update_progress(card_id, "Content generation complete.", 100)
             connection.execute(
                 text("UPDATE knowledge_cards SET generated_sections = :sections, status = 'completed', updated_at = NOW() WHERE id = :id"),
                 {"sections": json.dumps(generated_sections), "id": card_id}
             )
     except Exception as e:
         logger.error(f"[BACKGROUND KC GENERATION ERROR] {e}", exc_info=True)
+        _update_progress(card_id, f"An unexpected error occurred: {e}", -1)
         with get_engine().begin() as connection:
-            _add_log_entry(connection, card_id, f"An unexpected error occurred: {e}", status="failed")
             connection.execute(
                 text("UPDATE knowledge_cards SET status = 'failed' WHERE id = :id"),
                 {"id": card_id}
@@ -498,23 +493,28 @@ async def generate_knowledge_card_content(card_id: uuid.UUID, background_tasks: 
 @router.get("/knowledge-cards/{card_id}/status")
 async def get_knowledge_card_status(card_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
     """
-    Gets the status and generation log of a knowledge card.
+    Gets the status of a knowledge card generation task.
     """
     try:
+        progress_data = redis_client.get(f"knowledge_card_generation:{card_id}")
+        if progress_data:
+            return json.loads(progress_data)
+
+        # If no progress data, check the database for final status
         with get_engine().connect() as connection:
             result = connection.execute(
-                text("SELECT status, generated_sections, generation_log FROM knowledge_cards WHERE id = :id"),
+                text("SELECT status, generated_sections FROM knowledge_cards WHERE id = :id"),
                 {"id": card_id}
             ).fetchone()
 
             if not result:
                 raise HTTPException(status_code=404, detail="Knowledge card not found.")
 
-            return {
-                "status": result.status,
-                "generated_sections": json.loads(result.generated_sections) if result.generated_sections else None,
-                "generation_log": json.loads(result.generation_log) if result.generation_log else []
-            }
+            if result.status == 'completed':
+                return {"status": "completed", "progress": 100, "generated_sections": json.loads(result.generated_sections) if result.generated_sections else None}
+            else:
+                return {"status": result.status, "progress": 0}
+
     except Exception as e:
         logger.error(f"[GET KC STATUS ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to get knowledge card status.")

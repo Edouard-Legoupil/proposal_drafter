@@ -33,7 +33,8 @@ export default function KnowledgeCard() {
     const [editingSection, setEditingSection] = useState(null);
     const [editedContent, setEditedContent] = useState('');
     const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
-    const [generationLog, setGenerationLog] = useState([]);
+    const [generationProgress, setGenerationProgress] = useState(0);
+    const [generationMessage, setGenerationMessage] = useState("");
 
     const [donors, setDonors] = useState([]);
     const [outcomes, setOutcomes] = useState([]);
@@ -254,6 +255,8 @@ export default function KnowledgeCard() {
         if (saveResponse.ok) {
             const cardId = id || (await saveResponse.json()).knowledge_card_id;
             setIsProgressModalOpen(true);
+            setGenerationProgress(0);
+            setGenerationMessage("Starting content generation...");
 
             const genResponse = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${cardId}/generate`, {
                 method: 'POST',
@@ -266,10 +269,11 @@ export default function KnowledgeCard() {
                     const statusResponse = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${cardId}/status`, { credentials: 'include' });
                     if (statusResponse.ok) {
                         const statusData = await statusResponse.json();
-                        setGenerationLog(statusData.generation_log);
-                        if (statusData.status === 'completed' || statusData.status === 'failed') {
+                        setGenerationProgress(statusData.progress);
+                        setGenerationMessage(statusData.message);
+                        if (statusData.progress === 100 || statusData.progress === -1) {
                             clearInterval(intervalId);
-                            if (statusData.status === 'completed') {
+                            if (statusData.progress === 100) {
                                 setGeneratedSections(statusData.generated_sections);
                             }
                         }
@@ -339,9 +343,8 @@ export default function KnowledgeCard() {
             <ProgressModal
                 isOpen={isProgressModalOpen}
                 onClose={() => setIsProgressModalOpen(false)}
-                logs={generationLog}
-                onFileUpload={handleFileUpload}
-                onRetry={onRetry}
+                progress={generationProgress}
+                message={generationMessage}
             />
             <LoadingModal isOpen={loading} message={loadingMessage} />
             <div className="kc-container">
