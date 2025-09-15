@@ -8,7 +8,7 @@ def test_create_new_knowledge_card(page: Page):
     """
     email = "test_user@unhcr.org"
     password = "password123"
-    base_url = "http://localhost:8502"
+    base_url = "http://localhost:8503"
 
     page.goto(f"{base_url}/login")
     page.get_by_test_id("email-input").fill(email)
