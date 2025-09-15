@@ -4,6 +4,8 @@
 __Empowering change-makers with AI-enhanced Proposal Drafting__
 
 
+## Introduction
+
 The Project Proposal Generator is an open-source, agentic AI system, designed to automate and enhance the creation of high-quality, structured project proposals. Tailored for UN agencies, NGOs, and mission-driven organizations, it ensures strategic alignment, compliance, and efficiency—turning complex requirements into compelling, submission-ready drafts.
 
 ### ✨ Why This Tool?
@@ -67,7 +69,12 @@ This system leverages the agent-based framework of [CrewAI](https://docs.crewai.
 - 🧩 **Contextual Adaptation**: Accepts input on target countries, population groups, and sectors of intervention.
 - 📂 **Validation & Export**: Projects can be edit and refined, then exported to word and pdf and marked as validated.
 
+
+
+
+
 ## 🧱 System Architecture
+
 
 Each agent is powered by an LLM and follows a role-specific prompt and toolset.
 
@@ -91,33 +98,33 @@ This project prioritizes security to ensure the safe handling of sensitive infor
 *   **LLM Security**: For the AI components, we are mindful of risks such as prompt injection. We design our prompts and agentic workflows to be robust against malicious inputs and to ensure the Large Language Model (LLM) behaves within its intended scope.
 
 
-## 🤝  Alignment with UN Open Source Principles
+## 🤝 Contributing
 
-The open source nature of this project allows for community contributions and adaptations, making it a versatile solution for various UN agencies and NGOs.
+> 🚧 This project is licensed under the MIT License. It is in active development. Contributions are welcome!
 
-> 🚧 This project is licensed under the MIT License. It is in active development.
+The system uses multiple proposal structures and can be definitely adapted to other UN Humanitarian agencies (e.g., UNHCR, OCHA, UNICEF, WFP).
 
-This project is committed to upholding the [UN Open Source Principles](https://unite.un.org/en/news/osi-first-endorse-united-nations-open-source-principles), ensuring it is a transparent, collaborative, and sustainable solution for the humanitarian community.
-
--   **Open by Default**: The Project Proposal Generator is built as an open-source tool from the ground up, making its codebase and development process accessible to everyone.
-
--   **Contribute Back**: We actively encourage and welcome contributions from the community to foster a vibrant ecosystem of developers and users. If you would like to contribute to the project, please follow these steps:
+If you can contribute to the project, please follow these steps:
 1. Fork the repo
 2. Create a feature branch
 3. Commit changes
 4. Open a pull request
 
--   **Secure by Design**: Security is a core consideration in our development lifecycle, ensuring that the tool is safe and reliable for all users. The Open source nature of the project enhance security by allowing multiple developpers to test the system.
 
+## 🌐 Alignment with UN Open Source Principles
+
+The open source nature of this project allows for community contributions and adaptations, making it a versatile solution for various UN agencies and NGOs.
+
+This project is committed to upholding the [UN Open Source Principles](https://unite.un.org/en/news/osi-first-endorse-united-nations-open-source-principles), ensuring it is a transparent, collaborative, and sustainable solution for the humanitarian community.
+
+-   **Open by Default**: The Project Proposal Generator is built as an open-source tool from the ground up, making its codebase and development process accessible to everyone.
+-   **Contribute Back**: We actively encourage and welcome contributions from the community to foster a vibrant ecosystem of developers and users.
+-   **Secure by Design**: Security is a core consideration in our development lifecycle, ensuring that the tool is safe and reliable for all users.
 -   **Foster Inclusive Participation**: We are dedicated to creating an inclusive environment where individuals from diverse backgrounds can contribute and feel empowered.
-
--   **Design for Reusability**: The modular architecture of the system allows for easy adaptation and integration with other platforms and ecosystems. The application is designed to be agnostic of the cloud and inference provider.
-
--   **Provide Documentation**: Comprehensive documentation is provided for end-users, integrators, and developers to ensure clarity and ease of use. This includes documentation of the [backend](backend/README.md), [frontend](frontend/README.md), [db](db/ER_diagram.svg), [local installation](doc_running_local.md), and [deployment on different clouds](doc_cloud-deployment.md).
-
+-   **Design for Reusability**: The modular architecture of the system allows for easy adaptation and integration with other platforms and ecosystems.
+-   **Provide Documentation**: Comprehensive documentation is provided for end-users, integrators, and developers to ensure clarity and ease of use.
 -   **RISE (Recognize, Incentivize, Support, and Empower)**: We aim to empower our community by recognizing contributions and providing the necessary support for active participation.
-
--   **Sustain and Scale**: The project is designed to be a long-term solution that can evolve and scale to meet the changing needs of the UN system and its partners. The system uses multiple proposal structures and can be definitely adapted to other UN Humanitarian agencies (e.g., UNICEF, WFP).
+-   **Sustain and Scale**: The project is designed to be a long-term solution that can evolve and scale to meet the changing needs of the UN system and its partners.
 
 
 ## 🔮 Future Development: Strategic AI Enhancements
@@ -134,8 +141,6 @@ Developing budgets that align with real costs and institutional norms is time-co
 **Solution:**  
 An AI agent that generates budget lines using a calibrated costing tool referencing standard rates and historical financial data, in a similar approach than [IRC SCAN](https://www.rescue.org/sites/default/files/document/964/ircscantool2pager.pdf). The system ensures consistency, transparency, and realism in project budgeting.
 
-This could also include the generation of related contractual documents for service providers.
-
 **Added Benefits:**  
 - Saves time and increases accuracy in budget development  
 - Promotes financial coherence across projects and missions  
@@ -144,7 +149,7 @@ This could also include the generation of related contractual documents for serv
 
 ---
 
-### 📝 AI-Supported Reporting, Evaluation & Documentation Toolkit
+### 📝 AI-Supported Reporting & Documentation Toolkit
 
 **Pain Point:**  
 Project teams often struggle with reporting due to inconsistent formats, fragmented data sources, and unclear requirements. Generating accurate, timely, and donor-compliant reports can be burdensome, especially when field data is lacking or not well-structured.
@@ -159,11 +164,12 @@ An integrated module that provides tailored reporting templates aligned with don
 - Supports continuous learning by linking reported outcomes to future project design  
 - Facilitates better data collection through context-aware form generation
 
+
 --------
 
 ## 📚 Project Background & References
 
-This project was initially impulsed by [Edouard Legoupil](https://www.linkedin.com/in/edouardlegoupil/recent-activity/all/) during his secondment from UNHCR to IOM as Chief Data Officer. The [first version](https://github.com/iom/proposal_drafter) was developped with [Datamatics](https://www.datamatics.com/) through an initial seed funding from IOM, building on the [IOM Project Handbook](https://publications.iom.int/system/files/pdf/iom_project_handbook_6feb2012.pdf). 
+This project was initially impulsed by [Edouard Legoupil](https://www.linkedin.com/in/edouardlegoupil/recent-activity/all/) during his secondment to IOM as Chief Data Officer. The [first version](https://github.com/iom/proposal_drafter) was developped with [Datamatics](https://www.datamatics.com/) through an initial seed funding from IOM, building on the [IOM Project Handbook](https://publications.iom.int/system/files/pdf/iom_project_handbook_6feb2012.pdf).
 
 The last current releases and new features are developped to support the needs of UNHCR.
 

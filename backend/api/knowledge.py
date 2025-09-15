@@ -11,7 +11,7 @@ from typing import List, Optional
 from backend.core.db import get_engine
 from backend.core.security import get_current_user
 from backend.core.config import load_proposal_template
-from googlesearch import search
+from backend.utils.reference_identification_crew import get_reference_identification_crew
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -320,64 +320,25 @@ async def identify_references(data: IdentifyReferencesIn, current_user: dict = D
     """
     Identifies references for a knowledge card based on its title, summary, and linked element.
     """
-    logger.info(f"Identifying references for query: {data.title} {data.linked_element} {data.summary}")
-    query = f"{data.title} {data.linked_element} {data.summary}"
-    
-    authoritative_domains = ["un.org", "gov", "ec.europa.eu", "oecd.org", "worldbank.org"]
-    
+    logger.info(f"Identifying references for query: {data.title}")
+
     try:
-        # Perform Google search
-        search_results = list(search(query, num_results=10))
+        crew = get_reference_identification_crew(data.linked_element, data.title)
+        result = crew.kickoff()
 
-        logger.info(f"Found {len(search_results)} search results: {search_results}")
+        # The result from the crew is a string with URLs and summaries.
+        # I need to parse this string to extract the URLs.
+        # I will assume the format is:
+        # 1. URL: <url>
+        #    Summary: <summary>
 
+        references = []
+        for line in result.splitlines():
+            if line.startswith("URL:"):
+                url = line.split("URL:")[1].strip()
+                references.append({"url": url, "reference_type": ""})
 
-        # Rerank results to prioritize authoritative domains
-        reranked_results = sorted(
-            search_results,
-            key=lambda url: any(domain in url for domain in authoritative_domains),
-            reverse=True
-        )
-
-        # Take the top 5 results
-        top_5_results = reranked_results[:5]
-
-        classified_references = []
-        for url in top_5_results:
-            try:
-                # I am assuming view_text_website is available globally
-                content = view_text_website(url)
-
-                prompt = f"""
-                Given the following content from a webpage, classify it into one of the following categories:
-                - UNHCR Operation Page
-                - Donor Content
-                - Humanitarian Partner Content
-                - Statistics
-                - Needs Assessment
-                - Evaluation Report
-                - Policies
-
-                Content:
-                {content[:4000]}
-
-                Category:
-                """
-
-                response = litellm.completion(
-                    model="gpt-3.5-turbo",
-                    messages=[{"role": "user", "content": prompt}]
-                )
-
-                category = response.choices[0].message.content.strip()
-                classified_references.append({"url": url, "reference_type": category})
-            except Exception as e:
-                logger.error(f"Error processing URL {url}: {e}")
-                classified_references.append({"url": url, "reference_type": "Unclassified"})
-
-        logger.info(f"Classified references: {classified_references}")
-        return {"references": classified_references}
-
+        return {"references": references}
     except Exception as e:
         logger.error(f"[IDENTIFY REFERENCES ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to identify references.")
