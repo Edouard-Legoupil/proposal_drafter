@@ -189,10 +189,14 @@ export default function KnowledgeCard() {
     };
 
     const handleIdentifyReferences = async () => {
+        if (!id) {
+            alert("Please save the knowledge card before identifying references.");
+            return;
+        }
         setLoading(true);
         setLoadingMessage("Identifying references...");
         try {
-            const response = await fetch(`${API_BASE_URL}/knowledge-cards/identify-references`, {
+            const response = await fetch(`${API_BASE_URL}/knowledge-cards/${id}/identify-references`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -319,6 +323,7 @@ export default function KnowledgeCard() {
                                     <option value="Social Media">Social Media</option>
                                 </select>
                                 <input type="url" placeholder="https://example.com" value={ref.url} onChange={e => handleReferenceChange(index, 'url', e.target.value)} data-testid={`reference-url-input-${index}`} />
+                                <textarea value={ref.summary || ''} readOnly placeholder="Summary" data-testid={`reference-summary-textarea-${index}`} />
                                 <button type="button" onClick={() => removeReference(index)} data-testid={`remove-reference-button-${index}`}>Remove</button>
                             </div>
                         ))}
