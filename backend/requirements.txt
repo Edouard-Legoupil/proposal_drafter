@@ -94,4 +94,15 @@ pytest-playwright
 googlesearch-python
 google-search-results
 
+# Web scraping
+beautifulsoup4
+requests
+
+# Vector embeddings
+sentence-transformers
+pgvector
+
+# PDF processing
+pypdf
+
  

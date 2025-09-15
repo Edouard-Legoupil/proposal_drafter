@@ -20,6 +20,8 @@ export default function KnowledgeCard() {
     const [loading, setLoading] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState('');
     const [generatedSections, setGeneratedSections] = useState(null);
+    const [editingSection, setEditingSection] = useState(null);
+    const [editedContent, setEditedContent] = useState('');
 
     const [donors, setDonors] = useState([]);
     const [outcomes, setOutcomes] = useState([]);
@@ -251,6 +253,32 @@ export default function KnowledgeCard() {
         }
     }
 
+    const handleEditClick = (section, content) => {
+        setEditingSection(section);
+        setEditedContent(content);
+    };
+
+    const handleSaveClick = async (section) => {
+        const url = `${API_BASE_URL}/knowledge-cards/${id}/sections/${section}`;
+        const response = await fetch(url, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: editedContent }),
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            setGeneratedSections(prev => ({ ...prev, [section]: editedContent }));
+            setEditingSection(null);
+        } else {
+            alert('Failed to save section.');
+        }
+    };
+
+    const handleCancelClick = () => {
+        setEditingSection(null);
+    };
+
     return (
         <Base>
             <LoadingModal isOpen={loading} message={loadingMessage} />
@@ -353,9 +381,24 @@ export default function KnowledgeCard() {
                         {Object.entries(generatedSections).map(([section, content]) => (
                             <div key={section} className="kc-section">
                                 <h3>{section}</h3>
-                                <p>{content}</p>
+                                {editingSection === section ? (
+                                    <textarea
+                                        className="kc-edit-textarea"
+                                        value={editedContent}
+                                        onChange={(e) => setEditedContent(e.target.value)}
+                                    />
+                                ) : (
+                                    <p>{content}</p>
+                                )}
                                 <div className="kc-section-actions">
-                                    <button data-testid={`edit-section-button-${section}`}>Edit</button>
+                                    {editingSection === section ? (
+                                        <>
+                                            <button onClick={() => handleSaveClick(section)}>Save</button>
+                                            <button onClick={handleCancelClick}>Cancel</button>
+                                        </>
+                                    ) : (
+                                        <button onClick={() => handleEditClick(section, content)} data-testid={`edit-section-button-${section}`}>Edit</button>
+                                    )}
                                     <button data-testid={`regenerate-section-button-${section}`}>Regenerate</button>
                                 </div>
                             </div>

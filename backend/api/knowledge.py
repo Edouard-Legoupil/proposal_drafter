@@ -2,16 +2,22 @@
 import json
 import uuid
 import logging
-from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File
 from sqlalchemy import text
 import litellm
+import pypdf
 from pydantic import BaseModel, Field, validator
 from typing import List, Optional
+from datetime import datetime, timedelta
 
 from backend.core.db import get_engine
 from backend.core.security import get_current_user
 from backend.core.config import load_proposal_template
 from backend.utils.reference_identification_crew import ReferenceIdentificationCrew
+from backend.utils.content_generation_crew import ContentGenerationCrew
+from backend.utils.scraper import scrape_url
+from sentence_transformers import SentenceTransformer
+import numpy as np
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -26,6 +32,9 @@ class IdentifyReferencesIn(BaseModel):
     title: str
     summary: Optional[str] = None
     linked_element: Optional[str] = None
+
+class UpdateSectionIn(BaseModel):
+    content: str
 
 class KnowledgeCardIn(BaseModel):
     title: str
@@ -216,6 +225,44 @@ async def get_knowledge_card(card_id: uuid.UUID, current_user: dict = Depends(ge
         raise HTTPException(status_code=500, detail="Failed to fetch knowledge card.")
 
 
+@router.put("/knowledge-cards/{card_id}/sections/{section_name}")
+async def update_knowledge_card_section(card_id: uuid.UUID, section_name: str, section: UpdateSectionIn, current_user: dict = Depends(get_current_user)):
+    """
+    Updates a specific section of a knowledge card.
+    """
+    try:
+        with get_engine().begin() as connection:
+            # First, fetch the existing generated_sections
+            result = connection.execute(
+                text("SELECT generated_sections FROM knowledge_cards WHERE id = :id"),
+                {"id": card_id}
+            ).fetchone()
+
+            if not result or not result.generated_sections:
+                raise HTTPException(status_code=404, detail="Knowledge card or sections not found.")
+
+            generated_sections = json.loads(result.generated_sections)
+
+            if section_name not in generated_sections:
+                raise HTTPException(status_code=404, detail=f"Section '{section_name}' not found.")
+
+            # Update the specific section
+            generated_sections[section_name] = section.content
+
+            # Save the updated generated_sections back to the database
+            connection.execute(
+                text("UPDATE knowledge_cards SET generated_sections = :sections, updated_at = NOW() WHERE id = :id"),
+                {"sections": json.dumps(generated_sections), "id": card_id}
+            )
+
+        return {"message": f"Section '{section_name}' updated successfully."}
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        logger.error(f"[UPDATE KC SECTION ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to update knowledge card section.")
+
+
 @router.put("/knowledge-cards/{card_id}")
 async def update_knowledge_card(card_id: uuid.UUID, card: KnowledgeCardIn, current_user: dict = Depends(get_current_user)):
     """
@@ -269,13 +316,114 @@ async def update_knowledge_card(card_id: uuid.UUID, card: KnowledgeCardIn, curre
         raise HTTPException(status_code=500, detail="Failed to update knowledge card.")
 
 
+# Load the sentence transformer model
+embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+
+async def _process_and_store_text(reference_id: uuid.UUID, text_content: str, connection):
+    """
+    Chunks text, creates embeddings, and stores them for a given reference.
+    """
+    # For now, we will clear old vectors before adding new ones
+    connection.execute(
+        text("DELETE FROM knowledge_card_reference_vectors WHERE reference_id = :ref_id"),
+        {"ref_id": reference_id}
+    )
+
+    # Chunk the text
+    chunks = [chunk for chunk in text_content.split("\n") if chunk.strip()]
+
+    # Generate and store embeddings
+    for chunk in chunks:
+        embedding = embedding_model.encode(chunk).tolist()
+        connection.execute(
+            text("""
+                INSERT INTO knowledge_card_reference_vectors (reference_id, text_chunk, embedding)
+                VALUES (:ref_id, :chunk, :embedding)
+            """),
+            {"ref_id": reference_id, "chunk": chunk, "embedding": embedding}
+        )
+
+    # Update scraped_at timestamp
+    connection.execute(
+        text("UPDATE knowledge_card_references SET scraped_at = NOW(), scraping_error = FALSE WHERE id = :id"),
+        {"id": reference_id}
+    )
+
+async def ingest_reference_content(reference_id: uuid.UUID, force_scrape: bool = False):
+    """
+    Ingests content from a reference URL, creates embeddings, and stores them.
+    """
+    with get_engine().begin() as connection:
+        reference = connection.execute(
+            text("SELECT id, url, scraped_at FROM knowledge_card_references WHERE id = :id"),
+            {"id": reference_id}
+        ).fetchone()
+
+        if not reference:
+            logger.error(f"Reference with id {reference_id} not found.")
+            return {"status": "error", "message": "Reference not found."}
+
+        if reference.scraped_at and not force_scrape and datetime.utcnow() - reference.scraped_at < timedelta(days=7):
+            logger.info(f"Reference {reference.id} was scraped recently. Skipping.")
+            return {"status": "skipped", "message": "Scraped recently."}
+
+        content = scrape_url(reference.url)
+
+        if not content:
+            connection.execute(
+                text("UPDATE knowledge_card_references SET scraping_error = TRUE, updated_at = NOW() WHERE id = :id"),
+                {"id": reference.id}
+            )
+            return {"status": "error", "message": "Failed to scrape content."}
+
+        await _process_and_store_text(reference.id, content, connection)
+        return {"status": "success", "message": "Content ingested successfully."}
+
+
+@router.post("/knowledge-cards/references/{reference_id}/upload-pdf")
+async def upload_pdf_reference(reference_id: uuid.UUID, file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
+    """
+    Uploads a PDF for a reference, extracts text, and stores embeddings.
+    """
+    if file.content_type != "application/pdf":
+        raise HTTPException(status_code=400, detail="File must be a PDF.")
+
+    try:
+        pdf_reader = pypdf.PdfReader(file.file)
+        text_content = ""
+        for page in pdf_reader.pages:
+            text_content += page.extract_text()
+
+        if not text_content:
+            raise HTTPException(status_code=400, detail="Could not extract text from PDF.")
+
+        with get_engine().begin() as connection:
+            await _process_and_store_text(reference_id, text_content, connection)
+
+        return {"status": "success", "message": "PDF content ingested successfully."}
+    except Exception as e:
+        logger.error(f"Error processing PDF for reference {reference_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to process PDF file.")
+
+
 @router.post("/knowledge-cards/{card_id}/generate")
 async def generate_knowledge_card_content(card_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
     """
     Generates content for a knowledge card based on its linked entity.
     """
     try:
-        with get_engine().begin() as connection:
+        ingestion_results = []
+        with get_engine().connect() as connection:
+            # Fetch all references for the card
+            references = connection.execute(
+                text("SELECT id FROM knowledge_card_references WHERE knowledge_card_id = :card_id"),
+                {"card_id": card_id}
+            ).fetchall()
+
+            for ref in references:
+                result = await ingest_reference_content(ref.id)
+                ingestion_results.append({"reference_id": ref.id, **result})
+
             # Fetch the card to determine the link type
             card = connection.execute(
                 text("SELECT donor_id, outcome_id, field_context_id FROM knowledge_cards WHERE id = :id"),
@@ -287,21 +435,29 @@ async def generate_knowledge_card_content(card_id: uuid.UUID, current_user: dict
             # Determine which template to use
             if card.donor_id:
                 template_name = "knowledge_card_donor_template.json"
-            # TODO: Add logic for other link types
-            # elif card.outcome_id:
-            #     template_name = "knowledge_card_outcome_template.json"
-            # elif card.field_context_id:
-            #     template_name = "knowledge_card_field_context_template.json"
+            elif card.outcome_id:
+                template_name = "knowledge_card_outcome_template.json"
+            elif card.field_context_id:
+                template_name = "knowledge_card_field_context_template.json"
             else:
                 raise HTTPException(status_code=400, detail="Knowledge card is not linked to any entity.")
 
             template = load_proposal_template(template_name)
             generated_sections = {}
 
+            crew = ContentGenerationCrew()
             for section in template.get("sections", []):
                 section_name = section.get("section_name")
-                # Placeholder for actual content generation logic
-                generated_sections[section_name] = f"This is placeholder content for the '{section_name}' section."
+                instructions = section.get("instructions")
+
+                inputs = {
+                    "section_name": section_name,
+                    "instructions": instructions,
+                    "knowledge_card_id": str(card_id),
+                }
+
+                result = crew.create_crew().kickoff(inputs=inputs)
+                generated_sections[section_name] = result
 
             # Save the generated sections to the database
             connection.execute(
@@ -309,7 +465,11 @@ async def generate_knowledge_card_content(card_id: uuid.UUID, current_user: dict
                 {"sections": json.dumps(generated_sections), "id": card_id}
             )
 
-        return {"message": "Knowledge card content generated successfully.", "generated_sections": generated_sections}
+        return {
+            "message": "Knowledge card content generation process started.",
+            "ingestion_results": ingestion_results,
+            "generated_sections": generated_sections
+        }
     except HTTPException as http_exc:
         raise http_exc
     except Exception as e:

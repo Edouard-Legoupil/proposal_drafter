@@ -4,6 +4,10 @@
 -- Grant necessary privileges to the application user
 GRANT CONNECT ON DATABASE postgres TO <DB_USERNAME>;
 GRANT USAGE ON SCHEMA public TO <DB_USERNAME>;
+
+-- Enable vector extension
+CREATE EXTENSION IF NOT EXISTS vector;
+
 -- Create Teams table
 CREATE TABLE IF NOT EXISTS teams (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -145,11 +149,22 @@ CREATE TABLE IF NOT EXISTS knowledge_cards (
 
 -- Create Knowledge Card References table  
 CREATE TABLE IF NOT EXISTS knowledge_card_references (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     knowledge_card_id UUID NOT NULL REFERENCES knowledge_cards(id) ON DELETE CASCADE,
     url TEXT NOT NULL,
     reference_type TEXT NOT NULL,
     summary TEXT NOT NULL,
-    PRIMARY KEY (knowledge_card_id, url)
+    scraped_at TIMESTAMPTZ,
+    scraping_error BOOLEAN DEFAULT FALSE,
+    UNIQUE (knowledge_card_id, url)
+);
+
+-- Create Knowledge Card Reference Vectors table
+CREATE TABLE IF NOT EXISTS knowledge_card_reference_vectors (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    reference_id UUID NOT NULL REFERENCES knowledge_card_references(id) ON DELETE CASCADE,
+    text_chunk TEXT NOT NULL,
+    embedding vector(768)
 );
 
 -- Create join tables for many-to-many relationships  
