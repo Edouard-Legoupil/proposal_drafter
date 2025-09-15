@@ -203,7 +203,7 @@ export default function KnowledgeCard() {
         if (response.ok) {
             const data = await response.json();
             const newReferences = data.references.map(url => ({ url, reference_type: '' }));
-            setReferences(newReferences);
+            setReferences(prevReferences => [...prevReferences.filter(r => r.url), ...newReferences]);
         } else {
             const error = await response.json();
             alert(`Error identifying references: ${error.detail}`);
