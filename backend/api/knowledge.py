@@ -2,7 +2,7 @@
 import json
 import uuid
 import logging
-from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File, BackgroundTasks
 from sqlalchemy import text
 import litellm
 import pypdf
@@ -407,33 +407,44 @@ async def upload_pdf_reference(reference_id: uuid.UUID, file: UploadFile = File(
         raise HTTPException(status_code=500, detail="Failed to process PDF file.")
 
 
-@router.post("/knowledge-cards/{card_id}/generate")
-async def generate_knowledge_card_content(card_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
-    """
-    Generates content for a knowledge card based on its linked entity.
-    """
+def _add_log_entry(connection, card_id: uuid.UUID, message: str, status: str = "in_progress"):
+    entry = {"timestamp": datetime.utcnow().isoformat(), "message": message, "status": status}
+    connection.execute(
+        text("UPDATE knowledge_cards SET generation_log = generation_log || :entry::jsonb WHERE id = :id"),
+        {"entry": json.dumps(entry), "id": card_id}
+    )
+
+async def generate_content_background(card_id: uuid.UUID):
     try:
-        ingestion_results = []
-        with get_engine().connect() as connection:
-            # Fetch all references for the card
+        with get_engine().begin() as connection:
+            # Clear previous log and set status to generating
+            connection.execute(
+                text("UPDATE knowledge_cards SET status = 'generating_sections', generation_log = '[]'::jsonb WHERE id = :id"),
+                {"id": card_id}
+            )
+            _add_log_entry(connection, card_id, "Starting content generation...")
+
+            # Ingest content
             references = connection.execute(
-                text("SELECT id FROM knowledge_card_references WHERE knowledge_card_id = :card_id"),
+                text("SELECT id, url FROM knowledge_card_references WHERE knowledge_card_id = :card_id"),
                 {"card_id": card_id}
             ).fetchall()
 
-            for ref in references:
+            for i, ref in enumerate(references):
+                _add_log_entry(connection, card_id, f"Processing reference {i+1}/{len(references)}: {ref.url}")
                 result = await ingest_reference_content(ref.id)
-                ingestion_results.append({"reference_id": ref.id, **result})
+                if result["status"] == "error":
+                    _add_log_entry(connection, card_id, f"Failed to scrape {ref.url}. Please upload a PDF.", status="requires_action")
+                    # We will continue with other references, and let the user decide to retry later
+                else:
+                    _add_log_entry(connection, card_id, f"Finished processing reference {i+1}/{len(references)}.")
 
-            # Fetch the card to determine the link type
+            # Generate content
             card = connection.execute(
                 text("SELECT donor_id, outcome_id, field_context_id FROM knowledge_cards WHERE id = :id"),
                 {"id": card_id}
             ).fetchone()
-            if not card:
-                raise HTTPException(status_code=404, detail="Knowledge card not found.")
 
-            # Determine which template to use
             if card.donor_id:
                 template_name = "knowledge_card_donor_template.json"
             elif card.outcome_id:
@@ -441,15 +452,16 @@ async def generate_knowledge_card_content(card_id: uuid.UUID, current_user: dict
             elif card.field_context_id:
                 template_name = "knowledge_card_field_context_template.json"
             else:
-                raise HTTPException(status_code=400, detail="Knowledge card is not linked to any entity.")
+                raise Exception("Knowledge card is not linked to any entity.")
 
             template = load_proposal_template(template_name)
             generated_sections = {}
 
             crew = ContentGenerationCrew()
-            for section in template.get("sections", []):
+            for i, section in enumerate(template.get("sections", [])):
                 section_name = section.get("section_name")
                 instructions = section.get("instructions")
+                _add_log_entry(connection, card_id, f"Generating section {i+1}/{len(template.get('sections', []))}: {section_name}")
 
                 inputs = {
                     "section_name": section_name,
@@ -460,22 +472,52 @@ async def generate_knowledge_card_content(card_id: uuid.UUID, current_user: dict
                 result = crew.create_crew().kickoff(inputs=inputs)
                 generated_sections[section_name] = result
 
-            # Save the generated sections to the database
+            # Save the generated sections and update status
+            _add_log_entry(connection, card_id, "Content generation complete.", status="completed")
             connection.execute(
-                text("UPDATE knowledge_cards SET generated_sections = :sections, updated_at = NOW() WHERE id = :id"),
+                text("UPDATE knowledge_cards SET generated_sections = :sections, status = 'completed', updated_at = NOW() WHERE id = :id"),
                 {"sections": json.dumps(generated_sections), "id": card_id}
             )
-
-        return {
-            "message": "Knowledge card content generation process started.",
-            "ingestion_results": ingestion_results,
-            "generated_sections": generated_sections
-        }
-    except HTTPException as http_exc:
-        raise http_exc
     except Exception as e:
-        logger.error(f"[GENERATE KC CONTENT ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to generate knowledge card content.")
+        logger.error(f"[BACKGROUND KC GENERATION ERROR] {e}", exc_info=True)
+        with get_engine().begin() as connection:
+            _add_log_entry(connection, card_id, f"An unexpected error occurred: {e}", status="failed")
+            connection.execute(
+                text("UPDATE knowledge_cards SET status = 'failed' WHERE id = :id"),
+                {"id": card_id}
+            )
+
+@router.post("/knowledge-cards/{card_id}/generate")
+async def generate_knowledge_card_content(card_id: uuid.UUID, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
+    """
+    Starts the generation of content for a knowledge card in the background.
+    """
+    background_tasks.add_task(generate_content_background, card_id)
+    return {"message": "Knowledge card content generation started in the background."}
+
+@router.get("/knowledge-cards/{card_id}/status")
+async def get_knowledge_card_status(card_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
+    """
+    Gets the status and generation log of a knowledge card.
+    """
+    try:
+        with get_engine().connect() as connection:
+            result = connection.execute(
+                text("SELECT status, generated_sections, generation_log FROM knowledge_cards WHERE id = :id"),
+                {"id": card_id}
+            ).fetchone()
+
+            if not result:
+                raise HTTPException(status_code=404, detail="Knowledge card not found.")
+
+            return {
+                "status": result.status,
+                "generated_sections": json.loads(result.generated_sections) if result.generated_sections else None,
+                "generation_log": json.loads(result.generation_log) if result.generation_log else []
+            }
+    except Exception as e:
+        logger.error(f"[GET KC STATUS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to get knowledge card status.")
 
 @router.post("/knowledge-cards/{card_id}/identify-references")
 async def identify_references(card_id: uuid.UUID, data: IdentifyReferencesIn, current_user: dict = Depends(get_current_user)):

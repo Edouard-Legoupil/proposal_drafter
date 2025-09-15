@@ -5,11 +5,21 @@ import CreatableSelect from 'react-select/creatable';
 import Base from '../../components/Base/Base';
 import CommonButton from '../../components/CommonButton/CommonButton';
 import LoadingModal from '../../components/LoadingModal/LoadingModal';
+import ProgressModal from '../../components/ProgressModal/ProgressModal';
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 
 export default function KnowledgeCard() {
     const navigate = useNavigate();
+
+    const authenticatedFetch = async (url, options) => {
+        const response = await fetch(url, options);
+        if (response.status === 401) {
+            sessionStorage.setItem("session_expired", "Session expired. Please login again.");
+            navigate("/login");
+        }
+        return response;
+    };
     const { id } = useParams();
 
     const [title, setTitle] = useState('');
@@ -22,6 +32,8 @@ export default function KnowledgeCard() {
     const [generatedSections, setGeneratedSections] = useState(null);
     const [editingSection, setEditingSection] = useState(null);
     const [editedContent, setEditedContent] = useState('');
+    const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
+    const [generationLog, setGenerationLog] = useState([]);
 
     const [donors, setDonors] = useState([]);
     const [outcomes, setOutcomes] = useState([]);
@@ -37,14 +49,14 @@ export default function KnowledgeCard() {
         async function fetchData() {
             try {
                 const [donorsRes, outcomesRes] = await Promise.all([
-                    fetch(`${API_BASE_URL}/donors`, { credentials: 'include' }),
-                    fetch(`${API_BASE_URL}/outcomes`, { credentials: 'include' })
+                    authenticatedFetch(`${API_BASE_URL}/donors`, { credentials: 'include' }),
+                    authenticatedFetch(`${API_BASE_URL}/outcomes`, { credentials: 'include' })
                 ]);
                 if (donorsRes.ok) setDonors((await donorsRes.json()).donors);
                 if (outcomesRes.ok) setOutcomes((await outcomesRes.json()).outcomes);
 
                 // Fetch all field contexts initially to populate the geographic coverage dropdown
-                const allFieldContextsRes = await fetch(`${API_BASE_URL}/field-contexts`, { credentials: 'include' });
+                const allFieldContextsRes = await authenticatedFetch(`${API_BASE_URL}/field-contexts`, { credentials: 'include' });
                 if (allFieldContextsRes.ok) {
                     const allContexts = (await allFieldContextsRes.json()).field_contexts;
                     const uniqueGeos = [...new Set(allContexts.map(fc => fc.geographic_coverage))];
@@ -53,7 +65,7 @@ export default function KnowledgeCard() {
 
 
                 if (id) {
-                    const cardRes = await fetch(`${API_BASE_URL}/knowledge-cards/${id}`, { credentials: 'include' });
+                    const cardRes = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${id}`, { credentials: 'include' });
                     if (cardRes.ok) {
                         const data = await cardRes.json();
                         const card = data.knowledge_card;
@@ -91,7 +103,7 @@ export default function KnowledgeCard() {
             if (selectedGeoCoverage) {
                 url += `?geographic_coverage=${encodeURIComponent(selectedGeoCoverage)}`;
             }
-            const res = await fetch(url, { credentials: 'include' });
+            const res = await authenticatedFetch(url, { credentials: 'include' });
             if (res.ok) {
                 setFieldContexts((await res.json()).field_contexts);
             }
@@ -136,7 +148,7 @@ export default function KnowledgeCard() {
         setReferences(newReferences);
     };
 
-    const handleSave = async () => {
+    const handleSave = async (navigateOnSuccess = true) => {
         setLoading(true);
         let finalLinkedId = linkedId;
         if (linkedId && linkedId.startsWith('new_')) {
@@ -147,7 +159,7 @@ export default function KnowledgeCard() {
             };
             const endpoint = endpointMap[linkType];
             const value = linkedId.substring(4);
-            const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
+            const response = await authenticatedFetch(`${API_BASE_URL}/${endpoint}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: value }),
@@ -174,7 +186,7 @@ export default function KnowledgeCard() {
         const url = id ? `${API_BASE_URL}/knowledge-cards/${id}` : `${API_BASE_URL}/knowledge-cards`;
         const method = id ? 'PUT' : 'POST';
 
-        const response = await fetch(url, {
+        const response = await authenticatedFetch(url, {
             method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
@@ -183,9 +195,11 @@ export default function KnowledgeCard() {
         setLoading(false);
 
         if (response.ok) {
-            alert(`Knowledge card ${id ? 'updated' : 'created'} successfully!`);
-            sessionStorage.setItem('selectedDashboardTab', 'knowledge');
-            navigate('/dashboard');
+            if (navigateOnSuccess) {
+                alert(`Knowledge card ${id ? 'updated' : 'created'} successfully!`);
+                sessionStorage.setItem('selectedDashboardTab', 'knowledge');
+                navigate('/dashboard');
+            }
         } else {
             const error = await response.json();
             alert(`Error ${id ? 'updating' : 'creating'} knowledge card: ${error.detail}`);
@@ -201,7 +215,7 @@ export default function KnowledgeCard() {
         setLoading(true);
         setLoadingMessage("Identifying references...");
         try {
-            const response = await fetch(`${API_BASE_URL}/knowledge-cards/${id}/identify-references`, {
+            const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${id}/identify-references`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -236,25 +250,63 @@ export default function KnowledgeCard() {
 
     const handlePopulate = async (e) => {
         e.preventDefault();
-        const saveResponse = await handleSave();
+        const saveResponse = await handleSave(false);
         if (saveResponse.ok) {
             const cardId = id || (await saveResponse.json()).knowledge_card_id;
-            setLoading(true);
-            const genResponse = await fetch(`${API_BASE_URL}/knowledge-cards/${cardId}/generate`, {
+            setIsProgressModalOpen(true);
+
+            const genResponse = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${cardId}/generate`, {
                 method: 'POST',
                 credentials: 'include'
             });
-            setLoading(false);
+
             if (genResponse.ok) {
-                const genData = await genResponse.json();
-                setGeneratedSections(genData.generated_sections);
-                alert('Knowledge card content populated successfully!');
+                // Start polling for status
+                const intervalId = setInterval(async () => {
+                    const statusResponse = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${cardId}/status`, { credentials: 'include' });
+                    if (statusResponse.ok) {
+                        const statusData = await statusResponse.json();
+                        setGenerationLog(statusData.generation_log);
+                        if (statusData.status === 'completed' || statusData.status === 'failed') {
+                            clearInterval(intervalId);
+                            if (statusData.status === 'completed') {
+                                setGeneratedSections(statusData.generated_sections);
+                            }
+                        }
+                    }
+                }, 3000); // Poll every 3 seconds
             } else {
                 const error = await genResponse.json();
-                alert(`Error populating card content: ${error.detail}`);
+                alert(`Error starting content generation: ${error.detail}`);
+                setIsProgressModalOpen(false);
             }
         }
     }
+
+    const handleFileUpload = async (e, reference_id) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const url = `${API_BASE_URL}/knowledge-cards/references/${reference_id}/upload-pdf`;
+        const response = await authenticatedFetch(url, {
+            method: 'POST',
+            body: formData,
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            alert('Failed to upload PDF.');
+        }
+    };
+
+    const onRetry = async () => {
+        // This will re-trigger the whole generation process.
+        // The backend will skip already processed references.
+        handlePopulate(new Event('submit'));
+    };
 
     const handleEditClick = (section, content) => {
         setEditingSection(section);
@@ -263,7 +315,7 @@ export default function KnowledgeCard() {
 
     const handleSaveClick = async (section) => {
         const url = `${API_BASE_URL}/knowledge-cards/${id}/sections/${section}`;
-        const response = await fetch(url, {
+        const response = await authenticatedFetch(url, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ content: editedContent }),
@@ -284,6 +336,13 @@ export default function KnowledgeCard() {
 
     return (
         <Base>
+            <ProgressModal
+                isOpen={isProgressModalOpen}
+                onClose={() => setIsProgressModalOpen(false)}
+                logs={generationLog}
+                onFileUpload={handleFileUpload}
+                onRetry={onRetry}
+            />
             <LoadingModal isOpen={loading} message={loadingMessage} />
             <div className="kc-container">
                 <div className="kc-form-container">
@@ -369,11 +428,11 @@ export default function KnowledgeCard() {
                         <div className="kc-form-actions">
 
                             <div className="kc-form-actions-left">
-                                <CommonButton type="submit" onClick={() => handleSave()}  label="Populate Card Content" loading={loading} disabled={loading || !title} className="squared-btn" data-testid="populate-card-button" />
+                                <CommonButton type="submit" label="Populate Card Content" loading={loading} disabled={loading || !title} className="squared-btn" data-testid="populate-card-button" />
                             </div>
 
                             <div className="kc-form-actions-right">
-                                <CommonButton type="button" onClick={() => handleSave()} label="Save Card" loading={loading} disabled={loading || !title}  data-testid="save-card-button" />
+                                <CommonButton type="button" onClick={() => handleSave(true)} label="Save Card" loading={loading} disabled={loading || !title}  data-testid="save-card-button" />
                             </div>
 
                         </div>
