@@ -204,7 +204,11 @@ export default function KnowledgeCard() {
         if (response.ok) {
             const data = await response.json();
             const newReferences = data.references.map(url => ({ url, reference_type: '' }));
-            setReferences(prevReferences => [...prevReferences.filter(r => r.url), ...newReferences]);
+            setReferences(prevReferences => {
+                const existingUrls = new Set(prevReferences.map(r => r.url));
+                const uniqueNewReferences = newReferences.filter(r => !existingUrls.has(r.url));
+                return [...prevReferences.filter(r => r.url), ...uniqueNewReferences];
+            });
         } else {
             const error = await response.json();
             alert(`Error identifying references: ${error.detail}`);
