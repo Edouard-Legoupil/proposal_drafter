@@ -567,7 +567,7 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
 @router.get("/proposals/reviews")
 async def get_proposals_for_review(current_user: dict = Depends(get_current_user)):
     """
-    Lists all proposals assigned to the current user for review.
+    Lists all proposals assigned to the current user for review, both pending and completed.
     """
     user_id = current_user["user_id"]
     try:
@@ -581,11 +581,16 @@ async def get_proposals_for_review(current_user: dict = Depends(get_current_user
                     p.created_at,
                     p.updated_at,
                     p.is_accepted,
-                    pp.deadline,
                     d.name AS donor_name,
                     fc.name AS country_name,
-                    string_agg(o.name, ', ') AS outcome_names,
-                    u.name AS requester_name
+                    string_agg(DISTINCT o.name, ', ') AS outcome_names,
+                    u.name AS requester_name,
+                    -- Determine the review status by checking for any 'completed' status for this reviewer and proposal
+                    MAX(CASE WHEN pp.status = 'completed' THEN 1 ELSE 0 END) as is_completed,
+                    -- Get the deadline from the 'pending' review row
+                    MAX(CASE WHEN pp.status = 'pending' THEN pp.deadline ELSE NULL END) as deadline,
+                    -- Get the completion date from the latest 'completed' review row
+                    MAX(CASE WHEN pp.status = 'completed' THEN pp.updated_at ELSE NULL END) as review_completed_at
                 FROM
                     proposals p
                 JOIN
@@ -605,11 +610,11 @@ async def get_proposals_for_review(current_user: dict = Depends(get_current_user
                 LEFT JOIN
                     outcomes o ON po.outcome_id = o.id
                 WHERE
-                    pp.reviewer_id = :uid AND pp.status = 'pending'
+                    pp.reviewer_id = :uid
                 GROUP BY
-                    p.id, pp.deadline, d.name, fc.name, u.name, p.form_data, p.project_description, p.status, p.created_at, p.updated_at, p.is_accepted
+                    p.id, d.name, fc.name, u.name
                 ORDER BY
-                    p.updated_at DESC
+                    MAX(pp.updated_at) DESC
             """)
 
             result = connection.execute(query, {"uid": user_id})
@@ -633,7 +638,9 @@ async def get_proposals_for_review(current_user: dict = Depends(get_current_user
                     "donor": row['donor_name'],
                     "country": row['country_name'],
                     "outcomes": row['outcome_names'].split(', ') if row['outcome_names'] else [],
-                    "budget": form_data.get("Budget Range", "N/A")
+                    "budget": form_data.get("Budget Range", "N/A"),
+                    "review_status": "completed" if row['is_completed'] else "pending",
+                    "review_completed_at": row['review_completed_at'].isoformat() if row['review_completed_at'] else None
                 })
         return {"message": "Proposals for review fetched successfully.", "reviews": review_list}
     except Exception as e:
