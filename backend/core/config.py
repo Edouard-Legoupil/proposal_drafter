@@ -93,14 +93,6 @@ enable_iam_auth = os.getenv('ENABLE_IAM_AUTH', 'true').lower() == 'true'
 # Log the loaded database configuration for debugging purposes.
 # Note: Be cautious about logging sensitive information in production.
 logger.info(f"DEBUG: enable_iam_auth: {enable_iam_auth}")
-
-# --- Serper API Configuration ---
-SERPER_API_KEY = os.getenv("SERPER_API_KEY")
-if not SERPER_API_KEY:
-    logger.warning("SERPER_API_KEY environment variable is missing or empty.")
-    # raise ValueError("SERPER_API_KEY environment variable is missing or empty.")
-else:
-    os.environ["SERPER_API_KEY"] = SERPER_API_KEY
 logger.info(f"GAE_ENV: {os.getenv('GAE_ENV')}")
 logger.info(f"K_SERVICE: {os.getenv('K_SERVICE')}")
 logger.info(f"DEBUG: db_username from env: {db_username}")
