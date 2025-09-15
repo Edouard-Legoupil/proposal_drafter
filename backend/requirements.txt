@@ -9,6 +9,7 @@ redis
 
 # Framework for orchestrating role-playing AI agents to collaborate on tasks
 crewai>=0.48
+crewai[tools]
 
 # Unified interface to call various LLM APIs (OpenAI, Anthropic, etc.) with consistent formatting
 litellm>=1.73.7
@@ -92,3 +93,5 @@ pytest-playwright
 # Searching references
 googlesearch-python
 google-search-results
+
+ 
