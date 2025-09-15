@@ -3,7 +3,8 @@ import json
 import uuid
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Body
-from sqlalchemy import text, or_
+from sqlalchemy import text
+import litellm
 from pydantic import BaseModel, Field, validator
 from typing import List, Optional
 
@@ -327,6 +328,7 @@ async def identify_references(data: IdentifyReferencesIn, current_user: dict = D
     try:
         # Perform Google search
         search_results = list(search(query, num_results=10))
+        logger.info(f"Found {len(search_results)} search results: {search_results}")
 
         # Rerank results to prioritize authoritative domains
         reranked_results = sorted(
@@ -335,8 +337,44 @@ async def identify_references(data: IdentifyReferencesIn, current_user: dict = D
             reverse=True
         )
 
-        # Return the top 5 results
-        return {"references": reranked_results[:5]}
+        # Take the top 5 results
+        top_5_results = reranked_results[:5]
+
+        classified_references = []
+        for url in top_5_results:
+            try:
+                # I am assuming view_text_website is available globally
+                content = view_text_website(url)
+
+                prompt = f"""
+                Given the following content from a webpage, classify it into one of the following categories:
+                - UNHCR Operation Page
+                - Donor Content
+                - Humanitarian Partner Content
+                - Statistics
+                - Needs Assessment
+                - Evaluation Report
+                - Policies
+
+                Content:
+                {content[:4000]}
+
+                Category:
+                """
+
+                response = litellm.completion(
+                    model="gpt-3.5-turbo",
+                    messages=[{"role": "user", "content": prompt}]
+                )
+
+                category = response.choices[0].message.content.strip()
+                classified_references.append({"url": url, "reference_type": category})
+            except Exception as e:
+                logger.error(f"Error processing URL {url}: {e}")
+                classified_references.append({"url": url, "reference_type": "Unclassified"})
+
+        logger.info(f"Classified references: {classified_references}")
+        return {"references": classified_references}
     except Exception as e:
         logger.error(f"[IDENTIFY REFERENCES ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to identify references.")
