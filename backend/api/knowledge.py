@@ -322,13 +322,15 @@ async def identify_references(data: IdentifyReferencesIn, current_user: dict = D
     """
     logger.info(f"Identifying references for query: {data.title} {data.linked_element} {data.summary}")
     query = f"{data.title} {data.linked_element} {data.summary}"
-
+    
     authoritative_domains = ["un.org", "gov", "ec.europa.eu", "oecd.org", "worldbank.org"]
-
+    
     try:
         # Perform Google search
         search_results = list(search(query, num_results=10))
+
         logger.info(f"Found {len(search_results)} search results: {search_results}")
+
 
         # Rerank results to prioritize authoritative domains
         reranked_results = sorted(
@@ -375,6 +377,7 @@ async def identify_references(data: IdentifyReferencesIn, current_user: dict = D
 
         logger.info(f"Classified references: {classified_references}")
         return {"references": classified_references}
+
     except Exception as e:
         logger.error(f"[IDENTIFY REFERENCES ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to identify references.")
