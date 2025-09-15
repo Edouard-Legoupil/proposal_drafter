@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import CreatableSelect from 'react-select/creatable';
 import Base from '../../components/Base/Base';
 import CommonButton from '../../components/CommonButton/CommonButton';
+import LoadingModal from '../../components/LoadingModal/LoadingModal';
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 
@@ -17,6 +18,7 @@ export default function KnowledgeCard() {
     const [linkedId, setLinkedId] = useState('');
     const [references, setReferences] = useState([{ url: '', reference_type: '' }]);
     const [loading, setLoading] = useState(false);
+    const [loadingMessage, setLoadingMessage] = useState('');
     const [generatedSections, setGeneratedSections] = useState(null);
 
     const [donors, setDonors] = useState([]);
@@ -187,31 +189,39 @@ export default function KnowledgeCard() {
     };
 
     const handleIdentifyReferences = async () => {
-        console.log("Identifying references...");
         setLoading(true);
-        const response = await fetch(`${API_BASE_URL}/knowledge-cards/identify-references`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                title,
-                summary,
-                linked_element: linkType,
-            }),
-            credentials: 'include'
-        });
-        setLoading(false);
-
-        if (response.ok) {
-            const data = await response.json();
-            const newReferences = data.references.map(url => ({ url, reference_type: '' }));
-            setReferences(prevReferences => {
-                const existingUrls = new Set(prevReferences.map(r => r.url));
-                const uniqueNewReferences = newReferences.filter(r => !existingUrls.has(r.url));
-                return [...prevReferences.filter(r => r.url), ...uniqueNewReferences];
+        setLoadingMessage("Identifying references...");
+        try {
+            const response = await fetch(`${API_BASE_URL}/knowledge-cards/identify-references`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title,
+                    summary,
+                    linked_element: linkType,
+                }),
+                credentials: 'include'
             });
-        } else {
-            const error = await response.json();
-            alert(`Error identifying references: ${error.detail}`);
+
+            if (response.ok) {
+                const data = await response.json();
+                console.log("Identified references:", data.references);
+                setReferences(prevReferences => {
+                    const existingUrls = new Set(prevReferences.map(r => r.url).filter(Boolean));
+                    const uniqueNewReferences = data.references.filter(ref => !existingUrls.has(ref.url));
+                    const updatedReferences = [...prevReferences.filter(r => r.url), ...uniqueNewReferences];
+                    return updatedReferences.length > 0 ? updatedReferences : [{ url: '', reference_type: '' }];
+                });
+            } else {
+                const error = await response.json();
+                alert(`Error identifying references: ${error.detail}`);
+            }
+        } catch (error) {
+            console.error("Failed to fetch references:", error);
+            alert("An error occurred while identifying references.");
+        } finally {
+            setLoading(false);
+            setLoadingMessage('');
         }
     };
 
@@ -239,6 +249,7 @@ export default function KnowledgeCard() {
 
     return (
         <Base>
+            <LoadingModal isOpen={loading} message={loadingMessage} />
             <div className="kc-container">
                 <div className="kc-form-container">
                     <form onSubmit={handlePopulate} className="kc-form">
