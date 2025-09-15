@@ -70,6 +70,9 @@ export default function KnowledgeCard() {
                             setLinkedId(card.field_context_id);
                         }
                         setReferences(card.references && card.references.length > 0 ? card.references : [{ url: '', reference_type: '' }]);
+                        if (card.generated_sections) {
+                            setGeneratedSections(card.generated_sections);
+                        }
                     } else {
                         console.error("Failed to load knowledge card");
                         navigate('/dashboard');
@@ -351,6 +354,7 @@ export default function KnowledgeCard() {
                                     <option value="Social Media">Social Media</option>
                                 </select>
                                 <input type="url" placeholder="https://example.com" value={ref.url} onChange={e => handleReferenceChange(index, 'url', e.target.value)} data-testid={`reference-url-input-${index}`} />
+                                {ref.url && <a href={ref.url} target="_blank" rel="noopener noreferrer" style={{marginLeft: '10px'}}>Link</a>}
                                 <textarea value={ref.summary || ''} readOnly placeholder="Summary" data-testid={`reference-summary-textarea-${index}`} />
                                 <button type="button" onClick={() => removeReference(index)} data-testid={`remove-reference-button-${index}`}>Remove</button>
                             </div>
