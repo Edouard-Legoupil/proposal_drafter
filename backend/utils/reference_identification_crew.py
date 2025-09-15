@@ -1,13 +1,17 @@
+from typing import Type
+from pydantic import BaseModel, Field
 from crewai import Agent, Task, Crew
 from crewai.project import CrewBase, agent, crew, task
 from crewai_tools import SerperDevTool
 from backend.core.llm import llm
 
-class SerperSearchTool(SerperDevTool):
-    def __init__(self):
-        super().__init__()
-        self.name = "Serper Search"
-        self.description = "A search tool that uses the Serper API to find information on the web."
+class SerperSearchSchema(BaseModel):
+    search_query: str = Field(description="The search query.")
+
+class CustomSerperSearchTool(SerperDevTool):
+    name: str = "Serper Search"
+    description: str = "A search tool that uses the Serper API to find information on the web."
+    args_schema: Type[BaseModel] = SerperSearchSchema
 
 @CrewBase
 class ReferenceIdentificationCrew:
@@ -104,7 +108,7 @@ outcome with UNHCR's strategic priorities
             llm=llm,
             verbose=True,
             allow_delegation=False,
-            tools=[SerperSearchTool()]
+            tools=[CustomSerperSearchTool()]
         )
 
     @task
