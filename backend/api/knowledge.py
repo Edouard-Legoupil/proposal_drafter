@@ -319,6 +319,7 @@ async def identify_references(data: IdentifyReferencesIn, current_user: dict = D
     """
     Identifies references for a knowledge card based on its title, summary, and linked element.
     """
+    logger.info(f"Identifying references for query: {data.title} {data.linked_element} {data.summary}")
     query = f"{data.title} {data.linked_element} {data.summary}"
 
     authoritative_domains = ["un.org", "gov", "ec.europa.eu", "oecd.org", "worldbank.org"]
