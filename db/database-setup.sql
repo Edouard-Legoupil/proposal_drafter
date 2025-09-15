@@ -148,6 +148,7 @@ CREATE TABLE IF NOT EXISTS knowledge_card_references (
     knowledge_card_id UUID NOT NULL REFERENCES knowledge_cards(id) ON DELETE CASCADE,
     url TEXT NOT NULL,
     reference_type TEXT NOT NULL,
+    summary TEXT NOT NULL,
     PRIMARY KEY (knowledge_card_id, url)
 );
 
