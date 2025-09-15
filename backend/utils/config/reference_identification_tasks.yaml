@@ -1,0 +1,6 @@
+research_task:
+  description: >
+    {description}
+  expected_output: >
+    A list of up to 10 relevant URLs, with a one-sentence summary for each, and a suggested reference type from the following list: 'UNHCR Operation Page', 'Donor Content', 'Humanitarian Partner Content', 'Statistics', 'Needs Assessment', 'Evaluation Report', 'Policies', 'Social Media'. The output should be formatted as a JSON array of objects, with each object containing 'url', 'summary', and 'reference_type' keys.
+  agent: researcher

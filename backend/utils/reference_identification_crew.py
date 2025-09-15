@@ -1,9 +1,7 @@
-import os
 from crewai import Agent, Task, Crew
+from crewai.project import CrewBase, agent, crew, task
 from crewai_tools import SerperDevTool
 from backend.core.llm import llm
-
-os.environ["SERPER_API_KEY"] = os.getenv("SERPER_API_KEY")
 
 class SerperSearchTool(SerperDevTool):
     def __init__(self):
@@ -11,14 +9,16 @@ class SerperSearchTool(SerperDevTool):
         self.name = "Serper Search"
         self.description = "A search tool that uses the Serper API to find information on the web."
 
-def get_reference_identification_crew(link_type, topic):
-    """
-    Creates a CrewAI crew for research, with instructions tailored to the link_type.
-    """
+@CrewBase
+class ReferenceIdentificationCrew:
+    """ReferenceIdentificationCrew for identifying references"""
 
-    instructions = {
+    agents_config = 'config/reference_identification_agents.yaml'
+    tasks_config = 'config/reference_identification_tasks.yaml'
 
-        "donor": """You are an expert researcher specializing in donor intelligence for UNHCR. Your mission is to gather accurate, relevant, and up-to-date information about donors from various sources including web articles, official documents, and existing profiles.
+    def _get_instructions(self, link_type: str):
+        instructions = {
+            "donor": """You are an expert researcher specializing in donor intelligence for UNHCR. Your mission is to gather accurate, relevant, and up-to-date information about donors from various sources including web articles, official documents, and existing profiles.
 **RESEARCH OBJECTIVES:**
 - Collect comprehensive factual information about {topic}
 - Focus on organizational structure, funding patterns, and strategic priorities
@@ -43,13 +43,13 @@ def get_reference_identification_crew(link_type, topic):
 - Include document titles and sections for document content
 - Focus on actionable intelligence for UNHCR engagement""",
 
-
-        "outcome": """You are an expert researcher specializing in humanitarian outcomes for UNHCR. Your mission is to gather accurate, relevant, and up-to-date information about specific outcomes from various sources including web articles, official documents, and existing reports.
+            "outcome": """You are an expert researcher specializing in humanitarian outcomes for UNHCR. Your mission is to gather accurate, relevant, and up-to-date information about specific outcomes from various sources including web articles, official documents, and existing reports.
 **RESEARCH OBJECTIVES:**
 - Collect comprehensive factual information about {topic}
 - Focus on the definition, indicators, and measurement of the outcome
 - Identify best practices and lessons learned from past interventions
-- Analyze the alignment of the outcome with UNHCR's strategic priorities
+- Analyze the alignment of the
+outcome with UNHCR's strategic priorities
 - Assess the feasibility of achieving the outcome in different contexts
 
 **KEY INFORMATION TO GATHER:**
@@ -68,8 +68,7 @@ def get_reference_identification_crew(link_type, topic):
 - Include document titles and sections for document content
 - Focus on actionable intelligence for UNHCR programming""",
 
-
-        "field_context": """You are an expert researcher specializing in field context analysis for UNHCR. Your mission is to gather accurate, relevant, and up-to-date information about specific field contexts from various sources including web articles, official documents, and existing reports.
+            "field_context": """You are an expert researcher specializing in field context analysis for UNHCR. Your mission is to gather accurate, relevant, and up-to-date information about specific field contexts from various sources including web articles, official documents, and existing reports.
 **RESEARCH OBJECTIVES:**
 - Collect comprehensive factual information about {topic}
 - Focus on the political, economic, social, and security situation
@@ -92,37 +91,47 @@ def get_reference_identification_crew(link_type, topic):
 - Include publication dates and source URLs for web content
 - Include document titles and sections for document content
 - Focus on actionable intelligence for UNHCR operations"""
-    }
+        }
+        selected_instructions = instructions.get(link_type)
+        if not selected_instructions:
+            raise ValueError(f"Invalid link_type: {link_type}. Must be 'donor', 'outcome', or 'field_context'.")
+        return selected_instructions
 
-    # Use a clearer variable name for the selected instructions
-    selected_instructions = instructions.get(link_type)
+    @agent
+    def researcher(self) -> Agent:
+        return Agent(
+            config=self.agents_config['researcher'],
+            llm=llm,
+            verbose=True,
+            allow_delegation=False,
+            tools=[SerperSearchTool()]
+        )
 
-    if not selected_instructions:
-        raise ValueError(f"Invalid link_type: {link_type}. Must be 'donor', 'outcome', or 'field_context'.")
+    @task
+    def research_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['research_task'],
+            agent=self.researcher()
+        )
 
-    researcher = Agent(
-        role='Expert Researcher',
-        goal=f'Gather accurate, relevant, and up-to-date information about {link_type}: {topic}',
-        backstory="""You are an expert researcher specializing in humanitarian intelligence for UNHCR.
-        Your mission is to gather accurate, relevant, and up-to-date information from various sources including web articles, official documents, and existing profiles.
-        You are a master of search and can quickly find the most relevant information for any given topic.""",
-        verbose=True,
-        allow_delegation=False,
-        llm= llm,
-        tools=[SerperSearchTool()]
-    )
+    @crew
+    def identify_references_crew(self) -> Crew:
+        """Creates the ReferenceIdentificationCrew"""
+        return Crew(
+            agents=[self.researcher()],
+            tasks=[self.research_task()],
+            verbose=True,
+            output_log_file='log/app.log'
+        )
 
-    research_task = Task(
-        description=selected_instructions.format(topic=topic),
-        agent=researcher,
-        llm= llm,
-        expected_output="A list of up to 10 relevant URLs, with a one-sentence summary for each, and a suggested reference type from the following list: 'UNHCR Operation Page', 'Donor Content', 'Humanitarian Partner Content', 'Statistics', 'Needs Assessment', 'Evaluation Report', 'Policies', 'Social Media'. The output should be formatted as a JSON array of objects, with each object containing 'url', 'summary', and 'reference_type' keys."
-    )
-
-    crew = Crew(
-        agents=[researcher],
-        tasks=[research_task],
-        verbose=2
-    )
-
-    return crew
+    def kickoff(self, link_type: str, topic: str):
+        """
+        Kicks off the crew with the given parameters.
+        """
+        instructions = self._get_instructions(link_type)
+        inputs = {
+            "link_type": link_type,
+            "topic": topic,
+            "description": instructions.format(topic=topic)
+        }
+        return self.identify_references_crew().kickoff(inputs=inputs)

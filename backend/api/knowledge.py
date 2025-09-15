@@ -11,7 +11,7 @@ from typing import List, Optional
 from backend.core.db import get_engine
 from backend.core.security import get_current_user
 from backend.core.config import load_proposal_template
-from backend.utils.reference_identification_crew import get_reference_identification_crew
+from backend.utils.reference_identification_crew import ReferenceIdentificationCrew
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -323,20 +323,20 @@ async def identify_references(data: IdentifyReferencesIn, current_user: dict = D
     logger.info(f"Identifying references for query: {data.title}")
 
     try:
-        crew = get_reference_identification_crew(data.linked_element, data.title)
-        result = crew.kickoff()
+        crew = ReferenceIdentificationCrew()
+        result = crew.kickoff(link_type=data.linked_element, topic=data.title)
 
-        # The result from the crew is a string with URLs and summaries.
-        # I need to parse this string to extract the URLs.
-        # I will assume the format is:
-        # 1. URL: <url>
-        #    Summary: <summary>
-
-        references = []
-        for line in result.splitlines():
-            if line.startswith("URL:"):
-                url = line.split("URL:")[1].strip()
-                references.append({"url": url, "reference_type": ""})
+        # The result from the crew should be a JSON string.
+        try:
+            references = json.loads(result)
+        except json.JSONDecodeError:
+            logger.error(f"Failed to parse JSON from crew output: {result}")
+            # Attempt to parse manually if JSON fails
+            references = []
+            for line in result.splitlines():
+                if line.startswith("URL:"):
+                    url = line.split("URL:")[1].strip()
+                    references.append({"url": url, "reference_type": ""})
 
         return {"references": references}
     except Exception as e:
