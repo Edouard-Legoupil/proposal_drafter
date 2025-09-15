@@ -324,7 +324,10 @@ async def identify_references(data: IdentifyReferencesIn, current_user: dict = D
 
     try:
         crew = ReferenceIdentificationCrew()
-        result = crew.kickoff(link_type=data.linked_element, topic=data.title)
+        topic = data.title
+        if data.summary:
+            topic += f"\n{data.summary}"
+        result = crew.kickoff(link_type=data.linked_element, topic=topic)
 
         # The result from the crew should be a JSON string.
         try:
