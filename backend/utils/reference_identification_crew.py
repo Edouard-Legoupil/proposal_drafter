@@ -1,9 +1,12 @@
+import os
 from typing import Type
 from pydantic import BaseModel, Field
 from crewai import Agent, Task, Crew
 from crewai.project import CrewBase, agent, crew, task
 from crewai_tools import SerperDevTool
 from backend.core.llm import llm
+
+os.environ["SERPER_API_KEY"] = os.getenv("SERPER_API_KEY")
 
 class SerperSearchSchema(BaseModel):
     search_query: str = Field(description="The search query.")
@@ -52,8 +55,7 @@ class ReferenceIdentificationCrew:
 - Collect comprehensive factual information about {topic}
 - Focus on the definition, indicators, and measurement of the outcome
 - Identify best practices and lessons learned from past interventions
-- Analyze the alignment of the
-outcome with UNHCR's strategic priorities
+- Analyze the alignment of the outcome with UNHCR's strategic priorities
 - Assess the feasibility of achieving the outcome in different contexts
 
 **KEY INFORMATION TO GATHER:**

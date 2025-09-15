@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 class KnowledgeCardReferenceIn(BaseModel):
     url: str
     reference_type: str
+    summary: Optional[str] = None
 
 class IdentifyReferencesIn(BaseModel):
     title: str
@@ -73,10 +74,10 @@ async def create_knowledge_card(card: KnowledgeCardIn, current_user: dict = Depe
                 for ref in card.references:
                     connection.execute(
                         text("""
-                            INSERT INTO knowledge_card_references (knowledge_card_id, url, reference_type)
-                            VALUES (:kcid, :url, :reference_type)
+                            INSERT INTO knowledge_card_references (knowledge_card_id, url, reference_type, summary)
+                            VALUES (:kcid, :url, :reference_type, :summary)
                         """),
-                        {"kcid": card_id, "url": ref.url, "reference_type": ref.reference_type}
+                        {"kcid": card_id, "url": ref.url, "reference_type": ref.reference_type, "summary": ref.summary}
                     )
         return {"message": "Knowledge card created successfully.", "knowledge_card_id": card_id}
     except Exception as e:
@@ -111,7 +112,7 @@ async def get_knowledge_cards(
                     d.name as donor_name,
                     o.name as outcome_name,
                     fc.name as field_context_name,
-                    (SELECT json_agg(json_build_object('url', kcr.url, 'reference_type', kcr.reference_type))
+                    (SELECT json_agg(json_build_object('url', kcr.url, 'reference_type', kcr.reference_type, 'summary', kcr.summary))
                      FROM knowledge_card_references kcr
                      WHERE kcr.knowledge_card_id = kc.id) as "references"
                 FROM
@@ -180,7 +181,7 @@ async def get_knowledge_card(card_id: uuid.UUID, current_user: dict = Depends(ge
                     d.name as donor_name,
                     o.name as outcome_name,
                     fc.name as field_context_name,
-                    (SELECT json_agg(json_build_object('url', kcr.url, 'reference_type', kcr.reference_type))
+                    (SELECT json_agg(json_build_object('url', kcr.url, 'reference_type', kcr.reference_type, 'summary', kcr.summary))
                      FROM knowledge_card_references kcr
                      WHERE kcr.knowledge_card_id = kc.id) as "references"
                 FROM
@@ -255,10 +256,10 @@ async def update_knowledge_card(card_id: uuid.UUID, card: KnowledgeCardIn, curre
                 for ref in card.references:
                     connection.execute(
                         text("""
-                            INSERT INTO knowledge_card_references (knowledge_card_id, url, reference_type)
-                            VALUES (:kcid, :url, :reference_type)
+                            INSERT INTO knowledge_card_references (knowledge_card_id, url, reference_type, summary)
+                            VALUES (:kcid, :url, :reference_type, :summary)
                         """),
-                        {"kcid": card_id, "url": ref.url, "reference_type": ref.reference_type}
+                        {"kcid": card_id, "url": ref.url, "reference_type": ref.reference_type, "summary": ref.summary}
                     )
         return {"message": "Knowledge card updated successfully.", "knowledge_card_id": card_id}
     except HTTPException as http_exc:
@@ -315,10 +316,11 @@ async def generate_knowledge_card_content(card_id: uuid.UUID, current_user: dict
         logger.error(f"[GENERATE KC CONTENT ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to generate knowledge card content.")
 
-@router.post("/knowledge-cards/identify-references")
-async def identify_references(data: IdentifyReferencesIn, current_user: dict = Depends(get_current_user)):
+@router.post("/knowledge-cards/{card_id}/identify-references")
+async def identify_references(card_id: uuid.UUID, data: IdentifyReferencesIn, current_user: dict = Depends(get_current_user)):
     """
-    Identifies references for a knowledge card based on its title, summary, and linked element.
+    Identifies references for a knowledge card based on its title, summary, and linked element,
+    and stores them in the database.
     """
     logger.info(f"Identifying references for query: {data.title}")
 
@@ -329,17 +331,33 @@ async def identify_references(data: IdentifyReferencesIn, current_user: dict = D
             topic += f"\n{data.summary}"
         result = crew.kickoff(link_type=data.linked_element, topic=topic)
 
-        # The result from the crew should be a JSON string.
         try:
-            references = json.loads(result)
+            references = json.loads(result.raw)
         except json.JSONDecodeError:
-            logger.error(f"Failed to parse JSON from crew output: {result}")
-            # Attempt to parse manually if JSON fails
-            references = []
-            for line in result.splitlines():
-                if line.startswith("URL:"):
-                    url = line.split("URL:")[1].strip()
-                    references.append({"url": url, "reference_type": ""})
+            logger.error(f"Failed to parse JSON from crew output: {result.raw}")
+            # If parsing fails, we can't proceed to store references.
+            raise HTTPException(status_code=500, detail="Failed to parse references from crew output.")
+
+        with get_engine().begin() as connection:
+            # First, clear any existing references for this card
+            connection.execute(
+                text("DELETE FROM knowledge_card_references WHERE knowledge_card_id = :kcid"),
+                {"kcid": card_id}
+            )
+            # Then, insert the new references
+            for ref in references:
+                connection.execute(
+                    text("""
+                        INSERT INTO knowledge_card_references (knowledge_card_id, url, reference_type, summary)
+                        VALUES (:kcid, :url, :reference_type, :summary)
+                    """),
+                    {
+                        "kcid": card_id,
+                        "url": ref.get("url"),
+                        "reference_type": ref.get("reference_type"),
+                        "summary": ref.get("summary")
+                    }
+                )
 
         return {"references": references}
     except Exception as e:
