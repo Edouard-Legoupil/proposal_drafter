@@ -187,6 +187,7 @@ export default function KnowledgeCard() {
     };
 
     const handleIdentifyReferences = async () => {
+        console.log("Identifying references...");
         setLoading(true);
         const response = await fetch(`${API_BASE_URL}/knowledge-cards/identify-references`, {
             method: 'POST',

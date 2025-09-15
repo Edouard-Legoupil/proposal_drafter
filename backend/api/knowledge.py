@@ -319,21 +319,22 @@ async def identify_references(data: IdentifyReferencesIn, current_user: dict = D
     """
     Identifies references for a knowledge card based on its title, summary, and linked element.
     """
+    logger.info(f"Identifying references for query: {data.title} {data.linked_element} {data.summary}")
     query = f"{data.title} {data.linked_element} {data.summary}"
-
+    
     authoritative_domains = ["un.org", "gov", "ec.europa.eu", "oecd.org", "worldbank.org"]
-
+    
     try:
         # Perform Google search
         search_results = list(search(query, num_results=10))
-
+        
         # Rerank results to prioritize authoritative domains
         reranked_results = sorted(
             search_results,
             key=lambda url: any(domain in url for domain in authoritative_domains),
             reverse=True
         )
-
+        
         # Return the top 5 results
         return {"references": reranked_results[:5]}
     except Exception as e:
