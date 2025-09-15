@@ -330,6 +330,8 @@ export default function Dashboard ()
                                                 date={cleanedDate(review.updated_at)}
                                                 onClick={(e) => handleProjectClick(e, review.proposal_id, true)}
                                                 isReview={true}
+                                                handleDeleteProject={handleDeleteProject}
+                                                handleTransferOwnership={handleTransferOwnership}
                                         />
                                 )}
                                 </div>

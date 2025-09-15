@@ -91,3 +91,4 @@ pytest-playwright
 
 # Searching references
 googlesearch-python
+google-search-results
