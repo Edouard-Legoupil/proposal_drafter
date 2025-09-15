@@ -89,3 +89,4 @@ psutil
 playwright
 pytest-playwright
 googlesearch-python
+google-search-results

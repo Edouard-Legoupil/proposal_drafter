@@ -1428,7 +1428,7 @@ async def get_status_history(proposal_id: uuid.UUID, current_user: dict = Depend
             ).scalar()
 
             is_reviewer = connection.execute(
-                text("SELECT 1 FROM proposal_peer_reviews WHERE proposal_id = :pid AND reviewer_id = :rid AND status = 'pending'"),
+                text("SELECT 1 FROM proposal_peer_reviews WHERE proposal_id = :pid AND reviewer_id = :rid"),
                 {"pid": proposal_id, "rid": user_id}
             ).scalar()
 
