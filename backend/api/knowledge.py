@@ -16,7 +16,7 @@ from backend.core.config import load_proposal_template
 from backend.utils.reference_identification_crew import ReferenceIdentificationCrew
 from backend.utils.content_generation_crew import ContentGenerationCrew
 from backend.utils.scraper import scrape_url
-from sentence_transformers import SentenceTransformer
+import litellm
 import numpy as np
 
 router = APIRouter()
@@ -316,9 +316,6 @@ async def update_knowledge_card(card_id: uuid.UUID, card: KnowledgeCardIn, curre
         raise HTTPException(status_code=500, detail="Failed to update knowledge card.")
 
 
-# Load the sentence transformer model
-embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-
 async def _process_and_store_text(reference_id: uuid.UUID, text_content: str, connection):
     """
     Chunks text, creates embeddings, and stores them for a given reference.
@@ -334,7 +331,11 @@ async def _process_and_store_text(reference_id: uuid.UUID, text_content: str, co
 
     # Generate and store embeddings
     for chunk in chunks:
-        embedding = embedding_model.encode(chunk).tolist()
+        response = litellm.embedding(
+            model=os.getenv("AZURE_EMBEDDING_MODEL", "text-embedding-ada-002"),
+            input=[chunk]
+        )
+        embedding = response.data[0]['embedding']
         connection.execute(
             text("""
                 INSERT INTO knowledge_card_reference_vectors (reference_id, text_chunk, embedding)
