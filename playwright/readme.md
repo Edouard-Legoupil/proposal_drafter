@@ -91,6 +91,7 @@ xvfb-run pytest playwright/tests/ --headed
 To run a specific test file:
 ```bash
 pytest playwright/tests/test_1_register.py --headed
+pytest playwright/tests/test_2_create_proposal.py --headed
 ```
 
 ##  Recording user Journey with Codegen Tool

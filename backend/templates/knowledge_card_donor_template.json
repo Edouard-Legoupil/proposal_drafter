@@ -1,78 +1,91 @@
 {
-    "template_type": "Knowledge Card",
-    "template_name": "Humanitarian Donor Knowledge Card",
-    "description": "A comprehensive template for creating detailed knowledge cards about humanitarian donors, integrating corporate structures, funding trends, thematic priorities, and engagement strategies.",
-    "sections": [
-      {
-        "section_name": "Donor Overview",
-        "instructions": "Provide a concise summary of the donor's mission, key areas of focus, and their historical role in humanitarian aid. Include publishing dates, recent strategic shifts (2024-2025), pledges, annual reports, sustainability updates, and any known contact points or related partners. Add contextual metadata: Donor Name, Regional Focus, Thematic Priority, Existing Profile Data.",
-        "word_limit": 250
-      },
-      {
-        "section_name": "Corporate Structure",
-        "instructions": "Outline the organizational structure focusing on philanthropic entities (CSR departments, corporate foundations, corporate giving arms). Identify governance structures, decision-making hierarchies, and map relationships between corporate entities and philanthropic branches.",
-        "word_limit": 450
-      },
-      {
-        "section_name": "Key Players",
-        "instructions": "List and describe the key individuals or departments within the donor organization responsible for humanitarian funding decisions. Include names, titles, professional backgrounds, and levels of authority. Highlight champions of Forced Displacement-related causes and provide contact information if available.",
-        "word_limit": 500
-      },
-      {
-        "section_name": "Partnerships and Coalitions",
-        "instructions": "Map partnerships with other funders, NGOs, and UN agencies. Identify coalition memberships and collaborative funding mechanisms. Note participation in joint initiatives and multi-stakeholder platforms that influence funding priorities.",
-        "word_limit": 450
-      },
-      {
-        "section_name": "Funding Trends",
-        "instructions": "Analyze funding patterns across three dimensions: (1) Recent Contributions - historical funding amounts, frequency, flexibility, multi-year commitments, seasonal trends. (2) Innovative Allocation Models - use of impact investing, blended finance, venture philanthropy, and performance-based models. (3) Cross-Sector Patterns - collaborations with private sector, governments, multilaterals, and synergies with WFP, UNICEF, UNDP, IOM, WORLDBANK and other IFI.",
-        "word_limit": 700
-      },
-      {
-        "section_name": "Thematic Priorities",
-        "instructions": "Describe the donor's thematic interests across three dimensions: (1) Core Focus Areas - historical funding priorities (education, healthcare, climate, livelihoods) and alignment with UNHCR mission areas (Forced Displacement, Crisis Response, governance, Social Protection, trafficking prevention). (2) Emerging Priorities - Accountability to Affected Population, digital inclusion, private sector engagement, and innovation. (3) Linkages to UN System - relationships with UN agencies, frameworks for collaboration, and engagement preferences.",
-        "word_limit": 750
-      },
-      {
-        "section_name": "Geographic Priorities",
-        "instructions": "Identify geographic focus at two levels: (1) Specific Countries - priority countries based on funding history, emerging focus, crisis vs. development contexts. (2) Regional Focus - regional strategies, cross-border initiatives, indirect priorities through thematic programs.  Note any specific contexts, such as protracted crises or sudden-onset emergencies, they prioritize.",
-        "word_limit": 500
-      },
-      {
-        "section_name": "Decision-Making Processes",
-        "instructions": "Summarize funding governance across two dimensions: (1) Key Committees - decision-making boards or advisory groups, timelines, review cycles, influence networks. (2) Approval Criteria - alignment, scalability, SDG focus, replication, impact measurement, risk assessment, and due diligence.",
-        "word_limit": 500
-      }      ,
-      {
-        "section_name": "Funding Cycle and Opportunities",
-        "instructions": "Describe the typical application or funding cycle. Include information on eligibility criteria, deadlines, and the type of funding opportunities they offer (e.g., open calls for proposals, pre-identified partners). Highlight any multi-year funding opportunities.",
-        "word_limit": 450
-    } ,
+  "template_type": "Knowledge Card",
+  "template_name": "Humanitarian Donor Knowledge Card",
+  "description": "A comprehensive template for creating detailed knowledge cards about humanitarian donors, integrating corporate structures, funding trends, thematic priorities, and engagement strategies.",
+  "sections": [
     {
-        "section_name": "Proposal Design Guidance",
-        "instructions": "Provide donor-specific proposal advice across four elements: (1) Keywords to Use - innovative solutions, transformative impact, scalable models, sustainable outcomes, measurable results, resilience building. (2) Keywords to Avoid - traditional charity, aid dependency, short-term projects, generic development language. (3) Budget Considerations - typical funding ranges, matching fund requirements, co-financing, multi-year vs. single-year commitments. (4) Scalability Requirements - emphasis on scalable, replicable models, knowledge sharing, and technology integration.",
-        "word_limit": 600
+      "section_name": "Donor Overview",
+      "instructions": "Provide a concise summary of the donor's mission, key areas of focus, and their historical role in humanitarian aid. Include publishing dates, recent strategic shifts (2024-2025), pledges, annual reports, sustainability updates, and any known contact points or related partners. Add contextual metadata: Donor Name, Regional Focus, Thematic Priority, Existing Profile Data.",
+      "word_limit": 250,
+      "key_word": "humanitarian donor profile overview"
     },
     {
-        "section_name": "Engagement and Talking Points",
-        "instructions": "Provide engagement strategy across three components: (1) Direct Contacts - CSR/foundation leads, informal networks, communication preferences. (2) Social Media and Communications - monitoring of LinkedIn, Twitter, blogs, CSR announcements, speaking events. (3) Reporting Expectations - requirements for impact reporting, transparency, disclosure, and storytelling.",
-        "word_limit": 800
+      "section_name": "Corporate Structure",
+      "instructions": "Outline the organizational structure focusing on philanthropic entities (CSR departments, corporate foundations, corporate giving arms). Identify governance structures, decision-making hierarchies, and map relationships between corporate entities and philanthropic branches.",
+      "word_limit": 450,
+      "key_word": "donor corporate structure CSR foundation"
     },
     {
-        "section_name": "Real-Time Intelligence",
-        "instructions": "Capture dynamic donor intelligence: pledges, announcements, and strategic shifts (2024-2025). Include press releases, annual/sustainability reports, executive statements, social media updates, and corporate market performance trends.",
-        "word_limit": 500
+      "section_name": "Key Players",
+      "instructions": "List and describe the key individuals or departments within the donor organization responsible for humanitarian funding decisions. Include names, titles, professional backgrounds, and levels of authority. Highlight champions of Forced Displacement-related causes and provide contact information if available.",
+      "word_limit": 500,
+      "key_word": "donor humanitarian funding key contacts leadership"
     },
     {
-        "section_name": "Strategic Alignment",
-        "instructions": "Analyze overlaps between the donor's priorities and UNHCR strategies. Highlight synergies, alignment with UNHCR's operational capacity, and entry points for proposals. Ensure actionable insights to strengthen strategic positioning.",
-        "word_limit": 750
+      "section_name": "Partnerships and Coalitions",
+      "instructions": "Map partnerships with other funders, NGOs, and UN agencies. Identify coalition memberships and collaborative funding mechanisms. Note participation in joint initiatives and multi-stakeholder platforms that influence funding priorities.",
+      "word_limit": 450,
+      "key_word": "donor partnerships coalitions humanitarian funding"
     },
     {
-        "section_name": "Quality Assurance",
-        "instructions": "Verify all factual claims with reliable sources. Flag incomplete or uncertain information. Prioritize actionable intelligence. Ensure consistency with UNHCR's strategic priorities and operational capacity.",
-        "word_limit": 300
+      "section_name": "Funding Trends",
+      "instructions": "Analyze funding patterns across three dimensions: (1) Recent Contributions - historical funding amounts, frequency, flexibility, multi-year commitments, seasonal trends. (2) Innovative Allocation Models - use of impact investing, blended finance, venture philanthropy, and performance-based models. (3) Cross-Sector Patterns - collaborations with private sector, governments, multilaterals, and synergies with WFP, UNICEF, UNDP, IOM, WORLDBANK and other IFI.",
+      "word_limit": 700,
+      "key_word": "donor humanitarian funding trends 2024"
+    },
+    {
+      "section_name": "Thematic Priorities",
+      "instructions": "Describe the donor's thematic interests across three dimensions: (1) Core Focus Areas - historical funding priorities (education, healthcare, climate, livelihoods) and alignment with UNHCR mission areas (Forced Displacement, Crisis Response, governance, Social Protection, trafficking prevention). (2) Emerging Priorities - Accountability to Affected Population, digital inclusion, private sector engagement, and innovation. (3) Linkages to UN System - relationships with UN agencies, frameworks for collaboration, and engagement preferences.",
+      "word_limit": 750,
+      "key_word": "donor humanitarian thematic priorities"
+    },
+    {
+      "section_name": "Geographic Priorities",
+      "instructions": "Identify geographic focus at two levels: (1) Specific Countries - priority countries based on funding history, emerging focus, crisis vs. development contexts. (2) Regional Focus - regional strategies, cross-border initiatives, indirect priorities through thematic programs.  Note any specific contexts, such as protracted crises or sudden-onset emergencies, they prioritize.",
+      "word_limit": 500,
+      "key_word": "donor geographic funding priorities humanitarian"
+    },
+    {
+      "section_name": "Decision-Making Processes",
+      "instructions": "Summarize funding governance across two dimensions: (1) Key Committees - decision-making boards or advisory groups, timelines, review cycles, influence networks. (2) Approval Criteria - alignment, scalability, SDG focus, replication, impact measurement, risk assessment, and due diligence.",
+      "word_limit": 500,
+      "key_word": "donor humanitarian funding decision process"
+    },
+    {
+      "section_name": "Funding Cycle and Opportunities",
+      "instructions": "Describe the typical application or funding cycle. Include information on eligibility criteria, deadlines, and the type of funding opportunities they offer (e.g., open calls for proposals, pre-identified partners). Highlight any multi-year funding opportunities.",
+      "word_limit": 450,
+      "key_word": "donor humanitarian funding opportunities calls for proposals"
+    },
+    {
+      "section_name": "Proposal Design Guidance",
+      "instructions": "Provide donor-specific proposal advice across four elements: (1) Keywords to Use - innovative solutions, transformative impact, scalable models, sustainable outcomes, measurable results, resilience building. (2) Keywords to Avoid - traditional charity, aid dependency, short-term projects, generic development language. (3) Budget Considerations - typical funding ranges, matching fund requirements, co-financing, multi-year vs. single-year commitments. (4) Scalability Requirements - emphasis on scalable, replicable models, knowledge sharing, and technology integration.",
+      "word_limit": 600,
+      "key_word": "donor proposal guidelines humanitarian"
+    },
+    {
+      "section_name": "Engagement and Talking Points",
+      "instructions": "Provide engagement strategy across three components: (1) Direct Contacts - CSR/foundation leads, informal networks, communication preferences. (2) Social Media and Communications - monitoring of LinkedIn, Twitter, blogs, CSR announcements, speaking events. (3) Reporting Expectations - requirements for impact reporting, transparency, disclosure, and storytelling.",
+      "word_limit": 800,
+      "key_word": "donor engagement strategy CSR communication"
+    },
+    {
+      "section_name": "Real-Time Intelligence",
+      "instructions": "Capture dynamic donor intelligence: pledges, announcements, and strategic shifts (2024-2025). Include press releases, annual/sustainability reports, executive statements, social media updates, and corporate market performance trends.",
+      "word_limit": 500,
+      "key_word": "donor humanitarian funding news updates 2025"
+    },
+    {
+      "section_name": "Strategic Alignment",
+      "instructions": "Analyze overlaps between the donor's priorities and UNHCR strategies. Highlight synergies, alignment with UNHCR's operational capacity, and entry points for proposals. Ensure actionable insights to strengthen strategic positioning.",
+      "word_limit": 750,
+      "key_word": "donor UNHCR strategic alignment"
+    },
+    {
+      "section_name": "Quality Assurance",
+      "instructions": "Verify all factual claims with reliable sources. Flag incomplete or uncertain information. Prioritize actionable intelligence. Ensure consistency with UNHCR's strategic priorities and operational capacity.",
+      "word_limit": 300,
+      "key_word": "humanitarian donor data quality assurance"
     }
-    ]
-  }
-  
+  ]
+}
