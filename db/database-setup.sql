@@ -92,8 +92,10 @@ CREATE TABLE IF NOT EXISTS proposals (
     generated_sections JSONB,
     reviews JSONB,
     is_accepted BOOLEAN DEFAULT FALSE,
-    status proposal_status DEFAULT 'draft',
+    status proposal_status DEFAULT 'draft', 
+    created_by UUID NOT NULL REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_by UUID NOT NULL REFERENCES users(id),
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -138,7 +140,9 @@ CREATE TABLE IF NOT EXISTS knowledge_cards (
     donor_id UUID REFERENCES donors(id) ON DELETE SET NULL,
     outcome_id UUID REFERENCES outcomes(id) ON DELETE SET NULL,
     field_context_id UUID REFERENCES field_contexts(id) ON DELETE SET NULL,
+    created_by UUID NOT NULL REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_by UUID NOT NULL REFERENCES users(id),
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT one_link_only CHECK (
         (CASE WHEN donor_id IS NOT NULL THEN 1 ELSE 0 END +
@@ -147,13 +151,27 @@ CREATE TABLE IF NOT EXISTS knowledge_cards (
     )
 );
 
+
+-- Create Knowledge Card History table
+CREATE TABLE IF NOT EXISTS knowledge_card_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    knowledge_card_id UUID NOT NULL REFERENCES knowledge_cards(id) ON DELETE CASCADE,
+    generated_sections_snapshot JSONB,
+    created_by UUID NOT NULL REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create Knowledge Card References table  
 CREATE TABLE IF NOT EXISTS knowledge_card_references (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     knowledge_card_id UUID NOT NULL REFERENCES knowledge_cards(id) ON DELETE CASCADE,
     url TEXT NOT NULL,
     reference_type TEXT NOT NULL,
-    summary TEXT NOT NULL,
+    summary TEXT NOT NULL,    
+    created_by UUID NOT NULL REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_by UUID NOT NULL REFERENCES users(id),
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     scraped_at TIMESTAMPTZ,
     scraping_error BOOLEAN DEFAULT FALSE,
     UNIQUE (knowledge_card_id, url)
@@ -193,6 +211,7 @@ CREATE INDEX IF NOT EXISTS idx_knowledge_cards_donor_id ON knowledge_cards(donor
 CREATE INDEX IF NOT EXISTS idx_knowledge_cards_outcome_id ON knowledge_cards(outcome_id);
 CREATE INDEX IF NOT EXISTS idx_knowledge_cards_field_context_id ON knowledge_cards(field_context_id);
 CREATE INDEX IF NOT EXISTS idx_knowledge_card_references_knowledge_card_id ON knowledge_card_references(knowledge_card_id);
+CREATE INDEX IF NOT EXISTS idx_knowledge_card_history_knowledge_card_id ON knowledge_card_references(knowledge_card_id);
 CREATE INDEX IF NOT EXISTS idx_proposal_peer_reviews_proposal_id ON proposal_peer_reviews(proposal_id);
 CREATE INDEX IF NOT EXISTS idx_proposal_peer_reviews_reviewer_id ON proposal_peer_reviews(reviewer_id);
 CREATE INDEX IF NOT EXISTS idx_proposal_status_history_proposal_id ON proposal_status_history(proposal_id);
