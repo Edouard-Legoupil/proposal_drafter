@@ -1,6 +1,6 @@
 import './ProgressModal.css';
 
-export default function ProgressModal({ isOpen, onClose, logs, onFileUpload, onRetry }) {
+export default function ProgressModal({ isOpen, onClose, progress, message }) {
     if (!isOpen) {
         return null;
     }
@@ -13,20 +13,10 @@ export default function ProgressModal({ isOpen, onClose, logs, onFileUpload, onR
                     <button onClick={onClose} className="progress-modal-close-btn">&times;</button>
                 </div>
                 <div className="progress-modal-content">
-                    <ul>
-                        {logs.map((log, index) => (
-                            <li key={index} className={`log-entry status-${log.status}`}>
-                                <span className="log-timestamp">{new Date(log.timestamp).toLocaleTimeString()}</span>
-                                <span className="log-message">{log.message}</span>
-                                {log.status === 'requires_action' && (
-                                    <div className="log-action">
-                                        <input type="file" onChange={(e) => onFileUpload(e, log.reference_id)} accept=".pdf" />
-                                        <button onClick={() => onRetry(log.reference_id)}>Retry</button>
-                                    </div>
-                                )}
-                            </li>
-                        ))}
-                    </ul>
+                    <div className="progress-bar-container">
+                        <div className="progress-bar" style={{ width: `${progress}%` }}></div>
+                    </div>
+                    <p className="progress-message">{message}</p>
                 </div>
             </div>
         </div>

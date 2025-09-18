@@ -135,7 +135,6 @@ CREATE TABLE IF NOT EXISTS knowledge_cards (
     generated_sections JSONB,
     is_accepted BOOLEAN DEFAULT FALSE,
     status proposal_status DEFAULT 'draft',
-    generation_log JSONB,
     donor_id UUID REFERENCES donors(id) ON DELETE SET NULL,
     outcome_id UUID REFERENCES outcomes(id) ON DELETE SET NULL,
     field_context_id UUID REFERENCES field_contexts(id) ON DELETE SET NULL,

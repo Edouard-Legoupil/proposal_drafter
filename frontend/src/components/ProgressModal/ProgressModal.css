@@ -37,37 +37,25 @@
     cursor: pointer;
 }
 
-.progress-modal-content ul {
-    list-style: none;
-    padding: 0;
+.progress-bar-container {
+    width: 100%;
+    background-color: #f3f3f3;
+    border-radius: 5px;
+    margin-bottom: 15px;
 }
 
-.log-entry {
-    padding: 8px 0;
-    border-bottom: 1px solid #eee;
+.progress-bar {
+    width: 0%;
+    height: 20px;
+    background-color: #4caf50;
+    border-radius: 5px;
+    text-align: center;
+    line-height: 20px;
+    color: white;
+    transition: width 0.4s ease;
 }
 
-.log-timestamp {
-    font-weight: bold;
-    margin-right: 10px;
-}
-
-.status-in_progress .log-message {
-    color: #333;
-}
-
-.status-completed .log-message {
-    color: green;
-}
-
-.status-failed .log-message {
-    color: red;
-}
-
-.status-requires_action .log-message {
-    color: orange;
-}
-
-.log-action {
-    margin-top: 10px;
+.progress-message {
+    text-align: center;
+    font-size: 1rem;
 }
