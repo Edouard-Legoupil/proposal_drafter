@@ -182,7 +182,7 @@ CREATE TABLE IF NOT EXISTS knowledge_card_reference_vectors (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     reference_id UUID NOT NULL REFERENCES knowledge_card_references(id) ON DELETE CASCADE,
     text_chunk TEXT NOT NULL,
-    embedding vector(768)
+    embedding vector(1536)
 );
 
 -- Create join tables for many-to-many relationships  
