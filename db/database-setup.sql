@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS knowledge_cards (
     CONSTRAINT one_link_only CHECK (
         (CASE WHEN donor_id IS NOT NULL THEN 1 ELSE 0 END +
          CASE WHEN outcome_id IS NOT NULL THEN 1 ELSE 0 END +
-         CASE WHEN field_context_id IS NOT NULL THEN 1 ELSE 0 END) = 1
+         CASE WHEN field_context_id IS NOT NULL THEN 1 ELSE 0 END) <= 1
     )
 );
 
