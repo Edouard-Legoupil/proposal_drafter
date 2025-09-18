@@ -3,6 +3,7 @@ import json
 import os
 import uuid
 import logging
+import concurrent.futures
 from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File, BackgroundTasks
 from sqlalchemy import text
 import litellm
@@ -19,6 +20,7 @@ from backend.core.llm import get_embedder_config
 from backend.utils.reference_identification_crew import ReferenceIdentificationCrew
 from backend.utils.content_generation_crew import ContentGenerationCrew
 from backend.utils.scraper import scrape_url
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 import litellm
 import numpy as np
 
@@ -328,10 +330,23 @@ async def update_knowledge_card(card_id: uuid.UUID, card: KnowledgeCardIn, curre
         raise HTTPException(status_code=500, detail="Failed to update knowledge card.")
 
 
-async def _process_and_store_text(reference_id: uuid.UUID, text_content: str, connection):
+def get_embedding(chunk, model, embedder_config):
+    response = litellm.embedding(
+        model=model,
+        input=[chunk],
+        **embedder_config
+    )
+    return chunk, response.data[0]['embedding']
+
+async def _process_and_store_text(reference_id: uuid.UUID, text_content: str, connection, progress_callback=None):
     """
     Chunks text, creates embeddings, and stores them for a given reference.
     """
+    def _report_progress(message):
+        if progress_callback:
+            progress_callback(message)
+        logger.info(message)
+
     # For now, we will clear old vectors before adding new ones
     connection.execute(
         text("DELETE FROM knowledge_card_reference_vectors WHERE reference_id = :ref_id"),
@@ -339,8 +354,9 @@ async def _process_and_store_text(reference_id: uuid.UUID, text_content: str, co
     )
 
     # Chunk the text
-    chunks = [chunk.replace('\x00', '') for chunk in text_content.split("\n") if chunk.strip()]
-    logger.info(f"Content chunked into {len(chunks)} chunks.")
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    chunks = text_splitter.split_text(text_content.replace('\x00', ''))
+    _report_progress(f"Content chunked into {len(chunks)} chunks.")
 
     # Get the embedding configuration
     embedder_config = get_embedder_config()["config"]
@@ -349,22 +365,19 @@ async def _process_and_store_text(reference_id: uuid.UUID, text_content: str, co
     embedder_config.pop('model', None)
 
 
-    # Generate and store embeddings
-    for i, chunk in enumerate(chunks):
-        logger.info(f"Processing chunk {i+1}/{len(chunks)} for embedding.")
-        response = litellm.embedding(
-            model=model,
-            input=[chunk],
-            **embedder_config
-        )
-        embedding = response.data[0]['embedding']
-        connection.execute(
-            text("""
-                INSERT INTO knowledge_card_reference_vectors (reference_id, text_chunk, embedding)
-                VALUES (:ref_id, :chunk, :embedding)
-            """),
-            {"ref_id": reference_id, "chunk": chunk, "embedding": str(embedding)}
-        )
+    # Generate and store embeddings in parallel
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = [executor.submit(get_embedding, chunk, model, embedder_config) for chunk in chunks]
+        for i, future in enumerate(concurrent.futures.as_completed(futures)):
+            chunk, embedding = future.result()
+            _report_progress(f"Embedding for chunk {i+1}/{len(chunks)} completed.")
+            connection.execute(
+                text("""
+                    INSERT INTO knowledge_card_reference_vectors (reference_id, text_chunk, embedding)
+                    VALUES (:ref_id, :chunk, :embedding)
+                """),
+                {"ref_id": reference_id, "chunk": chunk, "embedding": str(embedding)}
+            )
 
     # Update scraped_at timestamp
     connection.execute(
@@ -372,13 +385,18 @@ async def _process_and_store_text(reference_id: uuid.UUID, text_content: str, co
         {"id": reference_id}
     )
 
-async def ingest_reference_content(reference_id: uuid.UUID, force_scrape: bool = False, connection=None):
+async def ingest_reference_content(reference_id: uuid.UUID, force_scrape: bool = False, connection=None, progress_callback=None):
     """
     Ingests content from a reference URL, creates embeddings, and stores them.
     """
+    def _report_progress(message):
+        if progress_callback:
+            progress_callback(message)
+        logger.info(message)
+
     if connection is None:
         with get_engine().begin() as new_connection:
-            return await ingest_reference_content(reference_id, force_scrape, new_connection)
+            return await ingest_reference_content(reference_id, force_scrape, new_connection, progress_callback)
 
     reference = connection.execute(
         text("SELECT id, url, scraped_at FROM knowledge_card_references WHERE id = :id"),
@@ -389,10 +407,10 @@ async def ingest_reference_content(reference_id: uuid.UUID, force_scrape: bool =
         logger.error(f"Reference with id {reference_id} not found.")
         return {"status": "error", "message": "Reference not found."}
 
-    logger.info(f"Attempting to ingest reference: {reference.url}")
+    _report_progress(f"Attempting to ingest reference: {reference.url}")
 
     if reference.scraped_at and not force_scrape and datetime.utcnow() - reference.scraped_at < timedelta(days=7):
-        logger.info(f"Reference {reference.id} was scraped recently. Skipping.")
+        _report_progress(f"Reference {reference.id} was scraped recently. Skipping.")
         return {"status": "skipped", "message": "Scraped recently."}
 
     content = scrape_url(reference.url)
@@ -405,8 +423,8 @@ async def ingest_reference_content(reference_id: uuid.UUID, force_scrape: bool =
         )
         return {"status": "error", "message": "Failed to scrape content."}
 
-    logger.info(f"Successfully scraped content from {reference.url}")
-    await _process_and_store_text(reference.id, content, connection)
+    _report_progress(f"Successfully scraped content from {reference.url}")
+    await _process_and_store_text(reference.id, content, connection, progress_callback)
     return {"status": "success", "message": "Content ingested successfully."}
 
 
@@ -440,8 +458,11 @@ def _update_progress(card_id: uuid.UUID, message: str, progress: int):
     redis_client.set(f"knowledge_card_generation:{card_id}", json.dumps({"message": message, "progress": progress}))
 
 async def generate_content_background(card_id: uuid.UUID):
+    def progress_callback_for_reference_ingestion(message, progress):
+        _update_progress(card_id, message, progress)
+
     try:
-        _update_progress(card_id, "Starting content generation...", 0)
+        progress_callback_for_reference_ingestion("Starting content generation...", 0)
         with get_engine().begin() as connection:
             connection.execute(
                 text("UPDATE knowledge_cards SET status = 'generating_sections' WHERE id = :id"),
@@ -457,10 +478,13 @@ async def generate_content_background(card_id: uuid.UUID):
             num_references = len(references)
             for i, ref in enumerate(references):
                 progress = int(((i + 1) / (num_references + 1)) * 50)
-                _update_progress(card_id, f"Processing reference {i+1}/{num_references}: {ref.url}", progress)
-                result = await ingest_reference_content(ref.id, connection=connection)
+
+                def reference_progress_callback(message):
+                    return progress_callback_for_reference_ingestion(message, progress)
+
+                result = await ingest_reference_content(ref.id, connection=connection, progress_callback=reference_progress_callback)
                 if result["status"] == "error":
-                    _update_progress(card_id, f"Failed to scrape {ref.url}. Please upload a PDF.", progress)
+                    progress_callback_for_reference_ingestion(f"Failed to scrape {ref.url}. Please upload a PDF.", progress)
 
         with get_engine().begin() as connection:
             card = connection.execute(
