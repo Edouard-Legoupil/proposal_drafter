@@ -3,7 +3,7 @@ from typing import Type
 from pydantic import BaseModel, Field
 from crewai import Agent, Task, Crew, Process
 from crewai.project import CrewBase, agent, crew, task
-from crewai_tools import BaseTool
+from crewai.tools import BaseTool
 from backend.core.llm import llm
 from backend.core.db import get_engine
 from sqlalchemy import text
