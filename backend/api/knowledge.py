@@ -512,6 +512,8 @@ async def get_knowledge_card_status(card_id: uuid.UUID, current_user: dict = Dep
 
             if result.status == 'completed':
                 return {"status": "completed", "progress": 100, "generated_sections": json.loads(result.generated_sections) if result.generated_sections else None}
+            elif result.status == 'failed':
+                return {"status": "failed", "progress": -1}
             else:
                 return {"status": result.status, "progress": 0}
 
