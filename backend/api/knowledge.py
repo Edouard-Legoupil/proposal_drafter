@@ -546,7 +546,15 @@ async def identify_references(card_id: uuid.UUID, data: IdentifyReferencesIn, cu
         result = crew.kickoff(link_type=data.linked_element, topic=topic)
 
         try:
-            references = json.loads(result.raw)
+            # Clean the raw output from the crew
+            raw_output = result.raw.strip()
+            if raw_output.startswith("```json"):
+                raw_output = raw_output[7:]
+            if raw_output.endswith("```"):
+                raw_output = raw_output[:-3]
+            raw_output = raw_output.strip()
+
+            references = json.loads(raw_output)
         except json.JSONDecodeError:
             logger.error(f"Failed to parse JSON from crew output: {result.raw}")
             # If parsing fails, we can't proceed to store references.
