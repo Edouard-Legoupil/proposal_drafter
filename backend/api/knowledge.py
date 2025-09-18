@@ -560,6 +560,7 @@ async def identify_references(card_id: uuid.UUID, data: IdentifyReferencesIn, cu
             # If parsing fails, we can't proceed to store references.
             raise HTTPException(status_code=500, detail="Failed to parse references from crew output.")
 
+        user_id = current_user['user_id']
         with get_engine().begin() as connection:
             # First, clear any existing references for this card
             connection.execute(
@@ -570,14 +571,15 @@ async def identify_references(card_id: uuid.UUID, data: IdentifyReferencesIn, cu
             for ref in references:
                 connection.execute(
                     text("""
-                        INSERT INTO knowledge_card_references (knowledge_card_id, url, reference_type, summary)
-                        VALUES (:kcid, :url, :reference_type, :summary)
+                        INSERT INTO knowledge_card_references (knowledge_card_id, url, reference_type, summary, created_by, updated_by, created_at, updated_at)
+                        VALUES (:kcid, :url, :reference_type, :summary, :user_id, :user_id, NOW(), NOW())
                     """),
                     {
                         "kcid": card_id,
                         "url": ref.get("url"),
                         "reference_type": ref.get("reference_type"),
-                        "summary": ref.get("summary")
+                        "summary": ref.get("summary"),
+                        "user_id": user_id
                     }
                 )
 
