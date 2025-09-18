@@ -59,16 +59,19 @@ async def create_knowledge_card(card: KnowledgeCardIn, current_user: dict = Depe
     Creates a new knowledge card.
     """
     card_id = uuid.uuid4()
-    # Check that only one of the foreign keys is provided.
-    if sum(1 for v in [card.donor_id, card.outcome_id, card.field_context_id] if v is not None) > 1:
+    user_id = current_user['id']
+
+    # Ensure that only one of the foreign keys is provided.
+    foreign_keys = [card.donor_id, card.outcome_id, card.field_context_id]
+    if sum(k is not None for k in foreign_keys) > 1:
         raise HTTPException(status_code=400, detail="A knowledge card can only be linked to one donor, outcome, or field context at a time.")
 
     try:
         with get_engine().begin() as connection:
             connection.execute(
                 text("""
-                    INSERT INTO knowledge_cards (id, title, summary, template_name, status, donor_id, outcome_id, field_context_id)
-                    VALUES (:id, :title, :summary, :template_name, 'draft', :donor_id, :outcome_id, :field_context_id)
+                    INSERT INTO knowledge_cards (id, title, summary, template_name, status, donor_id, outcome_id, field_context_id, created_by, updated_by, created_at, updated_at)
+                    VALUES (:id, :title, :summary, :template_name, 'draft', :donor_id, :outcome_id, :field_context_id, :user_id, :user_id, NOW(), NOW())
                 """),
                 {
                     "id": card_id,
@@ -77,21 +80,25 @@ async def create_knowledge_card(card: KnowledgeCardIn, current_user: dict = Depe
                     "template_name": card.template_name,
                     "donor_id": card.donor_id,
                     "outcome_id": card.outcome_id,
-                    "field_context_id": card.field_context_id
+                    "field_context_id": card.field_context_id,
+                    "user_id": user_id
                 }
             )
             if card.references:
                 for ref in card.references:
                     connection.execute(
                         text("""
-                            INSERT INTO knowledge_card_references (knowledge_card_id, url, reference_type, summary)
-                            VALUES (:kcid, :url, :reference_type, :summary)
+                            INSERT INTO knowledge_card_references (knowledge_card_id, url, reference_type, summary, created_by, updated_by, created_at, updated_at)
+                            VALUES (:kcid, :url, :reference_type, :summary, :user_id, :user_id, NOW(), NOW())
                         """),
-                        {"kcid": card_id, "url": ref.url, "reference_type": ref.reference_type, "summary": ref.summary}
+                        {"kcid": card_id, "url": ref.url, "reference_type": ref.reference_type, "summary": ref.summary, "user_id": user_id}
                     )
         return {"message": "Knowledge card created successfully.", "knowledge_card_id": card_id}
     except Exception as e:
         logger.error(f"[CREATE KNOWLEDGE CARD ERROR] {e}", exc_info=True)
+        # Check for the specific constraint violation from the DB if possible
+        if "violates not-null constraint" in str(e) or "violates foreign key constraint" in str(e):
+             raise HTTPException(status_code=400, detail="Invalid data: Make sure all required fields are provided and valid.")
         if "one_link_only" in str(e):
             raise HTTPException(status_code=400, detail="A knowledge card can only be linked to one donor, outcome, or field context.")
         raise HTTPException(status_code=500, detail="Failed to create knowledge card.")
@@ -269,6 +276,7 @@ async def update_knowledge_card(card_id: uuid.UUID, card: KnowledgeCardIn, curre
     """
     Updates an existing knowledge card.
     """
+    user_id = current_user['id']
     # Check that only one of the foreign keys is provided.
     if sum(1 for v in [card.donor_id, card.outcome_id, card.field_context_id] if v is not None) > 1:
         raise HTTPException(status_code=400, detail="A knowledge card can only be linked to one donor, outcome, or field context at a time.")
@@ -285,7 +293,7 @@ async def update_knowledge_card(card_id: uuid.UUID, card: KnowledgeCardIn, curre
                     UPDATE knowledge_cards
                     SET title = :title, summary = :summary, template_name = :template_name,
                         donor_id = :donor_id, outcome_id = :outcome_id, field_context_id = :field_context_id,
-                        updated_at = NOW()
+                        updated_by = :user_id, updated_at = NOW()
                     WHERE id = :id
                 """),
                 {
@@ -295,7 +303,8 @@ async def update_knowledge_card(card_id: uuid.UUID, card: KnowledgeCardIn, curre
                     "template_name": card.template_name,
                     "donor_id": card.donor_id,
                     "outcome_id": card.outcome_id,
-                    "field_context_id": card.field_context_id
+                    "field_context_id": card.field_context_id,
+                    "user_id": user_id
                 }
             )
             # Delete existing references and add new ones
@@ -304,10 +313,10 @@ async def update_knowledge_card(card_id: uuid.UUID, card: KnowledgeCardIn, curre
                 for ref in card.references:
                     connection.execute(
                         text("""
-                            INSERT INTO knowledge_card_references (knowledge_card_id, url, reference_type, summary)
-                            VALUES (:kcid, :url, :reference_type, :summary)
+                            INSERT INTO knowledge_card_references (knowledge_card_id, url, reference_type, summary, created_by, updated_by, created_at, updated_at)
+                            VALUES (:kcid, :url, :reference_type, :summary, :user_id, :user_id, NOW(), NOW())
                         """),
-                        {"kcid": card_id, "url": ref.url, "reference_type": ref.reference_type, "summary": ref.summary}
+                        {"kcid": card_id, "url": ref.url, "reference_type": ref.reference_type, "summary": ref.summary, "user_id": user_id}
                     )
         return {"message": "Knowledge card updated successfully.", "knowledge_card_id": card_id}
     except HTTPException as http_exc:

@@ -209,14 +209,22 @@ export default function KnowledgeCard() {
     };
 
     const handleIdentifyReferences = async () => {
-        if (!id) {
-            alert("Please save the knowledge card before identifying references.");
-            return;
+        let cardId = id;
+
+        if (!cardId) {
+            const saveResponse = await handleSave(false);
+            if (!saveResponse.ok) {
+                return;
+            }
+            const data = await saveResponse.json();
+            cardId = data.knowledge_card_id;
+            navigate(`/knowledge-card/${cardId}`, { replace: true });
         }
+
         setLoading(true);
         setLoadingMessage("Identifying references...");
         try {
-            const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${id}/identify-references`, {
+            const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${cardId}/identify-references`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
