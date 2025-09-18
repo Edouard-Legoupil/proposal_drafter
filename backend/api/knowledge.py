@@ -59,7 +59,7 @@ async def create_knowledge_card(card: KnowledgeCardIn, current_user: dict = Depe
     Creates a new knowledge card.
     """
     card_id = uuid.uuid4()
-    user_id = current_user['id']
+    user_id = current_user['user_id']
 
     # Ensure that only one of the foreign keys is provided.
     foreign_keys = [card.donor_id, card.outcome_id, card.field_context_id]
@@ -276,7 +276,7 @@ async def update_knowledge_card(card_id: uuid.UUID, card: KnowledgeCardIn, curre
     """
     Updates an existing knowledge card.
     """
-    user_id = current_user['id']
+    user_id = current_user['user_id']
     # Check that only one of the foreign keys is provided.
     if sum(1 for v in [card.donor_id, card.outcome_id, card.field_context_id] if v is not None) > 1:
         raise HTTPException(status_code=400, detail="A knowledge card can only be linked to one donor, outcome, or field context at a time.")
