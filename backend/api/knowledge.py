@@ -17,6 +17,12 @@ from datetime import datetime, timedelta
 from backend.core.db import get_engine
 from backend.core.redis import redis_client
 from backend.core.security import get_current_user
+try:
+    from backend.core.redis import DictStorage
+except ImportError:
+    # This will fail when redis is connected, but that's fine.
+    class DictStorage:
+        pass
 from backend.core.config import load_proposal_template
 from backend.core.llm import get_embedder_config
 from backend.utils.reference_identification_crew import ReferenceIdentificationCrew
@@ -460,7 +466,8 @@ async def upload_pdf_reference(reference_id: uuid.UUID, file: UploadFile = File(
 def _update_progress(card_id: uuid.UUID, message: str, progress: int):
     progress_data = json.dumps({"message": message, "progress": progress})
     redis_client.set(f"knowledge_card_generation:{card_id}", progress_data)
-    redis_client.publish(f"knowledge_card_generation_channel:{card_id}", progress_data)
+    if not isinstance(redis_client, DictStorage):
+        redis_client.publish(f"knowledge_card_generation_channel:{card_id}", progress_data)
 
 async def generate_content_background(card_id: uuid.UUID):
     def progress_callback_for_reference_ingestion(message, progress):
@@ -555,21 +562,37 @@ async def get_knowledge_card_status(card_id: uuid.UUID, current_user: dict = Dep
     Streams the status of a knowledge card generation task using SSE.
     """
     async def event_generator():
-        pubsub = redis_client.pubsub()
-        channel = f"knowledge_card_generation_channel:{card_id}"
-        await pubsub.subscribe(channel)
-        try:
-            while True:
-                message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=10)
-                if message:
-                    yield f"data: {message['data'].decode('utf-8')}\n\n"
-                await asyncio.sleep(0.1)
-        except asyncio.CancelledError:
-            logger.info(f"Client disconnected from {card_id} status stream.")
-        finally:
-            await pubsub.unsubscribe(channel)
-            await pubsub.close()
-
+        # Check if we are using the fallback in-memory storage or actual Redis
+        if isinstance(redis_client, DictStorage):
+            # Fallback for in-memory storage: polling
+            logger.info(f"Using polling for knowledge card {card_id} status.")
+            last_message = None
+            try:
+                while True:
+                    progress_data = redis_client.get(f"knowledge_card_generation:{card_id}")
+                    if progress_data and progress_data != last_message:
+                        last_message = progress_data
+                        yield f"data: {progress_data}\n\n"
+                    await asyncio.sleep(1)  # Poll every second
+            except asyncio.CancelledError:
+                logger.info(f"Client disconnected from {card_id} status stream (polling).")
+        else:
+            # Original implementation for Redis
+            logger.info(f"Using Redis Pub/Sub for knowledge card {card_id} status.")
+            pubsub = redis_client.pubsub()
+            channel = f"knowledge_card_generation_channel:{card_id}"
+            await pubsub.subscribe(channel)
+            try:
+                while True:
+                    message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=10)
+                    if message:
+                        yield f"data: {message['data']}\n\n"
+                    await asyncio.sleep(0.1)
+            except asyncio.CancelledError:
+                logger.info(f"Client disconnected from {card_id} status stream.")
+            finally:
+                await pubsub.unsubscribe(channel)
+                await pubsub.close()
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 

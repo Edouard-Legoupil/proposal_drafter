@@ -1,5 +1,6 @@
 #  Third-Party Libraries
 import redis
+import asyncio
 
 # --- Redis Client Initialization ---
 
@@ -45,6 +46,29 @@ except redis.ConnectionError:
         def delete(self, key):
             """Deletes a key."""
             self.storage.pop(key, None)
+
+        def publish(self, channel, message):
+            """Mock publish method. Does nothing in DictStorage."""
+            pass
+
+        def pubsub(self):
+            """Mock pubsub method. Returns a mock pubsub object."""
+            return self.MockPubSub()
+
+        class MockPubSub:
+            async def subscribe(self, channel):
+                pass
+
+            async def get_message(self, ignore_subscribe_messages=True, timeout=0):
+                # This mock will not receive messages, so it returns None
+                await asyncio.sleep(timeout if timeout else 0)
+                return None
+
+            async def unsubscribe(self, channel):
+                pass
+
+            async def close(self):
+                pass
 
     # Instantiate the fallback storage.
     redis_client = DictStorage()
