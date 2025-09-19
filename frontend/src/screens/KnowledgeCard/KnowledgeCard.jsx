@@ -35,6 +35,7 @@ export default function KnowledgeCard() {
     const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
     const [generationProgress, setGenerationProgress] = useState(0);
     const [generationMessage, setGenerationMessage] = useState("");
+    const [eventSource, setEventSource] = useState(null);
 
     const [donors, setDonors] = useState([]);
     const [outcomes, setOutcomes] = useState([]);
@@ -257,6 +258,15 @@ export default function KnowledgeCard() {
         }
     };
 
+    useEffect(() => {
+        // Cleanup event source on component unmount
+        return () => {
+            if (eventSource) {
+                eventSource.close();
+            }
+        };
+    }, [eventSource]);
+
     const handlePopulate = async (e) => {
         e.preventDefault();
         const saveResponse = await handleSave(false);
@@ -272,21 +282,30 @@ export default function KnowledgeCard() {
             });
 
             if (genResponse.ok) {
-                // Start polling for status
-                const intervalId = setInterval(async () => {
-                    const statusResponse = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${cardId}/status`, { credentials: 'include' });
-                    if (statusResponse.ok) {
-                        const statusData = await statusResponse.json();
-                        setGenerationProgress(statusData.progress);
-                        setGenerationMessage(statusData.message);
-                        if (statusData.progress === 100 || statusData.progress === -1) {
-                            clearInterval(intervalId);
-                            if (statusData.progress === 100) {
-                                setGeneratedSections(statusData.generated_sections);
-                            }
+                const es = new EventSource(`${API_BASE_URL}/knowledge-cards/${cardId}/status`);
+                setEventSource(es);
+
+                es.onmessage = (event) => {
+                    const statusData = JSON.parse(event.data);
+                    setGenerationProgress(statusData.progress);
+                    setGenerationMessage(statusData.message);
+                    if (statusData.progress === 100 || statusData.progress === -1) {
+                        if (statusData.progress === 100) {
+                            setGeneratedSections(statusData.generated_sections);
                         }
+                        es.close();
+                        setEventSource(null);
                     }
-                }, 3000); // Poll every 3 seconds
+                };
+
+                es.onerror = () => {
+                    // Handle error, maybe show a message to the user
+                    console.error("EventSource failed.");
+                    es.close();
+                    setEventSource(null);
+                    // Optionally, revert to polling or show a retry button
+                };
+
             } else {
                 const error = await genResponse.json();
                 alert(`Error starting content generation: ${error.detail}`);
