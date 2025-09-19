@@ -1,33 +1,73 @@
 import requests
 from bs4 import BeautifulSoup
 import logging
+import io
+from PyPDF2 import PdfReader
 
 logger = logging.getLogger(__name__)
 
 def scrape_url(url: str) -> str:
     """
     Scrapes the main text content from a given URL.
+    Supports both HTML pages and PDF files.
     """
+    logger.info(f"Starting scrape for URL: {url}")
+
     try:
-        response = requests.get(url, timeout=15)
+        logger.info("Sending GET request...")
+        response = requests.get(url, timeout=20)
+        logger.info(f"Received response with status code: {response.status_code}")
         response.raise_for_status()
-        soup = BeautifulSoup(response.content, 'html.parser')
 
-        # A simple approach to get the main content:
-        # join the text of all paragraph tags.
-        # This can be improved with more sophisticated methods.
-        paragraphs = soup.find_all('p')
-        main_content = "\n".join([p.get_text() for p in paragraphs])
+        content_type = response.headers.get("Content-Type", "").lower()
+        logger.info(f"Detected Content-Type: {content_type}")
 
-        if not main_content:
-            # Fallback to getting all text if no paragraphs are found
-            main_content = soup.get_text(separator='\n', strip=True)
+        if "application/pdf" in content_type or url.lower().endswith(".pdf"):
+            logger.info("Processing PDF content...")
+            pdf_file = io.BytesIO(response.content)
+            reader = PdfReader(pdf_file)
 
-        return main_content
+            text_chunks = []
+            for i, page in enumerate(reader.pages):
+                try:
+                    text = page.extract_text() or ""
+                    logger.info(f"Extracted {len(text)} characters from page {i+1}.")
+                    text_chunks.append(text)
+                except Exception as e:
+                    logger.warning(f"Failed to extract text from page {i+1}: {e}")
 
+            main_content = "\n".join(text_chunks).strip()
+            if main_content:
+                logger.info(f"PDF scraping completed. Extracted {len(main_content)} characters total.")
+            else:
+                logger.warning("PDF parsing completed but no text extracted.")
+            return main_content or None
+
+        else:
+            logger.info("Processing HTML content with BeautifulSoup...")
+            soup = BeautifulSoup(response.content, 'html.parser')
+            logger.info("Successfully parsed HTML.")
+
+            paragraphs = soup.find_all('p')
+            logger.info(f"Found {len(paragraphs)} <p> tags.")
+
+            main_content = "\n".join([p.get_text(strip=True) for p in paragraphs])
+
+            if main_content.strip():
+                logger.info("Extracted text content from paragraph tags.")
+            else:
+                logger.warning("No paragraph content found. Falling back to extracting all text.")
+                main_content = soup.get_text(separator='\n', strip=True)
+
+            logger.info(f"HTML scraping completed. Extracted {len(main_content)} characters.")
+            return main_content
+
+    except requests.exceptions.Timeout:
+        logger.error(f"Request timed out while scraping {url}")
+        return None
     except requests.exceptions.RequestException as e:
-        logger.error(f"Error scraping URL {url}: {e}")
+        logger.error(f"Request error while scraping {url}: {e}")
         return None
     except Exception as e:
-        logger.error(f"An unexpected error occurred while scraping {url}: {e}")
+        logger.exception(f"Unexpected error while scraping {url}: {e}")
         return None

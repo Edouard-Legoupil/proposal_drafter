@@ -1,11 +1,13 @@
 # backend/api/knowledge.py
 import json
+import os
 import uuid
 import logging
+import concurrent.futures
 from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File, BackgroundTasks
 from sqlalchemy import text
 import litellm
-import pypdf
+from PyPDF2 import PdfReader
 from pydantic import BaseModel, Field, validator
 from typing import List, Optional
 from datetime import datetime, timedelta
@@ -14,9 +16,11 @@ from backend.core.db import get_engine
 from backend.core.redis import redis_client
 from backend.core.security import get_current_user
 from backend.core.config import load_proposal_template
+from backend.core.llm import get_embedder_config
 from backend.utils.reference_identification_crew import ReferenceIdentificationCrew
 from backend.utils.content_generation_crew import ContentGenerationCrew
 from backend.utils.scraper import scrape_url
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 import litellm
 import numpy as np
 
@@ -326,10 +330,23 @@ async def update_knowledge_card(card_id: uuid.UUID, card: KnowledgeCardIn, curre
         raise HTTPException(status_code=500, detail="Failed to update knowledge card.")
 
 
-async def _process_and_store_text(reference_id: uuid.UUID, text_content: str, connection):
+def get_embedding(chunk, model, embedder_config):
+    response = litellm.embedding(
+        model=model,
+        input=[chunk],
+        **embedder_config
+    )
+    return chunk, response.data[0]['embedding']
+
+async def _process_and_store_text(reference_id: uuid.UUID, text_content: str, connection, progress_callback=None):
     """
     Chunks text, creates embeddings, and stores them for a given reference.
     """
+    def _report_progress(message):
+        if progress_callback:
+            progress_callback(message)
+        logger.info(message)
+
     # For now, we will clear old vectors before adding new ones
     connection.execute(
         text("DELETE FROM knowledge_card_reference_vectors WHERE reference_id = :ref_id"),
@@ -337,22 +354,30 @@ async def _process_and_store_text(reference_id: uuid.UUID, text_content: str, co
     )
 
     # Chunk the text
-    chunks = [chunk for chunk in text_content.split("\n") if chunk.strip()]
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    chunks = text_splitter.split_text(text_content.replace('\x00', ''))
+    _report_progress(f"Content chunked into {len(chunks)} chunks.")
 
-    # Generate and store embeddings
-    for chunk in chunks:
-        response = litellm.embedding(
-            model=os.getenv("AZURE_EMBEDDING_MODEL", "text-embedding-ada-002"),
-            input=[chunk]
-        )
-        embedding = response.data[0]['embedding']
-        connection.execute(
-            text("""
-                INSERT INTO knowledge_card_reference_vectors (reference_id, text_chunk, embedding)
-                VALUES (:ref_id, :chunk, :embedding)
-            """),
-            {"ref_id": reference_id, "chunk": chunk, "embedding": embedding}
-        )
+    # Get the embedding configuration
+    embedder_config = get_embedder_config()["config"]
+    model = f"azure/{embedder_config.pop('deployment_id')}"
+    # The 'model' key in the config is just the deployment name, which is not needed anymore.
+    embedder_config.pop('model', None)
+
+
+    # Generate and store embeddings in parallel
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = [executor.submit(get_embedding, chunk, model, embedder_config) for chunk in chunks]
+        for i, future in enumerate(concurrent.futures.as_completed(futures)):
+            chunk, embedding = future.result()
+            _report_progress(f"Embedding for chunk {i+1}/{len(chunks)} completed.")
+            connection.execute(
+                text("""
+                    INSERT INTO knowledge_card_reference_vectors (reference_id, text_chunk, embedding)
+                    VALUES (:ref_id, :chunk, :embedding)
+                """),
+                {"ref_id": reference_id, "chunk": chunk, "embedding": str(embedding)}
+            )
 
     # Update scraped_at timestamp
     connection.execute(
@@ -360,35 +385,47 @@ async def _process_and_store_text(reference_id: uuid.UUID, text_content: str, co
         {"id": reference_id}
     )
 
-async def ingest_reference_content(reference_id: uuid.UUID, force_scrape: bool = False):
+async def ingest_reference_content(reference_id: uuid.UUID, force_scrape: bool = False, connection=None, progress_callback=None):
     """
     Ingests content from a reference URL, creates embeddings, and stores them.
     """
-    with get_engine().begin() as connection:
-        reference = connection.execute(
-            text("SELECT id, url, scraped_at FROM knowledge_card_references WHERE id = :id"),
-            {"id": reference_id}
-        ).fetchone()
+    def _report_progress(message):
+        if progress_callback:
+            progress_callback(message)
+        logger.info(message)
 
-        if not reference:
-            logger.error(f"Reference with id {reference_id} not found.")
-            return {"status": "error", "message": "Reference not found."}
+    if connection is None:
+        with get_engine().begin() as new_connection:
+            return await ingest_reference_content(reference_id, force_scrape, new_connection, progress_callback)
 
-        if reference.scraped_at and not force_scrape and datetime.utcnow() - reference.scraped_at < timedelta(days=7):
-            logger.info(f"Reference {reference.id} was scraped recently. Skipping.")
-            return {"status": "skipped", "message": "Scraped recently."}
+    reference = connection.execute(
+        text("SELECT id, url, scraped_at FROM knowledge_card_references WHERE id = :id"),
+        {"id": reference_id}
+    ).fetchone()
 
-        content = scrape_url(reference.url)
+    if not reference:
+        logger.error(f"Reference with id {reference_id} not found.")
+        return {"status": "error", "message": "Reference not found."}
 
-        if not content:
-            connection.execute(
-                text("UPDATE knowledge_card_references SET scraping_error = TRUE, updated_at = NOW() WHERE id = :id"),
-                {"id": reference.id}
-            )
-            return {"status": "error", "message": "Failed to scrape content."}
+    _report_progress(f"Attempting to ingest reference: {reference.url}")
 
-        await _process_and_store_text(reference.id, content, connection)
-        return {"status": "success", "message": "Content ingested successfully."}
+    if reference.scraped_at and not force_scrape and datetime.utcnow() - reference.scraped_at < timedelta(days=7):
+        _report_progress(f"Reference {reference.id} was scraped recently. Skipping.")
+        return {"status": "skipped", "message": "Scraped recently."}
+
+    content = scrape_url(reference.url)
+
+    if not content:
+        logger.warning(f"Failed to scrape content from {reference.url}")
+        connection.execute(
+            text("UPDATE knowledge_card_references SET scraping_error = TRUE, updated_at = NOW() WHERE id = :id"),
+            {"id": reference.id}
+        )
+        return {"status": "error", "message": "Failed to scrape content."}
+
+    _report_progress(f"Successfully scraped content from {reference.url}")
+    await _process_and_store_text(reference.id, content, connection, progress_callback)
+    return {"status": "success", "message": "Content ingested successfully."}
 
 
 @router.post("/knowledge-cards/references/{reference_id}/upload-pdf")
@@ -400,7 +437,7 @@ async def upload_pdf_reference(reference_id: uuid.UUID, file: UploadFile = File(
         raise HTTPException(status_code=400, detail="File must be a PDF.")
 
     try:
-        pdf_reader = pypdf.PdfReader(file.file)
+        pdf_reader = PdfReader(file.file)
         text_content = ""
         for page in pdf_reader.pages:
             text_content += page.extract_text()
@@ -421,14 +458,18 @@ def _update_progress(card_id: uuid.UUID, message: str, progress: int):
     redis_client.set(f"knowledge_card_generation:{card_id}", json.dumps({"message": message, "progress": progress}))
 
 async def generate_content_background(card_id: uuid.UUID):
+    def progress_callback_for_reference_ingestion(message, progress):
+        _update_progress(card_id, message, progress)
+
     try:
+        progress_callback_for_reference_ingestion("Starting content generation...", 0)
         with get_engine().begin() as connection:
-            _update_progress(card_id, "Starting content generation...", 0)
             connection.execute(
                 text("UPDATE knowledge_cards SET status = 'generating_sections' WHERE id = :id"),
                 {"id": card_id}
             )
 
+        with get_engine().begin() as connection:
             references = connection.execute(
                 text("SELECT id, url FROM knowledge_card_references WHERE knowledge_card_id = :card_id"),
                 {"card_id": card_id}
@@ -437,46 +478,50 @@ async def generate_content_background(card_id: uuid.UUID):
             num_references = len(references)
             for i, ref in enumerate(references):
                 progress = int(((i + 1) / (num_references + 1)) * 50)
-                _update_progress(card_id, f"Processing reference {i+1}/{num_references}: {ref.url}", progress)
-                result = await ingest_reference_content(ref.id)
-                if result["status"] == "error":
-                    _update_progress(card_id, f"Failed to scrape {ref.url}. Please upload a PDF.", progress)
-                    # For now, we will just log and continue. A more robust solution would be to wait for user action.
+                
+                def reference_progress_callback(message):
+                    return progress_callback_for_reference_ingestion(message, progress)
 
+                result = await ingest_reference_content(ref.id, connection=connection, progress_callback=reference_progress_callback)
+                if result["status"] == "error":
+                    progress_callback_for_reference_ingestion(f"Failed to scrape {ref.url}. Please upload a PDF.", progress)
+
+        with get_engine().begin() as connection:
             card = connection.execute(
                 text("SELECT donor_id, outcome_id, field_context_id FROM knowledge_cards WHERE id = :id"),
                 {"id": card_id}
             ).fetchone()
 
-            if card.donor_id:
-                template_name = "knowledge_card_donor_template.json"
-            elif card.outcome_id:
-                template_name = "knowledge_card_outcome_template.json"
-            elif card.field_context_id:
-                template_name = "knowledge_card_field_context_template.json"
-            else:
-                raise Exception("Knowledge card is not linked to any entity.")
+        if card.donor_id:
+            template_name = "knowledge_card_donor_template.json"
+        elif card.outcome_id:
+            template_name = "knowledge_card_outcome_template.json"
+        elif card.field_context_id:
+            template_name = "knowledge_card_field_context_template.json"
+        else:
+            raise Exception("Knowledge card is not linked to any entity.")
 
-            template = load_proposal_template(template_name)
-            generated_sections = {}
-            crew = ContentGenerationCrew()
+        template = load_proposal_template(template_name)
+        generated_sections = {}
+        crew = ContentGenerationCrew()
 
-            num_sections = len(template.get("sections", []))
-            for i, section in enumerate(template.get("sections", [])):
-                progress = 50 + int(((i + 1) / num_sections) * 50)
-                section_name = section.get("section_name")
-                instructions = section.get("instructions")
-                _update_progress(card_id, f"Generating section {i+1}/{num_sections}: {section_name}", progress)
+        num_sections = len(template.get("sections", []))
+        for i, section in enumerate(template.get("sections", [])):
+            progress = 50 + int(((i + 1) / num_sections) * 50)
+            section_name = section.get("section_name")
+            instructions = section.get("instructions")
+            _update_progress(card_id, f"Generating section {i+1}/{num_sections}: {section_name}", progress)
 
-                inputs = {
-                    "section_name": section_name,
-                    "instructions": instructions,
-                    "knowledge_card_id": str(card_id),
-                }
+            inputs = {
+                "section_name": section_name,
+                "instructions": instructions,
+                "knowledge_card_id": str(card_id),
+            }
 
-                result = crew.create_crew().kickoff(inputs=inputs)
-                generated_sections[section_name] = result
+            result = crew.create_crew().kickoff(inputs=inputs)
+            generated_sections[section_name] = result
 
+        with get_engine().begin() as connection:
             _update_progress(card_id, "Content generation complete.", 100)
             connection.execute(
                 text("UPDATE knowledge_cards SET generated_sections = :sections, status = 'completed', updated_at = NOW() WHERE id = :id"),

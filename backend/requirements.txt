@@ -103,5 +103,5 @@ pgvector
 
 # PDF processing
 pypdf
-
+PyPDF2
  
