@@ -531,7 +531,7 @@ async def generate_content_background(card_id: uuid.UUID):
             }
 
             result = crew.create_crew().kickoff(inputs=inputs)
-            generated_sections[section_name] = result
+            generated_sections[section_name] = str(result)
 
         with get_engine().begin() as connection:
             _update_progress(card_id, "Content generation complete.", 100)
