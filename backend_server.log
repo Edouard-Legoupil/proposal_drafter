@@ -1,0 +1,18 @@
+INFO:     Will watch for changes in these directories: ['/app/backend']
+INFO:     Uvicorn running on http://0.0.0.0:8502 (Press CTRL+C to quit)
+INFO:     Started reloader process [7490] using WatchFiles
+2025-09-19 08:07:26,047 - backend.core.config - INFO - Python Version:
+2025-09-19 08:07:26,047 - backend.core.config - INFO - 3.12.11 (main, Jul 29 2025, 18:21:07) [GCC 13.3.0]
+2025-09-19 08:07:26,047 - backend.core.config - INFO - -----
+2025-09-19 08:07:26,047 - backend.core.config - INFO - Python Install Directory:
+2025-09-19 08:07:26,047 - backend.core.config - INFO - /app/backend/venv
+2025-09-19 08:07:26,048 - backend.core.config - INFO - -----
+2025-09-19 08:07:26,048 - backend.core.config - INFO - PATH Environment Variable:
+2025-09-19 08:07:26,048 - backend.core.config - INFO - /home/jules/.nvm/versions/node/v22.17.1/bin:/home/jules/.pyenv/shims:/home/jules/.pyenv/bin:/home/jules/.local/bin:/go/bin:/usr/local/go/bin:/usr/share/gradle/bin:/usr/share/maven/bin:/home/jules/.local/bin:/home/jules/.cargo/bin:/usr/local/bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+2025-09-19 08:07:26,048 - backend.core.config - INFO - -----
+2025-09-19 08:07:26,048 - backend.core.config - INFO - PYTHONPATH Environment Variable:
+2025-09-19 08:07:26,048 - backend.core.config - INFO - Not Set
+2025-09-19 08:07:26,048 - backend.core.config - INFO - -----
+2025-09-19 08:07:26,048 - backend.core.config - INFO - PYTHONHOME Environment Variable:
+2025-09-19 08:07:26,049 - backend.core.config - INFO - Not Set
+2025-09-19 08:07:26,049 - backend.core.config - INFO - -----
