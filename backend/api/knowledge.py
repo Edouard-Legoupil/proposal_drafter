@@ -3,8 +3,10 @@ import json
 import os
 import uuid
 import logging
+import asyncio
 import concurrent.futures
 from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File, BackgroundTasks
+from fastapi.responses import StreamingResponse
 from sqlalchemy import text
 import litellm
 from PyPDF2 import PdfReader
@@ -334,6 +336,7 @@ def get_embedding(chunk, model, embedder_config):
     response = litellm.embedding(
         model=model,
         input=[chunk],
+        max_retries=3,
         **embedder_config
     )
     return chunk, response.data[0]['embedding']
@@ -455,7 +458,9 @@ async def upload_pdf_reference(reference_id: uuid.UUID, file: UploadFile = File(
 
 
 def _update_progress(card_id: uuid.UUID, message: str, progress: int):
-    redis_client.set(f"knowledge_card_generation:{card_id}", json.dumps({"message": message, "progress": progress}))
+    progress_data = json.dumps({"message": message, "progress": progress})
+    redis_client.set(f"knowledge_card_generation:{card_id}", progress_data)
+    redis_client.publish(f"knowledge_card_generation_channel:{card_id}", progress_data)
 
 async def generate_content_background(card_id: uuid.UUID):
     def progress_callback_for_reference_ingestion(message, progress):
@@ -547,33 +552,26 @@ async def generate_knowledge_card_content(card_id: uuid.UUID, background_tasks: 
 @router.get("/knowledge-cards/{card_id}/status")
 async def get_knowledge_card_status(card_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
     """
-    Gets the status of a knowledge card generation task.
+    Streams the status of a knowledge card generation task using SSE.
     """
-    try:
-        progress_data = redis_client.get(f"knowledge_card_generation:{card_id}")
-        if progress_data:
-            return json.loads(progress_data)
+    async def event_generator():
+        pubsub = redis_client.pubsub()
+        channel = f"knowledge_card_generation_channel:{card_id}"
+        await pubsub.subscribe(channel)
+        try:
+            while True:
+                message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=10)
+                if message:
+                    yield f"data: {message['data'].decode('utf-8')}\n\n"
+                await asyncio.sleep(0.1)
+        except asyncio.CancelledError:
+            logger.info(f"Client disconnected from {card_id} status stream.")
+        finally:
+            await pubsub.unsubscribe(channel)
+            await pubsub.close()
 
-        # If no progress data, check the database for final status
-        with get_engine().connect() as connection:
-            result = connection.execute(
-                text("SELECT status, generated_sections FROM knowledge_cards WHERE id = :id"),
-                {"id": card_id}
-            ).fetchone()
 
-            if not result:
-                raise HTTPException(status_code=404, detail="Knowledge card not found.")
-
-            if result.status == 'completed':
-                return {"status": "completed", "progress": 100, "generated_sections": json.loads(result.generated_sections) if result.generated_sections else None}
-            elif result.status == 'failed':
-                return {"status": "failed", "progress": -1}
-            else:
-                return {"status": result.status, "progress": 0}
-
-    except Exception as e:
-        logger.error(f"[GET KC STATUS ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to get knowledge card status.")
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 @router.post("/knowledge-cards/{card_id}/identify-references")
 async def identify_references(card_id: uuid.UUID, data: IdentifyReferencesIn, current_user: dict = Depends(get_current_user)):
