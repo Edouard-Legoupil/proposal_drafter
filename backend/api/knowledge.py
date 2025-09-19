@@ -418,6 +418,7 @@ async def ingest_reference_content(reference_id: uuid.UUID, force_scrape: bool =
 
     _report_progress(f"Attempting to ingest reference: {reference.url}")
 
+    logger.info(f"Checking reference {reference.id}: scraped_at={reference.scraped_at}, force_scrape={force_scrape}")
     if reference.scraped_at and not force_scrape and datetime.utcnow() - reference.scraped_at < timedelta(days=7):
         _report_progress(f"Reference {reference.id} was scraped recently. Skipping.")
         return {"status": "skipped", "message": "Scraped recently."}
@@ -536,7 +537,7 @@ async def generate_content_background(card_id: uuid.UUID):
         with get_engine().begin() as connection:
             _update_progress(card_id, "Content generation complete.", 100)
             connection.execute(
-                text("UPDATE knowledge_cards SET generated_sections = :sections, status = 'completed', updated_at = NOW() WHERE id = :id"),
+                text("UPDATE knowledge_cards SET generated_sections = :sections, status = 'approved', updated_at = NOW() WHERE id = :id"),
                 {"sections": json.dumps(generated_sections), "id": card_id}
             )
     except Exception as e:
