@@ -7,7 +7,7 @@ import concurrent.futures
 from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File, BackgroundTasks
 from sqlalchemy import text
 import litellm
-import pypdf
+from PyPDF2 import PdfReader
 from pydantic import BaseModel, Field, validator
 from typing import List, Optional
 from datetime import datetime, timedelta
@@ -437,7 +437,7 @@ async def upload_pdf_reference(reference_id: uuid.UUID, file: UploadFile = File(
         raise HTTPException(status_code=400, detail="File must be a PDF.")
 
     try:
-        pdf_reader = pypdf.PdfReader(file.file)
+        pdf_reader = PdfReader(file.file)
         text_content = ""
         for page in pdf_reader.pages:
             text_content += page.extract_text()
