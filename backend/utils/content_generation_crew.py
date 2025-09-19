@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 from crewai import Agent, Task, Crew, Process
 from crewai.project import CrewBase, agent, crew, task
 from crewai.tools import BaseTool
-from backend.core.llm import llm
+from backend.core.llm import llm, get_embedder_config
 from backend.core.db import get_engine
 from sqlalchemy import text
 import litellm
@@ -14,9 +14,14 @@ class VectorSearchTool(BaseTool):
     description: str = "Searches for relevant information in the knowledge base using vector similarity."
 
     def _run(self, search_query: str, knowledge_card_id: str) -> str:
+        embedder_config = get_embedder_config()["config"]
+        model = f"azure/{embedder_config.pop('deployment_id')}"
+        embedder_config.pop('model', None)
+
         response = litellm.embedding(
-            model=os.getenv("AZURE_EMBEDDING_MODEL", "text-embedding-ada-002"),
-            input=[search_query]
+            model=model,
+            input=[search_query],
+            **embedder_config
         )
         query_embedding = response.data[0]['embedding']
         with get_engine().connect() as connection:

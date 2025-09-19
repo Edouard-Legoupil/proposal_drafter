@@ -478,7 +478,7 @@ async def generate_content_background(card_id: uuid.UUID):
             num_references = len(references)
             for i, ref in enumerate(references):
                 progress = int(((i + 1) / (num_references + 1)) * 50)
-                
+
                 def reference_progress_callback(message):
                     return progress_callback_for_reference_ingestion(message, progress)
 
