@@ -50,8 +50,7 @@ class UpdateSectionIn(BaseModel):
     content: str
 
 class KnowledgeCardIn(BaseModel):
-    title: str
-    summary: Optional[str] = None
+    summary: str
     template_name: Optional[str] = "knowledge_card_template.json"
     donor_id: Optional[uuid.UUID] = None
     outcome_id: Optional[uuid.UUID] = None
@@ -98,12 +97,11 @@ async def create_knowledge_card(card: KnowledgeCardIn, current_user: dict = Depe
         with get_engine().begin() as connection:
             connection.execute(
                 text("""
-                    INSERT INTO knowledge_cards (id, title, summary, template_name, status, donor_id, outcome_id, field_context_id, created_by, updated_by, created_at, updated_at)
-                    VALUES (:id, :title, :summary, :template_name, 'draft', :donor_id, :outcome_id, :field_context_id, :user_id, :user_id, NOW(), NOW())
+                    INSERT INTO knowledge_cards (id, summary, template_name, status, donor_id, outcome_id, field_context_id, created_by, updated_by, created_at, updated_at)
+                    VALUES (:id, :summary, :template_name, 'draft', :donor_id, :outcome_id, :field_context_id, :user_id, :user_id, NOW(), NOW())
                 """),
                 {
                     "id": card_id,
-                    "title": card.title,
                     "summary": card.summary,
                     "template_name": card.template_name,
                     "donor_id": card.donor_id,
@@ -147,7 +145,6 @@ async def get_knowledge_cards(
             base_query = """
                 SELECT
                     kc.id,
-                    kc.title,
                     kc.summary,
                     kc.template_name,
                     kc.status,
@@ -245,7 +242,6 @@ async def get_knowledge_card(card_id: uuid.UUID, current_user: dict = Depends(ge
             query = text("""
                 SELECT
                     kc.id,
-                    kc.title,
                     kc.summary,
                     kc.template_name,
                     kc.status,
@@ -355,14 +351,13 @@ async def update_knowledge_card(card_id: uuid.UUID, card: KnowledgeCardIn, curre
             connection.execute(
                 text("""
                     UPDATE knowledge_cards
-                    SET title = :title, summary = :summary, template_name = :template_name,
+                    SET summary = :summary, template_name = :template_name,
                         donor_id = :donor_id, outcome_id = :outcome_id, field_context_id = :field_context_id,
                         updated_by = :user_id, updated_at = NOW()
                     WHERE id = :id
                 """),
                 {
                     "id": card_id,
-                    "title": card.title,
                     "summary": card.summary,
                     "template_name": card.template_name,
                     "donor_id": card.donor_id,
@@ -384,7 +379,7 @@ async def update_knowledge_card(card_id: uuid.UUID, card: KnowledgeCardIn, curre
                     )
             # Fetch the generated_sections again to get the updated state
             updated_card = connection.execute(text("SELECT generated_sections FROM knowledge_cards WHERE id = :id"), {"id": card_id}).fetchone()
-            generated_sections = json.loads(updated_card.generated_sections) if updated_card and updated_card.generated_sections else {}
+            generated_sections = updated_card.generated_sections if updated_card and updated_card.generated_sections else {}
             create_knowledge_card_history_entry(connection, card_id, generated_sections, user_id)
         return {"message": "Knowledge card updated successfully.", "knowledge_card_id": card_id}
     except HTTPException as http_exc:
@@ -402,14 +397,16 @@ async def create_knowledge_card_reference(card_id: uuid.UUID, reference: Knowled
     user_id = current_user['user_id']
     try:
         with get_engine().begin() as connection:
-            connection.execute(
+            result = connection.execute(
                 text("""
                     INSERT INTO knowledge_card_references (knowledge_card_id, url, reference_type, summary, created_by, updated_by, created_at, updated_at)
                     VALUES (:kcid, :url, :reference_type, :summary, :user_id, :user_id, NOW(), NOW())
+                    RETURNING id, url, reference_type, summary
                 """),
                 {"kcid": card_id, "url": reference.url, "reference_type": reference.reference_type, "summary": reference.summary, "user_id": user_id}
             )
-        return {"message": "Reference created successfully."}
+            new_reference = result.fetchone()
+        return {"reference": dict(new_reference)}
     except Exception as e:
         logger.error(f"[CREATE KC REFERENCE ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to create reference.")

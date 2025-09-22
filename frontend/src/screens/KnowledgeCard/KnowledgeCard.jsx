@@ -14,7 +14,6 @@ export default function KnowledgeCard() {
     const navigate = useNavigate();
     const { id } = useParams();
 
-    const [title, setTitle] = useState('');
     const [summary, setSummary] = useState('');
     const [linkType, setLinkType] = useState('');
     const [linkedId, setLinkedId] = useState('');
@@ -58,7 +57,6 @@ export default function KnowledgeCard() {
                 if (cardRes.ok) {
                     const data = await cardRes.json();
                     const card = data.knowledge_card;
-                    setTitle(card.title);
                     setSummary(card.summary || '');
                     if (card.donor_id) {
                         setLinkType('donor');
@@ -214,7 +212,6 @@ export default function KnowledgeCard() {
         }
 
         const payload = {
-            title,
             summary,
             donor_id: linkType === 'donor' ? finalLinkedId : null,
             outcome_id: linkType === 'outcome' ? finalLinkedId : null,
@@ -266,7 +263,6 @@ export default function KnowledgeCard() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    title,
                     summary,
                     linked_element: linkType,
                 }),
@@ -435,11 +431,8 @@ export default function KnowledgeCard() {
                             </>
                         )}
 
-                        <label htmlFor="kc-title">Title*</label>
-                        <input id="kc-title" type="text" value={title} onChange={e => setTitle(e.target.value)} required data-testid="title-input" />
-
-                        <label htmlFor="kc-summary">Description</label>
-                        <textarea id="kc-summary" value={summary} onChange={e => setSummary(e.target.value)} data-testid="summary-textarea" />
+                        <label htmlFor="kc-summary">Description*</label>
+                        <textarea id="kc-summary" value={summary} onChange={e => setSummary(e.target.value)} required data-testid="summary-textarea" />
 
                         {/* References Section */}
                         <div className="kc-references-section">
