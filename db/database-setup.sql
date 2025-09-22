@@ -151,7 +151,6 @@ CREATE TABLE IF NOT EXISTS knowledge_cards (
     )
 );
 
-
 -- Create Knowledge Card History table
 CREATE TABLE IF NOT EXISTS knowledge_card_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

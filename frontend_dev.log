@@ -2,8 +2,12 @@
 > proposalgen@0.0.0 dev
 > vite
 
+Port 8503 is in use, trying another one...
+Port 8504 is in use, trying another one...
+Port 8505 is in use, trying another one...
+Port 8506 is in use, trying another one...
 
-  VITE v6.3.6  ready in 339 ms
+  VITE v6.3.6  ready in 249 ms
 
-  ➜  Local:   http://localhost:8503/
-  ➜  Network: http://192.168.0.2:8503/
+  ➜  Local:   http://localhost:8507/
+  ➜  Network: http://192.168.0.2:8507/
