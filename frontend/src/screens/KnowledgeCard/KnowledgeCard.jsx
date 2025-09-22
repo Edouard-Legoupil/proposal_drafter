@@ -41,7 +41,6 @@ export default function KnowledgeCard() {
     const [newFieldContexts, setNewFieldContexts] = useState([]);
 
     const [editingReferenceIndex, setEditingReferenceIndex] = useState(null);
-    const [editedReference, setEditedReference] = useState(null);
 
     const authenticatedFetch = useCallback(async (url, options) => {
         const response = await fetch(url, options);
@@ -131,41 +130,40 @@ export default function KnowledgeCard() {
     }, [linkType, donors, outcomes, fieldContexts, newDonors, newOutcomes, newFieldContexts, id, selectedGeoCoverage]);
 
     const handleAddReference = () => {
-        setEditedReference({ url: '', reference_type: '' });
-        setEditingReferenceIndex(references.length);
+        const newReferences = [...references, { url: '', reference_type: '', summary: '', isNew: true }];
+        setReferences(newReferences);
+        setEditingReferenceIndex(newReferences.length - 1);
     };
 
     const handleEditReference = (index) => {
-        setEditedReference({ ...references[index] });
         setEditingReferenceIndex(index);
     };
 
     const handleCancelEditReference = () => {
         setEditingReferenceIndex(null);
-        setEditedReference(null);
     };
 
-    const handleSaveReference = async () => {
-        if (!editedReference || !editedReference.url || !editedReference.reference_type) {
+    const handleSaveReference = async (index) => {
+        const reference = references[index];
+        if (!reference || !reference.url || !reference.reference_type) {
             alert("Reference URL and type are required.");
             return;
         }
 
-        const isNew = editingReferenceIndex === references.length;
-        const url = isNew ? `${API_BASE_URL}/knowledge-cards/${id}/references` : `${API_BASE_URL}/knowledge-cards/references/${editedReference.id}`;
+        const isNew = reference.isNew;
+        const url = isNew ? `${API_BASE_URL}/knowledge-cards/${id}/references` : `${API_BASE_URL}/knowledge-cards/references/${reference.id}`;
         const method = isNew ? 'POST' : 'PUT';
 
         const response = await authenticatedFetch(url, {
             method,
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(editedReference),
+            body: JSON.stringify(reference),
             credentials: 'include'
         });
 
         if (response.ok) {
             await fetchData();
             setEditingReferenceIndex(null);
-            setEditedReference(null);
         } else {
             const error = await response.json();
             alert(`Failed to save reference: ${error.detail}`);
@@ -374,47 +372,11 @@ export default function KnowledgeCard() {
         }
     };
 
-    const ReferenceEditForm = ({ reference, onSave, onCancel }) => {
-        const [formData, setFormData] = useState(reference);
-
-        const handleChange = (field, value) => {
-            setFormData(prev => ({ ...prev, [field]: value }));
-        };
-
-        return (
-            <div className="kc-reference-card">
-                <div className="kc-reference-edit-form">
-                    <select
-                        value={formData.reference_type}
-                        onChange={e => handleChange('reference_type', e.target.value)}
-                        required
-                    >
-                        <option value="">Select Type...</option>
-                        <option value="UNHCR Operation Page">UNHCR Operation Page</option>
-                        <option value="Donor Content">Donor Content</option>
-                        <option value="Humanitarian Partner Content">Humanitarian Partner Content</option>
-                        <option value="Statistics">Statistics</option>
-                        <option value="Needs Assessment">Needs Assessment</option>
-                        <option value="Evaluation Report">Evaluation Report</option>
-                        <option value="Policies">Policies</option>
-                        <option value="Social Media">Social Media</option>
-                    </select>
-                    <input
-                        type="url"
-                        placeholder="https://example.com"
-                        value={formData.url}
-                        onChange={e => handleChange('url', e.target.value)}
-                        required
-                    />
-                    <div className="kc-reference-edit-actions">
-                        <button onClick={() => onSave(formData)}>Save</button>
-                        <button onClick={onCancel}>Cancel</button>
-                    </div>
-                </div>
-            </div>
-        );
+    const handleReferenceFieldChange = (index, field, value) => {
+        const newReferences = [...references];
+        newReferences[index][field] = value;
+        setReferences(newReferences);
     };
-
 
     return (
         <Base>
@@ -488,37 +450,59 @@ export default function KnowledgeCard() {
                                 </button>
                             </div>
                             <div className="kc-references-grid">
-                                {references.map((ref, index) =>
-                                    editingReferenceIndex === index ? (
-                                        <ReferenceEditForm
-                                            key={ref.id || `new-${index}`}
-                                            reference={editedReference}
-                                            onSave={handleSaveReference}
-                                            onCancel={handleCancelEditReference}
-                                        />
-                                    ) : (
-                                        <div key={ref.id} className="kc-reference-card">
-                                            <div className="kc-reference-card-header">
-                                                <span className="kc-reference-type">{ref.reference_type}</span>
-                                                <div className="kc-reference-actions">
-                                                    <button onClick={() => handleEditReference(index)}><i className="fa-solid fa-pen"></i></button>
-                                                    <button onClick={() => handleRemoveReference(ref.id)}><i className="fa-solid fa-minus"></i></button>
+                                {references.map((ref, index) => (
+                                    <div key={ref.id || `new-${index}`} className="kc-reference-card">
+                                        {editingReferenceIndex === index ? (
+                                            <div className="kc-reference-edit-form">
+                                                <select
+                                                    value={ref.reference_type}
+                                                    onChange={e => handleReferenceFieldChange(index, 'reference_type', e.target.value)}
+                                                    required
+                                                >
+                                                    <option value="">Select Type...</option>
+                                                    <option value="UNHCR Operation Page">UNHCR Operation Page</option>
+                                                    <option value="Donor Content">Donor Content</option>
+                                                    <option value="Humanitarian Partner Content">Humanitarian Partner Content</option>
+                                                    <option value="Statistics">Statistics</option>
+                                                    <option value="Needs Assessment">Needs Assessment</option>
+                                                    <option value="Evaluation Report">Evaluation Report</option>
+                                                    <option value="Policies">Policies</option>
+                                                    <option value="Social Media">Social Media</option>
+                                                </select>
+                                                <input
+                                                    type="url"
+                                                    placeholder="https://example.com"
+                                                    value={ref.url}
+                                                    onChange={e => handleReferenceFieldChange(index, 'url', e.target.value)}
+                                                    required
+                                                />
+                                                <textarea
+                                                    placeholder="Summary"
+                                                    value={ref.summary}
+                                                    onChange={e => handleReferenceFieldChange(index, 'summary', e.target.value)}
+                                                />
+                                                <div className="kc-reference-edit-actions">
+                                                    <button onClick={() => handleSaveReference(index)}>Save</button>
+                                                    <button onClick={handleCancelEditReference}>Cancel</button>
                                                 </div>
                                             </div>
-                                            <div className="kc-reference-card-body">
-                                                <a href={ref.url} target="_blank" rel="noopener noreferrer">{ref.url}</a>
-                                            </div>
-                                        </div>
-                                    )
-                                )}
-                                {editingReferenceIndex === references.length && (
-                                    <ReferenceEditForm
-                                        key="new-reference"
-                                        reference={editedReference}
-                                        onSave={handleSaveReference}
-                                        onCancel={handleCancelEditReference}
-                                    />
-                                )}
+                                        ) : (
+                                            <>
+                                                <div className="kc-reference-card-header">
+                                                    <span className="kc-reference-type">{ref.reference_type}</span>
+                                                    <div className="kc-reference-actions">
+                                                        <button onClick={() => handleEditReference(index)}><i className="fa-solid fa-pen"></i></button>
+                                                        <button onClick={() => handleRemoveReference(ref.id)}><i className="fa-solid fa-minus"></i></button>
+                                                    </div>
+                                                </div>
+                                                <div className="kc-reference-card-body">
+                                                    <a href={ref.url} target="_blank" rel="noopener noreferrer">{ref.url}</a>
+                                                    <p>{ref.summary}</p>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
                         </div>
 
