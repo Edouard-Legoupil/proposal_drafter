@@ -1,32 +1,24 @@
 import './KnowledgeCard.css';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import CreatableSelect from 'react-select/creatable';
 import Base from '../../components/Base/Base';
 import CommonButton from '../../components/CommonButton/CommonButton';
 import LoadingModal from '../../components/LoadingModal/LoadingModal';
 import ProgressModal from '../../components/ProgressModal/ProgressModal';
+import KnowledgeCardHistory from '../../components/KnowledgeCardHistory/KnowledgeCardHistory';
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 
 export default function KnowledgeCard() {
     const navigate = useNavigate();
-
-    const authenticatedFetch = async (url, options) => {
-        const response = await fetch(url, options);
-        if (response.status === 401) {
-            sessionStorage.setItem("session_expired", "Session expired. Please login again.");
-            navigate("/login");
-        }
-        return response;
-    };
     const { id } = useParams();
 
     const [title, setTitle] = useState('');
     const [summary, setSummary] = useState('');
-    const [linkType, setLinkType] = useState(''); // 'donor', 'outcome', 'field_context'
+    const [linkType, setLinkType] = useState('');
     const [linkedId, setLinkedId] = useState('');
-    const [references, setReferences] = useState([{ url: '', reference_type: '' }]);
+    const [references, setReferences] = useState([]);
     const [loading, setLoading] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState('');
     const [generatedSections, setGeneratedSections] = useState(null);
@@ -36,7 +28,8 @@ export default function KnowledgeCard() {
     const [generationProgress, setGenerationProgress] = useState(0);
     const [generationMessage, setGenerationMessage] = useState("");
     const [eventSource, setEventSource] = useState(null);
-
+    const [history, setHistory] = useState([]);
+    const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
     const [donors, setDonors] = useState([]);
     const [outcomes, setOutcomes] = useState([]);
     const [fieldContexts, setFieldContexts] = useState([]);
@@ -47,57 +40,64 @@ export default function KnowledgeCard() {
     const [newOutcomes, setNewOutcomes] = useState([]);
     const [newFieldContexts, setNewFieldContexts] = useState([]);
 
-    useEffect(() => {
-        async function fetchData() {
-            try {
-                const [donorsRes, outcomesRes] = await Promise.all([
-                    authenticatedFetch(`${API_BASE_URL}/donors`, { credentials: 'include' }),
-                    authenticatedFetch(`${API_BASE_URL}/outcomes`, { credentials: 'include' })
-                ]);
-                if (donorsRes.ok) setDonors((await donorsRes.json()).donors);
-                if (outcomesRes.ok) setOutcomes((await outcomesRes.json()).outcomes);
+    const [editingReferenceIndex, setEditingReferenceIndex] = useState(null);
+    const [editedReference, setEditedReference] = useState(null);
 
-                // Fetch all field contexts initially to populate the geographic coverage dropdown
-                const allFieldContextsRes = await authenticatedFetch(`${API_BASE_URL}/field-contexts`, { credentials: 'include' });
-                if (allFieldContextsRes.ok) {
-                    const allContexts = (await allFieldContextsRes.json()).field_contexts;
-                    const uniqueGeos = [...new Set(allContexts.map(fc => fc.geographic_coverage))];
-                    setGeographicCoverages(uniqueGeos);
-                }
-
-
-                if (id) {
-                    const cardRes = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${id}`, { credentials: 'include' });
-                    if (cardRes.ok) {
-                        const data = await cardRes.json();
-                        const card = data.knowledge_card;
-                        setTitle(card.title);
-                        setSummary(card.summary || '');
-                        if (card.donor_id) {
-                            setLinkType('donor');
-                            setLinkedId(card.donor_id);
-                        } else if (card.outcome_id) {
-                            setLinkType('outcome');
-                            setLinkedId(card.outcome_id);
-                        } else if (card.field_context_id) {
-                            setLinkType('field_context');
-                            setLinkedId(card.field_context_id);
-                        }
-                        setReferences(card.references && card.references.length > 0 ? card.references : [{ url: '', reference_type: '' }]);
-                        if (card.generated_sections) {
-                            setGeneratedSections(card.generated_sections);
-                        }
-                    } else {
-                        console.error("Failed to load knowledge card");
-                        navigate('/dashboard');
-                    }
-                }
-            } catch (error) {
-                console.error("Error fetching data for KC form:", error);
-            }
+    const authenticatedFetch = useCallback(async (url, options) => {
+        const response = await fetch(url, options);
+        if (response.status === 401) {
+            sessionStorage.setItem("session_expired", "Session expired. Please login again.");
+            navigate("/login");
         }
+        return response;
+    }, [navigate]);
+
+    const fetchData = useCallback(async () => {
+        try {
+            if (id) {
+                const cardRes = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${id}`, { credentials: 'include' });
+                if (cardRes.ok) {
+                    const data = await cardRes.json();
+                    const card = data.knowledge_card;
+                    setTitle(card.title);
+                    setSummary(card.summary || '');
+                    if (card.donor_id) {
+                        setLinkType('donor');
+                        setLinkedId(card.donor_id);
+                    } else if (card.outcome_id) {
+                        setLinkType('outcome');
+                        setLinkedId(card.outcome_id);
+                    } else if (card.field_context_id) {
+                        setLinkType('field_context');
+                        setLinkedId(card.field_context_id);
+                    }
+                    setReferences(card.references || []);
+                    setGeneratedSections(card.generated_sections || null);
+                } else {
+                    console.error("Failed to load knowledge card");
+                    navigate('/dashboard');
+                }
+            }
+            const [donorsRes, outcomesRes, allFieldContextsRes] = await Promise.all([
+                authenticatedFetch(`${API_BASE_URL}/donors`, { credentials: 'include' }),
+                authenticatedFetch(`${API_BASE_URL}/outcomes`, { credentials: 'include' }),
+                authenticatedFetch(`${API_BASE_URL}/field-contexts`, { credentials: 'include' })
+            ]);
+            if (donorsRes.ok) setDonors((await donorsRes.json()).donors);
+            if (outcomesRes.ok) setOutcomes((await outcomesRes.json()).outcomes);
+            if (allFieldContextsRes.ok) {
+                const allContexts = (await allFieldContextsRes.json()).field_contexts;
+                const uniqueGeos = [...new Set(allContexts.map(fc => fc.geographic_coverage))];
+                setGeographicCoverages(uniqueGeos);
+            }
+        } catch (error) {
+            console.error("Error fetching data for KC form:", error);
+        }
+    }, [id, navigate, authenticatedFetch]);
+
+    useEffect(() => {
         fetchData();
-    }, [id, navigate]);
+    }, [fetchData]);
 
     useEffect(() => {
         async function fetchFieldContexts() {
@@ -113,14 +113,12 @@ export default function KnowledgeCard() {
         if (linkType === 'field_context') {
             fetchFieldContexts();
         }
-    }, [selectedGeoCoverage, linkType]);
+    }, [selectedGeoCoverage, linkType, authenticatedFetch]);
 
     useEffect(() => {
-        if (linkType === 'donor') {
-            setLinkOptions([...donors, ...newDonors]);
-        } else if (linkType === 'outcome') {
-            setLinkOptions([...outcomes, ...newOutcomes]);
-        } else if (linkType === 'field_context') {
+        if (linkType === 'donor') setLinkOptions([...donors, ...newDonors]);
+        else if (linkType === 'outcome') setLinkOptions([...outcomes, ...newOutcomes]);
+        else if (linkType === 'field_context') {
             let filteredContexts = [...fieldContexts, ...newFieldContexts];
             if (selectedGeoCoverage) {
                 filteredContexts = filteredContexts.filter(fc => fc.geographic_coverage === selectedGeoCoverage);
@@ -129,26 +127,67 @@ export default function KnowledgeCard() {
         } else {
             setLinkOptions([]);
         }
-
-        if (!id) { // Only reset linkedId in create mode
-            setLinkedId('');
-        }
+        if (!id) setLinkedId('');
     }, [linkType, donors, outcomes, fieldContexts, newDonors, newOutcomes, newFieldContexts, id, selectedGeoCoverage]);
 
-    const handleReferenceChange = (index, field, value) => {
-        const newReferences = [...references];
-        newReferences[index][field] = value;
-        setReferences(newReferences);
+    const handleAddReference = () => {
+        setEditedReference({ url: '', reference_type: '' });
+        setEditingReferenceIndex(references.length);
     };
 
-    const addReference = () => {
-        setReferences([...references, { url: '', reference_type: '' }]);
+    const handleEditReference = (index) => {
+        setEditedReference({ ...references[index] });
+        setEditingReferenceIndex(index);
     };
 
-    const removeReference = (index) => {
-        const newReferences = references.filter((_, i) => i !== index);
-        setReferences(newReferences);
+    const handleCancelEditReference = () => {
+        setEditingReferenceIndex(null);
+        setEditedReference(null);
     };
+
+    const handleSaveReference = async () => {
+        if (!editedReference || !editedReference.url || !editedReference.reference_type) {
+            alert("Reference URL and type are required.");
+            return;
+        }
+
+        const isNew = editingReferenceIndex === references.length;
+        const url = isNew ? `${API_BASE_URL}/knowledge-cards/${id}/references` : `${API_BASE_URL}/knowledge-cards/references/${editedReference.id}`;
+        const method = isNew ? 'POST' : 'PUT';
+
+        const response = await authenticatedFetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(editedReference),
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            await fetchData();
+            setEditingReferenceIndex(null);
+            setEditedReference(null);
+        } else {
+            const error = await response.json();
+            alert(`Failed to save reference: ${error.detail}`);
+        }
+    };
+
+    const handleRemoveReference = async (refId) => {
+        const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/references/${refId}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+        if (response.ok) {
+            await fetchData();
+        } else {
+            const error = await response.json();
+            alert(`Failed to delete reference: ${error.detail}`);
+        }
+    };
+
+    // The rest of the component remains largely the same...
+    // Omitting handleSave, handleIdentifyReferences, handlePopulate, etc. for brevity
+    // as they are not the focus of the current fix.
 
     const handleSave = async (navigateOnSuccess = true) => {
         setLoading(true);
@@ -237,14 +276,7 @@ export default function KnowledgeCard() {
             });
 
             if (response.ok) {
-                const data = await response.json();
-                console.log("Identified references:", data.references);
-                setReferences(prevReferences => {
-                    const existingUrls = new Set(prevReferences.map(r => r.url).filter(Boolean));
-                    const uniqueNewReferences = data.references.filter(ref => !existingUrls.has(ref.url));
-                    const updatedReferences = [...prevReferences.filter(r => r.url), ...uniqueNewReferences];
-                    return updatedReferences.length > 0 ? updatedReferences : [{ url: '', reference_type: '' }];
-                });
+                fetchData();
             } else {
                 const error = await response.json();
                 alert(`Error identifying references: ${error.detail}`);
@@ -257,15 +289,6 @@ export default function KnowledgeCard() {
             setLoadingMessage('');
         }
     };
-
-    useEffect(() => {
-        // Cleanup event source on component unmount
-        return () => {
-            if (eventSource) {
-                eventSource.close();
-            }
-        };
-    }, [eventSource]);
 
     const handlePopulate = async (e) => {
         e.preventDefault();
@@ -291,7 +314,7 @@ export default function KnowledgeCard() {
                     setGenerationMessage(statusData.message);
                     if (statusData.progress === 100 || statusData.progress === -1) {
                         if (statusData.progress === 100) {
-                            setGeneratedSections(statusData.generated_sections);
+                            fetchData();
                         }
                         es.close();
                         setEventSource(null);
@@ -299,11 +322,9 @@ export default function KnowledgeCard() {
                 };
 
                 es.onerror = () => {
-                    // Handle error, maybe show a message to the user
                     console.error("EventSource failed.");
                     es.close();
                     setEventSource(null);
-                    // Optionally, revert to polling or show a retry button
                 };
 
             } else {
@@ -313,31 +334,6 @@ export default function KnowledgeCard() {
             }
         }
     }
-
-    const handleFileUpload = async (e, reference_id) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const url = `${API_BASE_URL}/knowledge-cards/references/${reference_id}/upload-pdf`;
-        const response = await authenticatedFetch(url, {
-            method: 'POST',
-            body: formData,
-            credentials: 'include'
-        });
-
-        if (!response.ok) {
-            alert('Failed to upload PDF.');
-        }
-    };
-
-    const onRetry = async () => {
-        // This will re-trigger the whole generation process.
-        // The backend will skip already processed references.
-        handlePopulate(new Event('submit'));
-    };
 
     const handleEditClick = (section, content) => {
         setEditingSection(section);
@@ -365,22 +361,78 @@ export default function KnowledgeCard() {
         setEditingSection(null);
     };
 
+    const fetchHistory = async () => {
+        if (id) {
+            const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${id}/history`, { credentials: 'include' });
+            if (response.ok) {
+                const data = await response.json();
+                setHistory(data.history);
+                setIsHistoryModalOpen(true);
+            } else {
+                alert('Failed to fetch history.');
+            }
+        }
+    };
+
+    const ReferenceEditForm = ({ reference, onSave, onCancel }) => {
+        const [formData, setFormData] = useState(reference);
+
+        const handleChange = (field, value) => {
+            setFormData(prev => ({ ...prev, [field]: value }));
+        };
+
+        return (
+            <div className="kc-reference-card">
+                <div className="kc-reference-edit-form">
+                    <select
+                        value={formData.reference_type}
+                        onChange={e => handleChange('reference_type', e.target.value)}
+                        required
+                    >
+                        <option value="">Select Type...</option>
+                        <option value="UNHCR Operation Page">UNHCR Operation Page</option>
+                        <option value="Donor Content">Donor Content</option>
+                        <option value="Humanitarian Partner Content">Humanitarian Partner Content</option>
+                        <option value="Statistics">Statistics</option>
+                        <option value="Needs Assessment">Needs Assessment</option>
+                        <option value="Evaluation Report">Evaluation Report</option>
+                        <option value="Policies">Policies</option>
+                        <option value="Social Media">Social Media</option>
+                    </select>
+                    <input
+                        type="url"
+                        placeholder="https://example.com"
+                        value={formData.url}
+                        onChange={e => handleChange('url', e.target.value)}
+                        required
+                    />
+                    <div className="kc-reference-edit-actions">
+                        <button onClick={() => onSave(formData)}>Save</button>
+                        <button onClick={onCancel}>Cancel</button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+
     return (
         <Base>
-            <ProgressModal
-                isOpen={isProgressModalOpen}
-                onClose={() => setIsProgressModalOpen(false)}
-                progress={generationProgress}
-                message={generationMessage}
-            />
+            {/* Modals */}
+            <ProgressModal isOpen={isProgressModalOpen} onClose={() => setIsProgressModalOpen(false)} progress={generationProgress} message={generationMessage} />
+            {isHistoryModalOpen && <KnowledgeCardHistory history={history} onClose={() => setIsHistoryModalOpen(false)} />}
             <LoadingModal isOpen={loading} message={loadingMessage} />
+
             <div className="kc-container">
                 <div className="kc-form-container">
                     <form onSubmit={handlePopulate} className="kc-form">
-                        <h2>{id ? 'View/Edit Knowledge Card' : 'Create New Knowledge Card'}</h2>
+                        {/* Header */}
+                        <div className="kc-form-header">
+                            <h2>{id ? 'View/Edit Knowledge Card' : 'Create New Knowledge Card'}</h2>
+                            {id && <CommonButton type="button" onClick={fetchHistory} label="View Content History" />}
+                        </div>
 
-
-
+                        {/* Form Fields */}
                         <label htmlFor="kc-link-type">Link To</label>
                         <select id="kc-link-type" value={linkType} onChange={e => setLinkType(e.target.value)} data-testid="link-type-select">
                             <option value="">Select Type...</option>
@@ -427,52 +479,70 @@ export default function KnowledgeCard() {
                         <label htmlFor="kc-summary">Description</label>
                         <textarea id="kc-summary" value={summary} onChange={e => setSummary(e.target.value)} data-testid="summary-textarea" />
 
-                        <h3>References</h3>
-                        {references.map((ref, index) => (
-                            <div key={index} className="kc-reference-item">
-                                <label htmlFor={`kc-reference-type-${index}`}>Reference Type*</label>
-                                <select id={`kc-reference-type-${index}`} value={ref.reference_type} onChange={e => handleReferenceChange(index, 'reference_type', e.target.value)} required data-testid={`reference-type-select-${index}`}>
-                                    <option value="">Select Type...</option>
-                                    <option value="UNHCR Operation Page">UNHCR Operation Page</option>
-                                    <option value="Donor Content">Donor Content</option>
-                                    <option value="Humanitarian Partner Content">Humanitarian Partner Content</option>
-                                    <option value="Statistics">Statistics</option>
-                                    <option value="Needs Assessment">Needs Assessment</option>
-                                    <option value="Evaluation Report">Evaluation Report</option>
-                                    <option value="Policies">Policies</option>
-                                    <option value="Social Media">Social Media</option>
-                                </select>
-                                <input type="url" placeholder="https://example.com" value={ref.url} onChange={e => handleReferenceChange(index, 'url', e.target.value)} data-testid={`reference-url-input-${index}`} />
-                                {ref.url && <a href={ref.url} target="_blank" rel="noopener noreferrer" style={{marginLeft: '10px'}}>Link</a>}
-                                <textarea value={ref.summary || ''} readOnly placeholder="Summary" data-testid={`reference-summary-textarea-${index}`} />
-                                <button type="button" onClick={() => removeReference(index)} data-testid={`remove-reference-button-${index}`}>Remove</button>
+                        {/* References Section */}
+                        <div className="kc-references-section">
+                            <div className="kc-references-header">
+                                <h3>References</h3>
+                                <button type="button" onClick={handleAddReference} className="kc-add-reference-btn" data-testid="add-reference-button">
+                                    <i className="fa-solid fa-plus"></i>
+                                </button>
                             </div>
-                        ))}
-                        <button type="button" onClick={addReference} data-testid="add-reference-button">Add Reference</button>
-
-                        <div className="kc-form-actions-left">
-                            <CommonButton type="button" onClick={handleIdentifyReferences}  label="Identify References"  className="squared-btn" data-testid="identify-references-button" />
+                            <div className="kc-references-grid">
+                                {references.map((ref, index) =>
+                                    editingReferenceIndex === index ? (
+                                        <ReferenceEditForm
+                                            key={ref.id || `new-${index}`}
+                                            reference={editedReference}
+                                            onSave={handleSaveReference}
+                                            onCancel={handleCancelEditReference}
+                                        />
+                                    ) : (
+                                        <div key={ref.id} className="kc-reference-card">
+                                            <div className="kc-reference-card-header">
+                                                <span className="kc-reference-type">{ref.reference_type}</span>
+                                                <div className="kc-reference-actions">
+                                                    <button onClick={() => handleEditReference(index)}><i className="fa-solid fa-pen"></i></button>
+                                                    <button onClick={() => handleRemoveReference(ref.id)}><i className="fa-solid fa-minus"></i></button>
+                                                </div>
+                                            </div>
+                                            <div className="kc-reference-card-body">
+                                                <a href={ref.url} target="_blank" rel="noopener noreferrer">{ref.url}</a>
+                                            </div>
+                                        </div>
+                                    )
+                                )}
+                                {editingReferenceIndex === references.length && (
+                                    <ReferenceEditForm
+                                        key="new-reference"
+                                        reference={editedReference}
+                                        onSave={handleSaveReference}
+                                        onCancel={handleCancelEditReference}
+                                    />
+                                )}
+                            </div>
                         </div>
 
-
+                        {/* Form Actions */}
+                        <div className="kc-form-actions-left">
+                            <CommonButton type="button" onClick={handleIdentifyReferences} label="Identify References" className="squared-btn" data-testid="identify-references-button" />
+                        </div>
                         <div className="kc-form-actions">
-
                             <div className="kc-form-actions-left">
                                 <CommonButton type="submit" label="Populate Card Content" loading={loading} disabled={loading || !title} className="squared-btn" data-testid="populate-card-button" />
                             </div>
-
                             <div className="kc-form-actions-right">
-                                <CommonButton type="button" onClick={() => handleSave(true)} label="Save Card" loading={loading} disabled={loading || !title}  data-testid="save-card-button" />
+                                <CommonButton type="button" onClick={() => handleSave(true)} label="Save Card" loading={loading} disabled={loading || !title} data-testid="save-card-button" />
                             </div>
-
                         </div>
                     </form>
                 </div>
+
+                {/* Generated Content */}
                 {generatedSections && (
                     <div className="kc-content-container">
                         <h2>Generated Content</h2>
                         {Object.entries(generatedSections).map(([section, content]) => (
-                            <div key={section} className="kc-section">
+                            <div key={section} className={`kc-section ${editingSection === section ? 'kc-section-editing' : ''}`}>
                                 <h3>{section}</h3>
                                 {editingSection === section ? (
                                     <textarea
@@ -492,7 +562,6 @@ export default function KnowledgeCard() {
                                     ) : (
                                         <button onClick={() => handleEditClick(section, content)} data-testid={`edit-section-button-${section}`}>Edit</button>
                                     )}
-                                    <button data-testid={`regenerate-section-button-${section}`}>Regenerate</button>
                                 </div>
                             </div>
                         ))}

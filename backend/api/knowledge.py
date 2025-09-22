@@ -65,6 +65,22 @@ class KnowledgeCardIn(BaseModel):
                 raise ValueError('Only one of donor_id, outcome_id, or field_context_id can be set.')
         return v
 
+def create_knowledge_card_history_entry(connection, card_id: uuid.UUID, generated_sections: dict, user_id: uuid.UUID):
+    """
+    Creates a history entry for a knowledge card.
+    """
+    connection.execute(
+        text("""
+            INSERT INTO knowledge_card_history (knowledge_card_id, generated_sections_snapshot, created_by, created_at)
+            VALUES (:knowledge_card_id, :generated_sections_snapshot, :created_by, NOW())
+        """),
+        {
+            "knowledge_card_id": card_id,
+            "generated_sections_snapshot": json.dumps(generated_sections),
+            "created_by": user_id
+        }
+    )
+
 @router.post("/knowledge-cards")
 async def create_knowledge_card(card: KnowledgeCardIn, current_user: dict = Depends(get_current_user)):
     """
@@ -188,6 +204,37 @@ async def get_knowledge_cards(
         raise HTTPException(status_code=500, detail="Failed to fetch knowledge cards.")
 
 
+@router.get("/knowledge-cards/{card_id}/history")
+async def get_knowledge_card_history(card_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
+    """
+    Fetches the history of a knowledge card.
+    """
+    try:
+        with get_engine().connect() as connection:
+            query = text("""
+                SELECT
+                    kch.id,
+                    kch.generated_sections_snapshot,
+                    kch.created_at,
+                    u.name as created_by_name
+                FROM
+                    knowledge_card_history kch
+                JOIN
+                    users u ON kch.created_by = u.id
+                WHERE
+                    kch.knowledge_card_id = :card_id
+                ORDER BY
+                    kch.created_at DESC
+            """)
+            result = connection.execute(query, {"card_id": card_id})
+            history = [dict(row) for row in result.mappings().fetchall()]
+            for entry in history:
+                if isinstance(entry['generated_sections_snapshot'], str):
+                    entry['generated_sections_snapshot'] = json.loads(entry['generated_sections_snapshot'])
+            return {"history": history}
+    except Exception as e:
+        logger.error(f"[GET KC HISTORY ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch knowledge card history.")
 @router.get("/knowledge-cards/{card_id}")
 async def get_knowledge_card(card_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
     """
@@ -277,6 +324,9 @@ async def update_knowledge_card_section(card_id: uuid.UUID, section_name: str, s
                 {"sections": json.dumps(generated_sections), "id": card_id}
             )
 
+            # Create a history entry
+            create_knowledge_card_history_entry(connection, card_id, generated_sections, current_user['user_id'])
+
         return {"message": f"Section '{section_name}' updated successfully."}
     except HTTPException as http_exc:
         raise http_exc
@@ -332,12 +382,76 @@ async def update_knowledge_card(card_id: uuid.UUID, card: KnowledgeCardIn, curre
                         """),
                         {"kcid": card_id, "url": ref.url, "reference_type": ref.reference_type, "summary": ref.summary, "user_id": user_id}
                     )
+            # Fetch the generated_sections again to get the updated state
+            updated_card = connection.execute(text("SELECT generated_sections FROM knowledge_cards WHERE id = :id"), {"id": card_id}).fetchone()
+            generated_sections = json.loads(updated_card.generated_sections) if updated_card and updated_card.generated_sections else {}
+            create_knowledge_card_history_entry(connection, card_id, generated_sections, user_id)
         return {"message": "Knowledge card updated successfully.", "knowledge_card_id": card_id}
     except HTTPException as http_exc:
         raise http_exc
     except Exception as e:
         logger.error(f"[UPDATE KNOWLEDGE CARD ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to update knowledge card.")
+
+
+@router.post("/knowledge-cards/{card_id}/references")
+async def create_knowledge_card_reference(card_id: uuid.UUID, reference: KnowledgeCardReferenceIn, current_user: dict = Depends(get_current_user)):
+    """
+    Creates a new reference for a knowledge card.
+    """
+    user_id = current_user['user_id']
+    try:
+        with get_engine().begin() as connection:
+            connection.execute(
+                text("""
+                    INSERT INTO knowledge_card_references (knowledge_card_id, url, reference_type, summary, created_by, updated_by, created_at, updated_at)
+                    VALUES (:kcid, :url, :reference_type, :summary, :user_id, :user_id, NOW(), NOW())
+                """),
+                {"kcid": card_id, "url": reference.url, "reference_type": reference.reference_type, "summary": reference.summary, "user_id": user_id}
+            )
+        return {"message": "Reference created successfully."}
+    except Exception as e:
+        logger.error(f"[CREATE KC REFERENCE ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to create reference.")
+
+
+@router.put("/knowledge-cards/references/{reference_id}")
+async def update_knowledge_card_reference(reference_id: uuid.UUID, reference: KnowledgeCardReferenceIn, current_user: dict = Depends(get_current_user)):
+    """
+    Updates an existing reference for a knowledge card.
+    """
+    user_id = current_user['user_id']
+    try:
+        with get_engine().begin() as connection:
+            connection.execute(
+                text("""
+                    UPDATE knowledge_card_references
+                    SET url = :url, reference_type = :reference_type, summary = :summary, updated_by = :user_id, updated_at = NOW()
+                    WHERE id = :id
+                """),
+                {"id": reference_id, "url": reference.url, "reference_type": reference.reference_type, "summary": reference.summary, "user_id": user_id}
+            )
+        return {"message": "Reference updated successfully."}
+    except Exception as e:
+        logger.error(f"[UPDATE KC REFERENCE ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to update reference.")
+
+
+@router.delete("/knowledge-cards/references/{reference_id}")
+async def delete_knowledge_card_reference(reference_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
+    """
+    Deletes an existing reference for a knowledge card.
+    """
+    try:
+        with get_engine().begin() as connection:
+            connection.execute(
+                text("DELETE FROM knowledge_card_references WHERE id = :id"),
+                {"id": reference_id}
+            )
+        return {"message": "Reference deleted successfully."}
+    except Exception as e:
+        logger.error(f"[DELETE KC REFERENCE ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to delete reference.")
 
 
 def get_embedding(chunk, model, embedder_config):
@@ -542,6 +656,18 @@ async def generate_content_background(card_id: uuid.UUID):
                 text("UPDATE knowledge_cards SET generated_sections = :sections, status = 'approved', updated_at = NOW() WHERE id = :id"),
                 {"sections": json.dumps(generated_sections), "id": card_id}
             )
+            # Create a history entry
+            # Since this is a background task, we don't have the current user.
+            # We'll attribute this to the system or the user who created the card.
+            # For now, let's fetch the user who created the card.
+            result = connection.execute(
+                text("SELECT created_by FROM knowledge_cards WHERE id = :id"),
+                {"id": card_id}
+            ).fetchone()
+            if result:
+                user_id = result[0]
+                create_knowledge_card_history_entry(connection, card_id, generated_sections, user_id)
+
     except Exception as e:
         logger.error(f"[BACKGROUND KC GENERATION ERROR] {e}", exc_info=True)
         _update_progress(card_id, f"An unexpected error occurred: {e}", -1)
@@ -651,6 +777,13 @@ async def identify_references(card_id: uuid.UUID, data: IdentifyReferencesIn, cu
                         "user_id": user_id
                     }
                 )
+            # Fetch the current generated_sections to create a history entry
+            result = connection.execute(
+                text("SELECT generated_sections FROM knowledge_cards WHERE id = :id"),
+                {"id": card_id}
+            ).fetchone()
+            generated_sections = json.loads(result.generated_sections) if result and result.generated_sections else {}
+            create_knowledge_card_history_entry(connection, card_id, generated_sections, user_id)
 
         return {"references": references}
     except Exception as e:
