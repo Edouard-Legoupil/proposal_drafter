@@ -97,8 +97,8 @@ async def create_session(request: CreateSessionRequest, current_user: dict = Dep
             # Create the main proposal record
             connection.execute(
                 text("""
-                    INSERT INTO proposals (id, user_id, created_by, form_data, project_description, template_name, generated_sections)
-                    VALUES (:id, :uid, :uid, :form, :desc, :template, '{}')
+                    INSERT INTO proposals (id, user_id, created_by, updated_by, form_data, project_description, template_name, generated_sections)
+                    VALUES (:id, :uid, :uid, :uid, :form, :desc, :template, '{}')
                 """),
                 {
                     "id": proposal_id,
@@ -541,7 +541,6 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
                         "form": json.dumps(request.form_data),
                         "desc": request.project_description,
                         "sections": json.dumps(sections_to_save),
-                        "sections": json.dumps(sections_to_save),
                         "id": proposal_id,
                         "template_name": request.template_name
                     }
@@ -551,15 +550,14 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
                 # Insert a new draft.
                 connection.execute(
                     text("""
-                        INSERT INTO proposals (id, user_id, form_data, project_description, generated_sections, template_name)
-                        VALUES (:id, :uid, :form, :desc, :sections, :template_name)
+                        INSERT INTO proposals (id, user_id, created_by, updated_by, form_data, project_description, generated_sections, template_name)
+                        VALUES (:id, :uid, :uid, :uid, :form, :desc, :sections, :template_name)
                     """),
                     {
                         "id": proposal_id,
                         "uid": user_id,
                         "form": json.dumps(request.form_data),
                         "desc": request.project_description,
-                        "sections": json.dumps(sections_to_save),
                         "sections": json.dumps(sections_to_save),
                         "template_name": request.template_name
                     }

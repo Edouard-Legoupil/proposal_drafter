@@ -505,10 +505,10 @@ export default function KnowledgeCard() {
                         </div>
                         <div className="kc-form-actions">
                             <div className="kc-form-actions-left">
-                                <CommonButton type="submit" label="Populate Card Content" loading={loading} disabled={loading || !title} className="squared-btn" data-testid="populate-card-button" />
+                                <CommonButton type="submit" label="Populate Card Content" loading={loading} disabled={loading || !summary} className="squared-btn" data-testid="populate-card-button" />
                             </div>
                             <div className="kc-form-actions-right">
-                                <CommonButton type="button" onClick={() => handleSave(true)} label="Save Card" loading={loading} disabled={loading || !title} data-testid="save-card-button" />
+                                <CommonButton type="button" onClick={() => handleSave(true)} label="Save Card" loading={loading} disabled={loading || !summary} data-testid="save-card-button" />
                             </div>
                         </div>
                     </form>
