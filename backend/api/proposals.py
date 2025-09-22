@@ -4,6 +4,8 @@ import re
 import uuid
 from datetime import datetime 
 import logging
+import tempfile
+import os
 from typing import Optional
 
 #  Third-Party Libraries
@@ -147,6 +149,7 @@ async def create_session(request: CreateSessionRequest, current_user: dict = Dep
             "proposal_id": str(proposal_id),
             "form_data": request.form_data,
             "project_description": request.project_description,
+            "associated_knowledge_cards": request.associated_knowledge_cards,
             "template_name": template_name,
             "proposal_template": proposal_template,
             "generated_sections": {},
@@ -173,6 +176,7 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
     Runs the proposal generation process for all sections in the background.
     """
     logger.info(f"Starting background generation for proposal {proposal_id}")
+    knowledge_file_path = None
     try:
         with get_engine().begin() as connection:
             connection.execute(
@@ -191,13 +195,25 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
 
         form_data = session_data["form_data"]
         project_description = session_data["project_description"]
+        associated_knowledge_cards = session_data.get("associated_knowledge_cards")
         all_sections = {}
+
+        if associated_knowledge_cards:
+            knowledge_content = []
+            for card in associated_knowledge_cards:
+                if card.get("generated_sections"):
+                    knowledge_content.append(card["generated_sections"])
+
+            if knowledge_content:
+                with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix=".json") as temp_file:
+                    json.dump(knowledge_content, temp_file)
+                    knowledge_file_path = temp_file.name
 
         for section_config in proposal_template["sections"]:
             section_name = section_config["section_name"]
             logger.info(f"Generating section: {section_name} for proposal {proposal_id}")
 
-            crew_instance = ProposalCrew().generate_proposal_crew()
+            crew_instance = ProposalCrew(knowledge_file_path=knowledge_file_path).generate_proposal_crew()
             result = crew_instance.kickoff(inputs={
                 "section": section_name,
                 "form_data": form_data,
@@ -243,6 +259,9 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
                 )
         except Exception as db_error:
             logger.error(f"Failed to update proposal status to 'failed' for {proposal_id}: {db_error}", exc_info=True)
+    finally:
+        if knowledge_file_path and os.path.exists(knowledge_file_path):
+            os.remove(knowledge_file_path)
 
 @router.post("/generate-proposal-sections/{session_id}", status_code=202)
 async def generate_proposal_sections(session_id: str, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):

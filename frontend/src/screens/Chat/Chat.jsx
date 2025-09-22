@@ -56,6 +56,7 @@ export default function Chat (props)
         const [isAssociateKnowledgeModalOpen, setIsAssociateKnowledgeModalOpen] = useState(false)
         const [users, setUsers] = useState([])
         const [selectedUsers, setSelectedUsers] = useState([])
+        const [associatedKnowledgeCards, setAssociatedKnowledgeCards] = useState([]);
 
         const [donors, setDonors] = useState([]);
         const [outcomes, setOutcomes] = useState([]);
@@ -438,6 +439,7 @@ export default function Chat (props)
                                 body: JSON.stringify({
                                         project_description: userPrompt,
                                         form_data: updatedFormData,
+                                        associated_knowledge_cards: associatedKnowledgeCards
                                 }),
                                 credentials: 'include'
                         });
@@ -932,15 +934,7 @@ export default function Chat (props)
         }
 
         function handleAssociateKnowledgeConfirm(selectedCards) {
-                let sectionsContent = "";
-                selectedCards.forEach(card => {
-                        if (card.generated_sections) {
-                                for (const [section, content] of Object.entries(card.generated_sections)) {
-                                        sectionsContent += `## ${section}\n\n${content}\n\n`;
-                                }
-                        }
-                });
-                setUserPrompt(prev => `${prev}\n\n${sectionsContent}`);
+                setAssociatedKnowledgeCards(selectedCards);
         }
 
         return  <Base>
@@ -1041,7 +1035,19 @@ export default function Chat (props)
                                                         }
 
                                                         <div className="Chat_inputArea_buttonContainer">
-                                                                <CommonButton onClick={() => setIsAssociateKnowledgeModalOpen(true)} label="Associate Knowledge" disabled={proposalStatus !== 'draft'} icon={knowIcon}/>
+                                                                <div>
+                                                                        {associatedKnowledgeCards.length > 0 && (
+                                                                                <div className="associated-knowledge-display">
+                                                                                        <h4>Associated Knowledge Cards:</h4>
+                                                                                        <ul>
+                                                                                                {associatedKnowledgeCards.map(card => (
+                                                                                                        <li key={card.id}>{card.title}</li>
+                                                                                                ))}
+                                                                                        </ul>
+                                                                                </div>
+                                                                        )}
+                                                                        <CommonButton onClick={() => setIsAssociateKnowledgeModalOpen(true)} label="Associate Knowledge" disabled={proposalStatus !== 'draft'} icon={knowIcon}/>
+                                                                </div>
                                                                 
                                                                 <div style={{ marginLeft: 'auto' }}>
                                                                 <CommonButton onClick={handleGenerateClick} icon={generateIcon} label={generateLabel} loading={generateLoading} loadingLabel={generateLabel === "Generate" ? "Generating" : "Regenerating"} disabled={!buttonEnable || proposalStatus !== 'draft'}/>
