@@ -1,6 +1,6 @@
 #  Standard Library
 import uuid
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, List
 
 #  Third-Party Libraries
 from pydantic import BaseModel
@@ -16,6 +16,7 @@ class BaseDataRequest(BaseModel):
     """
     form_data: Dict[str, Any]
     project_description: str
+    associated_knowledge_cards: Optional[List[Dict[str, Any]]] = None
     template_name: str
 
 class SectionRequest(BaseModel):
