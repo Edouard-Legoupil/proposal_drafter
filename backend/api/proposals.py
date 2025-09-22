@@ -97,8 +97,8 @@ async def create_session(request: CreateSessionRequest, current_user: dict = Dep
             # Create the main proposal record
             connection.execute(
                 text("""
-                    INSERT INTO proposals (id, user_id, form_data, project_description, template_name, generated_sections)
-                    VALUES (:id, :uid, :form, :desc, :template, '{}')
+                    INSERT INTO proposals (id, user_id, created_by, form_data, project_description, template_name, generated_sections)
+                    VALUES (:id, :uid, :uid, :form, :desc, :template, '{}')
                 """),
                 {
                     "id": proposal_id,
