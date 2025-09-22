@@ -178,7 +178,8 @@ async def get_knowledge_cards(
                 if card.get('references') is None:
                     card['references'] = []
                 if card.get('generated_sections'):
-                    card['generated_sections'] = json.loads(card['generated_sections'])
+                    if isinstance(card['generated_sections'], str):
+                        card['generated_sections'] = json.loads(card['generated_sections'])
                 else:
                     card['generated_sections'] = {}
             return {"knowledge_cards": cards}
@@ -233,7 +234,8 @@ async def get_knowledge_card(card_id: uuid.UUID, current_user: dict = Depends(ge
             if card_dict.get('references') is None:
                 card_dict['references'] = []
             if card_dict.get('generated_sections'):
-                card_dict['generated_sections'] = json.loads(card_dict['generated_sections'])
+                if isinstance(card_dict['generated_sections'], str):
+                    card_dict['generated_sections'] = json.loads(card_dict['generated_sections'])
             else:
                 card_dict['generated_sections'] = {}
 
