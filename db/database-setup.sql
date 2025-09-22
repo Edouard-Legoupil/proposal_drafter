@@ -132,8 +132,7 @@ CREATE TABLE IF NOT EXISTS proposal_peer_reviews (
 CREATE TABLE IF NOT EXISTS knowledge_cards (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     template_name TEXT,
-    title TEXT NOT NULL,
-    summary TEXT,
+    summary TEXT NOT NULL,
     generated_sections JSONB,
     is_accepted BOOLEAN DEFAULT FALSE,
     status proposal_status DEFAULT 'draft',

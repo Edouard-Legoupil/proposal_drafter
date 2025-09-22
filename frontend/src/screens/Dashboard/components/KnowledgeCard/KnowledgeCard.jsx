@@ -2,8 +2,10 @@ import './KnowledgeCard.css'
 
 export default function KnowledgeCard({ card, onClick }) {
     let linked_to_element;
+    let title = card.summary;
 
     if (card.donor_name) {
+        title = `Donor: ${card.donor_name}`;
         linked_to_element = (
             <p>
                 <i className="fa-solid fa-money-bill-wave donor" aria-hidden="true"></i>
@@ -11,6 +13,7 @@ export default function KnowledgeCard({ card, onClick }) {
             </p>
         );
     } else if (card.outcome_name) {
+        title = `Outcome: ${card.outcome_name}`;
         linked_to_element = (
             <p>
                 <i className="fa-solid fa-bullseye outcome" aria-hidden="true"></i>
@@ -18,6 +21,7 @@ export default function KnowledgeCard({ card, onClick }) {
             </p>
         );
     } else if (card.field_context_name) {
+        title = `Field Context: ${card.field_context_name}`;
         linked_to_element = (
             <p>
                 <i className="fa-solid fa-earth-americas field-context" aria-hidden="true"></i>
@@ -31,7 +35,7 @@ export default function KnowledgeCard({ card, onClick }) {
 
     return (
         <article className="card" onClick={onClick} data-testid="knowledge-card">
-            <h3 id={`kc-${card.id}`}>{card.title}</h3>
+            <h3 id={`kc-${card.id}`}>{title}</h3>
             <p><small>{card.summary || 'No summary.'}</small></p>
             {linked_to_element}
             {card.references && card.references.length > 0 && (

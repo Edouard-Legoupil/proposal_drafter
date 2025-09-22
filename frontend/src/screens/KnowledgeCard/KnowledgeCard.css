@@ -135,9 +135,16 @@
 }
 
 .kc-reference-card-body a {
-    color: var(--primary-color);
+    color: blue;
     text-decoration: none;
     word-break: break-all;
+}
+
+.kc-reference-card-body p {
+    font-style: italic;
+    font-size: 0.9rem;
+    color: #666;
+    margin-top: 0.5rem;
 }
 
 .kc-reference-card-body a:hover {

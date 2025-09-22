@@ -6,7 +6,8 @@ def run(playwright):
     page = context.new_page()
 
     # Navigate to the knowledge card
-    page.goto("http://localhost:8511/knowledge-card/a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d")
+    page.goto("http://localhost:8511/knowledge-card/a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d", timeout=60000)
+    page.wait_for_selector('[data-testid="add-reference-button"]')
 
     # Add a new reference
     page.get_by_test_id("add-reference-button").click()
