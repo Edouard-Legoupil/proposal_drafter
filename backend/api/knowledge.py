@@ -97,8 +97,8 @@ async def create_knowledge_card(card: KnowledgeCardIn, current_user: dict = Depe
         with get_engine().begin() as connection:
             connection.execute(
                 text("""
-                    INSERT INTO knowledge_cards (id, summary, template_name, status, donor_id, outcome_id, field_context_id, created_by, updated_by, created_at, updated_at)
-                    VALUES (:id, :summary, :template_name, 'draft', :donor_id, :outcome_id, :field_context_id, :user_id, :user_id, NOW(), NOW())
+                    INSERT INTO knowledge_cards (id, title, summary, template_name, status, donor_id, outcome_id, field_context_id, created_by, updated_by, created_at, updated_at)
+                    VALUES (:id, :summary, :summary, :template_name, 'draft', :donor_id, :outcome_id, :field_context_id, :user_id, :user_id, NOW(), NOW())
                 """),
                 {
                     "id": card_id,
@@ -595,22 +595,6 @@ async def generate_content_background(card_id: uuid.UUID):
                 {"id": card_id}
             )
 
-        with get_engine().begin() as connection:
-            references = connection.execute(
-                text("SELECT id, url FROM knowledge_card_references WHERE knowledge_card_id = :card_id"),
-                {"card_id": card_id}
-            ).fetchall()
-
-            num_references = len(references)
-            for i, ref in enumerate(references):
-                progress = int(((i + 1) / (num_references + 1)) * 50)
-
-                def reference_progress_callback(message):
-                    return progress_callback_for_reference_ingestion(message, progress)
-
-                result = await ingest_reference_content(ref.id, connection=connection, progress_callback=reference_progress_callback)
-                if result["status"] == "error":
-                    progress_callback_for_reference_ingestion(f"Failed to scrape {ref.url}. Please upload a PDF.", progress)
 
         with get_engine().begin() as connection:
             card = connection.execute(
@@ -673,6 +657,25 @@ async def generate_content_background(card_id: uuid.UUID):
                 text("UPDATE knowledge_cards SET status = 'failed' WHERE id = :id"),
                 {"id": card_id}
             )
+
+@router.post("/knowledge-cards/{card_id}/ingest-references")
+async def ingest_knowledge_card_references(card_id: uuid.UUID, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
+    """
+    Starts the ingestion of references for a knowledge card in the background.
+    """
+    async def ingest_references_background(card_id: uuid.UUID):
+        with get_engine().begin() as connection:
+            references = connection.execute(
+                text("SELECT id FROM knowledge_card_references WHERE knowledge_card_id = :card_id"),
+                {"card_id": card_id}
+            ).fetchall()
+
+            for ref in references:
+                await ingest_reference_content(ref.id, connection=connection)
+
+    background_tasks.add_task(ingest_references_background, card_id)
+    return {"message": "Reference ingestion started in the background."}
+
 
 @router.post("/knowledge-cards/{card_id}/generate")
 async def generate_knowledge_card_content(card_id: uuid.UUID, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):

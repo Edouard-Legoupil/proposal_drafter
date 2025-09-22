@@ -10,6 +10,10 @@ def test_create_new_knowledge_card(page: Page):
     password = "password123"
     base_url = "http://localhost:8503"
 
+    # Create a test user
+    import requests
+    requests.post(f"http://localhost:8502/api/test/create-user?email={email}&password={password}")
+
     page.goto(f"{base_url}/login")
     page.get_by_test_id("email-input").fill(email)
     page.get_by_test_id("password-input").fill(password)

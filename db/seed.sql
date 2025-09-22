@@ -136,10 +136,9 @@ INSERT INTO outcomes (id, name) VALUES
 (gen_random_uuid(), 'OA16-Integrate');
 
 -- -- Insert Users with consistent UUIDs
--- INSERT INTO users (id, email, password, name, team_id) VALUES
--- ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'user1@example.com', '$2b$12$DwbvI.0M9c.uAiurT9zL9eR3u8vjP.yU/b4L6f/Yt2xY.gC6wzBGS', 'Alice', '11111111-1111-4111-8111-111111111111'),
--- ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'user2@example.com', '$2b$12$DwbvI.0M9c.uAiurT9zL9eR3u8vjP.yU/b4L6f/Yt2xY.gC6wzBGS', 'Bob', '11111111-1111-4111-8111-111111111111'),
--- ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', 'user3@example.com', '$2b$12$DwbvI.0M9c.uAiurT9zL9eR3u8vjP.yU/b4L6f/Yt2xY.gC6wzBGS', 'Charlie', '22222222-2222-4222-8222-222222222222');
+-- Insert Users with consistent UUIDs
+INSERT INTO users (id, email, password, name, team_id, created_by, updated_by) VALUES
+('a4e89f89-8f47-4d74-9a2c-9d6f3e8a6a2c', 'test_user@unhcr.org', '$2b$12$DwbvI.0M9c.uAiurT9zL9eR3u8vjP.yU/b4L6f/Yt2xY.gC6wzBGS', 'Test User', (SELECT id FROM teams WHERE name = 'Test' LIMIT 1), 'a4e89f89-8f47-4d74-9a2c-9d6f3e8a6a2c', 'a4e89f89-8f47-4d74-9a2c-9d6f3e8a6a2c');
 
 
 
