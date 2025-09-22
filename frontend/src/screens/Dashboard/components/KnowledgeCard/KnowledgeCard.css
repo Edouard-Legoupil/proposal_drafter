@@ -16,3 +16,16 @@
 .card-references a:hover {
     text-decoration: underline;
 }
+
+.card-references_date {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-family: "Noto";
+    font-weight: 400;
+    font-size: 14px;
+    color: #141419;
+    width: 200px;
+
+    line-height: 8px;
+}

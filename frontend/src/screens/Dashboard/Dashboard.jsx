@@ -315,6 +315,7 @@ export default function Dashboard ()
                                                 <KnowledgeCard
                                                         key={i}
                                                         card={card}
+                                                        date={cleanedDate(card.updated_at)}
                                                         onClick={() => navigate(`/knowledge-card/${card.id}`)}
                                                 />
                                         )}
