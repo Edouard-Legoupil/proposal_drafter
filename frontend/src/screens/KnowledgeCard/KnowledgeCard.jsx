@@ -38,6 +38,7 @@ export default function KnowledgeCard() {
     const [newDonors, setNewDonors] = useState([]);
     const [newOutcomes, setNewOutcomes] = useState([]);
     const [newFieldContexts, setNewFieldContexts] = useState([]);
+    const [proposal_template, setProposalTemplate] = useState(null);
 
     const [editingReferenceIndex, setEditingReferenceIndex] = useState(null);
 
@@ -95,6 +96,26 @@ export default function KnowledgeCard() {
     useEffect(() => {
         fetchData();
     }, [fetchData]);
+
+    useEffect(() => {
+        const fetchTemplate = async () => {
+            if (linkType) {
+                const templateName = `knowledge_card_${linkType}_template.json`;
+                try {
+                    const response = await authenticatedFetch(`${API_BASE_URL}/templates/${templateName}`, { credentials: 'include' });
+                    if (response.ok) {
+                        const data = await response.json();
+                        setProposalTemplate(data);
+                    } else {
+                        console.error("Failed to load template");
+                    }
+                } catch (error) {
+                    console.error("Error fetching template:", error);
+                }
+            }
+        };
+        fetchTemplate();
+    }, [linkType, authenticatedFetch]);
 
     useEffect(() => {
         async function fetchFieldContexts() {
@@ -278,6 +299,42 @@ export default function KnowledgeCard() {
         } catch (error) {
             console.error("Failed to fetch references:", error);
             alert("An error occurred while identifying references.");
+        } finally {
+            setLoading(false);
+            setLoadingMessage('');
+        }
+    };
+
+    const handleIngestReferences = async () => {
+        let cardId = id;
+
+        if (!cardId) {
+            const saveResponse = await handleSave(false);
+            if (!saveResponse.ok) {
+                return;
+            }
+            const data = await saveResponse.json();
+            cardId = data.knowledge_card_id;
+            navigate(`/knowledge-card/${cardId}`, { replace: true });
+        }
+
+        setLoading(true);
+        setLoadingMessage("Ingesting references...");
+        try {
+            const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${cardId}/ingest-references`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                alert("Reference ingestion started in the background.");
+            } else {
+                const error = await response.json();
+                alert(`Error ingesting references: ${error.detail}`);
+            }
+        } catch (error) {
+            console.error("Failed to ingest references:", error);
+            alert("An error occurred while ingesting references.");
         } finally {
             setLoading(false);
             setLoadingMessage('');
@@ -500,15 +557,12 @@ export default function KnowledgeCard() {
                         </div>
 
                         {/* Form Actions */}
-                        <div className="kc-form-actions-left">
-                            <CommonButton type="button" onClick={handleIdentifyReferences} label="Identify References" className="squared-btn" data-testid="identify-references-button" />
-                        </div>
-                        <div className="kc-form-actions">
-                            <div className="kc-form-actions-left">
+                        <div className="kc-form-actions-box">
+                            <div className="kc-form-actions">
+                                <CommonButton type="button" onClick={handleIdentifyReferences} label="Identify References" className="squared-btn" data-testid="identify-references-button" />
+                                <CommonButton type="button" onClick={handleIngestReferences} label="Ingest References" className="squared-btn" data-testid="ingest-references-button" />
                                 <CommonButton type="submit" label="Populate Card Content" loading={loading} disabled={loading || !summary} className="squared-btn" data-testid="populate-card-button" />
-                            </div>
-                            <div className="kc-form-actions-right">
-                                <CommonButton type="button" onClick={() => handleSave(true)} label="Save Card" loading={loading} disabled={loading || !summary} data-testid="save-card-button" />
+                                <CommonButton type="button" onClick={() => handleSave(true)} label="Close Card" loading={loading} data-testid="close-card-button" />
                             </div>
                         </div>
                     </form>
@@ -518,30 +572,35 @@ export default function KnowledgeCard() {
                 {generatedSections && (
                     <div className="kc-content-container">
                         <h2>Generated Content</h2>
-                        {Object.entries(generatedSections).map(([section, content]) => (
-                            <div key={section} className={`kc-section ${editingSection === section ? 'kc-section-editing' : ''}`}>
-                                <h3>{section}</h3>
-                                {editingSection === section ? (
-                                    <textarea
-                                        className="kc-edit-textarea"
-                                        value={editedContent}
-                                        onChange={(e) => setEditedContent(e.target.value)}
-                                    />
-                                ) : (
-                                    <p>{content}</p>
-                                )}
-                                <div className="kc-section-actions">
+                        {proposal_template?.sections?.map(sectionInfo => {
+                            const section = sectionInfo.section_name;
+                            const content = generatedSections[section];
+                            if (!content) return null;
+                            return (
+                                <div key={section} className={`kc-section ${editingSection === section ? 'kc-section-editing' : ''}`}>
+                                    <h3>{section}</h3>
                                     {editingSection === section ? (
-                                        <>
-                                            <button onClick={() => handleSaveClick(section)}>Save</button>
-                                            <button onClick={handleCancelClick}>Cancel</button>
-                                        </>
+                                        <textarea
+                                            className="kc-edit-textarea"
+                                            value={editedContent}
+                                            onChange={(e) => setEditedContent(e.target.value)}
+                                        />
                                     ) : (
-                                        <button onClick={() => handleEditClick(section, content)} data-testid={`edit-section-button-${section}`}>Edit</button>
+                                        <p>{content}</p>
                                     )}
+                                    <div className="kc-section-actions">
+                                        {editingSection === section ? (
+                                            <>
+                                                <button onClick={() => handleSaveClick(section)}>Save</button>
+                                                <button onClick={handleCancelClick}>Cancel</button>
+                                            </>
+                                        ) : (
+                                            <button onClick={() => handleEditClick(section, content)} data-testid={`edit-section-button-${section}`}>Edit</button>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div>
