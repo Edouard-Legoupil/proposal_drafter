@@ -288,6 +288,7 @@ export default function Chat (props)
                                                         options={getOptions(label)}
                                                         value={getOptions(label).find(o => o.value === field.value)}
                                                         isDisabled={disabled}
+                                                        inputId={fieldId}
                                                 />
                                         </div>
                                 ) : isCreatableMultiSelect ? (
@@ -301,6 +302,7 @@ export default function Chat (props)
                                                         options={getOptions(label)}
                                                         value={field.value.map(v => getOptions(label).find(o => o.value === v)).filter(Boolean)}
                                                         isDisabled={disabled}
+                                                        inputId={fieldId}
                                                 />
                                         </div>
                                 ) : isNormalSelect ? (
@@ -656,6 +658,9 @@ export default function Chat (props)
                         if (response.ok) {
                                 const data = await response.json();
                                 setStatusHistory(data.statuses);
+                        } else if (response.status === 403) {
+                                // If forbidden, user doesn't have rights, so we don't show history.
+                                setStatusHistory([]);
                         }
                 }
         }
