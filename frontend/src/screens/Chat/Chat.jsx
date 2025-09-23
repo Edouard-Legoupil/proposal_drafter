@@ -961,6 +961,7 @@ export default function Chat (props)
                                 donorId={formData["Targeted Donor"].value}
                                 outcomeId={formData["Main Outcome"].value}
                                 fieldContextId={formData["Country / Location(s)"].value}
+                                initialSelection={associatedKnowledgeCards}
                         />
                         {((!isMobile && sidebarOpen) || (isMobile && isMobileMenuOpen)) && <aside>
                                 <ul className='Chat_sidebar'>
