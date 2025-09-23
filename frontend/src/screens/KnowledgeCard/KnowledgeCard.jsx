@@ -1,5 +1,5 @@
 import './KnowledgeCard.css';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'; // Added useRef
 import { useNavigate, useParams } from 'react-router-dom';
 import CreatableSelect from 'react-select/creatable';
 import Base from '../../components/Base/Base';
@@ -20,7 +20,7 @@ export default function KnowledgeCard() {
     const [references, setReferences] = useState([]);
     const [loading, setLoading] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState('');
-    const [generatedSections, setGeneratedSections] = useState(null);
+    // const [generatedSections, setGeneratedSections] = useState(null);
     const [editingSection, setEditingSection] = useState(null);
     const [editedContent, setEditedContent] = useState('');
     const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
@@ -39,8 +39,31 @@ export default function KnowledgeCard() {
     const [newOutcomes, setNewOutcomes] = useState([]);
     const [newFieldContexts, setNewFieldContexts] = useState([]);
     const [proposal_template, setProposalTemplate] = useState(null);
-
     const [editingReferenceIndex, setEditingReferenceIndex] = useState(null);
+
+    // Use refs to track current state without stale closures
+    const referencesRef = useRef(references);
+    const eventSourceRef = useRef(eventSource);
+
+    // Sync refs with state
+    useEffect(() => {
+        referencesRef.current = references;
+    }, [references]);
+
+    useEffect(() => {
+        eventSourceRef.current = eventSource;
+    }, [eventSource]);
+
+    // Cleanup effect for EventSource and other resources
+    useEffect(() => {
+        return () => {
+            // Cleanup EventSource on component unmount
+            if (eventSourceRef.current) {
+                eventSourceRef.current.close();
+                console.log('EventSource cleaned up on unmount');
+            }
+        };
+    }, []);
 
     const authenticatedFetch = useCallback(async (url, options) => {
         const response = await fetch(url, options);
@@ -70,12 +93,25 @@ export default function KnowledgeCard() {
                         setLinkedId(card.field_context_id);
                     }
                     setReferences(card.references || []);
-                    setGeneratedSections(card.generated_sections || null);
+                    
+                    // Properly handle generated sections
+                    if (card.generated_sections && typeof card.generated_sections === 'object') {
+                        // Ensure it's a non-empty object
+                        const sections = card.generated_sections;
+                        if (Object.keys(sections).length > 0) {
+                            setGeneratedSections(sections);
+                        } else {
+                            setGeneratedSections(null);
+                        }
+                    } else {
+                        setGeneratedSections(null);
+                    }
                 } else {
                     console.error("Failed to load knowledge card");
                     navigate('/dashboard');
                 }
             }
+            
             const [donorsRes, outcomesRes, allFieldContextsRes] = await Promise.all([
                 authenticatedFetch(`${API_BASE_URL}/donors`, { credentials: 'include' }),
                 authenticatedFetch(`${API_BASE_URL}/outcomes`, { credentials: 'include' }),
@@ -190,24 +226,48 @@ export default function KnowledgeCard() {
     };
 
     const handleRemoveReference = async (refId) => {
-        const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/references/${refId}`, {
-            method: 'DELETE',
-            credentials: 'include'
-        });
-        if (response.ok) {
-            await fetchData();
-        } else {
-            const error = await response.json();
-            alert(`Failed to delete reference: ${error.detail}`);
+        if (!window.confirm("Are you sure you want to delete this reference?")) {
+            return;
+        }
+
+        setLoading(true);
+        setLoadingMessage("Deleting reference...");
+        
+        try {
+            const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/references/${refId}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+            if (response.ok) {
+                await fetchData();
+            } else {
+                const error = await response.json();
+                alert(`Failed to delete reference: ${error.detail}`);
+            }
+        } catch (error) {
+            console.error("Error deleting reference:", error);
+            alert("Failed to delete reference.");
+        } finally {
+            setLoading(false);
+            setLoadingMessage('');
         }
     };
 
-    // The rest of the component remains largely the same...
-    // Omitting handleSave, handleIdentifyReferences, handlePopulate, etc. for brevity
-    // as they are not the focus of the current fix.
-
     const handleSave = async (navigateOnSuccess = true) => {
+        // Validate required fields
+        if (!summary.trim()) {
+            alert("Description is required.");
+            return { ok: false };
+        }
+
+        if (!linkType || !linkedId) {
+            alert("Please select a link type and item.");
+            return { ok: false };
+        }
+
         setLoading(true);
+        setLoadingMessage("Saving knowledge card...");
+        
         let finalLinkedId = linkedId;
         if (linkedId && linkedId.startsWith('new_')) {
             const endpointMap = {
@@ -217,23 +277,39 @@ export default function KnowledgeCard() {
             };
             const endpoint = endpointMap[linkType];
             const value = linkedId.substring(4);
-            const response = await authenticatedFetch(`${API_BASE_URL}/${endpoint}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: value }),
-                credentials: 'include'
-            });
-            if (!response.ok) {
-                alert(`Failed to create new ${linkType}`);
+            
+            // Validate new item name
+            if (!value.trim()) {
+                alert("Please enter a valid name for the new item.");
                 setLoading(false);
-                return;
+                return { ok: false };
             }
-            const data = await response.json();
-            finalLinkedId = data.id;
+
+            try {
+                const response = await authenticatedFetch(`${API_BASE_URL}/${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: value }),
+                    credentials: 'include'
+                });
+                if (!response.ok) {
+                    const error = await response.json();
+                    alert(`Failed to create new ${linkType}: ${error.detail}`);
+                    setLoading(false);
+                    return { ok: false };
+                }
+                const data = await response.json();
+                finalLinkedId = data.id;
+            } catch (error) {
+                console.error("Error creating new item:", error);
+                alert("Failed to create new item.");
+                setLoading(false);
+                return { ok: false };
+            }
         }
 
         const payload = {
-            summary,
+            summary: summary.trim(),
             donor_id: linkType === 'donor' ? finalLinkedId : null,
             outcome_id: linkType === 'outcome' ? finalLinkedId : null,
             field_context_id: linkType === 'field_context' ? finalLinkedId : null,
@@ -243,30 +319,46 @@ export default function KnowledgeCard() {
         const url = id ? `${API_BASE_URL}/knowledge-cards/${id}` : `${API_BASE_URL}/knowledge-cards`;
         const method = id ? 'PUT' : 'POST';
 
-        const response = await authenticatedFetch(url, {
-            method: method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-            credentials: 'include'
-        });
-        setLoading(false);
+        try {
+            const response = await authenticatedFetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                credentials: 'include'
+            });
 
-        if (response.ok) {
-            if (navigateOnSuccess) {
-                alert(`Knowledge card ${id ? 'updated' : 'created'} successfully!`);
-                sessionStorage.setItem('selectedDashboardTab', 'knowledge');
-                navigate('/dashboard');
+            if (response.ok) {
+                if (navigateOnSuccess) {
+                    alert(`Knowledge card ${id ? 'updated' : 'created'} successfully!`);
+                    sessionStorage.setItem('selectedDashboardTab', 'knowledge');
+                    navigate('/dashboard');
+                }
+                return response;
+            } else {
+                const error = await response.json();
+                alert(`Error ${id ? 'updating' : 'creating'} knowledge card: ${error.detail}`);
+                return { ok: false };
             }
-        } else {
-            const error = await response.json();
-            alert(`Error ${id ? 'updating' : 'creating'} knowledge card: ${error.detail}`);
+        } catch (error) {
+            console.error("Error saving knowledge card:", error);
+            alert("Failed to save knowledge card.");
+            return { ok: false };
+        } finally {
+            setLoading(false);
+            setLoadingMessage('');
         }
-        return response;
     };
 
     const handleIdentifyReferences = async () => {
+        //  Validate required fields before proceeding
+        if (!linkType || !linkedId) {
+            alert("Please select a link type and item before identifying references.");
+            return;
+        }
+
         let cardId = id;
 
+        // Use proper async/await for navigation
         if (!cardId) {
             const saveResponse = await handleSave(false);
             if (!saveResponse.ok) {
@@ -274,31 +366,50 @@ export default function KnowledgeCard() {
             }
             const data = await saveResponse.json();
             cardId = data.knowledge_card_id;
-            navigate(`/knowledge-card/${cardId}`, { replace: true });
+            
+            // Wait for navigation to complete
+            await new Promise(resolve => {
+                navigate(`/knowledge-card/${cardId}`, { replace: true });
+                setTimeout(resolve, 100); // Small delay to ensure navigation
+            });
         }
 
         setLoading(true);
-        setLoadingMessage("Identifying references...");
+        setLoadingMessage("Identifying references from the web. Just a minute...");
+        
         try {
+            // Build title from linked elements only (not summary)
+            const selectedItem = linkOptions.find(o => o.id === linkedId);
+            let title = '';
+            
+            if (selectedItem) {
+                title = `${linkType.replace('_', ' ').toUpperCase()}: ${selectedItem.name}`;
+                if (linkType === 'field_context' && selectedGeoCoverage) {
+                    title += ` (${selectedGeoCoverage})`;
+                }
+            }
+
             const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${cardId}/identify-references`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    title: summary,
-                    summary,
+                    title: title,
                     linked_element: linkType,
+                    // Remove summary field or set to empty
+                    summary: ''
                 }),
                 credentials: 'include'
             });
 
             if (response.ok) {
-                fetchData();
+                await fetchData(); // Wait for data refresh
+                alert("References identified successfully!");
             } else {
                 const error = await response.json();
                 alert(`Error identifying references: ${error.detail}`);
             }
         } catch (error) {
-            console.error("Failed to fetch references:", error);
+            console.error("Failed to identify references:", error);
             alert("An error occurred while identifying references.");
         } finally {
             setLoading(false);
@@ -308,7 +419,7 @@ export default function KnowledgeCard() {
 
     const handleIngestReferences = async () => {
         let cardId = id;
-
+    
         if (!cardId) {
             const saveResponse = await handleSave(false);
             if (!saveResponse.ok) {
@@ -316,96 +427,212 @@ export default function KnowledgeCard() {
             }
             const data = await saveResponse.json();
             cardId = data.knowledge_card_id;
-            navigate(`/knowledge-card/${cardId}`, { replace: true });
+            
+            // Wait for navigation
+            await new Promise(resolve => {
+                navigate(`/knowledge-card/${cardId}`, { replace: true });
+                setTimeout(resolve, 100);
+            });
         }
-
+    
         setLoading(true);
-        setLoadingMessage("Ingesting references...");
-
-        const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${cardId}/ingest-references`, {
-            method: 'POST',
-            credentials: 'include'
-        });
-
-        if (response.ok) {
-            setLoadingMessage("Reference ingestion started...");
-            const es = new EventSource(`${API_BASE_URL}/knowledge-cards/${cardId}/ingest-status`);
-            es.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                setReferences(prev => prev.map(ref => {
-                    if (ref.id === data.reference_id) {
-                        return { ...ref, status: data.status, status_message: data.message };
+        setLoadingMessage("Ingesting references now. This may take a while, you may come back to this page in a few minutes...");
+    
+        try {
+            const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${cardId}/ingest-references`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+    
+            if (response.ok) {
+                setLoadingMessage("Reference ingestion started...");
+                
+                //  Use functional updates to avoid stale closures
+                const es = new EventSource(`${API_BASE_URL}/knowledge-cards/${cardId}/ingest-status`);
+                setEventSource(es);
+                eventSourceRef.current = es;
+                
+                es.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        console.log("Ingest status update:", data); // Debug log
+                        
+                        //   Use functional update to get latest state
+                        setReferences(prevReferences => {
+                            const updatedReferences = prevReferences.map(ref => {
+                                if (ref.id === data.reference_id) {
+                                    return { 
+                                        ...ref, 
+                                        status: data.status, 
+                                        status_message: data.message,
+                                        // Update timestamps if provided
+                                        ...(data.scraped_at && { scraped_at: data.scraped_at }),
+                                        ...(data.scraping_error !== undefined && { scraping_error: data.scraping_error })
+                                    };
+                                }
+                                return ref;
+                            });
+                            
+                            // Check if all references are done using the updated array
+                            const allDone = updatedReferences.every(ref => 
+                                ref.status === 'ingested' || 
+                                ref.status === 'error' || 
+                                ref.status === 'skipped' ||
+                                // Also check traditional status indicators
+                                ref.scraped_at || 
+                                ref.scraping_error
+                            );
+                            
+                            if (allDone) {
+                                console.log("All references processed, closing EventSource");
+                                setTimeout(() => {
+                                    es.close();
+                                    setEventSource(null);
+                                    eventSourceRef.current = null;
+                                    setLoading(false);
+                                    setLoadingMessage('');
+                                    fetchData(); // Refresh to get final state
+                                    alert("Reference ingestion completed!");
+                                }, 500);
+                            }
+                            
+                            return updatedReferences;
+                        });
+                        
+                    } catch (error) {
+                        console.error("Error processing ingest status:", error);
                     }
-                    return ref;
-                }));
-
-                // Check if all references are in a terminal state
-                const allDone = references.every(ref => ref.status === 'ingested' || ref.status === 'error' || ref.status === 'skipped');
-                if (allDone) {
+                };
+                
+                es.onerror = (error) => {
+                    console.error("EventSource error:", error);
                     es.close();
+                    setEventSource(null);
+                    eventSourceRef.current = null;
                     setLoading(false);
-                    fetchData(); // Refresh the data to get the final state
-                }
-            };
-            es.onerror = () => {
-                es.close();
+                    setLoadingMessage('');
+                    alert("Reference ingestion encountered an error.");
+                };
+                
+                // Add timeout for ingestion process
+                setTimeout(() => {
+                    if (es.readyState !== EventSource.CLOSED) {
+                        console.log("Ingestion timeout reached");
+                        es.close();
+                        setEventSource(null);
+                        eventSourceRef.current = null;
+                        setLoading(false);
+                        setLoadingMessage('');
+                        alert("Reference ingestion timeout. Some references may still be processing.");
+                    }
+                }, 300000); // 5 minute timeout
+    
+            } else {
+                const error = await response.json();
+                alert(`Error ingesting references: ${error.detail}`);
                 setLoading(false);
-            };
-        } else {
-            const error = await response.json();
-            alert(`Error ingesting references: ${error.detail}`);
+                setLoadingMessage('');
+            }
+        } catch (error) {
+            console.error("Error starting reference ingestion:", error);
+            alert("Failed to start reference ingestion.");
             setLoading(false);
+            setLoadingMessage('');
         }
     };
 
     const handlePopulate = async (e) => {
         e.preventDefault();
+        
+        if (!linkType || !linkedId) {
+            alert("Please select a link type and item before generating content.");
+            return;
+        }
+    
         const saveResponse = await handleSave(false);
         if (saveResponse.ok) {
             const cardId = id || (await saveResponse.json()).knowledge_card_id;
             setIsProgressModalOpen(true);
             setGenerationProgress(0);
-            setGenerationMessage("Starting content generation...");
-
-            const genResponse = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${cardId}/generate`, {
-                method: 'POST',
-                credentials: 'include'
-            });
-
-            if (genResponse.ok) {
-                const es = new EventSource(`${API_BASE_URL}/knowledge-cards/${cardId}/status`);
-                setEventSource(es);
-
-                es.onmessage = (event) => {
-                    const statusData = JSON.parse(event.data);
-                    setGenerationProgress(statusData.progress);
-                    setGenerationMessage(statusData.message);
-                    if (statusData.section_name && statusData.section_content) {
-                        setGeneratedSections(prev => ({ ...prev, [statusData.section_name]: statusData.section_content }));
-                    }
-                    if (statusData.progress >= 100 || statusData.progress === -1) {
-                        if (statusData.progress >= 100) {
-                            fetchData();
+            setGenerationMessage("Starting content generation for the different sections of the card...");
+    
+            try {
+                const genResponse = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${cardId}/generate`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+    
+                if (genResponse.ok) {
+                    const es = new EventSource(`${API_BASE_URL}/knowledge-cards/${cardId}/status`);
+                    setEventSource(es);
+                    eventSourceRef.current = es;
+    
+                    es.onmessage = (event) => {
+                        try {
+                            const statusData = JSON.parse(event.data);
+                            setGenerationProgress(statusData.progress);
+                            setGenerationMessage(statusData.message);
+                            
+                            if (statusData.section_name && statusData.section_content) {
+                                //  Use functional update to properly build sections
+                                setGeneratedSections(prev => {
+                                    const newSections = { 
+                                        ...prev, 
+                                        [statusData.section_name]: statusData.section_content 
+                                    };
+                                    return newSections;
+                                });
+                            }
+                            
+                            if (statusData.progress >= 100 || statusData.progress === -1) {
+                                if (statusData.progress >= 100) {
+                                    // Refresh complete data to ensure all sections are loaded
+                                    fetchData();
+                                    alert("Content generation completed successfully!");
+                                } else {
+                                    alert("Content generation failed. Please try again.");
+                                }
+                                es.close();
+                                setEventSource(null);
+                                eventSourceRef.current = null;
+                                setIsProgressModalOpen(false);
+                            }
+                        } catch (error) {
+                            console.error("Error processing generation status:", error);
                         }
+                    };
+    
+                    es.onerror = (error) => {
+                        console.error("EventSource error:", error);
                         es.close();
                         setEventSource(null);
+                        eventSourceRef.current = null;
                         setIsProgressModalOpen(false);
-                    }
-                };
-
-                es.onerror = () => {
-                    console.error("EventSource failed.");
-                    es.close();
-                    setEventSource(null);
-                };
-
-            } else {
-                const error = await genResponse.json();
-                alert(`Error starting content generation: ${error.detail}`);
+                        alert("Content generation encountered an error.");
+                    };
+    
+                    setTimeout(() => {
+                        if (es.readyState !== EventSource.CLOSED) {
+                            es.close();
+                            setEventSource(null);
+                            eventSourceRef.current = null;
+                            setIsProgressModalOpen(false);
+                            alert("Content generation timeout. Please check back later.");
+                        }
+                    }, 600000);
+    
+                } else {
+                    const error = await genResponse.json();
+                    alert(`Error starting content generation: ${error.detail}`);
+                    setIsProgressModalOpen(false);
+                }
+            } catch (error) {
+                console.error("Error starting content generation:", error);
+                alert("Failed to start content generation.");
                 setIsProgressModalOpen(false);
             }
         }
-    }
+    };
 
     const handleEditClick = (section, content) => {
         setEditingSection(section);
@@ -413,19 +640,32 @@ export default function KnowledgeCard() {
     };
 
     const handleSaveClick = async (section) => {
-        const url = `${API_BASE_URL}/knowledge-cards/${id}/sections/${section}`;
-        const response = await authenticatedFetch(url, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: editedContent }),
-            credentials: 'include'
-        });
+        setLoading(true);
+        setLoadingMessage("Saving section...");
+        
+        try {
+            const url = `${API_BASE_URL}/knowledge-cards/${id}/sections/${section}`;
+            const response = await authenticatedFetch(url, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: editedContent }),
+                credentials: 'include'
+            });
 
-        if (response.ok) {
-            setGeneratedSections(prev => ({ ...prev, [section]: editedContent }));
-            setEditingSection(null);
-        } else {
-            alert('Failed to save section.');
+            if (response.ok) {
+                setGeneratedSections(prev => ({ ...prev, [section]: editedContent }));
+                setEditingSection(null);
+                alert("Section saved successfully!");
+            } else {
+                const error = await response.json();
+                alert(`Failed to save section: ${error.detail}`);
+            }
+        } catch (error) {
+            console.error("Error saving section:", error);
+            alert("Failed to save section.");
+        } finally {
+            setLoading(false);
+            setLoadingMessage('');
         }
     };
 
@@ -435,13 +675,25 @@ export default function KnowledgeCard() {
 
     const fetchHistory = async () => {
         if (id) {
-            const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${id}/history`, { credentials: 'include' });
-            if (response.ok) {
-                const data = await response.json();
-                setHistory(data.history);
-                setIsHistoryModalOpen(true);
-            } else {
-                alert('Failed to fetch history.');
+            setLoading(true);
+            setLoadingMessage("Loading history...");
+            
+            try {
+                const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${id}/history`, { credentials: 'include' });
+                if (response.ok) {
+                    const data = await response.json();
+                    setHistory(data.history);
+                    setIsHistoryModalOpen(true);
+                } else {
+                    const error = await response.json();
+                    alert(`Failed to fetch history: ${error.detail}`);
+                }
+            } catch (error) {
+                console.error("Error fetching history:", error);
+                alert("Failed to fetch history.");
+            } finally {
+                setLoading(false);
+                setLoadingMessage('');
             }
         }
     };
@@ -459,11 +711,38 @@ export default function KnowledgeCard() {
         return 'pending';
     };
 
+    const getStatusMessage = (ref) => {
+        if (ref.status_message) return ref.status_message;
+        if (ref.scraping_error) return 'Scraping failed';
+        if (ref.scraped_at) return 'Ingested successfully';
+        return 'Pending ingestion';
+    };
+
     return (
         <Base>
             {/* Modals */}
-            <ProgressModal isOpen={isProgressModalOpen} onClose={() => setIsProgressModalOpen(false)} progress={generationProgress} message={generationMessage} />
-            {isHistoryModalOpen && <KnowledgeCardHistory history={history} onClose={() => setIsHistoryModalOpen(false)} />}
+            <ProgressModal 
+                isOpen={isProgressModalOpen} 
+                onClose={() => {
+                    // Close EventSource when modal closes
+                    if (eventSourceRef.current) {
+                        eventSourceRef.current.close();
+                        setEventSource(null);
+                        eventSourceRef.current = null;
+                    }
+                    setIsProgressModalOpen(false);
+                }} 
+                progress={generationProgress} 
+                message={generationMessage} 
+            />
+            
+            {isHistoryModalOpen && (
+                <KnowledgeCardHistory 
+                    history={history} 
+                    onClose={() => setIsHistoryModalOpen(false)} 
+                />
+            )}
+            
             <LoadingModal isOpen={loading} message={loadingMessage} />
 
             <div className="kc-container">
@@ -472,12 +751,24 @@ export default function KnowledgeCard() {
                         {/* Header */}
                         <div className="kc-form-header">
                             <h2>{id ? 'View/Edit Knowledge Card' : 'Create New Knowledge Card'}</h2>
-                            {id && <CommonButton type="button" onClick={fetchHistory} label="View Content History" />}
+                            {id && (
+                                <CommonButton 
+                                    type="button" 
+                                    onClick={fetchHistory} 
+                                    label="View Content History" 
+                                />
+                            )}
                         </div>
 
                         {/* Form Fields */}
                         <label htmlFor="kc-link-type">Link To</label>
-                        <select id="kc-link-type" value={linkType} onChange={e => setLinkType(e.target.value)} data-testid="link-type-select">
+                        <select 
+                            id="kc-link-type" 
+                            value={linkType} 
+                            onChange={e => setLinkType(e.target.value)} 
+                            data-testid="link-type-select"
+                            required
+                        >
                             <option value="">Select Type...</option>
                             <option value="donor">Donor</option>
                             <option value="outcome">Outcome</option>
@@ -487,22 +778,30 @@ export default function KnowledgeCard() {
                         {linkType === 'field_context' && (
                             <>
                                 <label htmlFor="kc-geo-coverage">Geographic Coverage</label>
-                                <select id="kc-geo-coverage" value={selectedGeoCoverage} onChange={e => setSelectedGeoCoverage(e.target.value)} data-testid="geo-coverage-select">
+                                <select 
+                                    id="kc-geo-coverage" 
+                                    value={selectedGeoCoverage} 
+                                    onChange={e => setSelectedGeoCoverage(e.target.value)} 
+                                    data-testid="geo-coverage-select"
+                                >
                                     <option value="">All</option>
-                                    {geographicCoverages.map(geo => <option key={geo} value={geo}>{geo}</option>)}
+                                    {geographicCoverages.map(geo => (
+                                        <option key={geo} value={geo}>{geo}</option>
+                                    ))}
                                 </select>
                             </>
                         )}
 
                         {linkType && (
                             <>
-                                <label htmlFor="kc-linked-id">Select Item</label>
+                                <label htmlFor="kc-linked-id">Select Item*</label>
                                 <CreatableSelect
                                     isClearable
                                     id="kc-linked-id"
                                     name="kc-linked-id"
-                                    value={linkOptions.find(o => o.id === linkedId) ? { value: linkedId, label: linkOptions.find(o => o.id === linkedId).name } : null}
-                                    onChange={option => setLinkedId(option ? option.id : '')}
+                                    value={linkOptions.find(o => o.id === linkedId) ? 
+                                        { value: linkedId, label: linkOptions.find(o => o.id === linkedId).name } : null}
+                                    onChange={option => setLinkedId(option ? option.value : '')}
                                     onCreateOption={inputValue => {
                                         const newOption = { id: `new_${inputValue}`, name: inputValue };
                                         if (linkType === 'donor') setNewDonors(prev => [...prev, newOption]);
@@ -512,18 +811,31 @@ export default function KnowledgeCard() {
                                     }}
                                     options={linkOptions.map(o => ({ ...o, value: o.id, label: o.name }))}
                                     data-testid="linked-item-select"
+                                    required
                                 />
                             </>
                         )}
 
                         <label htmlFor="kc-summary">Description*</label>
-                        <textarea id="kc-summary" value={summary} onChange={e => setSummary(e.target.value)} required data-testid="summary-textarea" />
+                        <textarea 
+                            id="kc-summary" 
+                            value={summary} 
+                            onChange={e => setSummary(e.target.value)} 
+                            required 
+                            data-testid="summary-textarea" 
+                            placeholder="Enter a description for this knowledge card..."
+                        />
 
                         {/* References Section */}
                         <div className="kc-references-section">
                             <div className="kc-references-header">
                                 <h3>References</h3>
-                                <button type="button" onClick={handleAddReference} className="kc-add-reference-btn" data-testid="add-reference-button">
+                                <button 
+                                    type="button" 
+                                    onClick={handleAddReference} 
+                                    className="kc-add-reference-btn" 
+                                    data-testid="add-reference-button"
+                                >
                                     <i className="fa-solid fa-plus"></i>
                                 </button>
                             </div>
@@ -555,32 +867,66 @@ export default function KnowledgeCard() {
                                                     required
                                                 />
                                                 <textarea
-                                                    placeholder="Summary"
+                                                    placeholder="Summary (optional)"
                                                     value={ref.summary}
                                                     onChange={e => handleReferenceFieldChange(index, 'summary', e.target.value)}
                                                 />
                                                 <div className="kc-reference-edit-actions">
-                                                    <button onClick={() => handleSaveReference(index)}>Save</button>
-                                                    <button onClick={handleCancelEditReference}>Cancel</button>
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => handleSaveReference(index)}
+                                                        disabled={!ref.url || !ref.reference_type}
+                                                    >
+                                                        Save
+                                                    </button>
+                                                    <button type="button" onClick={handleCancelEditReference}>
+                                                        Cancel
+                                                    </button>
                                                 </div>
                                             </div>
                                         ) : (
                                             <>
                                                 <div className="kc-reference-card-header">
                                                     <span className="kc-reference-type">{ref.reference_type}</span>
+                                                    
                                                     <div className='kc-reference-header-right'>
-                                                        <span className={`kc-reference-status-badge kc-reference-status-${getStatus(ref)}`}>
+                                                    <div className="kc-reference-status">
+                                                        <span 
+                                                            className={`kc-reference-status-badge kc-reference-status-${getStatus(ref)}`}
+                                                            title={getStatusMessage(ref)} // Add tooltip
+                                                        >
                                                             {getStatus(ref)}
                                                         </span>
-                                                        <div className="kc-reference-actions">
-                                                            <button onClick={() => handleEditReference(index)}><i className="fa-solid fa-pen"></i></button>
-                                                            <button onClick={() => handleRemoveReference(ref.id)}><i className="fa-solid fa-minus"></i></button>
-                                                        </div>
+                                                        {ref.status_message && (
+                                                            <span className="kc-reference-status-message">
+                                                                {ref.status_message}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="kc-reference-actions">
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => handleEditReference(index)}
+                                                            title="Edit reference"
+                                                            disabled={getStatus(ref) === 'processing'} // Disable during processing
+                                                        >
+                                                            <i className="fa-solid fa-pen"></i>
+                                                        </button>
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => handleRemoveReference(ref.id)}
+                                                            title="Delete reference"
+                                                            disabled={getStatus(ref) === 'processing'} // Disable during processing
+                                                        >
+                                                            <i className="fa-solid fa-trash"></i>
+                                                        </button>
                                                     </div>
                                                 </div>
                                                 <div className="kc-reference-card-body">
-                                                    <a href={ref.url} target="_blank" rel="noopener noreferrer">{ref.url}</a>
-                                                    <p>{ref.summary}</p>
+                                                    <a href={ref.url} target="_blank" rel="noopener noreferrer">
+                                                        {ref.url}
+                                                    </a>
+                                                    <p>{ref.summary || 'No summary provided'}</p>
                                                 </div>
                                             </>
                                         )}
@@ -592,23 +938,51 @@ export default function KnowledgeCard() {
                         {/* Form Actions */}
                         <div className="kc-form-actions-box">
                             <div className="kc-form-actions">
-                                <CommonButton type="button" onClick={handleIdentifyReferences} label="Identify References" className="squared-btn" data-testid="identify-references-button" />
-                                <CommonButton type="button" onClick={handleIngestReferences} label="Ingest References" className="squared-btn" data-testid="ingest-references-button" />
-                                <CommonButton type="submit" label="Populate Card Content" loading={loading} disabled={loading || !summary} className="squared-btn" data-testid="populate-card-button" />
-                                <CommonButton type="button" onClick={() => handleSave(true)} label="Close Card" loading={loading} data-testid="close-card-button" />
+                                <CommonButton 
+                                    type="button" 
+                                    onClick={handleIdentifyReferences} 
+                                    label="1. Identify References" 
+                                    className="squared-btn" 
+                                    data-testid="identify-references-button"
+                                    disabled={!linkType || !linkedId}
+                                />
+                                <CommonButton 
+                                    type="button" 
+                                    onClick={handleIngestReferences} 
+                                    label="2. Ingest References" 
+                                    className="squared-btn" 
+                                    data-testid="ingest-references-button"
+                                    disabled={references.length === 0}
+                                />
+                                <CommonButton 
+                                    type="submit" 
+                                    label="3. Populate Card Content" 
+                                    className="squared-btn" 
+                                    data-testid="populate-card-button"
+                                    disabled={!linkType || !linkedId}
+                                />
+                                <CommonButton 
+                                    type="button" 
+                                    onClick={() => handleSave()} 
+                                    label="Save & Close" 
+                                    className="squared-btn" 
+                                    data-testid="close-card-button"
+                                />
                             </div>
                         </div>
                     </form>
                 </div>
 
-                {/* Generated Content */}
-                {generatedSections && (
+                {/* Generated Content Section - Automatically shows when content exists */}
+                {generatedSections && Object.keys(generatedSections).length > 0 && (
                     <div className="kc-content-container">
                         <h2>Generated Content</h2>
                         {proposal_template?.sections?.map(sectionInfo => {
                             const section = sectionInfo.section_name;
                             const content = generatedSections[section];
+                            // Only show sections that have content
                             if (!content) return null;
+                            
                             return (
                                 <div key={section} className={`kc-section ${editingSection === section ? 'kc-section-editing' : ''}`}>
                                     <h3>{section}</h3>
@@ -617,18 +991,39 @@ export default function KnowledgeCard() {
                                             className="kc-edit-textarea"
                                             value={editedContent}
                                             onChange={(e) => setEditedContent(e.target.value)}
+                                            rows={10}
                                         />
                                     ) : (
-                                        <p>{content}</p>
+                                        <div className="kc-section-content">
+                                            {content.split('\n').map((paragraph, idx) => (
+                                                <p key={idx}>{paragraph || '\u00A0'}</p>
+                                            ))}
+                                        </div>
                                     )}
                                     <div className="kc-section-actions">
                                         {editingSection === section ? (
                                             <>
-                                                <button onClick={() => handleSaveClick(section)}>Save</button>
-                                                <button onClick={handleCancelClick}>Cancel</button>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => handleSaveClick(section)}
+                                                >
+                                                    Save
+                                                </button>
+                                                <button 
+                                                    type="button"
+                                                    onClick={handleCancelClick}
+                                                >
+                                                    Cancel
+                                                </button>
                                             </>
                                         ) : (
-                                            <button onClick={() => handleEditClick(section, content)} data-testid={`edit-section-button-${section}`}>Edit</button>
+                                            <button 
+                                                type="button"
+                                                onClick={() => handleEditClick(section, content)}
+                                                data-testid={`edit-section-button-${section}`}
+                                            >
+                                                Edit
+                                            </button>
                                         )}
                                     </div>
                                 </div>
@@ -636,6 +1031,8 @@ export default function KnowledgeCard() {
                         })}
                     </div>
                 )}
+
+
             </div>
         </Base>
     );

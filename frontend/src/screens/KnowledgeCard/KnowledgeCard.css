@@ -15,6 +15,8 @@
     overflow-y: auto;
 }
 
+
+
 .kc-form-container {
     align-self: flex-start;
 }
@@ -189,12 +191,28 @@
     padding-bottom: 1.5rem;
 }
 
+.kc-section h3 {
+    color: #333;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 0.5rem;
+    font-size: 1.2rem;
+}
+
+.kc-section-content p {
+    margin-bottom: 0.5rem;
+    line-height: 1.6;
+    color: #555;
+}
+
 .kc-section:last-child {
     border-bottom: none;
 }
 
 .kc-section-editing {
     flex-basis: 100%;
+    border-color: #007bff;
+    background-color: #f8f9fa;
 }
 
 .kc-edit-textarea {
@@ -233,25 +251,61 @@
     gap: 10px;
 }
 
-.kc-reference-status-badge {
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 500;
-    text-transform: capitalize;
+
+
+/* Status badge improvements */
+.kc-reference-status {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
 }
 
+.kc-reference-status-badge {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+
 .kc-reference-status-pending {
-    background-color: #efefef;
+    background-color: #f0f0f0;
     color: #666;
 }
 
+.kc-reference-status-processing {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
 .kc-reference-status-ingested {
-    background-color: #e6f7ff;
-    color: #1890ff;
+    background-color: #d1edff;
+    color: #004085;
 }
 
 .kc-reference-status-error {
-    background-color: #fff1f0;
-    color: #f5222d;
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.kc-reference-status-skipped {
+    background-color: #e2e3e5;
+    color: #383d41;
+}
+
+.kc-reference-status-message {
+    font-size: 10px;
+    color: #666;
+    max-width: 120px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+/* Disable buttons during processing */
+.kc-reference-actions button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
