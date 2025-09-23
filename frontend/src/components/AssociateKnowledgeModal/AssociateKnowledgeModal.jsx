@@ -5,14 +5,18 @@ import { useNavigate } from 'react-router-dom';
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 
-export default function AssociateKnowledgeModal({ isOpen, onClose, onConfirm, donorId, outcomeId, fieldContextId }) {
+export default function AssociateKnowledgeModal({ isOpen, onClose, onConfirm, donorId, outcomeId, fieldContextId, initialSelection = [] }) {
   const navigate = useNavigate();
   const [options, setOptions] = useState([]);
   const [selectedOptions, setSelectedOptions] = useState([]);
+  const [initialSelectedOptions, setInitialSelectedOptions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
+      const initialIds = initialSelection.map(c => c.id);
+      setSelectedOptions(initialIds);
+      setInitialSelectedOptions(initialIds);
       setIsLoading(true);
       const queryParams = new URLSearchParams();
       if (donorId) queryParams.append('donor_id', donorId);
@@ -26,7 +30,12 @@ export default function AssociateKnowledgeModal({ isOpen, onClose, onConfirm, do
       fetch(`${API_BASE_URL}/knowledge-cards?${queryParams.toString()}`, {
         credentials: 'include'
       })
-        .then(response => response.json())
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.json();
+        })
         .then(data => {
           setOptions(data.knowledge_cards || []);
           setIsLoading(false);
@@ -36,7 +45,7 @@ export default function AssociateKnowledgeModal({ isOpen, onClose, onConfirm, do
           setIsLoading(false);
         });
     }
-  }, [isOpen, donorId, outcomeId, fieldContextId]);
+  }, [isOpen, donorId, outcomeId, fieldContextId, initialSelection]);
 
   if (!isOpen) {
     return null;
@@ -53,6 +62,15 @@ export default function AssociateKnowledgeModal({ isOpen, onClose, onConfirm, do
       ? selectedOptions.filter(item => item !== optionId)
       : [...selectedOptions, optionId];
     setSelectedOptions(newSelection);
+  };
+
+  const selectionHasChanged = () => {
+    if (selectedOptions.length !== initialSelectedOptions.length) {
+      return true;
+    }
+    const sortedCurrent = [...selectedOptions].sort();
+    const sortedInitial = [...initialSelectedOptions].sort();
+    return sortedCurrent.join(',') !== sortedInitial.join(',');
   };
 
   return (
@@ -91,7 +109,7 @@ export default function AssociateKnowledgeModal({ isOpen, onClose, onConfirm, do
           <button onClick={() => navigate('/knowledge-card/new')}>Create New Knowledge Card</button>
           <div>
             <button onClick={onClose}>Cancel</button>
-            {onConfirm && <button onClick={handleConfirm} disabled={selectedOptions.length === 0}>Confirm</button>}
+            {onConfirm && <button onClick={handleConfirm} disabled={!selectionHasChanged()}>Confirm</button>}
           </div>
         </div>
       </div>

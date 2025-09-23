@@ -116,13 +116,13 @@ async def login(request: Request):
         
         # 3. Create a JWT token and set Redis session
         token = jwt.encode(
-            {"email": email, "exp": datetime.utcnow() + timedelta(minutes=30)},
+            {"email": email, "exp": datetime.utcnow() + timedelta(minutes=480)},
             SECRET_KEY,
             algorithm="HS256"
         )
         
         try:
-            redis_client.setex(f"user_session:{user_id}", 1800, token)
+            redis_client.setex(f"user_session:{user_id}", 28800, token)
         except RedisError as redis_error:
             # Catch specific Redis-related errors
             logging.error(f"Redis error setting session for user ID {user_id}: {redis_error}")
@@ -139,7 +139,7 @@ async def login(request: Request):
             value=token,
             httponly=True,
             path="/",
-            max_age=1800,
+            max_age=28800,
             **cookie_settings
         )
         logging.info(f"User {email} logged in successfully.")
