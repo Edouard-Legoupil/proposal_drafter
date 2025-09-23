@@ -20,7 +20,7 @@ export default function KnowledgeCard() {
     const [references, setReferences] = useState([]);
     const [loading, setLoading] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState('');
-    // const [generatedSections, setGeneratedSections] = useState(null);
+    const [generatedSections, setGeneratedSections] = useState(null);
     const [editingSection, setEditingSection] = useState(null);
     const [editedContent, setEditedContent] = useState('');
     const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
@@ -921,6 +921,7 @@ export default function KnowledgeCard() {
                                                             <i className="fa-solid fa-trash"></i>
                                                         </button>
                                                     </div>
+                                                </div>
                                                 </div>
                                                 <div className="kc-reference-card-body">
                                                     <a href={ref.url} target="_blank" rel="noopener noreferrer">
