@@ -978,8 +978,7 @@ export default function KnowledgeCard() {
                 {generatedSections && Object.keys(generatedSections).length > 0 && (
                     <div className="kc-content-container">
                         <h2>Generated Content</h2>
-                        {proposal_template?.sections?.map(sectionInfo => {
-                            const section = sectionInfo.section_name;
+                        {Object.keys(generatedSections).map(section => {
                             const content = generatedSections[section];
                             // Only show sections that have content
                             if (!content) return null;
