@@ -284,6 +284,7 @@ export default function KnowledgeCard() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    title: summary,
                     summary,
                     linked_element: linkType,
                 }),
@@ -320,24 +321,40 @@ export default function KnowledgeCard() {
 
         setLoading(true);
         setLoadingMessage("Ingesting references...");
-        try {
-            const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${cardId}/ingest-references`, {
-                method: 'POST',
-                credentials: 'include'
-            });
 
-            if (response.ok) {
-                alert("Reference ingestion started in the background.");
-            } else {
-                const error = await response.json();
-                alert(`Error ingesting references: ${error.detail}`);
-            }
-        } catch (error) {
-            console.error("Failed to ingest references:", error);
-            alert("An error occurred while ingesting references.");
-        } finally {
+        const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${cardId}/ingest-references`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            setLoadingMessage("Reference ingestion started...");
+            const es = new EventSource(`${API_BASE_URL}/knowledge-cards/${cardId}/ingest-status`);
+            es.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                setReferences(prev => prev.map(ref => {
+                    if (ref.id === data.reference_id) {
+                        return { ...ref, status: data.status, status_message: data.message };
+                    }
+                    return ref;
+                }));
+
+                // Check if all references are in a terminal state
+                const allDone = references.every(ref => ref.status === 'ingested' || ref.status === 'error' || ref.status === 'skipped');
+                if (allDone) {
+                    es.close();
+                    setLoading(false);
+                    fetchData(); // Refresh the data to get the final state
+                }
+            };
+            es.onerror = () => {
+                es.close();
+                setLoading(false);
+            };
+        } else {
+            const error = await response.json();
+            alert(`Error ingesting references: ${error.detail}`);
             setLoading(false);
-            setLoadingMessage('');
         }
     };
 
@@ -363,12 +380,16 @@ export default function KnowledgeCard() {
                     const statusData = JSON.parse(event.data);
                     setGenerationProgress(statusData.progress);
                     setGenerationMessage(statusData.message);
-                    if (statusData.progress === 100 || statusData.progress === -1) {
-                        if (statusData.progress === 100) {
+                    if (statusData.section_name && statusData.section_content) {
+                        setGeneratedSections(prev => ({ ...prev, [statusData.section_name]: statusData.section_content }));
+                    }
+                    if (statusData.progress >= 100 || statusData.progress === -1) {
+                        if (statusData.progress >= 100) {
                             fetchData();
                         }
                         es.close();
                         setEventSource(null);
+                        setIsProgressModalOpen(false);
                     }
                 };
 
@@ -429,6 +450,13 @@ export default function KnowledgeCard() {
         const newReferences = [...references];
         newReferences[index][field] = value;
         setReferences(newReferences);
+    };
+
+    const getStatus = (ref) => {
+        if (ref.status) return ref.status;
+        if (ref.scraping_error) return 'error';
+        if (ref.scraped_at) return 'ingested';
+        return 'pending';
     };
 
     return (
@@ -540,9 +568,14 @@ export default function KnowledgeCard() {
                                             <>
                                                 <div className="kc-reference-card-header">
                                                     <span className="kc-reference-type">{ref.reference_type}</span>
-                                                    <div className="kc-reference-actions">
-                                                        <button onClick={() => handleEditReference(index)}><i className="fa-solid fa-pen"></i></button>
-                                                        <button onClick={() => handleRemoveReference(ref.id)}><i className="fa-solid fa-minus"></i></button>
+                                                    <div className='kc-reference-header-right'>
+                                                        <span className={`kc-reference-status-badge kc-reference-status-${getStatus(ref)}`}>
+                                                            {getStatus(ref)}
+                                                        </span>
+                                                        <div className="kc-reference-actions">
+                                                            <button onClick={() => handleEditReference(index)}><i className="fa-solid fa-pen"></i></button>
+                                                            <button onClick={() => handleRemoveReference(ref.id)}><i className="fa-solid fa-minus"></i></button>
+                                                        </div>
                                                     </div>
                                                 </div>
                                                 <div className="kc-reference-card-body">

@@ -154,7 +154,7 @@ async def get_knowledge_cards(
                     d.name as donor_name,
                     o.name as outcome_name,
                     fc.name as field_context_name,
-                    (SELECT json_agg(json_build_object('url', kcr.url, 'reference_type', kcr.reference_type, 'summary', kcr.summary))
+                    (SELECT json_agg(json_build_object('id', kcr.id, 'url', kcr.url, 'reference_type', kcr.reference_type, 'summary', kcr.summary, 'scraped_at', kcr.scraped_at, 'scraping_error', kcr.scraping_error))
                      FROM knowledge_card_references kcr
                      WHERE kcr.knowledge_card_id = kc.id) as "references"
                 FROM
@@ -254,7 +254,7 @@ async def get_knowledge_card(card_id: uuid.UUID, current_user: dict = Depends(ge
                     d.name as donor_name,
                     o.name as outcome_name,
                     fc.name as field_context_name,
-                    (SELECT json_agg(json_build_object('url', kcr.url, 'reference_type', kcr.reference_type, 'summary', kcr.summary))
+                    (SELECT json_agg(json_build_object('id', kcr.id, 'url', kcr.url, 'reference_type', kcr.reference_type, 'summary', kcr.summary, 'scraped_at', kcr.scraped_at, 'scraping_error', kcr.scraping_error))
                      FROM knowledge_card_references kcr
                      WHERE kcr.knowledge_card_id = kc.id) as "references"
                 FROM
@@ -460,14 +460,10 @@ def get_embedding(chunk, model, embedder_config):
     )
     return chunk, response.data[0]['embedding']
 
-async def _process_and_store_text(reference_id: uuid.UUID, text_content: str, connection, progress_callback=None):
+async def _process_and_store_text(reference_id: uuid.UUID, text_content: str, connection):
     """
     Chunks text, creates embeddings, and stores them for a given reference.
     """
-    def _report_progress(message):
-        if progress_callback:
-            progress_callback(message)
-        logger.info(message)
 
     # For now, we will clear old vectors before adding new ones
     connection.execute(
@@ -478,7 +474,7 @@ async def _process_and_store_text(reference_id: uuid.UUID, text_content: str, co
     # Chunk the text
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     chunks = text_splitter.split_text(text_content.replace('\x00', ''))
-    _report_progress(f"Content chunked into {len(chunks)} chunks.")
+    logger.info(f"Content chunked into {len(chunks)} chunks.")
 
     # Get the embedding configuration
     embedder_config = get_embedder_config()["config"]
@@ -492,7 +488,7 @@ async def _process_and_store_text(reference_id: uuid.UUID, text_content: str, co
         futures = [executor.submit(get_embedding, chunk, model, embedder_config) for chunk in chunks]
         for i, future in enumerate(concurrent.futures.as_completed(futures)):
             chunk, embedding = future.result()
-            _report_progress(f"Embedding for chunk {i+1}/{len(chunks)} completed.")
+            logger.info(f"Embedding for chunk {i+1}/{len(chunks)} completed.")
             connection.execute(
                 text("""
                     INSERT INTO knowledge_card_reference_vectors (reference_id, text_chunk, embedding)
@@ -507,18 +503,13 @@ async def _process_and_store_text(reference_id: uuid.UUID, text_content: str, co
         {"id": reference_id}
     )
 
-async def ingest_reference_content(reference_id: uuid.UUID, force_scrape: bool = False, connection=None, progress_callback=None):
+async def ingest_reference_content(card_id: uuid.UUID, reference_id: uuid.UUID, force_scrape: bool = False, connection=None):
     """
     Ingests content from a reference URL, creates embeddings, and stores them.
     """
-    def _report_progress(message):
-        if progress_callback:
-            progress_callback(message)
-        logger.info(message)
-
     if connection is None:
         with get_engine().begin() as new_connection:
-            return await ingest_reference_content(reference_id, force_scrape, new_connection, progress_callback)
+            return await ingest_reference_content(card_id, reference_id, force_scrape, new_connection)
 
     reference = connection.execute(
         text("SELECT id, url, scraped_at FROM knowledge_card_references WHERE id = :id"),
@@ -527,14 +518,15 @@ async def ingest_reference_content(reference_id: uuid.UUID, force_scrape: bool =
 
     if not reference:
         logger.error(f"Reference with id {reference_id} not found.")
-        return {"status": "error", "message": "Reference not found."}
+        _update_ingest_progress(card_id, reference_id, "error", "Reference not found.")
+        return
 
-    _report_progress(f"Attempting to ingest reference: {reference.url}")
+    _update_ingest_progress(card_id, reference_id, "processing", f"Attempting to ingest reference: {reference.url}")
 
     logger.info(f"Checking reference {reference.id}: scraped_at={reference.scraped_at}, force_scrape={force_scrape}")
-    if reference.scraped_at and not force_scrape and datetime.utcnow() - reference.scraped_at < timedelta(days=7):
-        _report_progress(f"Reference {reference.id} was scraped recently. Skipping.")
-        return {"status": "skipped", "message": "Scraped recently."}
+    if reference.scraped_at and not force_scrape and (datetime.utcnow() - reference.scraped_at.replace(tzinfo=None)) < timedelta(days=7):
+        _update_ingest_progress(card_id, reference_id, "skipped", "Scraped recently.")
+        return
 
     content = scrape_url(reference.url)
 
@@ -544,11 +536,12 @@ async def ingest_reference_content(reference_id: uuid.UUID, force_scrape: bool =
             text("UPDATE knowledge_card_references SET scraping_error = TRUE, updated_at = NOW() WHERE id = :id"),
             {"id": reference.id}
         )
-        return {"status": "error", "message": "Failed to scrape content."}
+        _update_ingest_progress(card_id, reference_id, "error", "Failed to scrape content.")
+        return
 
-    _report_progress(f"Successfully scraped content from {reference.url}")
-    await _process_and_store_text(reference.id, content, connection, progress_callback)
-    return {"status": "success", "message": "Content ingested successfully."}
+    _update_ingest_progress(card_id, reference_id, "processing", f"Successfully scraped content from {reference.url}")
+    await _process_and_store_text(reference.id, content, connection)
+    _update_ingest_progress(card_id, reference_id, "ingested", "Content ingested successfully.")
 
 
 @router.post("/knowledge-cards/references/{reference_id}/upload-pdf")
@@ -577,11 +570,25 @@ async def upload_pdf_reference(reference_id: uuid.UUID, file: UploadFile = File(
         raise HTTPException(status_code=500, detail="Failed to process PDF file.")
 
 
-def _update_progress(card_id: uuid.UUID, message: str, progress: int):
-    progress_data = json.dumps({"message": message, "progress": progress})
-    redis_client.set(f"knowledge_card_generation:{card_id}", progress_data)
+def _update_progress(card_id: uuid.UUID, message: str, progress: int, section_name: str = None, section_content: str = None):
+    progress_data = {
+        "message": message,
+        "progress": progress
+    }
+    if section_name and section_content:
+        progress_data["section_name"] = section_name
+        progress_data["section_content"] = section_content
+
+    redis_client.set(f"knowledge_card_generation:{card_id}", json.dumps(progress_data))
     if not isinstance(redis_client, DictStorage):
-        redis_client.publish(f"knowledge_card_generation_channel:{card_id}", progress_data)
+        redis_client.publish(f"knowledge_card_generation_channel:{card_id}", json.dumps(progress_data))
+
+def _update_ingest_progress(card_id: uuid.UUID, reference_id: uuid.UUID, status: str, message: str):
+    progress_data = json.dumps({"reference_id": str(reference_id), "status": status, "message": message})
+    redis_client.set(f"knowledge_card_ingest:{card_id}", progress_data)
+    if not isinstance(redis_client, DictStorage):
+        redis_client.publish(f"knowledge_card_ingest_channel:{card_id}", progress_data)
+
 
 async def generate_content_background(card_id: uuid.UUID):
     def progress_callback_for_reference_ingestion(message, progress):
@@ -630,6 +637,7 @@ async def generate_content_background(card_id: uuid.UUID):
 
             result = crew.create_crew().kickoff(inputs=inputs)
             generated_sections[section_name] = str(result)
+            _update_progress(card_id, f"Generated section {i+1}/{num_sections}: {section_name}", progress, section_name, str(result))
 
         with get_engine().begin() as connection:
             _update_progress(card_id, "Content generation complete.", 100)
@@ -671,7 +679,7 @@ async def ingest_knowledge_card_references(card_id: uuid.UUID, background_tasks:
             ).fetchall()
 
             for ref in references:
-                await ingest_reference_content(ref.id, connection=connection)
+                await ingest_reference_content(card_id, ref.id, connection=connection)
 
     background_tasks.add_task(ingest_references_background, card_id)
     return {"message": "Reference ingestion started in the background."}
@@ -724,6 +732,45 @@ async def get_knowledge_card_status(card_id: uuid.UUID, current_user: dict = Dep
                 await pubsub.close()
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+@router.get("/knowledge-cards/{card_id}/ingest-status")
+async def get_knowledge_card_ingest_status(card_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
+    """
+    Streams the status of a knowledge card reference ingestion task using SSE.
+    """
+    async def event_generator():
+        if isinstance(redis_client, DictStorage):
+            logger.info(f"Using polling for knowledge card {card_id} ingest status.")
+            last_message = None
+            try:
+                while True:
+                    progress_data = redis_client.get(f"knowledge_card_ingest:{card_id}")
+                    if progress_data and progress_data != last_message:
+                        last_message = progress_data
+                        yield f"data: {progress_data}\\n\\n"
+                    await asyncio.sleep(1)
+            except asyncio.CancelledError:
+                logger.info(f"Client disconnected from {card_id} ingest status stream (polling).")
+        else:
+            logger.info(f"Using Redis Pub/Sub for knowledge card {card_id} ingest status.")
+            pubsub = redis_client.pubsub()
+            channel = f"knowledge_card_ingest_channel:{card_id}"
+            await pubsub.subscribe(channel)
+            try:
+                while True:
+                    message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=10)
+                    if message:
+                        yield f"data: {message['data']}\\n\\n"
+                    await asyncio.sleep(0.1)
+            except asyncio.CancelledError:
+                logger.info(f"Client disconnected from {card_id} ingest status stream.")
+            finally:
+                await pubsub.unsubscribe(channel)
+                await pubsub.close()
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
 
 @router.post("/knowledge-cards/{card_id}/identify-references")
 async def identify_references(card_id: uuid.UUID, data: IdentifyReferencesIn, current_user: dict = Depends(get_current_user)):
