@@ -70,6 +70,7 @@ class CreateSessionRequest(BaseModel):
     """
     form_data: Dict[str, Any]
     project_description: str
+    associated_knowledge_cards: Optional[List[Dict[str, Any]]] = None
 
 
 class UpdateSectionRequest(BaseModel):

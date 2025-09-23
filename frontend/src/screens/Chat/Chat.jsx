@@ -1035,7 +1035,8 @@ export default function Chat (props)
                                                         }
 
                                                         <div className="Chat_inputArea_buttonContainer">
-                                                                <div>
+                                                                <div style={{ position: 'relative' }}>
+                                                                        <CommonButton onClick={() => setIsAssociateKnowledgeModalOpen(true)} label="Associate Knowledge" disabled={proposalStatus !== 'draft'} icon={knowIcon}/>
                                                                         {associatedKnowledgeCards.length > 0 && (
                                                                                 <div className="associated-knowledge-display">
                                                                                         <h4>Associated Knowledge Cards:</h4>
@@ -1046,11 +1047,10 @@ export default function Chat (props)
                                                                                         </ul>
                                                                                 </div>
                                                                         )}
-                                                                        <CommonButton onClick={() => setIsAssociateKnowledgeModalOpen(true)} label="Associate Knowledge" disabled={proposalStatus !== 'draft'} icon={knowIcon}/>
                                                                 </div>
                                                                 
                                                                 <div style={{ marginLeft: 'auto' }}>
-                                                                <CommonButton onClick={handleGenerateClick} icon={generateIcon} label={generateLabel} loading={generateLoading} loadingLabel={generateLabel === "Generate" ? "Generating" : "Regenerating"} disabled={!buttonEnable || proposalStatus !== 'draft'}/>
+                                                                        <CommonButton onClick={handleGenerateClick} icon={generateIcon} label={generateLabel} loading={generateLoading} loadingLabel={generateLabel === "Generate" ? "Generating" : "Regenerating"} disabled={!buttonEnable || proposalStatus !== 'draft'}/>
                                                                 </div>
                                                         </div>
                                                 </div>
