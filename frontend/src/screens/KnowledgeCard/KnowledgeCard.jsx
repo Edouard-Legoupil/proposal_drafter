@@ -1,6 +1,6 @@
 import './KnowledgeCard.css';
 import { useState, useEffect, useCallback, useRef } from 'react'; // Added useRef
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import CreatableSelect from 'react-select/creatable';
 import Base from '../../components/Base/Base';
 import CommonButton from '../../components/CommonButton/CommonButton';
@@ -13,6 +13,7 @@ const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 export default function KnowledgeCard() {
     const navigate = useNavigate();
     const { id } = useParams();
+    const location = useLocation();
 
     const [summary, setSummary] = useState('');
     const [linkType, setLinkType] = useState('');
@@ -184,76 +185,7 @@ export default function KnowledgeCard() {
         if (!id) setLinkedId('');
     }, [linkType, donors, outcomes, fieldContexts, newDonors, newOutcomes, newFieldContexts, id, selectedGeoCoverage]);
 
-    const handleAddReference = () => {
-        const newReferences = [...references, { url: '', reference_type: '', summary: '', isNew: true }];
-        setReferences(newReferences);
-        setEditingReferenceIndex(newReferences.length - 1);
-    };
-
-    const handleEditReference = (index) => {
-        setEditingReferenceIndex(index);
-    };
-
-    const handleCancelEditReference = () => {
-        setEditingReferenceIndex(null);
-    };
-
-    const handleSaveReference = async (index) => {
-        const reference = references[index];
-        if (!reference || !reference.url || !reference.reference_type) {
-            alert("Reference URL and type are required.");
-            return;
-        }
-
-        const isNew = reference.isNew;
-        const url = isNew ? `${API_BASE_URL}/knowledge-cards/${id}/references` : `${API_BASE_URL}/knowledge-cards/references/${reference.id}`;
-        const method = isNew ? 'POST' : 'PUT';
-
-        const response = await authenticatedFetch(url, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(reference),
-            credentials: 'include'
-        });
-
-        if (response.ok) {
-            await fetchData();
-            setEditingReferenceIndex(null);
-        } else {
-            const error = await response.json();
-            alert(`Failed to save reference: ${error.detail}`);
-        }
-    };
-
-    const handleRemoveReference = async (refId) => {
-        if (!window.confirm("Are you sure you want to delete this reference?")) {
-            return;
-        }
-
-        setLoading(true);
-        setLoadingMessage("Deleting reference...");
-        
-        try {
-            const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/references/${refId}`, {
-                method: 'DELETE',
-                credentials: 'include'
-            });
-            if (response.ok) {
-                await fetchData();
-            } else {
-                const error = await response.json();
-                alert(`Failed to delete reference: ${error.detail}`);
-            }
-        } catch (error) {
-            console.error("Error deleting reference:", error);
-            alert("Failed to delete reference.");
-        } finally {
-            setLoading(false);
-            setLoadingMessage('');
-        }
-    };
-
-    const handleSave = async (navigateOnSuccess = true) => {
+    const handleSave = useCallback(async (navigateOnSuccess = true) => {
         // Validate required fields
         if (!summary.trim()) {
             alert("Description is required.");
@@ -347,9 +279,9 @@ export default function KnowledgeCard() {
             setLoading(false);
             setLoadingMessage('');
         }
-    };
+    }, [summary, linkType, linkedId, references, id, navigate, authenticatedFetch, setLoading, setLoadingMessage]);
 
-    const handleIdentifyReferences = async () => {
+    const handleIdentifyReferences = useCallback(async () => {
         //  Validate required fields before proceeding
         if (!linkType || !linkedId) {
             alert("Please select a link type and item before identifying references.");
@@ -367,11 +299,11 @@ export default function KnowledgeCard() {
             const data = await saveResponse.json();
             cardId = data.knowledge_card_id;
             
-            // Wait for navigation to complete
-            await new Promise(resolve => {
-                navigate(`/knowledge-card/${cardId}`, { replace: true });
-                setTimeout(resolve, 100); // Small delay to ensure navigation
+            navigate(`/knowledge-card/${cardId}`, {
+                replace: true,
+                state: { fromAction: 'identify' }
             });
+            return;
         }
 
         setLoading(true);
@@ -415,9 +347,9 @@ export default function KnowledgeCard() {
             setLoading(false);
             setLoadingMessage('');
         }
-    };
+    }, [id, linkType, linkedId, handleSave, navigate, linkOptions, selectedGeoCoverage, authenticatedFetch, fetchData]);
 
-    const handleIngestReferences = async () => {
+    const handleIngestReferences = useCallback(async () => {
         let cardId = id;
     
         if (!cardId) {
@@ -428,11 +360,11 @@ export default function KnowledgeCard() {
             const data = await saveResponse.json();
             cardId = data.knowledge_card_id;
             
-            // Wait for navigation
-            await new Promise(resolve => {
-                navigate(`/knowledge-card/${cardId}`, { replace: true });
-                setTimeout(resolve, 100);
+            navigate(`/knowledge-card/${cardId}`, {
+                replace: true,
+                state: { fromAction: 'ingest' }
             });
+            return;
         }
     
         setLoading(true);
@@ -536,6 +468,89 @@ export default function KnowledgeCard() {
         } catch (error) {
             console.error("Error starting reference ingestion:", error);
             alert("Failed to start reference ingestion.");
+            setLoading(false);
+            setLoadingMessage('');
+        }
+    }, [id, handleSave, navigate, authenticatedFetch, eventSourceRef, fetchData, setEventSource, setReferences, setLoading, setLoadingMessage]);
+
+    useEffect(() => {
+        const fromAction = location.state?.fromAction;
+        if (id && fromAction) {
+            // Clean the state from location to prevent re-triggering
+            navigate(location.pathname, { replace: true });
+
+            if (fromAction === 'identify') {
+                handleIdentifyReferences();
+            } else if (fromAction === 'ingest') {
+                handleIngestReferences();
+            }
+        }
+    }, [id, location.state, navigate, handleIdentifyReferences, handleIngestReferences]);
+
+    const handleAddReference = () => {
+        const newReferences = [...references, { url: '', reference_type: '', summary: '', isNew: true }];
+        setReferences(newReferences);
+        setEditingReferenceIndex(newReferences.length - 1);
+    };
+
+    const handleEditReference = (index) => {
+        setEditingReferenceIndex(index);
+    };
+
+    const handleCancelEditReference = () => {
+        setEditingReferenceIndex(null);
+    };
+
+    const handleSaveReference = async (index) => {
+        const reference = references[index];
+        if (!reference || !reference.url || !reference.reference_type) {
+            alert("Reference URL and type are required.");
+            return;
+        }
+
+        const isNew = reference.isNew;
+        const url = isNew ? `${API_BASE_URL}/knowledge-cards/${id}/references` : `${API_BASE_URL}/knowledge-cards/references/${reference.id}`;
+        const method = isNew ? 'POST' : 'PUT';
+
+        const response = await authenticatedFetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(reference),
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            await fetchData();
+            setEditingReferenceIndex(null);
+        } else {
+            const error = await response.json();
+            alert(`Failed to save reference: ${error.detail}`);
+        }
+    };
+
+    const handleRemoveReference = async (refId) => {
+        if (!window.confirm("Are you sure you want to delete this reference?")) {
+            return;
+        }
+
+        setLoading(true);
+        setLoadingMessage("Deleting reference...");
+
+        try {
+            const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/references/${refId}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+            if (response.ok) {
+                await fetchData();
+            } else {
+                const error = await response.json();
+                alert(`Failed to delete reference: ${error.detail}`);
+            }
+        } catch (error) {
+            console.error("Error deleting reference:", error);
+            alert("Failed to delete reference.");
+        } finally {
             setLoading(false);
             setLoadingMessage('');
         }
@@ -975,10 +990,11 @@ export default function KnowledgeCard() {
                 </div>
 
                 {/* Generated Content Section - Automatically shows when content exists */}
-                {generatedSections && Object.keys(generatedSections).length > 0 && (
+                {generatedSections && proposal_template && proposal_template.sections && (
                     <div className="kc-content-container">
                         <h2>Generated Content</h2>
-                        {Object.keys(generatedSections).map(section => {
+                        {proposal_template.sections.map(sectionInfo => {
+                            const section = sectionInfo.section_name;
                             const content = generatedSections[section];
                             // Only show sections that have content
                             if (!content) return null;
