@@ -205,7 +205,9 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
                     knowledge_content.append(card["generated_sections"])
 
             if knowledge_content:
-                with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix=".json") as temp_file:
+                tmp_dir = os.path.join("knowledge", "tmp")
+                os.makedirs(tmp_dir, exist_ok=True)
+                with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix=".json", dir=tmp_dir) as temp_file:
                     json.dump(knowledge_content, temp_file)
                     knowledge_file_path = temp_file.name
 
