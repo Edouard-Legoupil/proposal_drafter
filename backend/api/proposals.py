@@ -60,6 +60,22 @@ async def get_templates():
         raise HTTPException(status_code=500, detail="Could not retrieve proposal templates.")
 
 
+@router.get("/templates/{template_name}")
+async def get_template(template_name: str):
+    """
+    Loads and returns the content of a specific template file.
+    """
+    try:
+        template_data = load_proposal_template(template_name)
+        return template_data
+    except HTTPException as http_exc:
+        # Re-raise HTTP exceptions from load_proposal_template
+        raise http_exc
+    except Exception as e:
+        logger.error(f"Failed to load template '{template_name}': {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while loading the template.")
+
+
 @router.post("/create-session")
 async def create_session(request: CreateSessionRequest, current_user: dict = Depends(get_current_user)):
     """

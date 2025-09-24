@@ -358,15 +358,7 @@ async def update_knowledge_card_section(card_id: uuid.UUID, section_name: str, s
             if not result or not result.generated_sections:
                 raise HTTPException(status_code=404, detail="Knowledge card or sections not found.")
 
-            generated_sections = result.generated_sections
-            if isinstance(generated_sections, str):
-                try:
-                    generated_sections = json.loads(generated_sections)
-                except json.JSONDecodeError:
-                    raise HTTPException(status_code=500, detail="Failed to parse existing sections.")
-
-            if not isinstance(generated_sections, dict):
-                 raise HTTPException(status_code=500, detail="Existing sections are not in a valid format.")
+            generated_sections = json.loads(result.generated_sections)
 
             if section_name not in generated_sections:
                 raise HTTPException(status_code=404, detail=f"Section '{section_name}' not found.")

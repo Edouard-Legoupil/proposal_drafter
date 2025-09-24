@@ -107,6 +107,15 @@ export default function KnowledgeCard() {
                     } else {
                         setGeneratedSections(null);
                     }
+
+                    // Fetch the template using the name from the card data
+                    if (card.template_name) {
+                        const templateRes = await authenticatedFetch(`${API_BASE_URL}/templates/${card.template_name}`, { credentials: 'include' });
+                        if (templateRes.ok) {
+                            const templateData = await templateRes.json();
+                            setProposalTemplate(templateData);
+                        }
+                    }
                 } else {
                     console.error("Failed to load knowledge card");
                     navigate('/dashboard');
@@ -136,7 +145,7 @@ export default function KnowledgeCard() {
 
     useEffect(() => {
         const fetchTemplate = async () => {
-            if (linkType) {
+            if (!id && linkType) { // Only for new cards
                 const templateName = `knowledge_card_${linkType}_template.json`;
                 try {
                     const response = await authenticatedFetch(`${API_BASE_URL}/templates/${templateName}`, { credentials: 'include' });
@@ -152,7 +161,7 @@ export default function KnowledgeCard() {
             }
         };
         fetchTemplate();
-    }, [linkType, authenticatedFetch]);
+    }, [id, linkType, authenticatedFetch]);
 
     useEffect(() => {
         async function fetchFieldContexts() {
