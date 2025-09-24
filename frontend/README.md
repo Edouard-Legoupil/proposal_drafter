@@ -2,6 +2,32 @@
 
 This directory contains the frontend of the proposal drafting application, built with React and Vite.
 
+## High-Level Design Philosophy
+
+This application is designed around a two-level knowledge management system to enhance proposal generation, minimize hallucinations, and ensure human accountability throughout the process.
+
+### Two-Level Knowledge Management
+
+1.  **Knowledge Card Creation**: The first level focuses on building a curated knowledge base.
+    *   **Reference Identification**: The system identifies and ingests relevant information from web sources to serve as references.
+    *   **RAG-Based Content**: It then uses a Retrieval-Augmented Generation (RAG) model to create structured "Knowledge Cards" from these references.
+    *   **Human in the Loop**: Crucially, these cards are not final. They can be reviewed and edited by users, ensuring that the knowledge is accurate, well-curated, and fit for purpose.
+
+2.  **Grounded Proposal Generation**: The second level leverages this curated knowledge.
+    *   **Consistent Knowledge Injection**: When generating proposals, users can associate specific Knowledge Cards with the generation process. This ensures that precise, pre-approved information is consistently used across multiple proposals.
+    *   **Optimal Context Management**: This approach helps to manage the context window of the language model effectively, feeding it only the most relevant information and reducing the risk of content mismatch or deviation from the core message.
+
+### Continuous Learning
+
+The application is built for continuous improvement. The peer review workflow for proposals allows the system to learn from fully reviewed and approved documents over time. This creates a feedback loop where the quality of generated content improves with each successful proposal cycle.
+
+### Core Benefits
+
+This design ensures:
+-   **Better Proposals**: Grounded in curated, specific knowledge.
+-   **Minimized Hallucination**: By relying on RAG and human-verified knowledge cards.
+-   **Human Accountability**: Users are in control of the knowledge base and the final output, maintaining clear accountability.
+
 ## Code Structure
 
 The frontend code is organized into the following directories:
@@ -51,6 +77,7 @@ The core of the user experience is handled by two main screen components:
         - When a user manually edits a section and clicks "Save", the component calls the `POST /api/update-section-content` endpoint.
         - This provides a direct, fast way to save content without involving the AI generation process.
 -   **New Features**:
+    -   **Grounded Generation**: Users can click "Associate Knowledge" to open a modal and select one or more Knowledge Cards. This links the curated information to the proposal, grounding the AI's output in verified data and optimizing the context window.
     -   **Workflow Badges**: The status badges have been updated to be more sequential and are now grouped in a "Workflow Stage" box. "Submission" has been renamed to "Pre-Submission", and each badge has a descriptive tooltip.
     -   **Version Switching**: Users can revert a proposal to a previous status by clicking the "Revert" button next to an inactive status badge.
     -   **Restricted Editing**: The proposal form and generation buttons are disabled if the proposal's status is not "Drafting".
@@ -59,11 +86,12 @@ The core of the user experience is handled by two main screen components:
 
 ### `screens/KnowledgeCard/KnowledgeCard.jsx`
 
--   **Responsibility**: This screen allows users to create and manage "Knowledge Cards". These are reusable pieces of information that can be linked to donors, outcomes, or field contexts.
+-   **Responsibility**: This screen allows users to create and manage "Knowledge Cards." It is central to the application's two-level knowledge management system.
 -   **User Flow**:
-    -   A user can create a new knowledge card by providing a title, a summary, and linking it to a donor, outcome, or field context.
-    -   After a knowledge card is created, its content can be populated by an AI agent.
-    -   The information from knowledge cards can be used to enrich the content of proposals.
+    -   **Reference Ingestion**: A user starts by providing a URL to a reference document. The system's AI ingests the content.
+    -   **AI-Powered Creation**: Based on the ingested reference, the AI generates a structured Knowledge Card with content organized according to a predefined template.
+    -   **Human-in-the-Loop Editing**: The user can then review, edit, and refine the AI-generated content to ensure its accuracy and quality.
+    -   **Association**: The curated Knowledge Card can then be associated with proposals to ground the generation process in reliable information.
 -   **New Features**:
     -   **Updated Form**: The "Reference Type" field is now a compulsory dropdown at the top of the form. When "Field Context" is selected as the link type, a "Geographic Coverage" dropdown appears to filter the items.
     -   **Restyled Buttons**: The buttons have been restyled and realigned as per the user's request.
