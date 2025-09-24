@@ -2,6 +2,32 @@
 
 This directory contains the backend of the proposal drafting application, built with FastAPI. It handles user authentication, proposal data management, and AI-powered content generation.
 
+## High-Level Design Philosophy
+
+This application is designed around a two-level knowledge management system to enhance proposal generation, minimize hallucinations, and ensure human accountability throughout the process.
+
+### Two-Level Knowledge Management
+
+1.  **Knowledge Card Creation**: The first level focuses on building a curated knowledge base.
+    *   **Reference Identification**: The system identifies and ingests relevant information from web sources to serve as references.
+    *   **RAG-Based Content**: It then uses a Retrieval-Augmented Generation (RAG) model to create structured "Knowledge Cards" from these references.
+    *   **Human in the Loop**: Crucially, these cards are not final. They can be reviewed and edited by users, ensuring that the knowledge is accurate, well-curated, and fit for purpose.
+
+2.  **Grounded Proposal Generation**: The second level leverages this curated knowledge.
+    *   **Consistent Knowledge Injection**: When generating proposals, users can associate specific Knowledge Cards with the generation process. This ensures that precise, pre-approved information is consistently used across multiple proposals.
+    *   **Optimal Context Management**: This approach helps to manage the context window of the language model effectively, feeding it only the most relevant information and reducing the risk of content mismatch or deviation from the core message.
+
+### Continuous Learning
+
+The application is built for continuous improvement. The peer review workflow for proposals allows the system to learn from fully reviewed and approved documents over time. This creates a feedback loop where the quality of generated content improves with each successful proposal cycle.
+
+### Core Benefits
+
+This design ensures:
+-   **Better Proposals**: Grounded in curated, specific knowledge.
+-   **Minimized Hallucination**: By relying on RAG and human-verified knowledge cards.
+-   **Human Accountability**: Users are in control of the knowledge base and the final output, maintaining clear accountability.
+
 ## Code Structure
 
 The backend code is organized into the following modules:
@@ -245,18 +271,25 @@ The backend follows a specific workflow for creating and generating a new propos
 
 3.  **Section Processing (`POST /process_section/{session_id}`)**: The frontend iterates through the sections defined in the template and calls this endpoint for each one. To ensure the AI has the latest information, the frontend sends the **current form data and project description** with every request. The backend updates the Redis session with this fresh data before kicking off the CrewAI generation process.
 
-4.  **Manual Edits (`POST /update-section-content`)**: If a user manually edits a section, the frontend calls this dedicated endpoint. It directly updates the content for that section in the PostgreSQL database, bypassing the AI for a fast and reliable save.
+4.  **Grounding with Knowledge Cards**: During proposal generation, users can associate one or more Knowledge Cards with the process. This injects curated, high-quality information into the generation context, which helps to ground the AI's output, improve accuracy, and make optimal use of the context window.
 
-5.  **Document Generation (`GET /generate-document/{proposal_id}`)**: When a user requests to download the document, the backend fetches the proposal from the database, loads the appropriate template to ensure correct section ordering, and generates the requested file (`.docx` or `.pdf`).
+5.  **Manual Edits (`POST /update-section-content`)**: If a user manually edits a section, the frontend calls this dedicated endpoint. It directly updates the content for that section in the PostgreSQL database, bypassing the AI for a fast and reliable save.
+
+6.  **Document Generation (`GET /generate-document/{proposal_id}`)**: When a user requests to download the document, the backend fetches the proposal from the database, loads the appropriate template to ensure correct section ordering, and generates the requested file (`.docx` or `.pdf`).
 
 ## Knowledge Card Management
 
-The application supports the creation and management of "Knowledge Cards". These are reusable pieces of information that can be linked to donors, outcomes, or field contexts. Knowledge cards can be populated with AI-generated content based on a title and summary.
+The application supports the creation and management of "Knowledge Cards," which are foundational to the system's two-level knowledge management philosophy. These cards are reusable, curated pieces of information that ground the proposal generation process in verified data.
 
 The workflow for knowledge cards is as follows:
-1.  **Create a Knowledge Card**: A user can create a new knowledge card by providing a title, a summary, and linking it to a donor, outcome, or field context.
-2.  **Populate Content**: After a knowledge card is created, its content can be populated by an AI agent.
-3.  **Use in Proposals**: The information from knowledge cards can be used to enrich the content of proposals.
+
+1.  **Reference Identification and Ingestion**: The process begins by identifying and ingesting reference materials from web links. The system's AI agents scan the source to extract key information.
+
+2.  **AI-Powered Content Generation**: Using a Retrieval-Augmented Generation (RAG) model, the system automatically populates the Knowledge Card with content based on the ingested reference. The card is structured according to a predefined template to ensure consistency.
+
+3.  **Human-in-the-Loop Editing**: After generation, users can review, edit, and refine the content of the knowledge card. This "human in the loop" step is critical for ensuring the accuracy and quality of the knowledge base.
+
+4.  **Association with Proposals**: Once a knowledge card is finalized, it can be associated with a proposal during the generation phase. This allows the AI to use the curated content from the card to inform and ground the generated text, ensuring it is accurate and aligned with pre-approved information.
 
 ## Peer Review Workflow
 
