@@ -161,26 +161,21 @@ def get_available_templates():
                 with open(template_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
 
-                # Ensure the loaded data is a dictionary, skipping files like sample_templates.json
                 if not isinstance(data, dict):
                     logger.info(f"Skipping non-dictionary template file: {filename}")
                     continue
 
-                # Handle multiple donors per template
-                if "donors" in data and isinstance(data["donors"], list):
-                    for donor_name in data["donors"]:
+                donors = data.get("donors", [])
+                if isinstance(donors, list):
+                    for donor_name in donors:
                         templates_map[donor_name] = filename
-                # Fallback to single donor field for backward compatibility
-                elif "donor" in data:
-                    templates_map[data["donor"]] = filename
-                else:
-                    # Fallback for templates without a 'donors' or 'donor' field
-                    base_name = filename.replace(".json", "").replace("_", " ").title()
-                    templates_map[base_name] = filename
-                    logger.warning(f"Template '{filename}' is missing a 'donors' or 'donor' field. Falling back to filename.")
+
+                # Also map the template by its filename for direct access
+                templates_map[filename] = filename
 
             except (json.JSONDecodeError, IOError) as e:
                 logger.error(f"Failed to read or parse template file: {filename}. Error: {e}")
+                continue # Skip to the next file
 
     # Ensure "Not Yet Specified" option points to the default UNHCR template.
     unhcr_template_file = "unhcr_proposal_template.json"
