@@ -8,7 +8,9 @@ import concurrent.futures
 from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from sqlalchemy import text
+from sqlalchemy.engine import Engine
 import litellm
+from slugify import slugify
 from PyPDF2 import PdfReader
 from pydantic import BaseModel, Field, validator
 from typing import List, Optional
@@ -63,6 +65,38 @@ class KnowledgeCardIn(BaseModel):
             if sum(1 for field in ['donor_id', 'outcome_id', 'field_context_id'] if values.get(field) is not None) > 0:
                 raise ValueError('Only one of donor_id, outcome_id, or field_context_id can be set.')
         return v
+
+def _save_knowledge_card_content_to_file(connection, card_id: uuid.UUID, generated_sections: dict):
+    """
+    Saves the generated content of a knowledge card to a file.
+    """
+    try:
+        # Fetch the knowledge card's summary to use in the filename
+        card_summary = connection.execute(
+            text("SELECT summary FROM knowledge_cards WHERE id = :card_id"),
+            {"card_id": card_id}
+        ).scalar_one_or_none()
+
+        if not card_summary:
+            logger.error(f"Cannot save content to file: Knowledge card with id {card_id} not found.")
+            return
+
+        # Create a clean, URL-safe filename from the summary
+        filename = f"{slugify(card_summary)}.json"
+        filepath = os.path.join("backend", "knowledge", filename)
+
+        # Ensure the knowledge directory exists
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+
+        # Write the generated sections to the JSON file
+        with open(filepath, 'w') as f:
+            json.dump(generated_sections, f, indent=4)
+
+        logger.info(f"Knowledge card content saved to {filepath}")
+
+    except Exception as e:
+        logger.error(f"Failed to save knowledge card content to file for card {card_id}: {e}", exc_info=True)
+
 
 def create_knowledge_card_history_entry(connection, card_id: uuid.UUID, generated_sections: dict, user_id: uuid.UUID):
     """
@@ -344,12 +378,12 @@ async def get_knowledge_card(card_id: uuid.UUID, current_user: dict = Depends(ge
 
 
 @router.put("/knowledge-cards/{card_id}/sections/{section_name}")
-async def update_knowledge_card_section(card_id: uuid.UUID, section_name: str, section: UpdateSectionIn, current_user: dict = Depends(get_current_user)):
+async def update_knowledge_card_section(card_id: uuid.UUID, section_name: str, section: UpdateSectionIn, current_user: dict = Depends(get_current_user), engine: Engine = Depends(get_engine)):
     """
     Updates a specific section of a knowledge card.
     """
     try:
-        with get_engine().begin() as connection:
+        with engine.begin() as connection:
             # Add user permission check
             # card_owner_check = connection.execute(
             #     text("SELECT created_by FROM knowledge_cards WHERE id = :id"),
@@ -381,6 +415,9 @@ async def update_knowledge_card_section(card_id: uuid.UUID, section_name: str, s
                 text("UPDATE knowledge_cards SET generated_sections = :sections, updated_at = NOW() WHERE id = :id"),
                 {"sections": json.dumps(generated_sections), "id": card_id}
             )
+
+            # Save content to file
+            _save_knowledge_card_content_to_file(connection, card_id, generated_sections)
 
             # Create a history entry
             create_knowledge_card_history_entry(connection, card_id, generated_sections, current_user['user_id'])
@@ -783,6 +820,9 @@ async def generate_content_background(card_id: uuid.UUID):
                 {"sections": json.dumps(generated_sections), "id": card_id}
             )
             
+            # Save content to file
+            _save_knowledge_card_content_to_file(connection, card_id, generated_sections)
+
             # Create a history entry
             result = connection.execute(
                 text("SELECT created_by FROM knowledge_cards WHERE id = :id"),
