@@ -13,11 +13,11 @@ from backend.core.llm import llm, get_embedder_config
 class ProposalCrew():
     """ProposalCrew for generating project proposal"""
 
-    def __init__(self, knowledge_file_path: str = None):
-        self.knowledge_file_path = knowledge_file_path
+    def __init__(self, knowledge_file_paths: list[str] = None):
+        self.knowledge_file_paths = knowledge_file_paths
         self.json_knowledge = None
-        if self.knowledge_file_path:
-            self.json_knowledge = JSONKnowledgeSource(file_paths=[self.knowledge_file_path])
+        if self.knowledge_file_paths:
+            self.json_knowledge = JSONKnowledgeSource(file_paths=self.knowledge_file_paths)
 
     agents_config = 'config/agents.yaml'
     tasks_config = 'config/tasks.yaml'
