@@ -104,4 +104,7 @@ pgvector
 # PDF processing
 pypdf
 PyPDF2
+
+# Slugify for clean filenames
+python-slugify
  
