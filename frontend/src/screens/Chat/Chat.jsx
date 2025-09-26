@@ -1047,9 +1047,15 @@ export default function Chat (props)
                                                                                 <div className="associated-knowledge-display">
                                                                                         <h4>Associated Knowledge Cards:</h4>
                                                                                         <ul>
-                                                                                                {associatedKnowledgeCards.map(card => (
-                                                                                                        <li key={card.id}>{card.title}</li>
-                                                                                                ))}
+                                                                                                {associatedKnowledgeCards.map(card => {
+                                                                                                        const title = [
+                                                                                                                card.title,
+                                                                                                                card.donor_name,
+                                                                                                                card.outcome_name,
+                                                                                                                card.field_context_name,
+                                                                                                        ].filter(Boolean).join(' - ');
+                                                                                                        return (<li key={card.id}>{title}</li>);
+                                                                                                })}
                                                                                         </ul>
                                                                                 </div>
                                                                         )}

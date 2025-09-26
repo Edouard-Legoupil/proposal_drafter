@@ -205,5 +205,21 @@ export const server = setupServer(
 
         http.post(`${API_BASE_URL}/finalize-proposal`, () =>
                 HttpResponse.json({ success: true })
-        )
+        ),
+
+        http.get(`${API_BASE_URL}/metrics/development-time`, () => {
+                return HttpResponse.json({ "Proposal": 30, "Revision": 15 });
+        }),
+
+        http.get(`${API_BASE_URL}/metrics/funding-by-category`, () => {
+                return HttpResponse.json({ "Health": 5, "Education": 10 });
+        }),
+
+        http.get(`${API_BASE_URL}/metrics/donor-interest`, () => {
+                return HttpResponse.json({ "USAID": 20, "UNICEF": 5 });
+        }),
+
+        http.get(`${API_BASE_URL}/knowledge-cards`, () => {
+                return HttpResponse.json({ knowledge_cards: [] });
+        })
 )

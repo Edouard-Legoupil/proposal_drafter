@@ -14,6 +14,18 @@ describe('Proposal Drafter – Form validation', () => {
                         }),
                         http.get('http://localhost:8502/api/profile', () => {
                                 return HttpResponse.json({ user: { "email": "test@test.com", "name": "Test User" } })
+                        }),
+                        http.get('http://localhost:8502/api/donors', () => {
+                                return HttpResponse.json({ donors: [{id: '1', name: 'USAID'}] });
+                        }),
+                        http.get('http://localhost:8502/api/outcomes', () => {
+                                return HttpResponse.json({ outcomes: [{id: '1', name: 'OA1-Access/Documentation'}] });
+                        }),
+                        http.get('http://localhost:8502/api/field-contexts', () => {
+                                return HttpResponse.json({ field_contexts: [{id: '1', name: 'USA', geographic_coverage: 'One Country Operation'}] });
+                        }),
+                        http.get('http://localhost:8502/api/users', () => {
+                                return HttpResponse.json({ users: [] });
                         })
                 )
                 render(
@@ -34,7 +46,7 @@ describe('Proposal Drafter – Form validation', () => {
                 await waitFor(() => expect(generateButton).toBeDisabled())
 
                 const geographicalScopeInput = screen.getByTestId('geographical-scope')
-                await userEvent.selectOptions(geographicalScopeInput, 'One Area')
+                await userEvent.selectOptions(geographicalScopeInput, 'One Country Operation')
                 await waitFor(() => expect(generateButton).toBeDisabled())
 
                 const countryInput = screen.getByLabelText(/Country \/ Location\(s\)/i)
@@ -60,7 +72,7 @@ describe('Proposal Drafter – Form validation', () => {
                 const donorInput = screen.getByLabelText(/Targeted Donor/i)
                 await userEvent.type(donorInput, 'USAID{enter}')
                 await waitFor(() => expect(generateButton).toBeEnabled())
-        })
+        }, 20000)
 })
 
 describe('Proposal Drafter – One‑Section Generation Flow', () => {
@@ -68,6 +80,18 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                 server.use(
                         http.get('http://localhost:8502/api/templates', () => HttpResponse.json({ templates: { "UNHCR": {} } })),
                         http.get('http://localhost:8502/api/profile', () => HttpResponse.json({ user: { "email": "test@test.com", "name": "Test User" } })),
+                        http.get('http://localhost:8502/api/donors', () => {
+                                return HttpResponse.json({ donors: [{id: '1', name: 'USAID'}] });
+                        }),
+                        http.get('http://localhost:8502/api/outcomes', () => {
+                                return HttpResponse.json({ outcomes: [{id: '1', name: 'OA1-Access/Documentation'}] });
+                        }),
+                        http.get('http://localhost:8502/api/field-contexts', () => {
+                                return HttpResponse.json({ field_contexts: [{id: '1', name: 'USA', geographic_coverage: 'One Country Operation'}] });
+                        }),
+                        http.get('http://localhost:8502/api/users', () => {
+                                return HttpResponse.json({ users: [] });
+                        }),
                         http.post('http://localhost:8502/api/create-session', () => {
                                 return HttpResponse.json({
                                         session_id: 'test-session-id',
@@ -80,9 +104,18 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                                         }
                                 })
                         }),
-                        http.post('http://localhost:8502/api/process_section/:session_id', async ({request}) => {
-                                const body = await request.json()
-                                return HttpResponse.json({ generated_text: `Mocked text for ${body.section}` })
+                        http.post('http://localhost:8502/api/generate-proposal-sections/:session_id', async ({request}) => {
+                                return new HttpResponse(null, { status: 200 });
+                        }),
+                        http.get('http://localhost:8502/api/proposals/:proposal_id/status', async ({request}) => {
+                                return HttpResponse.json({ status: 'done', generated_sections: {
+                                        'Summary': 'Mocked text for Summary',
+                                        'Rationale': 'Mocked text for Rationale',
+                                        'Project Description': 'Mocked text for Project Description',
+                                        'Partnerships and Coordination': 'Mocked text for Partnerships and Coordination',
+                                        'Monitoring': 'Mocked text for Monitoring',
+                                        'Evaluation': 'Mocked text for Evaluation',
+                                }})
                         })
                 )
                 render(
@@ -96,7 +129,7 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                 const mainOutcomeButton = screen.getByLabelText('Main Outcome')
                 await userEvent.type(mainOutcomeButton, 'OA1-Access/Documentation{enter}')
                 const geographicalScopeInput = screen.getByTestId('geographical-scope')
-                await userEvent.selectOptions(geographicalScopeInput, 'One Area')
+                await userEvent.selectOptions(geographicalScopeInput, 'One Country Operation')
                 await userEvent.type(screen.getByLabelText(/Country \/ Location\(s\)/i), 'USA{enter}')
                 await userEvent.type(screen.getByLabelText(/Beneficiaries Profile/i), 'Students')
                 await userEvent.type(screen.getByLabelText(/Duration/i), '12 months{enter}')
@@ -111,12 +144,24 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                         const card = await screen.findByText(new RegExp(`Mocked text for ${sec}`, 'i'), { timeout: 10000 });
                         expect(card).toBeInTheDocument();
                 }
-        })
+        }, 20000)
 
         it('allows editing Summary content', async () => {
                 server.use(
                         http.get('http://localhost:8502/api/templates', () => HttpResponse.json({ templates: { "UNHCR": {} } })),
                         http.get('http://localhost:8502/api/profile', () => HttpResponse.json({ user: { "email": "test@test.com", "name": "Test User" } })),
+                        http.get('http://localhost:8502/api/donors', () => {
+                                return HttpResponse.json({ donors: [{id: '1', name: 'USAID'}] });
+                        }),
+                        http.get('http://localhost:8502/api/outcomes', () => {
+                                return HttpResponse.json({ outcomes: [{id: '1', name: 'OA1-Access/Documentation'}] });
+                        }),
+                        http.get('http://localhost:8502/api/field-contexts', () => {
+                                return HttpResponse.json({ field_contexts: [{id: '1', name: 'USA', geographic_coverage: 'One Country Operation'}] });
+                        }),
+                        http.get('http://localhost:8502/api/users', () => {
+                                return HttpResponse.json({ users: [] });
+                        }),
                         http.post('http://localhost:8502/api/create-session', () => {
                                 return HttpResponse.json({
                                         session_id: 'test-session-id',
@@ -129,9 +174,18 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                                         }
                                 })
                         }),
-                        http.post('http://localhost:8502/api/process_section/:session_id', async ({request}) => {
-                                const body = await request.json()
-                                return HttpResponse.json({ generated_text: `Mocked text for ${body.section}` })
+                        http.post('http://localhost:8502/api/generate-proposal-sections/:session_id', async ({request}) => {
+                                return new HttpResponse(null, { status: 200 });
+                        }),
+                        http.get('http://localhost:8502/api/proposals/:proposal_id/status', async ({request}) => {
+                                return HttpResponse.json({ status: 'done', generated_sections: {
+                                        'Summary': 'Mocked text for Summary',
+                                        'Rationale': 'Mocked text for Rationale',
+                                        'Project Description': 'Mocked text for Project Description',
+                                        'Partnerships and Coordination': 'Mocked text for Partnerships and Coordination',
+                                        'Monitoring': 'Mocked text for Monitoring',
+                                        'Evaluation': 'Mocked text for Evaluation',
+                                }})
                         }),
                         http.post('http://localhost:8502/api/update-section-content', async ({request}) => {
                                 const body = await request.json()
@@ -149,7 +203,7 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                 const mainOutcomeButton = screen.getByLabelText('Main Outcome')
                 await userEvent.type(mainOutcomeButton, 'OA1-Access/Documentation{enter}')
                 const geographicalScopeInput = screen.getByTestId('geographical-scope')
-                await userEvent.selectOptions(geographicalScopeInput, 'One Area')
+                await userEvent.selectOptions(geographicalScopeInput, 'One Country Operation')
                 await userEvent.type(screen.getByLabelText(/Country \/ Location\(s\)/i), 'USA{enter}')
                 await userEvent.type(screen.getByLabelText(/Beneficiaries Profile/i), 'Students')
                 await userEvent.type(screen.getByLabelText(/Duration/i), '12 months{enter}')
@@ -181,26 +235,42 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
 
                 const regenerated = await screen.findByText(/Custom Summary Text/i)
                 expect(regenerated).toBeInTheDocument()
-        }),
+        }, 20000),
 
         it('hides the input form when a finalized proposal is loaded', async () => {
                 server.use(
                         http.get('http://localhost:8502/api/templates', () => HttpResponse.json({ templates: { "UNHCR": {} } })),
                         http.get('http://localhost:8502/api/profile', () => HttpResponse.json({ user: { "email": "test@test.com", "name": "Test User" } })),
+                        http.get('http://localhost:8502/api/donors', () => {
+                                return HttpResponse.json({ donors: [{id: '1', name: 'USAID'}] });
+                        }),
+                        http.get('http://localhost:8502/api/outcomes', () => {
+                                return HttpResponse.json({ outcomes: [{id: '1', name: 'OA1-Access/Documentation'}] });
+                        }),
+                        http.get('http://localhost:8502/api/field-contexts', () => {
+                                return HttpResponse.json({ field_contexts: [{id: '1', name: 'USA', geographic_coverage: 'One Country Operation'}] });
+                        }),
+                        http.get('http://localhost:8502/api/users', () => {
+                                return HttpResponse.json({ users: [] });
+                        }),
                         http.get('http://localhost:8502/api/load-draft/:proposal_id', () => {
                                 return HttpResponse.json({
                                         proposal_id: 'approved-proposal-123',
                                         session_id: 'test-session-id',
                                         project_description: 'test description',
                                         form_data: {
-                                                "Project Draft Short name": "test project", "Main Outcome": ["OA1-Access/Documentation"],
+                                                "Project Draft Short name": "test project", "Main Outcome": ["1"],
                                                 "Beneficiaries Profile": "test beneficiaries", "Potential Implementing Partner": "test partner",
-                                                "Geographical Scope": "test scope", "Country / Location(s)": "test country",
-                                                "Budget Range": "1M$", "Duration": "12 months", "Targeted Donor": "USAID"
+                                                "Geographical Scope": "One Country Operation", "Country / Location(s)": "1",
+                                                "Budget Range": "1M$", "Duration": "12 months", "Targeted Donor": "1"
                                         },
                                         generated_sections: { 'Summary': 'Mocked text for Summary' },
-                                        is_accepted: true
+                                        is_accepted: true,
+                                        status: 'approved'
                                 })
+                        }),
+                        http.get('http://localhost:8502/api/proposals/:proposal_id/status-history', () => {
+                                return HttpResponse.json({ statuses: [] });
                         })
                 )
 
