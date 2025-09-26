@@ -12,6 +12,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File, BackgroundTasks
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError 
+from slugify import slugify
 
 #  Internal Modules
 from backend.core.db import get_engine
@@ -192,7 +193,7 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
     Runs the proposal generation process for all sections in the background.
     """
     logger.info(f"Starting background generation for proposal {proposal_id}")
-    knowledge_file_path = None
+    knowledge_file_paths = []
     try:
         with get_engine().begin() as connection:
             connection.execute(
@@ -215,23 +216,45 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
         all_sections = {}
 
         if associated_knowledge_cards:
-            knowledge_content = []
-            for card in associated_knowledge_cards:
-                if card.get("generated_sections"):
-                    knowledge_content.append(card["generated_sections"])
+            with get_engine().connect() as connection:
+                for card in associated_knowledge_cards:
+                    card_id = card.get("id")
+                    if not card_id:
+                        logger.warning("Associated knowledge card missing 'id', skipping.")
+                        continue
 
-            if knowledge_content:
-                tmp_dir = os.path.join("knowledge", "tmp")
-                os.makedirs(tmp_dir, exist_ok=True)
-                with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix=".json", dir=tmp_dir) as temp_file:
-                    json.dump(knowledge_content, temp_file)
-                    knowledge_file_path = temp_file.name
+                    card_details = connection.execute(
+                        text("SELECT summary, donor_id, outcome_id, field_context_id FROM knowledge_cards WHERE id = :card_id"),
+                        {"card_id": str(card_id)}
+                    ).fetchone()
+
+                    if not card_details:
+                        logger.warning(f"Knowledge card with id {card_id} not found, skipping.")
+                        continue
+
+                    card_summary = card_details.summary
+                    link_type, link_id = None, None
+                    if card_details.donor_id:
+                        link_type, link_id = "donor", card_details.donor_id
+                    elif card_details.outcome_id:
+                        link_type, link_id = "outcome", card_details.outcome_id
+                    elif card_details.field_context_id:
+                        link_type, link_id = "field_context", card_details.field_context_id
+
+                    filename = f"{link_type}-{link_id}-{slugify(card_summary)}.json" if link_type and link_id else f"{slugify(card_summary)}.json"
+                    filepath = os.path.join("backend", "knowledge", filename)
+
+                    if os.path.exists(filepath):
+                        knowledge_file_paths.append(filepath)
+                    else:
+                        logger.warning(f"Knowledge file not found at path: {filepath}")
+
+        crew_instance = ProposalCrew(knowledge_file_paths=knowledge_file_paths).generate_proposal_crew()
 
         for section_config in proposal_template["sections"]:
             section_name = section_config["section_name"]
             logger.info(f"Generating section: {section_name} for proposal {proposal_id}")
 
-            crew_instance = ProposalCrew(knowledge_file_path=knowledge_file_path).generate_proposal_crew()
             result = crew_instance.kickoff(inputs={
                 "section": section_name,
                 "form_data": form_data,
@@ -246,7 +269,6 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
                 parsed = json.loads(clean_output)
             except (AttributeError, json.JSONDecodeError) as e:
                 logger.error(f"[CREWAI PARSE ERROR] for section {section_name}: {e}")
-                # Skip this section and continue with the next
                 continue
 
             generated_text = parsed.get("generated_content", "").strip()
@@ -278,8 +300,7 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
         except Exception as db_error:
             logger.error(f"Failed to update proposal status to 'failed' for {proposal_id}: {db_error}", exc_info=True)
     finally:
-        if knowledge_file_path and os.path.exists(knowledge_file_path):
-            os.remove(knowledge_file_path)
+        pass
 
 @router.post("/generate-proposal-sections/{session_id}", status_code=202)
 async def generate_proposal_sections(session_id: str, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
