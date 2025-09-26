@@ -74,6 +74,30 @@ def test_engine():
                     FOREIGN KEY (knowledge_card_id) REFERENCES knowledge_cards(id)
                 )
             """))
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS donors (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    created_by TEXT
+                )
+            """))
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS outcomes (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    created_by TEXT
+                )
+            """))
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS field_contexts (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    title TEXT,
+                    category TEXT,
+                    geographic_coverage TEXT,
+                    created_by TEXT
+                )
+            """))
     return engine
 
 @pytest.fixture(scope="function", autouse=True)
