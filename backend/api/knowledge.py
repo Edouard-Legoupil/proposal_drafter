@@ -69,12 +69,31 @@ class KnowledgeCardIn(BaseModel):
 def _save_knowledge_card_content_to_file(connection, card_id: uuid.UUID, generated_sections: dict):
     """
     Saves the generated content of a knowledge card to a file in the 'backend/knowledge' directory.
-    The filename is a concatenation of the link type, link ID, and a slugified summary.
+    The filename is a concatenation of the link type, a human-readable link label, and a slugified summary.
     """
     try:
-        # Fetch the knowledge card's details to construct the filename
+        # Fetch the knowledge card's details and the name of the linked entity
         card_details = connection.execute(
-            text("SELECT summary, donor_id, outcome_id, field_context_id FROM knowledge_cards WHERE id = :card_id"),
+            text("""
+                SELECT
+                    kc.summary,
+                    kc.donor_id,
+                    kc.outcome_id,
+                    kc.field_context_id,
+                    d.name as donor_name,
+                    o.name as outcome_name,
+                    fc.name as field_context_name
+                FROM
+                    knowledge_cards kc
+                LEFT JOIN
+                    donors d ON kc.donor_id = d.id
+                LEFT JOIN
+                    outcomes o ON kc.outcome_id = o.id
+                LEFT JOIN
+                    field_contexts fc ON kc.field_context_id = fc.id
+                WHERE
+                    kc.id = :card_id
+            """),
             {"card_id": str(card_id)}
         ).fetchone()
 
@@ -84,30 +103,34 @@ def _save_knowledge_card_content_to_file(connection, card_id: uuid.UUID, generat
 
         card_summary = card_details.summary
         link_type = None
-        link_id = None
+        link_label = None
 
         if card_details.donor_id:
             link_type = "donor"
-            link_id = card_details.donor_id
+            link_label = card_details.donor_name
         elif card_details.outcome_id:
             link_type = "outcome"
-            link_id = card_details.outcome_id
+            link_label = card_details.outcome_name
         elif card_details.field_context_id:
             link_type = "field_context"
-            link_id = card_details.field_context_id
+            link_label = card_details.field_context_name
 
-        # Create a clean, URL-safe filename
-        if link_type and link_id:
-            filename = f"{link_type}-{link_id}-{slugify(card_summary)}.json"
+        # Create a clean, URL-safe filename using the human-readable label
+        if link_type and link_label:
+            filename = f"{link_type}-{slugify(link_label)}-{slugify(card_summary)}.json"
         else:
             # Fallback for cards without a direct link
             filename = f"{slugify(card_summary)}.json"
 
-        # Correctly join paths to ensure it's always relative to the project's 'backend' directory
-        filepath = os.path.join("backend", "knowledge", filename)
+        # Construct a robust path to the 'backend/knowledge' directory.
+        # This is relative to this file's location to avoid CWD issues.
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        # from backend/api/ go to backend/ and then knowledge/
+        knowledge_dir = os.path.join(current_dir, "..", "knowledge")
+        filepath = os.path.join(knowledge_dir, filename)
 
         # Ensure the knowledge directory exists
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        os.makedirs(knowledge_dir, exist_ok=True)
 
         # Write the generated sections to the JSON file
         with open(filepath, 'w') as f:
