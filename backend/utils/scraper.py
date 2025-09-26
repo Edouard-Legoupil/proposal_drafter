@@ -2,7 +2,13 @@ import requests
 from bs4 import BeautifulSoup
 import logging
 import io
+from urllib.parse import urlparse
 from PyPDF2 import PdfReader
+import os
+import time
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -14,8 +20,21 @@ def scrape_url(url: str) -> str:
     logger.info(f"Starting scrape for URL: {url}")
 
     try:
+        headers = {}
+        parsed_url = urlparse(url)
+        if parsed_url.netloc == "www.unhcr.org":
+            logger.info("UNHCR URL detected, adding authentication headers and delay.")
+            time.sleep(10)  # Add a 10-second delay
+            client_id = os.getenv("CF-Access-Client-Id")
+            client_secret = os.getenv("CF-Access-Client-Secret")
+            if client_id and client_secret:
+                auth_token = f"{client_id}:{client_secret}"
+                headers["Authorization"] = f"Bearer {auth_token}"
+            else:
+                logger.warning("Cloudflare credentials not found in environment variables.")
+
         logger.info("Sending GET request...")
-        response = requests.get(url, timeout=20)
+        response = requests.get(url, timeout=20, headers=headers)
         logger.info(f"Received response with status code: {response.status_code}")
         response.raise_for_status()
 
