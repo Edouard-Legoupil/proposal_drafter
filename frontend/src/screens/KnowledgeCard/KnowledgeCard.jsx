@@ -326,7 +326,7 @@ export default function KnowledgeCard() {
         }
 
         setLoading(true);
-        setLoadingMessage("Identifying references from the web. Just a minute...");
+        setLoadingMessage("Let me search the web for you and identify the relevant references. Just a minute...");
         
         try {
             // Build title from linked elements only (not summary)
@@ -354,13 +354,13 @@ export default function KnowledgeCard() {
 
             if (response.ok) {
                 await fetchData(); // Wait for data refresh
-                alert("References identified successfully!");
+                alert("Good News! References were successfully identified !");
             } else {
                 const error = await response.json();
-                alert(`Error identifying references: ${error.detail}`);
+                alert(`Aie.. Error identifying references: ${error.detail}`);
             }
         } catch (error) {
-            console.error("Failed to identify references:", error);
+            console.error("Sorry - I failed to identify references:", error);
             alert("An error occurred while identifying references.");
         } finally {
             setLoading(false);
@@ -387,7 +387,7 @@ export default function KnowledgeCard() {
         }
     
         setLoading(true);
-        setLoadingMessage("Ingesting references now. This may take a while, you may come back to this page in a few minutes...");
+        setLoadingMessage("Gosh! That it is a lot to read for a human :)! Ingesting references now! This may take a while, you may come back to this page in a few minutes...");
     
         try {
             const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${cardId}/ingest-references`, {
@@ -553,7 +553,7 @@ export default function KnowledgeCard() {
         }
 
         setLoading(true);
-        setLoadingMessage("Deleting reference...");
+        setLoadingMessage("Deleting this reference as requested...");
 
         try {
             const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/references/${refId}`, {
