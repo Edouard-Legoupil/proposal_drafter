@@ -64,6 +64,16 @@ def test_engine():
                     generated_sections TEXT
                 )
             """))
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS knowledge_card_history (
+                    id TEXT PRIMARY KEY,
+                    knowledge_card_id TEXT NOT NULL,
+                    generated_sections_snapshot TEXT,
+                    created_by TEXT,
+                    created_at DATETIME,
+                    FOREIGN KEY (knowledge_card_id) REFERENCES knowledge_cards(id)
+                )
+            """))
     return engine
 
 @pytest.fixture(scope="function", autouse=True)
@@ -92,6 +102,11 @@ def authenticated_client(client, db_session):
     """An authenticated TestClient."""
     user_id = str(uuid.uuid4())
     user_email = "test@example.com"
+
+    # HACK: Clear the user if it exists to prevent IntegrityError in tests.
+    # This is needed because some tests commit transactions, which can cause
+    # data to leak between tests when using an in-memory SQLite DB.
+    db_session.execute(text("DELETE FROM users WHERE email = :email"), {"email": user_email})
 
     db_session.execute(
         text("INSERT INTO users (id, email, name, password) VALUES (:id, :email, :name, :password)"),

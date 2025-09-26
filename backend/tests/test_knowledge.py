@@ -53,11 +53,15 @@ def test_create_and_update_knowledge_card_saves_content_to_file(authenticated_cl
     updated_content = "This is the updated first section."
     generated_sections["section_1"] = updated_content
 
+    # The test client runs in a separate thread and doesn't share the transaction.
+    # We need to commit the changes to the database so that the API endpoint can see them.
+    db_session.commit()
+
     response = authenticated_client.put(
         f"/api/knowledge-cards/{card_id}/sections/section_1",
         json={"content": updated_content}
     )
-    assert response.status_code == 200
+    assert response.status_code == 200, f"Expected status 200, got {response.status_code}. Response: {response.text}"
 
     # 6. Verify that the file was updated
     with open(filepath, 'r') as f:

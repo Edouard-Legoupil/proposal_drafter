@@ -25,7 +25,7 @@ async def get_development_time_metrics(
             SELECT
                 psh.proposal_id,
                 psh.status,
-                LEAD(psh.created_at, 1, NOW()) OVER (PARTITION BY psh.proposal_id ORDER BY psh.created_at) - psh.created_at AS duration
+                LEAD(psh.created_at, 1, CURRENT_TIMESTAMP) OVER (PARTITION BY psh.proposal_id ORDER BY psh.created_at) - psh.created_at AS duration
             FROM
                 proposal_status_history psh
             JOIN

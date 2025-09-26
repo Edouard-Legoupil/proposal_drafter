@@ -196,7 +196,7 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
     try:
         with get_engine().begin() as connection:
             connection.execute(
-                text("UPDATE proposals SET status = 'generating_sections', updated_at = NOW() WHERE id = :id"),
+                text("UPDATE proposals SET status = 'generating_sections', updated_at = CURRENT_TIMESTAMP WHERE id = :id"),
                 {"id": proposal_id}
             )
 
@@ -262,7 +262,7 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
 
         with get_engine().begin() as connection:
             connection.execute(
-                text("UPDATE proposals SET generated_sections = :sections, status = 'draft', updated_at = NOW() WHERE id = :id"),
+                text("UPDATE proposals SET generated_sections = :sections, status = 'draft', updated_at = CURRENT_TIMESTAMP WHERE id = :id"),
                 {"sections": json.dumps(all_sections), "id": proposal_id}
             )
         logger.info(f"Successfully generated all sections for proposal {proposal_id}")
@@ -272,7 +272,7 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
         try:
             with get_engine().begin() as connection:
                 connection.execute(
-                    text("UPDATE proposals SET status = 'failed', updated_at = NOW() WHERE id = :id"),
+                    text("UPDATE proposals SET status = 'failed', updated_at = CURRENT_TIMESTAMP WHERE id = :id"),
                     {"id": proposal_id}
                 )
         except Exception as db_error:
@@ -420,7 +420,7 @@ async def process_section(session_id: str, request: SectionRequest, current_user
             
             sections[request.section] = generated_text
             conn.execute(
-                text("UPDATE proposals SET generated_sections = :sections, updated_at = NOW() WHERE id = :id"),
+                text("UPDATE proposals SET generated_sections = :sections, updated_at = CURRENT_TIMESTAMP WHERE id = :id"),
                 {"sections": json.dumps(sections), "id": request.proposal_id}
             )
     except Exception as e:
@@ -494,7 +494,7 @@ async def update_section_content(request: UpdateSectionRequest, current_user: di
                         ARRAY[:section],
                         to_jsonb(:content::text)
                     ),
-                    updated_at = NOW()
+                    updated_at = CURRENT_TIMESTAMP
                     WHERE id = :id
                 """),
                 {
@@ -552,7 +552,7 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
                     text("""
                         UPDATE proposals
                         SET form_data = :form, project_description = :desc, generated_sections = :sections,
-                            template_name = :template_name, updated_at = NOW()
+                            template_name = :template_name, updated_at = CURRENT_TIMESTAMP
                         WHERE id = :id
                     """),
                     {
@@ -896,7 +896,7 @@ async def request_submission(proposal_id: uuid.UUID, current_user: dict = Depend
             ).scalar() or {}
 
             connection.execute(
-                text("UPDATE proposals SET status = 'submission', updated_at = NOW() WHERE id = :id AND user_id = :uid"),
+                text("UPDATE proposals SET status = 'submission', updated_at = CURRENT_TIMESTAMP WHERE id = :id AND user_id = :uid"),
                 {"id": proposal_id, "uid": user_id}
             )
             # Log the status change
@@ -924,7 +924,7 @@ async def submit_proposal(proposal_id: uuid.UUID, current_user: dict = Depends(g
             ).scalar() or {}
 
             connection.execute(
-                text("UPDATE proposals SET status = 'submitted', updated_at = NOW() WHERE id = :id AND user_id = :uid"),
+                text("UPDATE proposals SET status = 'submitted', updated_at = CURRENT_TIMESTAMP WHERE id = :id AND user_id = :uid"),
                 {"id": proposal_id, "uid": user_id}
             )
             # Log the status change
@@ -951,7 +951,7 @@ async def finalize_proposal(request: FinalizeProposalRequest, current_user: dict
             ).scalar() or {}
 
             connection.execute(
-                text("UPDATE proposals SET is_accepted = TRUE, status = 'approved', updated_at = NOW() WHERE id = :id AND user_id = :uid"),
+                text("UPDATE proposals SET is_accepted = TRUE, status = 'approved', updated_at = CURRENT_TIMESTAMP WHERE id = :id AND user_id = :uid"),
                 {"id": request.proposal_id, "uid": current_user["user_id"]}
             )
             # Log the status change
@@ -1043,7 +1043,7 @@ async def submit_for_review(proposal_id: uuid.UUID, request: SubmitPeerReviewReq
 
             # Update the proposal status
             connection.execute(
-                text("UPDATE proposals SET status = 'in_review', updated_at = NOW() WHERE id = :id"),
+                text("UPDATE proposals SET status = 'in_review', updated_at = CURRENT_TIMESTAMP WHERE id = :id"),
                 {"id": proposal_id}
             )
 
@@ -1069,7 +1069,7 @@ async def submit_for_review(proposal_id: uuid.UUID, request: SubmitPeerReviewReq
                     connection.execute(
                         text("""
                             UPDATE proposal_peer_reviews
-                            SET deadline = :deadline, updated_at = NOW()
+                            SET deadline = :deadline, updated_at = CURRENT_TIMESTAMP
                             WHERE id = :id
                         """),
                         {"deadline": reviewer_info.deadline, "id": pending_review.id}
@@ -1124,7 +1124,7 @@ async def update_proposal_status(proposal_id: uuid.UUID, request: UpdateProposal
 
             # Update the proposal status
             connection.execute(
-                text("UPDATE proposals SET status = :status, updated_at = NOW() WHERE id = :id"),
+                text("UPDATE proposals SET status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :id"),
                 {"status": new_status, "id": proposal_id}
             )
 
@@ -1366,7 +1366,7 @@ async def delete_proposal(proposal_id: uuid.UUID, current_user: dict = Depends(g
     try:
         with get_engine().begin() as connection:
             result = connection.execute(
-                text("UPDATE proposals SET status = 'deleted', updated_at = NOW() WHERE id = :id AND user_id = :uid RETURNING id"),
+                text("UPDATE proposals SET status = 'deleted', updated_at = CURRENT_TIMESTAMP WHERE id = :id AND user_id = :uid RETURNING id"),
                 {"id": proposal_id, "uid": user_id}
             )
             if not result.fetchone():
@@ -1400,7 +1400,7 @@ async def transfer_ownership(proposal_id: uuid.UUID, request: TransferOwnershipR
 
             # Then, update the proposal's user_id
             result = connection.execute(
-                text("UPDATE proposals SET user_id = :new_owner_id, updated_at = NOW() WHERE id = :id AND user_id = :uid RETURNING id"),
+                text("UPDATE proposals SET user_id = :new_owner_id, updated_at = CURRENT_TIMESTAMP WHERE id = :id AND user_id = :uid RETURNING id"),
                 {"new_owner_id": new_owner_id, "id": proposal_id, "uid": user_id}
             )
 
@@ -1444,7 +1444,7 @@ async def revert_to_status(proposal_id: uuid.UUID, status: str, current_user: di
             connection.execute(
                 text("""
                     UPDATE proposals
-                    SET status = :status, generated_sections = :snapshot, updated_at = NOW()
+                    SET status = :status, generated_sections = :snapshot, updated_at = CURRENT_TIMESTAMP
                     WHERE id = :id AND user_id = :uid
                 """),
                 {"status": status, "snapshot": json.dumps(snapshot), "id": proposal_id, "uid": user_id}
@@ -1578,7 +1578,7 @@ async def save_author_response(review_id: uuid.UUID, request: AuthorResponseRequ
 
             # Update the author_response
             connection.execute(
-                text("UPDATE proposal_peer_reviews SET author_response = :response, updated_at = NOW() WHERE id = :rid"),
+                text("UPDATE proposal_peer_reviews SET author_response = :response, updated_at = CURRENT_TIMESTAMP WHERE id = :rid"),
                 {"response": request.author_response, "rid": review_id}
             )
 

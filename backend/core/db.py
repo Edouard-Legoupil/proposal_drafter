@@ -70,7 +70,7 @@ def get_engine():
             
             # Test the connection immediately
             with engine.connect() as test_conn:
-                result = test_conn.execute(text("SELECT NOW()"))
+                result = test_conn.execute(text("SELECT CURRENT_TIMESTAMP"))
                 logger.info(f"✅ Database connection test passed: {result.scalar()}")
 
         except Exception as e:
@@ -103,7 +103,7 @@ def test_connection():
         eng = get_engine()
         with eng.connect() as conn:
             from sqlalchemy import text
-            result = conn.execute(ext("SELECT NOW() as current_time, version() as db_version"))
+            result = conn.execute(text("SELECT CURRENT_TIMESTAMP as current_time, version() as db_version"))
             logger.info(f"✅ Database connection successful. Current time: {result.scalar()}")
             return True
     except Exception as e:
