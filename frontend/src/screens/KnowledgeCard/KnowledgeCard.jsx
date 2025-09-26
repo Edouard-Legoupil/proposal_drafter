@@ -83,13 +83,17 @@ export default function KnowledgeCard() {
                     const data = await cardRes.json();
                     const card = data.knowledge_card;
                     setSummary(card.summary || '');
+                    let determinedLinkType = '';
                     if (card.donor_id) {
+                        determinedLinkType = 'donor';
                         setLinkType('donor');
                         setLinkedId(card.donor_id);
                     } else if (card.outcome_id) {
+                        determinedLinkType = 'outcome';
                         setLinkType('outcome');
                         setLinkedId(card.outcome_id);
                     } else if (card.field_context_id) {
+                        determinedLinkType = 'field_context';
                         setLinkType('field_context');
                         setLinkedId(card.field_context_id);
                     }
@@ -108,13 +112,19 @@ export default function KnowledgeCard() {
                         setGeneratedSections(null);
                     }
 
-                    // Fetch the template using the name from the card data
-                    if (card.template_name) {
-                        const templateRes = await authenticatedFetch(`${API_BASE_URL}/templates/${card.template_name}`, { credentials: 'include' });
+                    // Fetch the template using the DERIVED linkType, not from the card data
+                    if (determinedLinkType) {
+                        const templateName = `knowledge_card_${determinedLinkType}_template.json`;
+                        const templateRes = await authenticatedFetch(`${API_BASE_URL}/templates/${templateName}`, { credentials: 'include' });
                         if (templateRes.ok) {
                             const templateData = await templateRes.json();
                             setProposalTemplate(templateData);
+                        } else {
+                            console.error(`Failed to load template: ${templateName}`);
+                            setProposalTemplate(null);
                         }
+                    } else {
+                        setProposalTemplate(null);
                     }
                 } else {
                     console.error("Failed to load knowledge card");

@@ -649,20 +649,20 @@ export default function Chat (props)
         }
 
         async function getStatusHistory() {
-                if (sessionStorage.getItem("proposal_id")) {
-                        const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/status-history`, {
-                                method: "GET",
-                                headers: { 'Content-Type': 'application/json' },
-                                credentials: "include"
-                        });
-                        if (response.ok) {
-                                const data = await response.json();
-                                setStatusHistory(data.statuses);
-                        } else if (response.status === 403) {
-                                // If forbidden, user doesn't have rights, so we don't show history.
-                                setStatusHistory([]);
-                        }
-                }
+                // if (sessionStorage.getItem("proposal_id")) {
+                //      const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/status-history`, {
+                //              method: "GET",
+                //              headers: { 'Content-Type': 'application/json' },
+                //              credentials: "include"
+                //      });
+                //      if (response.ok) {
+                //              const data = await response.json();
+                //              setStatusHistory(data.statuses);
+                //      } else if (response.status === 403) {
+                //              // If forbidden, user doesn't have rights, so we don't show history.
+                //              setStatusHistory([]);
+                //      }
+                // }
         }
 
         async function getContent()         {
