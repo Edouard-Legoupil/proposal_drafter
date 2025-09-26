@@ -51,7 +51,7 @@ class UpdateSectionIn(BaseModel):
 
 class KnowledgeCardIn(BaseModel):
     summary: str
-    template_name: Optional[str] = "knowledge_card_template.json"
+    template_name: Optional[str] = None
     donor_id: Optional[uuid.UUID] = None
     outcome_id: Optional[uuid.UUID] = None
     field_context_id: Optional[uuid.UUID] = None
@@ -93,6 +93,16 @@ async def create_knowledge_card(card: KnowledgeCardIn, current_user: dict = Depe
     if sum(k is not None for k in foreign_keys) > 1:
         raise HTTPException(status_code=400, detail="A knowledge card can only be linked to one donor, outcome, or field context at a time.")
 
+    # Determine the template name based on the linked entity if not provided
+    template_name = card.template_name
+    if not template_name:
+        if card.donor_id:
+            template_name = "knowledge_card_donor_template.json"
+        elif card.outcome_id:
+            template_name = "knowledge_card_outcome_template.json"
+        elif card.field_context_id:
+            template_name = "knowledge_card_field_context_template.json"
+
     try:
         with get_engine().begin() as connection:
             connection.execute(
@@ -103,7 +113,7 @@ async def create_knowledge_card(card: KnowledgeCardIn, current_user: dict = Depe
                 {
                     "id": card_id,
                     "summary": card.summary,
-                    "template_name": card.template_name,
+                    "template_name": template_name,
                     "donor_id": card.donor_id,
                     "outcome_id": card.outcome_id,
                     "field_context_id": card.field_context_id,
