@@ -68,21 +68,42 @@ class KnowledgeCardIn(BaseModel):
 
 def _save_knowledge_card_content_to_file(connection, card_id: uuid.UUID, generated_sections: dict):
     """
-    Saves the generated content of a knowledge card to a file.
+    Saves the generated content of a knowledge card to a file in the 'backend/knowledge' directory.
+    The filename is a concatenation of the link type, link ID, and a slugified summary.
     """
     try:
-        # Fetch the knowledge card's summary to use in the filename
-        card_summary = connection.execute(
-            text("SELECT summary FROM knowledge_cards WHERE id = :card_id"),
-            {"card_id": card_id}
-        ).scalar_one_or_none()
+        # Fetch the knowledge card's details to construct the filename
+        card_details = connection.execute(
+            text("SELECT summary, donor_id, outcome_id, field_context_id FROM knowledge_cards WHERE id = :card_id"),
+            {"card_id": str(card_id)}
+        ).fetchone()
 
-        if not card_summary:
+        if not card_details:
             logger.error(f"Cannot save content to file: Knowledge card with id {card_id} not found.")
             return
 
-        # Create a clean, URL-safe filename from the summary
-        filename = f"{slugify(card_summary)}.json"
+        card_summary = card_details.summary
+        link_type = None
+        link_id = None
+
+        if card_details.donor_id:
+            link_type = "donor"
+            link_id = card_details.donor_id
+        elif card_details.outcome_id:
+            link_type = "outcome"
+            link_id = card_details.outcome_id
+        elif card_details.field_context_id:
+            link_type = "field_context"
+            link_id = card_details.field_context_id
+
+        # Create a clean, URL-safe filename
+        if link_type and link_id:
+            filename = f"{link_type}-{link_id}-{slugify(card_summary)}.json"
+        else:
+            # Fallback for cards without a direct link
+            filename = f"{slugify(card_summary)}.json"
+
+        # Correctly join paths to ensure it's always relative to the project's 'backend' directory
         filepath = os.path.join("backend", "knowledge", filename)
 
         # Ensure the knowledge directory exists
@@ -102,15 +123,17 @@ def create_knowledge_card_history_entry(connection, card_id: uuid.UUID, generate
     """
     Creates a history entry for a knowledge card.
     """
+    history_id = uuid.uuid4()
     connection.execute(
         text("""
-            INSERT INTO knowledge_card_history (knowledge_card_id, generated_sections_snapshot, created_by, created_at)
-            VALUES (:knowledge_card_id, :generated_sections_snapshot, :created_by, NOW())
+            INSERT INTO knowledge_card_history (id, knowledge_card_id, generated_sections_snapshot, created_by, created_at)
+            VALUES (:id, :knowledge_card_id, :generated_sections_snapshot, :created_by, CURRENT_TIMESTAMP)
         """),
         {
-            "knowledge_card_id": card_id,
+            "id": str(history_id),
+            "knowledge_card_id": str(card_id),
             "generated_sections_snapshot": json.dumps(generated_sections),
-            "created_by": user_id
+            "created_by": str(user_id)
         }
     )
 
@@ -142,7 +165,7 @@ async def create_knowledge_card(card: KnowledgeCardIn, current_user: dict = Depe
             connection.execute(
                 text("""
                     INSERT INTO knowledge_cards (id, title, summary, template_name, status, donor_id, outcome_id, field_context_id, created_by, updated_by, created_at, updated_at)
-                    VALUES (:id, :summary, :summary, :template_name, 'draft', :donor_id, :outcome_id, :field_context_id, :user_id, :user_id, NOW(), NOW())
+                    VALUES (:id, :summary, :summary, :template_name, 'draft', :donor_id, :outcome_id, :field_context_id, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 """),
                 {
                     "id": card_id,
@@ -159,7 +182,7 @@ async def create_knowledge_card(card: KnowledgeCardIn, current_user: dict = Depe
                     connection.execute(
                         text("""
                             INSERT INTO knowledge_card_references (knowledge_card_id, url, reference_type, summary, created_by, updated_by, created_at, updated_at)
-                            VALUES (:kcid, :url, :reference_type, :summary, :user_id, :user_id, NOW(), NOW())
+                            VALUES (:kcid, :url, :reference_type, :summary, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                         """),
                         {"kcid": card_id, "url": ref.url, "reference_type": ref.reference_type, "summary": ref.summary, "user_id": user_id}
                     )
@@ -396,7 +419,7 @@ async def update_knowledge_card_section(card_id: uuid.UUID, section_name: str, s
             # First, fetch the existing generated_sections
             result = connection.execute(
                 text("SELECT generated_sections FROM knowledge_cards WHERE id = :id"),
-                {"id": card_id}
+                {"id": str(card_id)}
             ).fetchone()
 
             if not result or not result.generated_sections:
@@ -412,8 +435,8 @@ async def update_knowledge_card_section(card_id: uuid.UUID, section_name: str, s
 
             # Save the updated generated_sections back to the database
             connection.execute(
-                text("UPDATE knowledge_cards SET generated_sections = :sections, updated_at = NOW() WHERE id = :id"),
-                {"sections": json.dumps(generated_sections), "id": card_id}
+                text("UPDATE knowledge_cards SET generated_sections = :sections, updated_at = CURRENT_TIMESTAMP WHERE id = :id"),
+                {"sections": json.dumps(generated_sections), "id": str(card_id)}
             )
 
             # Save content to file
@@ -504,7 +527,7 @@ async def create_knowledge_card_reference(card_id: uuid.UUID, reference: Knowled
             result = connection.execute(
                 text("""
                     INSERT INTO knowledge_card_references (knowledge_card_id, url, reference_type, summary, created_by, updated_by, created_at, updated_at)
-                    VALUES (:kcid, :url, :reference_type, :summary, :user_id, :user_id, NOW(), NOW())
+                    VALUES (:kcid, :url, :reference_type, :summary, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                     RETURNING id, url, reference_type, summary
                 """),
                 {"kcid": card_id, "url": reference.url, "reference_type": reference.reference_type, "summary": reference.summary, "user_id": user_id}
@@ -536,7 +559,7 @@ async def update_knowledge_card_reference(reference_id: uuid.UUID, reference: Kn
             connection.execute(
                 text("""
                     UPDATE knowledge_card_references
-                    SET url = :url, reference_type = :reference_type, summary = :summary, updated_by = :user_id, updated_at = NOW()
+                    SET url = :url, reference_type = :reference_type, summary = :summary, updated_by = :user_id, updated_at = CURRENT_TIMESTAMP
                     WHERE id = :id
                 """),
                 {"id": reference_id, "url": reference.url, "reference_type": reference.reference_type, "summary": reference.summary, "user_id": user_id}
@@ -636,7 +659,7 @@ async def _process_and_store_text(reference_id: uuid.UUID, text_content: str, co
 
         # Update scraped_at timestamp
         connection.execute(
-            text("UPDATE knowledge_card_references SET scraped_at = NOW(), scraping_error = FALSE WHERE id = :id"),
+            text("UPDATE knowledge_card_references SET scraped_at = CURRENT_TIMESTAMP, scraping_error = FALSE WHERE id = :id"),
             {"id": reference_id}
         )
         
@@ -644,7 +667,7 @@ async def _process_and_store_text(reference_id: uuid.UUID, text_content: str, co
         logger.error(f"[PROCESS AND STORE TEXT ERROR] {e}", exc_info=True)
         # Mark as error in database
         connection.execute(
-            text("UPDATE knowledge_card_references SET scraping_error = TRUE, updated_at = NOW() WHERE id = :id"),
+            text("UPDATE knowledge_card_references SET scraping_error = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = :id"),
             {"id": reference_id}
         )
         raise
@@ -682,7 +705,7 @@ async def ingest_reference_content(card_id: uuid.UUID, reference_id: uuid.UUID, 
         if not content:
             logger.warning(f"Failed to scrape content from {reference.url}")
             connection.execute(
-                text("UPDATE knowledge_card_references SET scraping_error = TRUE, updated_at = NOW() WHERE id = :id"),
+                text("UPDATE knowledge_card_references SET scraping_error = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = :id"),
                 {"id": reference.id}
             )
             _update_ingest_progress(card_id, reference_id, "error", "Failed to scrape content.")
@@ -816,7 +839,7 @@ async def generate_content_background(card_id: uuid.UUID):
         with get_engine().begin() as connection:
             _update_progress(card_id, "Content generation complete.", 100)
             connection.execute(
-                text("UPDATE knowledge_cards SET generated_sections = :sections, status = 'approved', updated_at = NOW() WHERE id = :id"),
+                text("UPDATE knowledge_cards SET generated_sections = :sections, status = 'approved', updated_at = CURRENT_TIMESTAMP WHERE id = :id"),
                 {"sections": json.dumps(generated_sections), "id": card_id}
             )
             
@@ -1100,7 +1123,7 @@ async def identify_references(card_id: uuid.UUID, data: IdentifyReferencesIn, cu
                 connection.execute(
                     text("""
                         INSERT INTO knowledge_card_references (knowledge_card_id, url, reference_type, summary, created_by, updated_by, created_at, updated_at)
-                        VALUES (:kcid, :url, :reference_type, :summary, :user_id, :user_id, NOW(), NOW())
+                        VALUES (:kcid, :url, :reference_type, :summary, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                     """),
                     {
                         "kcid": card_id,
