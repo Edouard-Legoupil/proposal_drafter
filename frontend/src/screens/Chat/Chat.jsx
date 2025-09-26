@@ -163,15 +163,17 @@ export default function Chat (props)
 
         useEffect(() => {
                 const scope = formData['Geographical Scope'].value;
-                if (scope) {
-                        const filtered = fieldContexts.filter(fc => fc.geographic_coverage === scope);
-                        setFilteredFieldContexts(filtered);
-                } else {
-                        setFilteredFieldContexts(fieldContexts);
-                }
+                const filtered = scope
+                        ? fieldContexts.filter(fc => fc.geographic_coverage === scope)
+                        : fieldContexts;
+                setFilteredFieldContexts(filtered);
 
-                if (formData['Country / Location(s)'].value) {
-                    handleFormInput({ target: { value: "" } }, "Country / Location(s)");
+                const locationValue = formData['Country / Location(s)'].value;
+                if (locationValue) {
+                    const isLocationStillValid = filtered.some(fc => fc.id === locationValue);
+                    if (fieldContexts.length > 0 && !isLocationStillValid) {
+                        handleFormInput({ target: { value: "" } }, "Country / Location(s)");
+                    }
                 }
         }, [formData['Geographical Scope'].value, fieldContexts]);
         function handleFormInput (e, label) {
