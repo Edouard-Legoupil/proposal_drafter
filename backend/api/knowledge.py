@@ -1106,7 +1106,7 @@ async def get_knowledge_card_ingest_status(card_id: uuid.UUID, current_user: dic
                     progress_data = redis_client.get(f"knowledge_card_ingest:{card_id}")
                     if progress_data and progress_data != last_message:
                         last_message = progress_data
-                        yield f"data: {progress_data}\\n\\n"
+                        yield f"data: {progress_data}\n\n"
                     
                     # Add completion check
                     try:
