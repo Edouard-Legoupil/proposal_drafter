@@ -27,8 +27,8 @@ except ImportError:
         pass
 from backend.core.config import load_proposal_template
 from backend.core.llm import get_embedder_config
-from backend.utils.reference_identification_crew import ReferenceIdentificationCrew
-from backend.utils.content_generation_crew import ContentGenerationCrew
+from backend.utils.crew_reference import ReferenceIdentificationCrew
+from backend.utils.crew_knowledge import ContentGenerationCrew
 from backend.utils.scraper import scrape_url
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import litellm

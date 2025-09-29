@@ -42,8 +42,8 @@ class VectorSearchTool(BaseTool):
 class ContentGenerationCrew:
     """ContentGenerationCrew for generating knowledge card content"""
 
-    agents_config = 'config/content_generation_agents.yaml'
-    tasks_config = 'config/content_generation_tasks.yaml'
+    agents_config = 'config/agents_knowledge.yaml'
+    tasks_config = 'config/tasks_knowledge.yaml'
 
     @agent
     def researcher(self) -> Agent:
@@ -86,5 +86,5 @@ class ContentGenerationCrew:
             tasks=[self.research_task(), self.write_task()],
             verbose=True,
             process=Process.sequential,
-            output_log_file='log/content_generation.log'
+            output_log_file='log/log_knowledge.txt'
         )

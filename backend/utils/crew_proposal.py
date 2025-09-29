@@ -19,10 +19,10 @@ class ProposalCrew():
         if self.knowledge_file_paths:
             self.json_knowledge = JSONKnowledgeSource(file_paths=self.knowledge_file_paths)
 
-    agents_config = 'config/agents.yaml'
-    tasks_config = 'config/tasks.yaml'
-    generate_proposal_log = 'log/generate_proposal_log.txt'
-    regenerate_proposal_log = 'log/regenerate_proposal_log.txt'
+    agents_config = 'config/agents_proposal.yaml'
+    tasks_config = 'config/tasks_proposal.yaml'
+    generate_proposal_log = 'log/log_proposal.txt'
+    regenerate_proposal_log = 'log/log_proposal_regenerate.txt'
 
 ## List of agents ##########
     @agent

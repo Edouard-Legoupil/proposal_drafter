@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 #  Internal Modules
-from backend.utils.crew import ProposalCrew
+from backend.utils.crew_proposal import ProposalCrew
 from backend.core.redis import redis_client
 from backend.core.db import engine
 

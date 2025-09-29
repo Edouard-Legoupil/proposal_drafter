@@ -36,7 +36,7 @@ from backend.models.schemas import (
     AuthorResponseRequest
 )
 from backend.utils.proposal_logic import regenerate_section_logic
-from backend.utils.crew import ProposalCrew
+from backend.utils.crew_proposal  import ProposalCrew
 
 # This router handles all endpoints related to the lifecycle of a proposal,
 # from creation and editing to listing and deletion.
@@ -99,7 +99,7 @@ async def create_session(request: CreateSessionRequest, current_user: dict = Dep
     try:
         templates_map = get_available_templates()
         donor_id = request.form_data.get("Targeted Donor")
-        template_name = "unhcr_proposal_template.json"  # Default template
+        template_name = "proposal_template_unhcr.json"  # Default template
 
         with get_engine().begin() as connection:
             if donor_id:
@@ -109,7 +109,7 @@ async def create_session(request: CreateSessionRequest, current_user: dict = Dep
                     {"id": donor_id}
                 ).scalar()
                 if donor_name_result:
-                    template_name = templates_map.get(donor_name_result, "unhcr_proposal_template.json")
+                    template_name = templates_map.get(donor_name_result, "proposal_template_unhcr.json")
 
             # Create the main proposal record
             connection.execute(

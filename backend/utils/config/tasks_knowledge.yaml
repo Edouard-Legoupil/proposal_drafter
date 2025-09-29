@@ -1,5 +1,5 @@
 research_task:
-  description: "For the given section name and instructions, find the most relevant information from the knowledge base. The section name is '{section_name}' and the instructions are '{instructions}'. The knowledge card ID is '{knowledge_card_id}'."
+  description: "For the given section name and instructions, find the most relevant information from the knowledge base. The section name is '{section_name}' and the instructions are '{instructions}'."
   expected_output: "A bulleted list of key findings and supporting evidence from the knowledge base that directly addresses the instructions for the section."
 
 write_task:

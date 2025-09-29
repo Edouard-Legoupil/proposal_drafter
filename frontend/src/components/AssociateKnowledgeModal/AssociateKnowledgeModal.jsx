@@ -106,9 +106,9 @@ export default function AssociateKnowledgeModal({ isOpen, onClose, onConfirm, do
           )}
         </div>
         <div className="modal-actions">
-          <button onClick={() => navigate('/knowledge-card/new')}>Create New Knowledge Card</button>
+          <button onClick={() => navigate('/knowledge-card/new')}>Create New Knowledge Card</button>  
           <div>
-            <button onClick={onClose}>Cancel</button>
+            <button onClick={onClose}>Cancel </button> 
             {onConfirm && <button onClick={handleConfirm} disabled={!selectionHasChanged()}>Confirm</button>}
           </div>
         </div>

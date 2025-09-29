@@ -20,8 +20,8 @@ class CustomSerperSearchTool(SerperDevTool):
 class ReferenceIdentificationCrew:
     """ReferenceIdentificationCrew for identifying references"""
 
-    agents_config = 'config/reference_identification_agents.yaml'
-    tasks_config = 'config/reference_identification_tasks.yaml'
+    agents_config = 'config/agents_reference.yaml'
+    tasks_config = 'config/tasks_reference.yaml'
 
     def _get_instructions(self, link_type: str):
         instructions = {
@@ -127,7 +127,7 @@ class ReferenceIdentificationCrew:
             agents=[self.researcher()],
             tasks=[self.research_task()],
             verbose=True,
-            output_log_file='log/app_ref_search.log'
+            output_log_file='log/log_reference.txt'
         )
 
     def kickoff(self, link_type: str, topic: str):
