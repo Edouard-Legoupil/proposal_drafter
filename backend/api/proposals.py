@@ -236,14 +236,19 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
                     link_type, link_id = None, None
                     if card_details.donor_id:
                         link_type, link_id = "donor", card_details.donor_id
+                        link_label = card_details.donor_name
                     elif card_details.outcome_id:
                         link_type, link_id = "outcome", card_details.outcome_id
+                        link_label = card_details.outcome_name
                     elif card_details.field_context_id:
                         link_type, link_id = "field_context", card_details.field_context_id
+                        link_label = card_details.field_context_name
 
-                    filename = f"{link_type}-{link_id}-{slugify(card_summary)}.json" if link_type and link_id else f"{slugify(card_summary)}.json"
+
+                    filename = f"{link_type}-{slugify(link_label)}-{slugify(card_summary)}.json" if link_type and link_id else f"{slugify(card_summary)}.json"
                     filepath = os.path.join("backend", "knowledge", filename)
-
+                    logger.info(f"Associating knowledge file: {filename} for proposal {proposal_id}")
+                    
                     if os.path.exists(filepath):
                         knowledge_file_paths.append(filepath)
                     else:
