@@ -1,12 +1,12 @@
 import './KnowledgeCard.css';
-import { useState, useEffect, useCallback, useRef } from 'react'; // Added useRef
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'; // Added lazy, Suspense
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import CreatableSelect from 'react-select/creatable';
 import Base from '../../components/Base/Base';
 import CommonButton from '../../components/CommonButton/CommonButton';
 import LoadingModal from '../../components/LoadingModal/LoadingModal';
 import ProgressModal from '../../components/ProgressModal/ProgressModal';
-import KnowledgeCardHistory from '../../components/KnowledgeCardHistory/KnowledgeCardHistory';
+const KnowledgeCardHistory = lazy(() => import('../../components/KnowledgeCardHistory/KnowledgeCardHistory'));
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 
@@ -783,10 +783,12 @@ export default function KnowledgeCard() {
             />
             
             {isHistoryModalOpen && (
-                <KnowledgeCardHistory 
-                    history={history} 
-                    onClose={() => setIsHistoryModalOpen(false)} 
-                />
+                <Suspense fallback={<div>Loading history...</div>}>
+                    <KnowledgeCardHistory
+                        history={history}
+                        onClose={() => setIsHistoryModalOpen(false)}
+                    />
+                </Suspense>
             )}
             
             <LoadingModal isOpen={loading} message={loadingMessage} />
