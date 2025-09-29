@@ -83,7 +83,7 @@ async def generate_and_download_document(
         # Load the template to get the correct section order and list.
         if not template_name:
             # Fallback to a default if no template is stored with the proposal.
-            template_name = "unhcr_proposal_template.json"
+            template_name = "proposal_template_unhcr.json"
             logger.warning(f"Proposal {proposal_id} has no template_name, falling back to default.")
 
         proposal_template = load_proposal_template(template_name)
