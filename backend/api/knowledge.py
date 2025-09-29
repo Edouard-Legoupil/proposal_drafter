@@ -874,7 +874,7 @@ async def generate_content_background(card_id: uuid.UUID):
 
         template = load_proposal_template(template_name)
         generated_sections = {}
-        crew = ContentGenerationCrew()
+        crew = ContentGenerationCrew(knowledge_card_id=str(card_id))
 
         num_sections = len(template.get("sections", []))
         for i, section in enumerate(template.get("sections", [])):
@@ -886,7 +886,6 @@ async def generate_content_background(card_id: uuid.UUID):
             inputs = {
                 "section_name": section_name,
                 "instructions": instructions,
-                "knowledge_card_id": str(card_id),
             }
 
             # Add timeout and error handling for each section

@@ -12,8 +12,13 @@ import litellm
 class VectorSearchTool(BaseTool):
     name: str = "Vector Search"
     description: str = "Searches for relevant information in the knowledge base using vector similarity."
+    knowledge_card_id: str = None
 
-    def _run(self, search_query: str, knowledge_card_id: str) -> str:
+    def __init__(self, knowledge_card_id: str):
+        super().__init__()
+        self.knowledge_card_id = knowledge_card_id
+
+    def _run(self, search_query: str) -> str:
         embedder_config = get_embedder_config()["config"]
         model = f"azure/{embedder_config.pop('deployment_id')}"
         embedder_config.pop('model', None)
@@ -35,15 +40,18 @@ class VectorSearchTool(BaseTool):
                 ORDER BY embedding <=> :query_embedding
                 LIMIT 5;
             """)
-            results = connection.execute(query, {"kc_id": knowledge_card_id, "query_embedding": str(query_embedding)}).fetchall()
+            results = connection.execute(query, {"kc_id": self.knowledge_card_id, "query_embedding": str(query_embedding)}).fetchall()
             return "\n".join([row[0] for row in results])
 
 @CrewBase
 class ContentGenerationCrew:
     """ContentGenerationCrew for generating knowledge card content"""
-
     agents_config = 'config/agents_knowledge.yaml'
     tasks_config = 'config/tasks_knowledge.yaml'
+    knowledge_card_id: str = None
+
+    def __init__(self, knowledge_card_id: str):
+        self.knowledge_card_id = knowledge_card_id
 
     @agent
     def researcher(self) -> Agent:
@@ -52,7 +60,7 @@ class ContentGenerationCrew:
             llm=llm,
             verbose=True,
             allow_delegation=False,
-            tools=[VectorSearchTool()]
+            tools=[VectorSearchTool(knowledge_card_id=self.knowledge_card_id)]
         )
 
     @agent
