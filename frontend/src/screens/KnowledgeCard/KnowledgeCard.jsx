@@ -332,7 +332,7 @@ export default function KnowledgeCard() {
         }
 
         setLoading(true);
-        setLoadingMessage("Let me search the web for you and identify the relevant references. Just a minute...");
+        setLoadingMessage("🚀 Let me search the web for you and identify the relevant references. Just a minute...");
         
         try {
             // Build title from linked elements only (not summary)
@@ -393,7 +393,7 @@ export default function KnowledgeCard() {
         }
     
         setLoading(true);
-        setLoadingMessage("Gosh! That it is a lot to read for a human :)! Ingesting references now! This may take a while, you may come back to this page in a few minutes...");
+        setLoadingMessage("Gosh! That it is a lot to read for a human 🤖 Ingesting references now! This may take a while, you may come back to this page in a few minutes...");
     
         try {
             const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${cardId}/ingest-references`, {
@@ -402,7 +402,7 @@ export default function KnowledgeCard() {
             });
     
             if (response.ok) {
-                setLoadingMessage("Reference ingestion started...");
+                setLoadingMessage("Reference ingestion started 📖...");
                 
                 //  Use functional updates to avoid stale closures
                 const es = new EventSource(`${API_BASE_URL}/knowledge-cards/${cardId}/ingest-status`);
