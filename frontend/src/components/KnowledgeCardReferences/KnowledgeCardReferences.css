@@ -1,0 +1,156 @@
+.kc-references-section {
+    margin-top: 1rem;
+}
+
+.kc-references-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.kc-add-reference-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: var(--primary-color);
+}
+
+.kc-references-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.kc-reference-card {
+    background: #f9f9f9;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.kc-reference-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.5rem;
+}
+
+.kc-reference-type {
+    font-weight: bold;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.kc-reference-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.kc-reference-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.kc-reference-actions button:hover {
+    color: var(--primary-color);
+}
+
+.kc-reference-card-body a {
+    color: blue;
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.kc-reference-card-body p {
+    font-style: italic;
+    font-size: 0.9rem;
+    color: #666;
+    margin-top: 0.5rem;
+}
+
+.kc-reference-card-body a:hover {
+    text-decoration: underline;
+}
+
+.kc-reference-edit-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.kc-reference-edit-form select,
+.kc-reference-edit-form input {
+    width: 100%;
+}
+
+.kc-reference-header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Status badge improvements */
+.kc-reference-status {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+}
+
+.kc-reference-status-badge {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+
+.kc-reference-status-pending {
+    background-color: #f0f0f0;
+    color: #666;
+}
+
+.kc-reference-status-processing {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.kc-reference-status-ingested {
+    background-color: #d1edff;
+    color: #004085;
+}
+
+.kc-reference-status-error {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.kc-reference-status-skipped {
+    background-color: #e2e3e5;
+    color: #383d41;
+}
+
+.kc-reference-status-message {
+    font-size: 10px;
+    color: #666;
+    max-width: 120px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+/* Disable buttons during processing */
+.kc-reference-actions button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

@@ -1,12 +1,13 @@
 import './KnowledgeCard.css';
-import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'; // Added lazy, Suspense
+import { useState, useEffect, useCallback, useRef } from 'react'; // Added useRef
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import CreatableSelect from 'react-select/creatable';
 import Base from '../../components/Base/Base';
 import CommonButton from '../../components/CommonButton/CommonButton';
 import LoadingModal from '../../components/LoadingModal/LoadingModal';
 import ProgressModal from '../../components/ProgressModal/ProgressModal';
-const KnowledgeCardHistory = lazy(() => import('../../components/KnowledgeCardHistory/KnowledgeCardHistory'));
+import KnowledgeCardHistory from '../../components/KnowledgeCardHistory/KnowledgeCardHistory';
+import KnowledgeCardReferences from '../../components/KnowledgeCardReferences/KnowledgeCardReferences';
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 
@@ -507,11 +508,9 @@ export default function KnowledgeCard() {
                 handleIdentifyReferences();
             } else if (fromAction === 'ingest') {
                 handleIngestReferences();
-            } else if (fromAction === 'populate') {
-                handlePopulate();
             }
         }
-    }, [id, location.state, navigate, handleIdentifyReferences, handleIngestReferences, handlePopulate]);
+    }, [id, location.state, navigate, handleIdentifyReferences, handleIngestReferences]);
 
     const handleAddReference = () => {
         const newReferences = [...references, { url: '', reference_type: '', summary: '', isNew: true }];
@@ -582,8 +581,8 @@ export default function KnowledgeCard() {
         }
     };
 
-    const handlePopulate = useCallback(async (e) => {
-        if (e) e.preventDefault();
+    const handlePopulate = async (e) => {
+        e.preventDefault();
 
         if (!linkType || !linkedId) {
             alert("Please select a link type and item before generating content.");
@@ -593,16 +592,6 @@ export default function KnowledgeCard() {
         const saveResponse = await handleSave(false);
         if (saveResponse.ok) {
             const cardId = id || (await saveResponse.json()).knowledge_card_id;
-
-            // If new card was created, navigate to its page to avoid state issues
-            if (!id && cardId) {
-                navigate(`/knowledge-card/${cardId}`, {
-                    replace: true,
-                    state: { fromAction: 'populate' } // Use a new state for this action
-                });
-                return;
-            }
-
             setIsProgressModalOpen(true);
             setGenerationProgress(0);
             setGenerationMessage("Starting content generation for the different sections of the card...");
@@ -625,14 +614,19 @@ export default function KnowledgeCard() {
                             setGenerationMessage(statusData.message);
 
                             if (statusData.section_name && statusData.section_content) {
-                                setGeneratedSections(prev => ({
-                                    ...prev,
-                                    [statusData.section_name]: statusData.section_content
-                                }));
+                                //  Use functional update to properly build sections
+                                setGeneratedSections(prev => {
+                                    const newSections = {
+                                        ...prev,
+                                        [statusData.section_name]: statusData.section_content
+                                    };
+                                    return newSections;
+                                });
                             }
 
                             if (statusData.progress >= 100 || statusData.progress === -1) {
                                 if (statusData.progress >= 100) {
+                                    // Refresh complete data to ensure all sections are loaded
                                     fetchData();
                                     alert("Content generation completed successfully!");
                                 } else {
@@ -678,7 +672,7 @@ export default function KnowledgeCard() {
                 setIsProgressModalOpen(false);
             }
         }
-    }, [id, linkType, linkedId, handleSave, navigate, authenticatedFetch, fetchData, eventSourceRef]);
+    };
 
     const handleEditClick = (section, content) => {
         setEditingSection(section);
@@ -783,12 +777,10 @@ export default function KnowledgeCard() {
             />
             
             {isHistoryModalOpen && (
-                <Suspense fallback={<div>Loading history...</div>}>
-                    <KnowledgeCardHistory
-                        history={history}
-                        onClose={() => setIsHistoryModalOpen(false)}
-                    />
-                </Suspense>
+                <KnowledgeCardHistory
+                    history={history}
+                    onClose={() => setIsHistoryModalOpen(false)}
+                />
             )}
             
             <LoadingModal isOpen={loading} message={loadingMessage} />
@@ -874,115 +866,18 @@ export default function KnowledgeCard() {
                             placeholder="Enter a description for this knowledge card..."
                         />
 
-                        {/* References Section */}
-                        <div className="kc-references-section">
-                            <div className="kc-references-header">
-                                <h3>References</h3>
-                                <button 
-                                    type="button" 
-                                    onClick={handleAddReference} 
-                                    className="kc-add-reference-btn" 
-                                    data-testid="add-reference-button"
-                                >
-                                    <i className="fa-solid fa-plus"></i>
-                                </button>
-                            </div>
-                            <div className="kc-references-grid">
-                                {references.map((ref, index) => (
-                                    <div key={ref.id || `new-${index}`} className="kc-reference-card">
-                                        {editingReferenceIndex === index ? (
-                                            <div className="kc-reference-edit-form">
-                                                <select
-                                                    value={ref.reference_type}
-                                                    onChange={e => handleReferenceFieldChange(index, 'reference_type', e.target.value)}
-                                                    required
-                                                >
-                                                    <option value="">Select Type...</option>
-                                                    <option value="UNHCR Operation Page">UNHCR Operation Page</option>
-                                                    <option value="Donor Content">Donor Content</option>
-                                                    <option value="Humanitarian Partner Content">Humanitarian Partner Content</option>
-                                                    <option value="Statistics">Statistics</option>
-                                                    <option value="Needs Assessment">Needs Assessment</option>
-                                                    <option value="Evaluation Report">Evaluation Report</option>
-                                                    <option value="Policies">Policies</option>
-                                                    <option value="Social Media">Social Media</option>
-                                                </select>
-                                                <input
-                                                    type="url"
-                                                    placeholder="https://example.com"
-                                                    value={ref.url}
-                                                    onChange={e => handleReferenceFieldChange(index, 'url', e.target.value)}
-                                                    required
-                                                />
-                                                <textarea
-                                                    placeholder="Summary (optional)"
-                                                    value={ref.summary}
-                                                    onChange={e => handleReferenceFieldChange(index, 'summary', e.target.value)}
-                                                />
-                                                <div className="kc-reference-edit-actions">
-                                                    <button 
-                                                        type="button"
-                                                        onClick={() => handleSaveReference(index)}
-                                                        disabled={!ref.url || !ref.reference_type}
-                                                    >
-                                                        Save
-                                                    </button>
-                                                    <button type="button" onClick={handleCancelEditReference}>
-                                                        Cancel
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <div className="kc-reference-card-header">
-                                                    <span className="kc-reference-type">{ref.reference_type}</span>
-                                                    
-                                                    <div className='kc-reference-header-right'>
-                                                    <div className="kc-reference-status">
-                                                        <span 
-                                                            className={`kc-reference-status-badge kc-reference-status-${getStatus(ref)}`}
-                                                            title={getStatusMessage(ref)} // Add tooltip
-                                                        >
-                                                            {getStatus(ref)}
-                                                        </span>
-                                                        {ref.status_message && (
-                                                            <span className="kc-reference-status-message">
-                                                                {ref.status_message}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="kc-reference-actions">
-                                                        <button 
-                                                            type="button"
-                                                            onClick={() => handleEditReference(index)}
-                                                            title="Edit reference"
-                                                            disabled={getStatus(ref) === 'processing'} // Disable during processing
-                                                        >
-                                                            <i className="fa-solid fa-pen"></i>
-                                                        </button>
-                                                        <button 
-                                                            type="button"
-                                                            onClick={() => handleRemoveReference(ref.id)}
-                                                            title="Delete reference"
-                                                            disabled={getStatus(ref) === 'processing'} // Disable during processing
-                                                        >
-                                                            <i className="fa-solid fa-trash"></i>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                </div>
-                                                <div className="kc-reference-card-body">
-                                                    <a href={ref.url} target="_blank" rel="noopener noreferrer">
-                                                        {ref.url}
-                                                    </a>
-                                                    <p>{ref.summary || 'No summary provided'}</p>
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                        <KnowledgeCardReferences
+                            references={references}
+                            editingReferenceIndex={editingReferenceIndex}
+                            handleReferenceFieldChange={handleReferenceFieldChange}
+                            handleSaveReference={handleSaveReference}
+                            handleCancelEditReference={handleCancelEditReference}
+                            handleEditReference={handleEditReference}
+                            handleRemoveReference={handleRemoveReference}
+                            handleAddReference={handleAddReference}
+                            getStatus={getStatus}
+                            getStatusMessage={getStatusMessage}
+                        />
 
                         {/* Form Actions */}
                         <div className="kc-form-actions-box">
