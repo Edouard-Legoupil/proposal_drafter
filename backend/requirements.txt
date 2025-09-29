@@ -108,3 +108,5 @@ PyPDF2
 # Slugify for clean filenames
 python-slugify
  
+## # WSGI HTTP Server for UNIX concurrent connection
+gunicorn

@@ -13,3 +13,6 @@ accesslog = "-"  # Log to stdout
 errorlog = "-"   # Log to stdout
 loglevel = "info"
 reload = True
+
+# Timeout
+timeout = 1200
