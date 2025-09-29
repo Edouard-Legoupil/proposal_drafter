@@ -10,7 +10,8 @@ export default function KnowledgeCardReferences({
     handleRemoveReference,
     handleAddReference,
     getStatus,
-    getStatusMessage
+    getStatusMessage,
+    onUploadClick
 }) {
     return (
         <div className="kc-references-section">
@@ -78,8 +79,9 @@ export default function KnowledgeCardReferences({
                                     <div className='kc-reference-header-right'>
                                         <div className="kc-reference-status">
                                             <span
-                                                className={`kc-reference-status-badge kc-reference-status-${getStatus(ref)}`}
+                                                className={`kc-reference-status-badge kc-reference-status-${getStatus(ref)} ${getStatus(ref) === 'error' ? 'clickable' : ''}`}
                                                 title={getStatusMessage(ref)} // Add tooltip
+                                                onClick={() => getStatus(ref) === 'error' && onUploadClick(ref)}
                                             >
                                                 {getStatus(ref)}
                                             </span>

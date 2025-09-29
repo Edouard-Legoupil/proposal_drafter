@@ -781,8 +781,13 @@ async def ingest_reference_content(card_id: uuid.UUID, reference_id: uuid.UUID, 
             connection.close()
 
 
-@router.post("/knowledge-cards/references/{reference_id}/upload-pdf")
-async def upload_pdf_reference(reference_id: uuid.UUID, file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
+@router.post("/knowledge-cards/references/{reference_id}/upload")
+async def upload_pdf_reference(
+    reference_id: uuid.UUID,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+    engine: Engine = Depends(get_engine)
+):
     """
     Uploads a PDF for a reference, extracts text, and stores embeddings.
     """
@@ -798,7 +803,7 @@ async def upload_pdf_reference(reference_id: uuid.UUID, file: UploadFile = File(
         if not text_content:
             raise HTTPException(status_code=400, detail="Could not extract text from PDF.")
 
-        with get_engine().begin() as connection:
+        with engine.begin() as connection:
             await _process_and_store_text(reference_id, text_content, connection)
 
         return {"status": "success", "message": "PDF content ingested successfully."}
@@ -954,6 +959,34 @@ async def ingest_knowledge_card_references(card_id: uuid.UUID, background_tasks:
 
     background_tasks.add_task(ingest_references_background, card_id)
     return {"message": "Reference ingestion started in the background."}
+
+
+@router.post("/knowledge-cards/{card_id}/references/{reference_id}/reingest")
+async def reingest_knowledge_card_reference(card_id: uuid.UUID, reference_id: uuid.UUID, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
+    """
+    Starts the ingestion of a single reference for a knowledge card in the background.
+    """
+    #  Validate card and reference exist
+    with get_engine().connect() as connection:
+        ref_check = connection.execute(
+            text("SELECT id FROM knowledge_card_references WHERE id = :ref_id AND knowledge_card_id = :card_id"),
+            {"ref_id": reference_id, "card_id": card_id}
+        ).fetchone()
+
+        if not ref_check:
+            raise HTTPException(status_code=404, detail="Reference not found for the given knowledge card.")
+
+    async def ingest_single_reference_background(card_id: uuid.UUID, reference_id: uuid.UUID):
+        with get_engine().begin() as connection:
+            try:
+                # Force scrape since we are manually re-ingesting
+                await ingest_reference_content(card_id, reference_id, force_scrape=True, connection=connection)
+            except Exception as e:
+                logger.error(f"[BACKGROUND SINGLE INGEST ERROR] Failed to ingest reference {reference_id}: {e}")
+                _update_ingest_progress(card_id, reference_id, "error", f"Processing error: {str(e)}")
+
+    background_tasks.add_task(ingest_single_reference_background, card_id, reference_id)
+    return {"message": "Single reference ingestion started in the background."}
 
 
 @router.post("/knowledge-cards/{card_id}/generate")

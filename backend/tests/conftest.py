@@ -75,6 +75,31 @@ def test_engine():
                 )
             """))
             connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS knowledge_card_references (
+                    id TEXT PRIMARY KEY,
+                    knowledge_card_id TEXT NOT NULL,
+                    url TEXT,
+                    reference_type TEXT,
+                    summary TEXT,
+                    created_by TEXT,
+                    updated_by TEXT,
+                    created_at DATETIME,
+                    updated_at DATETIME,
+                    scraped_at DATETIME,
+                    scraping_error BOOLEAN,
+                    FOREIGN KEY (knowledge_card_id) REFERENCES knowledge_cards(id)
+                )
+            """))
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS knowledge_card_reference_vectors (
+                    id TEXT PRIMARY KEY,
+                    reference_id TEXT NOT NULL,
+                    text_chunk TEXT,
+                    embedding TEXT,
+                    FOREIGN KEY (reference_id) REFERENCES knowledge_card_references(id)
+                )
+            """))
+            connection.execute(text("""
                 CREATE TABLE IF NOT EXISTS donors (
                     id TEXT PRIMARY KEY,
                     name TEXT NOT NULL,

@@ -224,7 +224,22 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
                         continue
 
                     card_details = connection.execute(
-                        text("SELECT summary, donor_id, outcome_id, field_context_id FROM knowledge_cards WHERE id = :card_id"),
+                        text("""
+                            SELECT
+                                kc.summary,
+                                kc.donor_id,
+                                kc.outcome_id,
+                                kc.field_context_id,
+                                d.name as donor_name,
+                                o.name as outcome_name,
+                                fc.name as field_context_name
+                            FROM
+                                knowledge_cards kc
+                            LEFT JOIN donors d ON kc.donor_id = d.id
+                            LEFT JOIN outcomes o ON kc.outcome_id = o.id
+                            LEFT JOIN field_contexts fc ON kc.field_context_id = fc.id
+                            WHERE kc.id = :card_id
+                        """),
                         {"card_id": str(card_id)}
                     ).fetchone()
 

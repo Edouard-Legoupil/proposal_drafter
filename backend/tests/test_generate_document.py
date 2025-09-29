@@ -10,6 +10,23 @@ from unittest.mock import MagicMock
 
 @pytest.mark.asyncio
 async def test_generate_document(authenticated_client, db_session, mocker):
+    # Mock the template loading to prevent file system dependency
+    dummy_template = {
+        "sections": [
+            {"section_name": "Summary"},
+            {"section_name": "Rationale"},
+            {"section_name": "Project Description"},
+            {"section_name": "Implementation and Coordination Arrangements"},
+            {"section_name": "Monitoring"},
+            {"section_name": "Evaluation"},
+            {"section_name": "Results Matrix"},
+            {"section_name": "Work Plan"},
+            {"section_name": "Budget"},
+            {"section_name": "Annex 1. Risk Assessment Plan"}
+        ]
+    }
+    mocker.patch('backend.api.documents.load_proposal_template', return_value=dummy_template)
+
     # Mock the database engine for this specific test
     mock_engine = MagicMock()
     mock_connection = db_session

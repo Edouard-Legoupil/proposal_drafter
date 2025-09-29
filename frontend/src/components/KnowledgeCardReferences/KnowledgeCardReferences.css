@@ -135,6 +135,14 @@
     color: #721c24;
 }
 
+.kc-reference-status-error.clickable {
+    cursor: pointer;
+}
+
+.kc-reference-status-error.clickable:hover {
+    text-decoration: underline;
+}
+
 .kc-reference-status-skipped {
     background-color: #e2e3e5;
     color: #383d41;

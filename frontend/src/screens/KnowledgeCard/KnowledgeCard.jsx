@@ -8,6 +8,8 @@ import LoadingModal from '../../components/LoadingModal/LoadingModal';
 import ProgressModal from '../../components/ProgressModal/ProgressModal';
 import KnowledgeCardHistory from '../../components/KnowledgeCardHistory/KnowledgeCardHistory';
 import KnowledgeCardReferences from '../../components/KnowledgeCardReferences/KnowledgeCardReferences';
+import UploadReferenceModal from '../../components/UploadReferenceModal/UploadReferenceModal';
+import { setupSse } from '../../utils/sse';
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 
@@ -42,6 +44,8 @@ export default function KnowledgeCard() {
     const [newFieldContexts, setNewFieldContexts] = useState([]);
     const [proposal_template, setProposalTemplate] = useState(null);
     const [editingReferenceIndex, setEditingReferenceIndex] = useState(null);
+    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const [currentReference, setCurrentReference] = useState(null);
 
     // Use refs to track current state without stale closures
     const summaryRef = useRef(summary);
@@ -332,7 +336,7 @@ export default function KnowledgeCard() {
         }
 
         setLoading(true);
-        setLoadingMessage("🚀 Let me search the web for you and identify the relevant references. Just a minute...");
+        setLoadingMessage("Let me search the web for you and identify the relevant references. Just a minute...");
         
         try {
             // Build title from linked elements only (not summary)
@@ -379,21 +383,16 @@ export default function KnowledgeCard() {
     
         if (!cardId) {
             const saveResponse = await handleSave(false);
-            if (!saveResponse.ok) {
-                return;
-            }
+            if (!saveResponse.ok) return;
             const data = await saveResponse.json();
             cardId = data.knowledge_card_id;
             
-            navigate(`/knowledge-card/${cardId}`, {
-                replace: true,
-                state: { fromAction: 'ingest' }
-            });
+            navigate(`/knowledge-card/${cardId}`, { replace: true, state: { fromAction: 'ingest' } });
             return;
         }
     
         setLoading(true);
-        setLoadingMessage("Gosh! That it is a lot to read for a human 🤖 Ingesting references now! This may take a while, you may come back to this page in a few minutes...");
+        setLoadingMessage("Ingesting all references... This may take a while.");
     
         try {
             const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${cardId}/ingest-references`, {
@@ -402,101 +401,42 @@ export default function KnowledgeCard() {
             });
     
             if (response.ok) {
-                setLoadingMessage("Reference ingestion started 📖...");
-                
-                //  Use functional updates to avoid stale closures
-                const es = new EventSource(`${API_BASE_URL}/knowledge-cards/${cardId}/ingest-status`);
-                setEventSource(es);
-                eventSourceRef.current = es;
-                
-                es.onmessage = (event) => {
-                    try {
-                        const data = JSON.parse(event.data);
-                        console.log("Ingest status update:", data); // Debug log
-                        
-                        //   Use functional update to get latest state
-                        setReferences(prevReferences => {
-                            const updatedReferences = prevReferences.map(ref => {
-                                if (ref.id === data.reference_id) {
-                                    return { 
-                                        ...ref, 
-                                        status: data.status, 
-                                        status_message: data.message,
-                                        // Update timestamps if provided
-                                        ...(data.scraped_at && { scraped_at: data.scraped_at }),
-                                        ...(data.scraping_error !== undefined && { scraping_error: data.scraping_error })
-                                    };
-                                }
-                                return ref;
-                            });
-                            
-                            // Check if all references are done using the updated array
-                            const allDone = updatedReferences.every(ref => 
-                                ref.status === 'ingested' || 
-                                ref.status === 'error' || 
-                                ref.status === 'skipped' ||
-                                // Also check traditional status indicators
-                                ref.scraped_at || 
-                                ref.scraping_error
-                            );
-                            
-                            if (allDone) {
-                                console.log("All references processed, closing EventSource");
-                                setTimeout(() => {
-                                    es.close();
-                                    setEventSource(null);
-                                    eventSourceRef.current = null;
-                                    setLoading(false);
-                                    setLoadingMessage('');
-                                    fetchData(); // Refresh to get final state
-                                    alert("Reference ingestion completed!");
-                                }, 500);
-                            }
-                            
-                            return updatedReferences;
-                        });
-                        
-                    } catch (error) {
-                        console.error("Error processing ingest status:", error);
-                    }
+                setLoadingMessage("Reference ingestion started...");
+    
+                const onMessage = (data) => {
+                    setReferences(prev => {
+                        const updated = prev.map(ref => ref.id === data.reference_id ? { ...ref, status: data.status, status_message: data.message } : ref);
+                        const allDone = updated.every(ref => ['ingested', 'error', 'skipped'].includes(ref.status));
+                        if (allDone) {
+                            setTimeout(() => {
+                                if (eventSourceRef.current) eventSourceRef.current.close();
+                                setLoading(false);
+                                setLoadingMessage('');
+                                fetchData();
+                            }, 500);
+                        }
+                        return updated;
+                    });
                 };
-                
-                es.onerror = (error) => {
-                    console.error("EventSource error:", error);
-                    es.close();
-                    setEventSource(null);
-                    eventSourceRef.current = null;
-                    setLoading(false);
-                    setLoadingMessage('');
-                    alert("Reference ingestion encountered an error.");
-                };
-                
-                // Add timeout for ingestion process
-                setTimeout(() => {
-                    if (es.readyState !== EventSource.CLOSED) {
-                        console.log("Ingestion timeout reached");
-                        es.close();
-                        setEventSource(null);
-                        eventSourceRef.current = null;
-                        setLoading(false);
-                        setLoadingMessage('');
-                        alert("Reference ingestion timeout. Some references may still be processing.");
-                    }
-                }, 300000); // 5 minute timeout
+    
+                const onError = () => { setLoading(false); setLoadingMessage(''); };
+                const onTimeout = () => { setLoading(false); setLoadingMessage(''); fetchData(); };
+    
+                const closeSse = setupSse(`${API_BASE_URL}/knowledge-cards/${cardId}/ingest-status`, onMessage, onError, onTimeout);
+                eventSourceRef.current = { close: closeSse };
     
             } else {
                 const error = await response.json();
-                alert(`Error ingesting references: ${error.detail}`);
+                console.error(`Error starting ingestion: ${error.detail}`);
                 setLoading(false);
                 setLoadingMessage('');
             }
         } catch (error) {
             console.error("Error starting reference ingestion:", error);
-            alert("Failed to start reference ingestion.");
             setLoading(false);
             setLoadingMessage('');
         }
-    }, [id, handleSave, navigate, authenticatedFetch, eventSourceRef, fetchData, setEventSource, setReferences, setLoading, setLoadingMessage]);
+    }, [id, handleSave, navigate, authenticatedFetch, fetchData]);
 
     useEffect(() => {
         const fromAction = location.state?.fromAction;
@@ -758,11 +698,91 @@ export default function KnowledgeCard() {
         return 'Pending ingestion';
     };
 
+    const handleOpenUploadModal = (reference) => {
+        setCurrentReference(reference);
+        setIsUploadModalOpen(true);
+    };
+
+    const handleUploadReference = async (referenceId, file) => {
+        setLoading(true);
+        setLoadingMessage('Uploading file...');
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            // Step 1: Upload the file
+            const uploadResponse = await authenticatedFetch(
+                `${API_BASE_URL}/knowledge-cards/references/${referenceId}/upload`,
+                { method: 'POST', body: formData, credentials: 'include' }
+            );
+
+            if (!uploadResponse.ok) {
+                const error = await uploadResponse.json();
+                console.error(`Upload failed: ${error.detail}`);
+                setLoading(false);
+                setLoadingMessage('');
+                return;
+            }
+
+            // Step 2: Close modal and trigger re-ingestion of the single reference
+            setIsUploadModalOpen(false);
+            setLoadingMessage('File uploaded. Re-ingesting reference...');
+
+            const reingestResponse = await authenticatedFetch(
+                `${API_BASE_URL}/knowledge-cards/${id}/references/${referenceId}/reingest`,
+                { method: 'POST', credentials: 'include' }
+            );
+
+            if (!reingestResponse.ok) {
+                const error = await reingestResponse.json();
+                console.error(`Failed to start re-ingestion: ${error.detail}`);
+                setLoading(false);
+                setLoadingMessage('');
+                return;
+            }
+
+            // Step 3: Listen for SSE updates for the single reference
+            const onMessage = (data) => {
+                if (data.reference_id === referenceId) {
+                    setReferences(prev => prev.map(ref =>
+                        ref.id === referenceId ? { ...ref, status: data.status, status_message: data.message } : ref
+                    ));
+
+                    if (['ingested', 'error', 'skipped'].includes(data.status)) {
+                        if (eventSourceRef.current) eventSourceRef.current.close();
+                        setLoading(false);
+                        setLoadingMessage('');
+                    }
+                }
+            };
+
+            const onError = (error) => {
+                console.error('Re-ingestion SSE error:', error);
+                setLoading(false);
+                setLoadingMessage('');
+            };
+
+            const onTimeout = () => {
+                console.warn('Re-ingestion timed out.');
+                setLoading(false);
+                setLoadingMessage('');
+            };
+
+            const closeSse = setupSse(`${API_BASE_URL}/knowledge-cards/${id}/ingest-status`, onMessage, onError, onTimeout);
+            eventSourceRef.current = { close: closeSse };
+
+        } catch (error) {
+            console.error('An error occurred during the upload/re-ingest process:', error);
+            setLoading(false);
+            setLoadingMessage('');
+        }
+    };
+
     return (
         <Base>
             {/* Modals */}
-            <ProgressModal 
-                isOpen={isProgressModalOpen} 
+            <ProgressModal
+                isOpen={isProgressModalOpen}
                 onClose={() => {
                     // Close EventSource when modal closes
                     if (eventSourceRef.current) {
@@ -771,18 +791,25 @@ export default function KnowledgeCard() {
                         eventSourceRef.current = null;
                     }
                     setIsProgressModalOpen(false);
-                }} 
-                progress={generationProgress} 
-                message={generationMessage} 
+                }}
+                progress={generationProgress}
+                message={generationMessage}
             />
-            
+
             {isHistoryModalOpen && (
                 <KnowledgeCardHistory
                     history={history}
                     onClose={() => setIsHistoryModalOpen(false)}
                 />
             )}
-            
+
+            <UploadReferenceModal
+                isOpen={isUploadModalOpen}
+                onClose={() => setIsUploadModalOpen(false)}
+                onUpload={handleUploadReference}
+                reference={currentReference}
+            />
+
             <LoadingModal isOpen={loading} message={loadingMessage} />
 
             <div className="kc-container">
@@ -877,6 +904,7 @@ export default function KnowledgeCard() {
                             handleAddReference={handleAddReference}
                             getStatus={getStatus}
                             getStatusMessage={getStatusMessage}
+                            onUploadClick={handleOpenUploadModal}
                         />
 
                         {/* Form Actions */}
