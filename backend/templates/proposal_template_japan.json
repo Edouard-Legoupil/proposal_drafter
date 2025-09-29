@@ -206,28 +206,25 @@
           "footer": "Include this note 'The 1% coordination levy is not applicable' at the end of the table."
           }
         }
-          ],
-          "special_requirements": {
-          "language_restrictions": [
+    ],
+    "special_requirements": {
+        "language_restrictions": [
             "Avoid phrases indicating multi-year planning continuity",
             "Do not use 'as a continuation from the previous year'",
             "Do not use 'UNHCR continues to...'",
             "Emphasize urgency and unpredictability"
-          ],
-          "formatting_requirements": [
+        ],
+        "formatting_requirements": [
             "Right-align all numerical values in budget table",
             "Maintain exact table structures as specified",
             "Use provided variables consistently",
             "Follow word limits strictly"
-          ],
-          "strategic_emphasis": [
+        ],
+        "strategic_emphasis": [
             "Focus on how project advances Japan's policy priorities",
             "Demonstrate why Japanese funding is essential",
             "Highlight urgent and unpredictable nature",
             "Show UNHCR's unique capacity and access"
-          ]
-          }
-        }
-      }
-  ]
+        ]
+    }
 }
