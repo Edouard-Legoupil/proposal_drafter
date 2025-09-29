@@ -499,7 +499,37 @@ async def update_knowledge_card(card_id: uuid.UUID, card: KnowledgeCardIn, curre
             if not existing_card:
                 raise HTTPException(status_code=404, detail="Knowledge card not found.")
 
-            # ... rest of the update logic ...
+            # Update the main knowledge card fields
+            connection.execute(
+                text("""
+                    UPDATE knowledge_cards
+                    SET summary = :summary, donor_id = :donor_id, outcome_id = :outcome_id, field_context_id = :field_context_id, updated_by = :user_id, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = :id
+                """),
+                {
+                    "id": card_id,
+                    "summary": card.summary,
+                    "donor_id": card.donor_id,
+                    "outcome_id": card.outcome_id,
+                    "field_context_id": card.field_context_id,
+                    "user_id": user_id
+                }
+            )
+
+            # Update references: delete old ones and insert new ones
+            connection.execute(
+                text("DELETE FROM knowledge_card_references WHERE knowledge_card_id = :kcid"),
+                {"kcid": card_id}
+            )
+            if card.references:
+                for ref in card.references:
+                    connection.execute(
+                        text("""
+                            INSERT INTO knowledge_card_references (knowledge_card_id, url, reference_type, summary, created_by, updated_by, created_at, updated_at)
+                            VALUES (:kcid, :url, :reference_type, :summary, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                        """),
+                        {"kcid": card_id, "url": ref.url, "reference_type": ref.reference_type, "summary": ref.summary, "user_id": user_id}
+                    )
 
             # Fetch the generated_sections again to get the updated state
             updated_card = connection.execute(
@@ -519,6 +549,9 @@ async def update_knowledge_card(card_id: uuid.UUID, card: KnowledgeCardIn, curre
                         logger.warning(f"Failed to parse generated_sections for card {card_id}")
                         generated_sections = {}
             
+            # Save the updated knowledge card to a file to reflect changes
+            _save_knowledge_card_content_to_file(connection, card_id, generated_sections)
+
             create_knowledge_card_history_entry(connection, card_id, generated_sections, user_id)
             
         return {"message": "Knowledge card updated successfully.", "knowledge_card_id": card_id}

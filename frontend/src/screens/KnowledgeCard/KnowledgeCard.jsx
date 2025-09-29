@@ -43,6 +43,12 @@ export default function KnowledgeCard() {
     const [editingReferenceIndex, setEditingReferenceIndex] = useState(null);
 
     // Use refs to track current state without stale closures
+    const summaryRef = useRef(summary);
+    useEffect(() => { summaryRef.current = summary; }, [summary]);
+    const linkTypeRef = useRef(linkType);
+    useEffect(() => { linkTypeRef.current = linkType; }, [linkType]);
+    const linkedIdRef = useRef(linkedId);
+    useEffect(() => { linkedIdRef.current = linkedId; }, [linkedId]);
     const referencesRef = useRef(references);
     const eventSourceRef = useRef(eventSource);
 
@@ -206,12 +212,12 @@ export default function KnowledgeCard() {
 
     const handleSave = useCallback(async (navigateOnSuccess = true) => {
         // Validate required fields
-        if (!summary.trim()) {
+        if (!summaryRef.current.trim()) {
             alert("Description is required.");
             return { ok: false };
         }
 
-        if (!linkType || !linkedId) {
+        if (!linkTypeRef.current || !linkedIdRef.current) {
             alert("Please select a link type and item.");
             return { ok: false };
         }
@@ -219,17 +225,16 @@ export default function KnowledgeCard() {
         setLoading(true);
         setLoadingMessage("Saving knowledge card...");
         
-        let finalLinkedId = linkedId;
-        if (linkedId && linkedId.startsWith('new_')) {
+        let finalLinkedId = linkedIdRef.current;
+        if (finalLinkedId && finalLinkedId.startsWith('new_')) {
             const endpointMap = {
                 donor: 'donors',
                 outcome: 'outcomes',
                 field_context: 'field-contexts',
             };
-            const endpoint = endpointMap[linkType];
-            const value = linkedId.substring(4);
+            const endpoint = endpointMap[linkTypeRef.current];
+            const value = finalLinkedId.substring(4);
             
-            // Validate new item name
             if (!value.trim()) {
                 alert("Please enter a valid name for the new item.");
                 setLoading(false);
@@ -245,7 +250,7 @@ export default function KnowledgeCard() {
                 });
                 if (!response.ok) {
                     const error = await response.json();
-                    alert(`Failed to create new ${linkType}: ${error.detail}`);
+                    alert(`Failed to create new ${linkTypeRef.current}: ${error.detail}`);
                     setLoading(false);
                     return { ok: false };
                 }
@@ -260,11 +265,11 @@ export default function KnowledgeCard() {
         }
 
         const payload = {
-            summary: summary.trim(),
-            donor_id: linkType === 'donor' ? finalLinkedId : null,
-            outcome_id: linkType === 'outcome' ? finalLinkedId : null,
-            field_context_id: linkType === 'field_context' ? finalLinkedId : null,
-            references: references.filter(r => r.url && r.reference_type)
+            summary: summaryRef.current.trim(),
+            donor_id: linkTypeRef.current === 'donor' ? finalLinkedId : null,
+            outcome_id: linkTypeRef.current === 'outcome' ? finalLinkedId : null,
+            field_context_id: linkTypeRef.current === 'field_context' ? finalLinkedId : null,
+            references: referencesRef.current.filter(r => r.url && r.reference_type)
         };
 
         const url = id ? `${API_BASE_URL}/knowledge-cards/${id}` : `${API_BASE_URL}/knowledge-cards`;
@@ -298,7 +303,7 @@ export default function KnowledgeCard() {
             setLoading(false);
             setLoadingMessage('');
         }
-    }, [summary, linkType, linkedId, references, id, navigate, authenticatedFetch, setLoading, setLoadingMessage]);
+    }, [id, navigate, authenticatedFetch]);
 
     const handleIdentifyReferences = useCallback(async () => {
         //  Validate required fields before proceeding
@@ -502,9 +507,11 @@ export default function KnowledgeCard() {
                 handleIdentifyReferences();
             } else if (fromAction === 'ingest') {
                 handleIngestReferences();
+            } else if (fromAction === 'populate') {
+                handlePopulate();
             }
         }
-    }, [id, location.state, navigate, handleIdentifyReferences, handleIngestReferences]);
+    }, [id, location.state, navigate, handleIdentifyReferences, handleIngestReferences, handlePopulate]);
 
     const handleAddReference = () => {
         const newReferences = [...references, { url: '', reference_type: '', summary: '', isNew: true }];
@@ -575,9 +582,9 @@ export default function KnowledgeCard() {
         }
     };
 
-    const handlePopulate = async (e) => {
-        e.preventDefault();
-        
+    const handlePopulate = useCallback(async (e) => {
+        if (e) e.preventDefault();
+
         if (!linkType || !linkedId) {
             alert("Please select a link type and item before generating content.");
             return;
@@ -586,6 +593,16 @@ export default function KnowledgeCard() {
         const saveResponse = await handleSave(false);
         if (saveResponse.ok) {
             const cardId = id || (await saveResponse.json()).knowledge_card_id;
+
+            // If new card was created, navigate to its page to avoid state issues
+            if (!id && cardId) {
+                navigate(`/knowledge-card/${cardId}`, {
+                    replace: true,
+                    state: { fromAction: 'populate' } // Use a new state for this action
+                });
+                return;
+            }
+
             setIsProgressModalOpen(true);
             setGenerationProgress(0);
             setGenerationMessage("Starting content generation for the different sections of the card...");
@@ -606,21 +623,16 @@ export default function KnowledgeCard() {
                             const statusData = JSON.parse(event.data);
                             setGenerationProgress(statusData.progress);
                             setGenerationMessage(statusData.message);
-                            
+
                             if (statusData.section_name && statusData.section_content) {
-                                //  Use functional update to properly build sections
-                                setGeneratedSections(prev => {
-                                    const newSections = { 
-                                        ...prev, 
-                                        [statusData.section_name]: statusData.section_content 
-                                    };
-                                    return newSections;
-                                });
+                                setGeneratedSections(prev => ({
+                                    ...prev,
+                                    [statusData.section_name]: statusData.section_content
+                                }));
                             }
-                            
+
                             if (statusData.progress >= 100 || statusData.progress === -1) {
                                 if (statusData.progress >= 100) {
-                                    // Refresh complete data to ensure all sections are loaded
                                     fetchData();
                                     alert("Content generation completed successfully!");
                                 } else {
@@ -666,7 +678,7 @@ export default function KnowledgeCard() {
                 setIsProgressModalOpen(false);
             }
         }
-    };
+    }, [id, linkType, linkedId, handleSave, navigate, authenticatedFetch, fetchData, eventSourceRef]);
 
     const handleEditClick = (section, content) => {
         setEditingSection(section);
