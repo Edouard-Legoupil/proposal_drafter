@@ -1,6 +1,6 @@
 import './MetricsDashboard.css';
-import { useState, useEffect } from 'react';
-import { Bar } from 'react-chartjs-2';
+import { useState, useEffect, useMemo } from 'react';
+import { Bar, Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
@@ -88,6 +88,60 @@ export default function MetricsDashboard() {
         }]
     } : { labels: [], datasets: [] };
 
+    const fundingByCategoryChartData = useMemo(() => {
+        if (!fundingData || fundingData.length === 0) return null;
+        const dataByStatus = fundingData.reduce((acc, item) => {
+            const { status, proposal_count } = item;
+            acc[status] = (acc[status] || 0) + proposal_count;
+            return acc;
+        }, {});
+        const labels = Object.keys(dataByStatus);
+        const data = Object.values(dataByStatus);
+        return {
+            labels,
+            datasets: [{
+                label: '# of Proposals',
+                data,
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.6)',
+                    'rgba(54, 162, 235, 0.6)',
+                    'rgba(255, 206, 86, 0.6)',
+                    'rgba(75, 192, 192, 0.6)',
+                    'rgba(153, 102, 255, 0.6)',
+                    'rgba(255, 159, 64, 0.6)',
+                ],
+                borderColor: [
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 206, 86, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)',
+                    'rgba(255, 159, 64, 1)',
+                ],
+                borderWidth: 1,
+            }],
+        };
+    }, [fundingData]);
+
+    const donorInterestChartData = useMemo(() => {
+        if (!interestData || interestData.length === 0) return null;
+        const dataByDonor = interestData.reduce((acc, item) => {
+            const { donor_name, project_count } = item;
+            acc[donor_name] = (acc[donor_name] || 0) + project_count;
+            return acc;
+        }, {});
+        const labels = Object.keys(dataByDonor);
+        const data = Object.values(dataByDonor);
+        return {
+            labels,
+            datasets: [{
+                label: 'Projects per Donor',
+                data,
+                backgroundColor: 'rgba(255, 159, 64, 0.6)',
+            }],
+        };
+    }, [interestData]);
+
     if (loading) {
         return <div className="metrics-loading">Loading metrics...</div>;
     }
@@ -117,6 +171,14 @@ export default function MetricsDashboard() {
                     <p className="metric-value">
                         {averageFunding ? `$${Number(averageFunding.average_funding).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'N/A'}
                     </p>
+                </div>
+                <div className="metric-card">
+                    <h3>Proposals by Category</h3>
+                    {fundingByCategoryChartData ? <div className="chart-container"><Pie data={fundingByCategoryChartData} options={{...chartOptions, title: {display: true, text: 'Proposals by Category'}}} /></div> : <p>No data available.</p>}
+                </div>
+                <div className="metric-card">
+                    <h3>Donor Interest</h3>
+                    {donorInterestChartData ? <div className="chart-container"><Bar data={donorInterestChartData} options={{...chartOptions, indexAxis: 'y', title: {display: true, text: 'Donor Interest'}}} /></div> : <p>No data available.</p>}
                 </div>
                 <div className="metric-card">
                     <h3>Avg. Time in Status (Days)</h3>
