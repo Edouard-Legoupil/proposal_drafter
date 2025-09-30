@@ -107,6 +107,9 @@ PyPDF2
 
 # Slugify for clean filenames
 python-slugify
+
+# WebSocket library
+websockets>=12.0
  
 ## # WSGI HTTP Server for UNIX concurrent connection
 gunicorn

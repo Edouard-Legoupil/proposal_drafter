@@ -12,7 +12,7 @@ from sqlalchemy.engine import Engine
 import litellm
 from slugify import slugify
 from PyPDF2 import PdfReader
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional
 from datetime import datetime, timedelta
 
@@ -59,10 +59,10 @@ class KnowledgeCardIn(BaseModel):
     field_context_id: Optional[uuid.UUID] = None
     references: Optional[List[KnowledgeCardReferenceIn]] = []
 
-    @validator('donor_id', 'outcome_id', 'field_context_id', pre=True, always=True)
+    @field_validator('donor_id', 'outcome_id', 'field_context_id')
     def check_one_link_only(cls, v, values):
         if v is not None:
-            if sum(1 for field in ['donor_id', 'outcome_id', 'field_context_id'] if values.get(field) is not None) > 0:
+            if sum(1 for field in ['donor_id', 'outcome_id', 'field_context_id'] if values.data.get(field) is not None) > 1:
                 raise ValueError('Only one of donor_id, outcome_id, or field_context_id can be set.')
         return v
 
