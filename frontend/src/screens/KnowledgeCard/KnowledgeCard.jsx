@@ -473,23 +473,47 @@ export default function KnowledgeCard() {
             return;
         }
 
+        let cardId = id;
+
+        // If it's a new card, save it first to get an ID
+        if (!cardId) {
+            const saveResponse = await handleSave(false); // Don't navigate
+            if (!saveResponse.ok) {
+                alert("Could not save the new knowledge card. Please fill in all required fields.");
+                return;
+            }
+            const data = await saveResponse.json();
+            cardId = data.knowledge_card_id;
+            // Navigate to the new URL to update the id in the component state
+            navigate(`/knowledge-card/${cardId}`, { replace: true });
+        }
+
         const isNew = reference.isNew;
-        const url = isNew ? `${API_BASE_URL}/knowledge-cards/${id}/references` : `${API_BASE_URL}/knowledge-cards/references/${reference.id}`;
+        // Use cardId which is now guaranteed to be defined
+        const url = isNew ? `${API_BASE_URL}/knowledge-cards/${cardId}/references` : `${API_BASE_URL}/knowledge-cards/references/${reference.id}`;
         const method = isNew ? 'POST' : 'PUT';
 
-        const response = await authenticatedFetch(url, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(reference),
-            credentials: 'include'
-        });
+        try {
+            const response = await authenticatedFetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(reference),
+                credentials: 'include'
+            });
 
-        if (response.ok) {
-            await fetchData();
-            setEditingReferenceIndex(null);
-        } else {
-            const error = await response.json();
-            alert(`Failed to save reference: ${error.detail}`);
+            if (response.ok) {
+                // Refetch data for the current (and possibly new) cardId
+                await fetchData();
+                setEditingReferenceIndex(null);
+            } else {
+                // Improved error handling
+                const error = await response.json();
+                const errorMessage = error.detail || JSON.stringify(error);
+                alert(`Failed to save reference: ${errorMessage}`);
+            }
+        } catch (error) {
+            console.error("Error saving reference:", error);
+            alert("An unexpected error occurred while saving the reference.");
         }
     };
 
