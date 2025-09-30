@@ -18,6 +18,8 @@ async def get_development_time_metrics(
     Calculates the average time proposals spend in each status.
     Can be filtered by 'user', 'team', or 'all'.
     """
+    user_id = current_user["user_id"]
+
     base_query = """
         WITH status_durations AS (
             SELECT
@@ -39,7 +41,26 @@ async def get_development_time_metrics(
             status
     """
 
-    where_clause, params = _get_filter_clauses(current_user, filter_by)
+    where_clause = ""
+    params = {}
+
+    if filter_by == "user":
+        where_clause = "WHERE p.user_id = :user_id"
+        params["user_id"] = user_id
+    elif filter_by == "team":
+        with get_engine().connect() as connection:
+            team_result = connection.execute(
+                text("SELECT team FROM users WHERE id = :user_id"),
+                {"user_id": user_id}
+            ).scalar()
+
+        if team_result:
+            where_clause = "WHERE p.user_id IN (SELECT id FROM users WHERE team = :team)"
+            params["team"] = team_result
+        else:
+            where_clause = "WHERE p.user_id = :user_id"
+            params["user_id"] = user_id
+
     final_query = base_query.format(where_clause=where_clause)
 
     try:
@@ -210,7 +231,13 @@ async def get_cycle_time_metrics(
 
     where_clause, params = _get_filter_clauses(current_user, filter_by)
     # Adjust where clause for the subquery
-    where_clause_and = where_clause.replace("WHERE", "AND")
+    where_clause_and = ""
+    if where_clause:
+        # The query already has a WHERE clause, so we need to prepend AND
+        # to the conditions from the helper function.
+        conditions = where_clause.replace("WHERE ", "")
+        if conditions:
+            where_clause_and = f" AND {conditions}"
     final_query = query_template.format(where_clause_and=where_clause_and)
 
 
