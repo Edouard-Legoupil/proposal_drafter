@@ -18,8 +18,6 @@ async def get_development_time_metrics(
     Calculates the average time proposals spend in each status.
     Can be filtered by 'user', 'team', or 'all'.
     """
-    user_id = current_user["user_id"]
-
     base_query = """
         WITH status_durations AS (
             SELECT
@@ -41,26 +39,7 @@ async def get_development_time_metrics(
             status
     """
 
-    where_clause = ""
-    params = {}
-
-    if filter_by == "user":
-        where_clause = "WHERE p.user_id = :user_id"
-        params["user_id"] = user_id
-    elif filter_by == "team":
-        with get_engine().connect() as connection:
-            team_result = connection.execute(
-                text("SELECT team FROM users WHERE id = :user_id"),
-                {"user_id": user_id}
-            ).scalar()
-
-        if team_result:
-            where_clause = "WHERE p.user_id IN (SELECT id FROM users WHERE team = :team)"
-            params["team"] = team_result
-        else:
-            where_clause = "WHERE p.user_id = :user_id"
-            params["user_id"] = user_id
-
+    where_clause, params = _get_filter_clauses(current_user, filter_by)
     final_query = base_query.format(where_clause=where_clause)
 
     try:
@@ -79,17 +58,28 @@ async def get_funding_by_category_metrics(
     filter_by: Optional[str] = Query("all", enum=["user", "team", "all"])
 ):
     """
-    Calculates the number of proposals per status, donor, and outcome.
-    Note: Does not aggregate budget due to string format; returns proposal count instead.
+    Calculates the number of proposals and total budget per status, donor, and outcome.
     """
-    user_id = current_user["user_id"]
-
     query_template = """
         SELECT
             p.status,
             d.name as donor_name,
             o.name as outcome_name,
-            COUNT(p.id) as proposal_count
+            COUNT(p.id) as proposal_count,
+            SUM(
+                COALESCE(
+                    NULLIF(
+                        regexp_replace(
+                            p.form_data->>'Budget Range',
+                            '[^0-9]',
+                            '',
+                            'g'
+                        ),
+                        ''
+                    )::numeric,
+                    0
+                )
+            ) as total_budget
         FROM
             proposals p
         LEFT JOIN proposal_donors pd ON p.id = pd.proposal_id
@@ -107,8 +97,12 @@ async def get_funding_by_category_metrics(
     try:
         with get_engine().connect() as connection:
             result = connection.execute(text(final_query), params)
-            data = [dict(row) for row in result.mappings().fetchall()]
-        return {"filter": filter_by, "data": data, "note": "Budget is not aggregated; proposal_count is returned instead."}
+            # Convert rows to dictionaries, ensuring total_budget is a float
+            data = [
+                {**row, 'total_budget': float(row['total_budget'])}
+                for row in result.mappings().fetchall()
+            ]
+        return {"filter": filter_by, "data": data}
     except Exception as e:
         logger.error(f"[GET FUNDING METRICS ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to calculate funding metrics.")
@@ -155,13 +149,87 @@ async def get_donor_interest_metrics(
         logger.error(f"[GET DONOR INTEREST METRICS ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to calculate donor interest metrics.")
 
-def _get_filter_clauses(current_user, filter_by):
+
+@router.get("/metrics/proposal-success-rate")
+async def get_proposal_success_rate_metrics(
+    current_user: dict = Depends(get_current_user),
+    filter_by: Optional[str] = Query("all", enum=["user", "team", "all"])
+):
+    """
+    Calculates the proposal success rate (approved proposals / total proposals).
+    """
+    query_template = """
+        SELECT
+            CAST(SUM(CASE WHEN p.status = 'approved' THEN 1 ELSE 0 END) AS FLOAT) * 100 / COUNT(p.id) as success_rate
+        FROM
+            proposals p
+        {where_clause}
+    """
+
+    where_clause, params = _get_filter_clauses(current_user, filter_by)
+    final_query = query_template.format(where_clause=where_clause)
+
+    try:
+        with get_engine().connect() as connection:
+            result = connection.execute(text(final_query), params).scalar()
+        return {"filter": filter_by, "success_rate": result or 0}
+    except Exception as e:
+        logger.error(f"[GET SUCCESS RATE METRICS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to calculate proposal success rate.")
+
+
+@router.get("/metrics/cycle-time")
+async def get_cycle_time_metrics(
+    current_user: dict = Depends(get_current_user),
+    filter_by: Optional[str] = Query("all", enum=["user", "team", "all"])
+):
+    """
+    Calculates the average time from proposal creation to a final decision (approved/rejected).
+    """
+    query_template = """
+        WITH decision_times AS (
+            SELECT
+                p.id,
+                p.created_at,
+                MIN(psh.created_at) as decision_date
+            FROM
+                proposals p
+            JOIN
+                proposal_status_history psh ON p.id = psh.proposal_id
+            WHERE
+                psh.status IN ('approved', 'rejected', 'deleted')
+                {where_clause_and}
+            GROUP BY
+                p.id, p.created_at
+        )
+        SELECT
+            EXTRACT(EPOCH FROM AVG(decision_date - created_at)) as average_cycle_time_seconds
+        FROM
+            decision_times
+    """
+
+    where_clause, params = _get_filter_clauses(current_user, filter_by)
+    # Adjust where clause for the subquery
+    where_clause_and = where_clause.replace("WHERE", "AND")
+    final_query = query_template.format(where_clause_and=where_clause_and)
+
+
+    try:
+        with get_engine().connect() as connection:
+            result = connection.execute(text(final_query), params).scalar()
+        return {"filter": filter_by, "average_cycle_time_seconds": result or 0}
+    except Exception as e:
+        logger.error(f"[GET CYCLE TIME METRICS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to calculate cycle time metrics.")
+
+
+def _get_filter_clauses(current_user, filter_by, status_filter=None):
     user_id = current_user["user_id"]
-    where_clause = ""
+    where_clauses = []
     params = {}
 
     if filter_by == "user":
-        where_clause = "WHERE p.user_id = :user_id"
+        where_clauses.append("p.user_id = :user_id")
         params["user_id"] = user_id
     elif filter_by == "team":
         with get_engine().connect() as connection:
@@ -171,10 +239,119 @@ def _get_filter_clauses(current_user, filter_by):
             ).scalar()
 
         if team_result:
-            where_clause = "WHERE p.user_id IN (SELECT id FROM users WHERE team = :team)"
+            where_clauses.append("p.user_id IN (SELECT id FROM users WHERE team = :team)")
             params["team"] = team_result
         else:
-            where_clause = "WHERE p.user_id = :user_id"
+            # Fallback to user filter if team not found
+            where_clauses.append("p.user_id = :user_id")
             params["user_id"] = user_id
 
-    return where_clause, params
+    if status_filter == "approved":
+        where_clauses.append("p.status = 'approved'")
+
+    if where_clauses:
+        return "WHERE " + " AND ".join(where_clauses), params
+
+    return "", params
+
+@router.get("/metrics/average-funding-amount")
+async def get_average_funding_amount_metrics(
+    current_user: dict = Depends(get_current_user),
+    filter_by: Optional[str] = Query("all", enum=["user", "team", "all"]),
+    status: Optional[str] = Query("all", enum=["all", "approved"])
+):
+    """
+    Calculates the average funding amount for proposals.
+    Can be filtered by status ('all' or 'approved').
+    """
+    query_template = """
+        SELECT
+            AVG(
+                NULLIF(
+                    regexp_replace(
+                        p.form_data->>'Budget Range',
+                        '[^0-9]',
+                        '',
+                        'g'
+                    ),
+                    ''
+                )::numeric
+            ) as average_funding
+        FROM
+            proposals p
+        {where_clause}
+    """
+
+    where_clause, params = _get_filter_clauses(current_user, filter_by, status_filter=status)
+    final_query = query_template.format(where_clause=where_clause)
+
+    try:
+        with get_engine().connect() as connection:
+            result = connection.execute(text(final_query), params).scalar()
+        return {"filter": filter_by, "status": status, "average_funding": float(result) if result else 0}
+    except Exception as e:
+        logger.error(f"[GET AVG FUNDING METRICS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to calculate average funding amount.")
+
+
+@router.get("/metrics/proposal-volume")
+async def get_proposal_volume_metrics(
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Calculates the number of proposals created per user and per team.
+    """
+    user_volume_query = """
+        SELECT
+            u.name as user_name,
+            COUNT(p.id) as proposal_count
+        FROM
+            proposals p
+        JOIN
+            users u ON p.user_id = u.id
+        GROUP BY
+            u.name
+        ORDER BY
+            proposal_count DESC
+    """
+
+    team_volume_query = """
+        SELECT
+            u.team as team_name,
+            COUNT(p.id) as proposal_count
+        FROM
+            proposals p
+        JOIN
+            users u ON p.user_id = u.id
+        WHERE
+            u.team IS NOT NULL
+        GROUP BY
+            u.team
+        ORDER BY
+            proposal_count DESC
+    """
+
+    try:
+        with get_engine().connect() as connection:
+            user_result = connection.execute(text(user_volume_query))
+            user_data = [dict(row) for row in user_result.mappings().fetchall()]
+
+            team_result = connection.execute(text(team_volume_query))
+            team_data = [dict(row) for row in team_result.mappings().fetchall()]
+
+        return {"by_user": user_data, "by_team": team_data}
+    except Exception as e:
+        logger.error(f"[GET PROPOSAL VOLUME METRICS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to calculate proposal volume metrics.")
+
+
+# Future Metric Suggestions:
+#
+# 1.  **Average Funding Amount:**
+#     - Calculate the average budget of all proposals, or approved proposals.
+#     - This would require a query similar to get_funding_by_category_metrics,
+#       but with an AVG aggregation on the parsed budget.
+#
+# 2.  **User/Team Proposal Volume:**
+#     - Count the number of proposals created per user or team over a time period.
+#     - This could be a simple COUNT grouped by user_id or team.
