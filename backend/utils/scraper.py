@@ -36,6 +36,7 @@ def scrape_url(url: str) -> str:
             if client_id and client_secret:
                 auth_token = f"{client_id}:{client_secret}"
                 headers["Authorization"] = f"Bearer {auth_token}"
+                headers["CF-Access-Client-Id"] = f"{client_id}"
             else:
                 logger.warning("Cloudflare credentials not found in environment variables.")
 
