@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy import text
 from typing import Optional
 
@@ -171,6 +171,85 @@ async def get_donor_interest_metrics(
         raise HTTPException(status_code=500, detail="Failed to calculate donor interest metrics.")
 
 
+@router.get("/metrics/proposal-success-rate")
+async def get_proposal_success_rate_metrics(
+    current_user: dict = Depends(get_current_user),
+    filter_by: Optional[str] = Query("all", enum=["user", "team", "all"])
+):
+    """
+    Calculates the proposal success rate (approved proposals / total proposals).
+    """
+    query_template = """
+        SELECT
+            CAST(SUM(CASE WHEN p.status = 'approved' THEN 1 ELSE 0 END) AS FLOAT) * 100 / COUNT(p.id) as success_rate
+        FROM
+            proposals p
+        {where_clause}
+    """
+
+    where_clause, params = _get_filter_clauses(current_user, filter_by)
+    final_query = query_template.format(where_clause=where_clause)
+
+    try:
+        with get_engine().connect() as connection:
+            result = connection.execute(text(final_query), params).scalar()
+        return {"filter": filter_by, "success_rate": result or 0}
+    except Exception as e:
+        logger.error(f"[GET SUCCESS RATE METRICS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to calculate proposal success rate.")
+
+
+@router.get("/metrics/cycle-time")
+async def get_cycle_time_metrics(
+    current_user: dict = Depends(get_current_user),
+    filter_by: Optional[str] = Query("all", enum=["user", "team", "all"])
+):
+    """
+    Calculates the average time from proposal creation to a final decision (approved/rejected).
+    """
+    query_template = """
+        WITH decision_times AS (
+            SELECT
+                p.id,
+                p.created_at,
+                MIN(psh.created_at) as decision_date
+            FROM
+                proposals p
+            JOIN
+                proposal_status_history psh ON p.id = psh.proposal_id
+            WHERE
+                psh.status IN ('approved', 'rejected', 'deleted')
+                {where_clause_and}
+            GROUP BY
+                p.id, p.created_at
+        )
+        SELECT
+            EXTRACT(EPOCH FROM AVG(decision_date - created_at)) as average_cycle_time_seconds
+        FROM
+            decision_times
+    """
+
+    where_clause, params = _get_filter_clauses(current_user, filter_by)
+    # Adjust where clause for the subquery
+    where_clause_and = ""
+    if where_clause:
+        # The query already has a WHERE clause, so we need to prepend AND
+        # to the conditions from the helper function.
+        conditions = where_clause.replace("WHERE ", "")
+        if conditions:
+            where_clause_and = f" AND {conditions}"
+    final_query = query_template.format(where_clause_and=where_clause_and)
+
+
+    try:
+        with get_engine().connect() as connection:
+            result = connection.execute(text(final_query), params).scalar()
+        return {"filter": filter_by, "average_cycle_time_seconds": result or 0}
+    except Exception as e:
+        logger.error(f"[GET CYCLE TIME METRICS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to calculate cycle time metrics.")
+
+
 def _get_filter_clauses(current_user, filter_by, status_filter=None):
     user_id = current_user["user_id"]
     where_clauses = []
@@ -293,13 +372,3 @@ async def get_proposal_volume_metrics(
         raise HTTPException(status_code=500, detail="Failed to calculate proposal volume metrics.")
 
 
-# Future Metric Suggestions:
-#
-# 1.  **Average Funding Amount:**
-#     - Calculate the average budget of all proposals, or approved proposals.
-#     - This would require a query similar to get_funding_by_category_metrics,
-#       but with an AVG aggregation on the parsed budget.
-#
-# 2.  **User/Team Proposal Volume:**
-#     - Count the number of proposals created per user or team over a time period.
-#     - This could be a simple COUNT grouped by user_id or team.

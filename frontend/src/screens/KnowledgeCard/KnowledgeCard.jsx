@@ -473,23 +473,52 @@ export default function KnowledgeCard() {
             return;
         }
 
-        const isNew = reference.isNew;
-        const url = isNew ? `${API_BASE_URL}/knowledge-cards/${id}/references` : `${API_BASE_URL}/knowledge-cards/references/${reference.id}`;
-        const method = isNew ? 'POST' : 'PUT';
+        try {
+            let cardId = id;
+            let isNewCard = false;
 
-        const response = await authenticatedFetch(url, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(reference),
-            credentials: 'include'
-        });
+            // If it's a new card, save it first to get an ID
+            if (!cardId) {
+                isNewCard = true;
+                const saveResponse = await handleSave(false); // Don't navigate
+                if (!saveResponse.ok) {
+                    alert("Could not save the new knowledge card. Please fill in all required fields.");
+                    return;
+                }
+                const data = await saveResponse.json();
+                cardId = data.knowledge_card_id;
+            }
 
-        if (response.ok) {
-            await fetchData();
-            setEditingReferenceIndex(null);
-        } else {
-            const error = await response.json();
-            alert(`Failed to save reference: ${error.detail}`);
+            // Now we are sure we have a cardId
+            const isNewReference = reference.isNew;
+            const url = isNewReference ? `${API_BASE_URL}/knowledge-cards/${cardId}/references` : `${API_BASE_URL}/knowledge-cards/references/${reference.id}`;
+            const method = isNewReference ? 'POST' : 'PUT';
+
+            const response = await authenticatedFetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(reference),
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                if (isNewCard) {
+                    // If it was a new card, we navigate to the new URL.
+                    // This will cause a re-render and fetchData will be called with the correct new ID.
+                    navigate(`/knowledge-card/${cardId}`, { replace: true });
+                } else {
+                    // If it was an existing card, just refetch the data.
+                    await fetchData();
+                    setEditingReferenceIndex(null);
+                }
+            } else {
+                const error = await response.json();
+                const errorMessage = error.detail || JSON.stringify(error);
+                alert(`Failed to save reference: ${errorMessage}`);
+            }
+        } catch (error) {
+            console.error("Error saving reference:", error);
+            alert("An unexpected error occurred while saving the reference.");
         }
     };
 

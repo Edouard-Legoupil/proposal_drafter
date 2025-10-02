@@ -26,7 +26,7 @@ def get_connector() -> Connector:
     """Initializes and returns a Cloud SQL Connector instance."""
     global connector
     if connector is None:
-        logger.info("Initializing Cloud SQL Connector for this process...")
+        #logger.info("Initializing Cloud SQL Connector for this process...")
         connector = Connector()
     return connector
 
@@ -40,7 +40,7 @@ def get_engine():
     """
     global engine
     if engine is not None:
-        logger.info(f"Returning existing engine: {type(engine)}")
+        # logger.info(f"Returning existing engine: {type(engine)}")
         return engine
 
     logger.info(f"Initializing new SQLAlchemy engine... on_gcp={on_gcp}")
