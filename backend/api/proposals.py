@@ -37,6 +37,7 @@ from backend.models.schemas import (
 )
 from backend.utils.proposal_logic import regenerate_section_logic
 from backend.utils.crew_proposal  import ProposalCrew
+from backend.api.knowledge import _save_knowledge_card_content_to_file
 
 # This router handles all endpoints related to the lifecycle of a proposal,
 # from creation and editing to listing and deletion.
@@ -261,13 +262,39 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
 
 
                     filename = f"{link_type}-{slugify(link_label)}-{slugify(card_summary)}.json" if link_type and link_id else f"{slugify(card_summary)}.json"
-                    filepath = os.path.join( filename)
-                    logger.info(f"Associating knowledge file: {filename} for proposal {proposal_id}")
                     
-                    if os.path.exists(filepath):
-                        knowledge_file_paths.append(filepath)
+                    # Correctly construct the full path to the knowledge file
+                    knowledge_dir = os.path.join(os.path.dirname(__file__), "..", "knowledge")
+                    filepath = os.path.join(knowledge_dir, filename)
+                    
+                    logger.info(f"Associating knowledge file: {filename} for proposal {proposal_id}")
+
+                    if not os.path.exists(filepath):
+                        logger.warning(f"Knowledge file not found at path: {filepath}. Attempting to create it.")
+                        # Fetch the generated_sections for the card
+                        card_content_result = connection.execute(
+                            text("SELECT generated_sections FROM knowledge_cards WHERE id = :card_id"),
+                            {"card_id": str(card_id)}
+                        ).fetchone()
+
+                        if card_content_result and card_content_result.generated_sections:
+                            generated_sections = card_content_result.generated_sections
+                            if isinstance(generated_sections, str):
+                                generated_sections = json.loads(generated_sections)
+                            
+                            # This function needs the raw DB connection
+                            _save_knowledge_card_content_to_file(connection, uuid.UUID(card_id), generated_sections)
+                            
+                            # Verify file was created
+                            if os.path.exists(filepath):
+                                logger.info(f"Successfully created knowledge file: {filepath}")
+                                knowledge_file_paths.append(filepath)
+                            else:
+                                logger.error(f"Failed to create knowledge file: {filepath}")
+                        else:
+                            logger.warning(f"No content found for knowledge card {card_id} to create file.")
                     else:
-                        logger.warning(f"Knowledge file not found at path: {filepath}")
+                        knowledge_file_paths.append(filepath)
 
         crew_instance = ProposalCrew(knowledge_file_paths=knowledge_file_paths).generate_proposal_crew()
 
