@@ -56,6 +56,7 @@ export default function KnowledgeCard() {
     useEffect(() => { linkedIdRef.current = linkedId; }, [linkedId]);
     const referencesRef = useRef(references);
     const eventSourceRef = useRef(eventSource);
+    const pollingRef = useRef({ intervalId: null, attempts: 0 });
 
     // Sync refs with state
     useEffect(() => {
@@ -66,6 +67,20 @@ export default function KnowledgeCard() {
         eventSourceRef.current = eventSource;
     }, [eventSource]);
 
+    const getStatus = useCallback((ref) => {
+        if (ref.status) return ref.status;
+        if (ref.scraping_error) return 'error';
+        if (ref.scraped_at) return 'ingested';
+        return 'pending';
+    }, []);
+
+    const getStatusMessage = useCallback((ref) => {
+        if (ref.status_message) return ref.status_message;
+        if (ref.scraping_error) return 'Scraping failed';
+        if (ref.scraped_at) return 'Ingested successfully';
+        return 'Pending ingestion';
+    }, []);
+
     // Cleanup effect for EventSource and other resources
     useEffect(() => {
         return () => {
@@ -74,8 +89,42 @@ export default function KnowledgeCard() {
                 eventSourceRef.current.close();
                 console.log('EventSource cleaned up on unmount');
             }
+            // Cleanup polling interval on unmount
+            if (pollingRef.current.intervalId) {
+                clearInterval(pollingRef.current.intervalId);
+                console.log('Polling interval cleaned up on unmount');
+            }
         };
     }, []);
+
+    useEffect(() => {
+        if (!pollingRef.current.intervalId) {
+            return; // Not polling, do nothing
+        }
+
+        pollingRef.current.attempts += 1;
+        const maxAttempts = 15; // Poll for a max of 30 seconds
+
+        // Check if all references have a final status according to the latest fetched data
+        const allReferencesSettled = references.every(ref =>
+            ['ingested', 'error', 'skipped'].includes(getStatus(ref))
+        );
+
+        if (allReferencesSettled) {
+            console.log("All references settled. Stopping polling.");
+            clearInterval(pollingRef.current.intervalId);
+            pollingRef.current.intervalId = null;
+            setLoading(false); // Hide any lingering loading indicators
+            setLoadingMessage('');
+        } else if (pollingRef.current.attempts >= maxAttempts) {
+            console.warn("Polling timeout reached. Stopping polling.");
+            clearInterval(pollingRef.current.intervalId);
+            pollingRef.current.intervalId = null;
+            setLoading(false);
+            setLoadingMessage('');
+        }
+
+    }, [references, getStatus]);
 
     const authenticatedFetch = useCallback(async (url, options) => {
         const response = await fetch(url, options);
@@ -406,21 +455,36 @@ export default function KnowledgeCard() {
                 const onMessage = (data) => {
                     setReferences(prev => {
                         const updated = prev.map(ref => ref.id === data.reference_id ? { ...ref, status: data.status, status_message: data.message } : ref);
-                        const allDone = updated.every(ref => ['ingested', 'error', 'skipped'].includes(ref.status));
+                        const allDone = updated.every(ref => ['ingested', 'error', 'skipped'].includes(getStatus(ref)));
+
                         if (allDone) {
-                            setTimeout(() => {
-                                if (eventSourceRef.current) eventSourceRef.current.close();
-                                setLoading(false);
-                                setLoadingMessage('');
+                            // All SSE messages received, close the connection
+                            if (eventSourceRef.current) {
+                                eventSourceRef.current.close();
+                                eventSourceRef.current = null;
+                            }
+
+                            // Start polling to check for DB updates
+                            setLoadingMessage("Finalizing ingestion... This might take a moment.");
+                            pollingRef.current.attempts = 0; // Reset attempts
+                            pollingRef.current.intervalId = setInterval(() => {
+                                console.log(`Polling for updates... Attempt: ${pollingRef.current.attempts + 1}`);
                                 fetchData();
-                            }, 500);
+                            }, 2000); // Poll every 2 seconds
                         }
                         return updated;
                     });
                 };
     
-                const onError = () => { setLoading(false); setLoadingMessage(''); };
-                const onTimeout = () => { setLoading(false); setLoadingMessage(''); fetchData(); };
+                const onError = () => {
+                    setLoading(false);
+                    setLoadingMessage('');
+                };
+
+                const onTimeout = () => {
+                    setLoading(false);
+                    setLoadingMessage('');
+                };
     
                 const closeSse = setupSse(`${API_BASE_URL}/knowledge-cards/${cardId}/ingest-status`, onMessage, onError, onTimeout);
                 eventSourceRef.current = { close: closeSse };
@@ -436,7 +500,7 @@ export default function KnowledgeCard() {
             setLoading(false);
             setLoadingMessage('');
         }
-    }, [id, handleSave, navigate, authenticatedFetch, fetchData]);
+    }, [id, handleSave, navigate, authenticatedFetch, fetchData, getStatus]);
 
     useEffect(() => {
         const fromAction = location.state?.fromAction;
@@ -713,19 +777,6 @@ export default function KnowledgeCard() {
         setReferences(newReferences);
     };
 
-    const getStatus = (ref) => {
-        if (ref.status) return ref.status;
-        if (ref.scraping_error) return 'error';
-        if (ref.scraped_at) return 'ingested';
-        return 'pending';
-    };
-
-    const getStatusMessage = (ref) => {
-        if (ref.status_message) return ref.status_message;
-        if (ref.scraping_error) return 'Scraping failed';
-        if (ref.scraped_at) return 'Ingested successfully';
-        return 'Pending ingestion';
-    };
 
     const handleOpenUploadModal = (reference) => {
         setCurrentReference(reference);
