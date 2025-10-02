@@ -1,7 +1,7 @@
 import logging
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy import text
-from typing import Optional
+from typing import Optional 
 
 from backend.core.db import get_engine
 from backend.core.security import get_current_user
