@@ -372,13 +372,3 @@ async def get_proposal_volume_metrics(
         raise HTTPException(status_code=500, detail="Failed to calculate proposal volume metrics.")
 
 
-# Future Metric Suggestions:
-#
-# 1.  **Average Funding Amount:**
-#     - Calculate the average budget of all proposals, or approved proposals.
-#     - This would require a query similar to get_funding_by_category_metrics,
-#       but with an AVG aggregation on the parsed budget.
-#
-# 2.  **User/Team Proposal Volume:**
-#     - Count the number of proposals created per user or team over a time period.
-#     - This could be a simple COUNT grouped by user_id or team.
