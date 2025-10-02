@@ -203,20 +203,6 @@ main() {
     
     log_info "✅ Project structure is valid"
     
-    if [ ! -d "frontend/node_modules" ]; then
-        log_warning "Frontend node_modules not found, running npm install..."
-        cd frontend
-        if ! npm install >> "../$LOG_FILE" 2>&1; then
-            log_error "Failed to install frontend dependencies"
-            cd ..
-            graceful_shutdown 1
-        fi
-        cd ..
-        log_info "✅ Frontend dependencies installed"
-    else
-        log_info "✅ Frontend dependencies found"
-    fi
-
     # Check environment configuration
     if [ ! -f "backend/.env" ]; then
         log_warning "backend/.env file not found"
@@ -252,6 +238,7 @@ main() {
 
     # Install dependencies
     pip install -r requirements.txt
+    pip install gunicorn
 
     # Start backend with Gunicorn
     gunicorn main:app --conf gunicorn.conf.py >> "../$LOG_FILE" 2>&1 &
@@ -261,18 +248,6 @@ main() {
     log_info "Backend server started with PID: $BACKEND_PID"
     log_debug "Backend logs are being written to $LOG_FILE"
     
-    # Start frontend server
-    log_info "🌐 Building frontend server..."
-    cd frontend
-    npm install
-    # Set environment variable to suppress browser opening
-    export BROWSER=none
-    npm run build >> "../$LOG_FILE" 2>&1 &
-    FRONTEND_PID=$!
-    cd ..
-    log_info "Frontend server started with PID: $FRONTEND_PID"
-    log_debug "Frontend logs are being written to $LOG_FILE"
-
     # Success!
     log_info "🎉 Proposal Generator Backend is now running!"
     log_info ""

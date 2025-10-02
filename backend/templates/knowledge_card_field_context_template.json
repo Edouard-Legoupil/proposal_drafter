@@ -5,36 +5,173 @@
     "description": "A template for creating a comprehensive knowledge card that provides a structured overview of a humanitarian field context.",
     "sections": [
       {
-        "section_name": "1. Protection & Legal Landscape",
-        "instructions": "Assess the **legal, institutional, and security environment** for displaced (refugees and IDPs) and stateless people. Summarize national **legal provisions** for asylum and statelessness. Identify key **national institutions** (ministries, courts, local authorities) and evaluate their effectiveness. Analyze prevailing **security conditions** (conflict, crime, border controls) and major **protection risks** (violence, exploitation, discrimination). Describe which **rights** (movement, work, education) are most constrained and evaluate the likely **evolution of asylum policies** and any political, security, or environmental developments that could alter displacement patterns.",
-        "word_limit": 800,
-        "key_word": "legal framework security protection risks institutional effectiveness asylum policy outlook"
-      },
-      {
-        "section_name": "2. Population Profile & Demographics",
-        "instructions": "Detail the **displaced and stateless population**. Provide an overview of **demographics** (age, gender distribution), **countries of origin**, and prevalent **ethnicities/cultural affiliations**. Describe their typical **education levels and professional skills**. Summarize recent **population movement trends** (influxes, returns, secondary movements) and **project** future inflows/outflows. Assess **conditions in countries of origin** that could enable voluntary return and any internal **demographic shifts** (birth rates, aging) impacting the displacement profile.",
-        "word_limit": 800,
-        "key_word": "refugee demographics country of origin movement trends education skills return conditions"
-      },
-      {
-        "section_name": "3. Socio-Economic & Basic Needs Status",
-        "instructions": "Analyze **socio-economic vulnerability and basic needs**. Summarize key national **economic indicators** (GDP, inflation, employment). **Compare income sources and socio-economic status** of displaced populations with host communities. Analyze **labour-market regulations** and socio-economic policies affecting **access to work** and **social protection schemes**. Summarize barriers to essential **services** (health, education, legal aid) and describe the most critical **unmet basic needs** (shelter, WASH, food security).",
-        "word_limit": 800,
-        "key_word": "economic indicators socio-economic status labour market access social protection unmet needs service barriers"
-      },
-      {
-        "section_name": "4. Stakeholders & Partnership Landscape",
-        "instructions": "Map **stakeholders and partnership dynamics**. **Identify principal stakeholders** (government, IOs, NGOs, donors, private sector, community leaders) and **analyze their leverage** over protection and solutions. Analyze how shifts in **stakeholder roles, funding**, or partnerships could affect humanitarian strategy and comparative advantage.",
-        "word_limit": 400,
-        "key_word": "stakeholder mapping humanitarian funding partnership dynamics donor government NGOs"
-      },
-      {
-        "section_name": "5. Solutions & Strategic Outlook",
-        "instructions": "Define **pathways for durable solutions**. **Identify legal or policy gaps** hindering durable solutions (voluntary return, local integration, resettlement). Highlight **partnership opportunities**, **complementary pathways** (education, labor mobility, family reunification), and **project resettlement quotas** and prospects for long-term solutions.",
+        "section_name": "Economic Indicators",
+        "instructions": "Summarize key national economic indicators most relevant to forcibly displaced and stateless people, including employment, inflation, and GDP growth.",
         "word_limit": 300,
-        "key_word": "durable solutions policy gaps resettlement complementary pathways integration return"
+        "key_word": "country economic indicators refugees displaced GDP employment inflation"
+      },
+      {
+        "section_name": "Security Conditions",
+        "instructions": "Assess prevailing security conditions, including conflict hotspots, crime levels, and border controls, and their effect on the safety and mobility of displaced and stateless people.",
+        "word_limit": 300,
+        "key_word": "country security situation refugees displaced border controls"
+      },
+      {
+        "section_name": "Institutional Framework",
+        "instructions": "Identify the primary national institutions (ministries, courts, local authorities) responsible for protection and assistance, and evaluate their effectiveness.",
+        "word_limit": 300,
+        "key_word": "national institutions refugee protection asylum system effectiveness"
+      },
+      {
+        "section_name": "Rights Environment",
+        "instructions": "Describe which rights—such as freedom of movement, work, and education—are most constrained by the current environment.",
+        "word_limit": 300,
+        "key_word": "refugee rights restrictions freedom of movement work education"
+      },
+      {
+        "section_name": "Population Demographics",
+        "instructions": "Provide the age and gender distribution of forcibly displaced and stateless populations.",
+        "word_limit": 300,
+        "key_word": "refugee demographics age gender distribution displaced populations"
+      },
+      {
+        "section_name": "Country of Origin Profile",
+        "instructions": "List the main countries or places of origin represented among displaced and stateless populations.",
+        "word_limit": 300,
+        "key_word": "refugee country of origin displaced populations"
+      },
+      {
+        "section_name": "Cultural Affiliations",
+        "instructions": "Identify the ethnicities, languages, or cultural affiliations most prevalent among displaced and stateless people.",
+        "word_limit": 300,
+        "key_word": "refugee ethnicities languages cultural affiliations"
+      },
+      {
+        "section_name": "Education and Skills",
+        "instructions": "Describe the predominant education levels and professional skills of displaced and stateless people.",
+        "word_limit": 300,
+        "key_word": "refugee education levels professional skills displaced"
+      },
+      {
+        "section_name": "Socio-Economic Status",
+        "instructions": "Compare income sources and socio-economic status of displaced populations with host communities.",
+        "word_limit": 300,
+        "key_word": "refugee socio-economic status income comparison host communities"
+      },
+      {
+        "section_name": "Population Movements",
+        "instructions": "Summarize recent trends such as influxes, returns, and secondary movements over the past 1 to 3 recent years.",
+        "word_limit": 300,
+        "key_word": "refugee movement trends returns secondary displacement last 3 years"
+      },
+      {
+        "section_name": "Stakeholder Mapping",
+        "instructions": "Identify principal stakeholders—government, international organizations, NGOs, donors, private sector, and community leaders—and analyze their leverage over protection and solutions.",
+        "word_limit": 400,
+        "key_word": "refugee humanitarian stakeholders mapping donors NGOs government"
+      },
+      {
+        "section_name": "Legal Framework",
+        "instructions": "Summarize legal provisions for asylum, statelessness determination, and refugee status in the country.",
+        "word_limit": 300,
+        "key_word": "refugee asylum laws statelessness legal framework country"
+      },
+      {
+        "section_name": "Civil Documentation",
+        "instructions": "Assess the accessibility of civil-documentation and legal-identity processes for displaced and stateless people.",
+        "word_limit": 300,
+        "key_word": "refugee civil documentation legal identity access"
+      },
+      {
+        "section_name": "Labour Market Access",
+        "instructions": "Analyze labour-market regulations and socio-economic policies affecting access to work and self-reliance.",
+        "word_limit": 300,
+        "key_word": "refugee labour market access employment policies"
+      },
+      {
+        "section_name": "Social Protection",
+        "instructions": "Describe the availability of social-protection schemes or safety nets for displaced and stateless people.",
+        "word_limit": 300,
+        "key_word": "refugee social protection safety nets displaced"
+      },
+      {
+        "section_name": "Protection Risks",
+        "instructions": "Identify major protection risks including violence, exploitation, and discrimination.",
+        "word_limit": 300,
+        "key_word": "refugee protection risks violence exploitation discrimination"
+      },
+      {
+        "section_name": "Freedom of Movement",
+        "instructions": "Explain how restrictions on freedom of movement impact access to services and livelihoods.",
+        "word_limit": 300,
+        "key_word": "refugee freedom of movement restrictions services"
+      },
+      {
+        "section_name": "Access to Services",
+        "instructions": "Summarize barriers to health care, education, and legal aid for displaced and stateless people.",
+        "word_limit": 300,
+        "key_word": "refugee access to health education legal aid services"
+      },
+      {
+        "section_name": "Unmet Basic Needs",
+        "instructions": "Describe the most critical unmet basic needs such as shelter, WASH, and food security.",
+        "word_limit": 300,
+        "key_word": "refugee unmet needs shelter WASH food security"
+      },
+      {
+        "section_name": "Policy Gaps",
+        "instructions": "Identify legal or policy gaps hindering durable solutions such as voluntary return, local integration, and resettlement.",
+        "word_limit": 300,
+        "key_word": "refugee policy gaps durable solutions return resettlement integration"
+      },
+      {
+        "section_name": "Partnership Opportunities",
+        "instructions": "Highlight opportunities for partnerships, complementary pathways, or innovative approaches to expand protection and solutions.",
+        "word_limit": 300,
+        "key_word": "refugee partnership opportunities complementary pathways"
+      },
+      {
+        "section_name": "Stakeholder Dynamics and Funding",
+        "instructions": "Analyze how shifts in stakeholder roles, funding, or partnerships could affect UNHCR’s strategy and comparative advantage.",
+        "word_limit": 400,
+        "key_word": "refugee stakeholder dynamics humanitarian funding UNHCR strategy"
+      },
+      {
+        "section_name": "Resettlement and Pathways",
+        "instructions": "Project resettlement quotas and prospects for complementary pathways such as education, labour mobility, and family reunification.",
+        "word_limit": 300,
+        "key_word": "refugee resettlement quotas complementary pathways"
+      },
+      {
+        "section_name": "Conditions in Countries of Origin",
+        "instructions": "Assess conditions in countries of origin that could enable voluntary return of displaced and stateless people.",
+        "word_limit": 300,
+        "key_word": "refugee country of origin conditions voluntary return"
+      },
+      {
+        "section_name": "Asylum Policy Outlook",
+        "instructions": "Analyze the likely evolution of asylum policies and protection space in the host country.",
+        "word_limit": 300,
+        "key_word": "asylum policy outlook host country refugees"
+      },
+      {
+        "section_name": "Demographic Shifts",
+        "instructions": "Assess demographic changes such as birth rates, aging, and family reunification and their impact on displacement profiles.",
+        "word_limit": 300,
+        "key_word": "refugee demographic shifts birth rates aging population"
+      },
+      {
+        "section_name": "Movement Projections",
+        "instructions": "Project inflows, outflows, returns, and internal movements of displaced and stateless people over the strategy period.",
+        "word_limit": 300,
+        "key_word": "refugee displacement projections inflows outflows returns"
+      },
+      {
+        "section_name": "Political, Security, and Environmental Developments",
+        "instructions": "Evaluate political, security, or environmental developments that could alter displacement patterns.",
+        "word_limit": 400,
+        "key_word": "refugee political security environmental developments displacement"
       }
-
     ]
   }
   

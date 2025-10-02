@@ -63,7 +63,7 @@ openpyxl
 apscheduler
 
 # ASGI server implementation with enhanced performance (standard extras)
-uvicorn[standard]>=0.23.0
+uvicorn[standard]
 
 # Async PostgreSQL connector for Google Cloud SQL
 cloud-sql-python-connector[asyncpg]
@@ -107,9 +107,3 @@ PyPDF2
 
 # Slugify for clean filenames
 python-slugify
-
-# WebSocket library
-websockets>=12.0
- 
-## # WSGI HTTP Server for UNIX concurrent connection
-gunicorn
