@@ -270,6 +270,9 @@ export default function Login (props)
                                 }
                                 <div className='Login-motto'>
                                         <div className='Login-motto-item'>
+                                                <p className='Login-motto-text'>⚠️ Beta Version for Testing Purpose ⚠️</p>
+                                        </div>
+                                        <div className='Login-motto-item'>
                                                 <FontAwesomeIcon icon={faWandMagicSparkles} className='Login-motto-icon' />
                                                 <p className='Login-motto-text'>Draft Initial Project Proposal with AI</p>
                                         </div>

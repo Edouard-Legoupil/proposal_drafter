@@ -1,7 +1,7 @@
 import logging
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy import text
-from typing import Optional 
+from typing import Optional
 
 from backend.core.db import get_engine
 from backend.core.security import get_current_user
@@ -49,15 +49,16 @@ async def get_development_time_metrics(
         params["user_id"] = user_id
     elif filter_by == "team":
         with get_engine().connect() as connection:
-            team_result = connection.execute(
-                text("SELECT team FROM users WHERE id = :user_id"),
+            team_id = connection.execute(
+                text("SELECT team_id FROM users WHERE id = :user_id"),
                 {"user_id": user_id}
             ).scalar()
 
-        if team_result:
-            where_clause = "WHERE p.user_id IN (SELECT id FROM users WHERE team = :team)"
-            params["team"] = team_result
+        if team_id:
+            where_clause = "WHERE p.user_id IN (SELECT id FROM users WHERE team_id = :team_id)"
+            params["team_id"] = team_id
         else:
+            # Fallback to user filter if the user is not in a team
             where_clause = "WHERE p.user_id = :user_id"
             params["user_id"] = user_id
 
@@ -171,85 +172,6 @@ async def get_donor_interest_metrics(
         raise HTTPException(status_code=500, detail="Failed to calculate donor interest metrics.")
 
 
-@router.get("/metrics/proposal-success-rate")
-async def get_proposal_success_rate_metrics(
-    current_user: dict = Depends(get_current_user),
-    filter_by: Optional[str] = Query("all", enum=["user", "team", "all"])
-):
-    """
-    Calculates the proposal success rate (approved proposals / total proposals).
-    """
-    query_template = """
-        SELECT
-            CAST(SUM(CASE WHEN p.status = 'approved' THEN 1 ELSE 0 END) AS FLOAT) * 100 / COUNT(p.id) as success_rate
-        FROM
-            proposals p
-        {where_clause}
-    """
-
-    where_clause, params = _get_filter_clauses(current_user, filter_by)
-    final_query = query_template.format(where_clause=where_clause)
-
-    try:
-        with get_engine().connect() as connection:
-            result = connection.execute(text(final_query), params).scalar()
-        return {"filter": filter_by, "success_rate": result or 0}
-    except Exception as e:
-        logger.error(f"[GET SUCCESS RATE METRICS ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to calculate proposal success rate.")
-
-
-@router.get("/metrics/cycle-time")
-async def get_cycle_time_metrics(
-    current_user: dict = Depends(get_current_user),
-    filter_by: Optional[str] = Query("all", enum=["user", "team", "all"])
-):
-    """
-    Calculates the average time from proposal creation to a final decision (approved/rejected).
-    """
-    query_template = """
-        WITH decision_times AS (
-            SELECT
-                p.id,
-                p.created_at,
-                MIN(psh.created_at) as decision_date
-            FROM
-                proposals p
-            JOIN
-                proposal_status_history psh ON p.id = psh.proposal_id
-            WHERE
-                psh.status IN ('approved', 'rejected', 'deleted')
-                {where_clause_and}
-            GROUP BY
-                p.id, p.created_at
-        )
-        SELECT
-            EXTRACT(EPOCH FROM AVG(decision_date - created_at)) as average_cycle_time_seconds
-        FROM
-            decision_times
-    """
-
-    where_clause, params = _get_filter_clauses(current_user, filter_by)
-    # Adjust where clause for the subquery
-    where_clause_and = ""
-    if where_clause:
-        # The query already has a WHERE clause, so we need to prepend AND
-        # to the conditions from the helper function.
-        conditions = where_clause.replace("WHERE ", "")
-        if conditions:
-            where_clause_and = f" AND {conditions}"
-    final_query = query_template.format(where_clause_and=where_clause_and)
-
-
-    try:
-        with get_engine().connect() as connection:
-            result = connection.execute(text(final_query), params).scalar()
-        return {"filter": filter_by, "average_cycle_time_seconds": result or 0}
-    except Exception as e:
-        logger.error(f"[GET CYCLE TIME METRICS ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to calculate cycle time metrics.")
-
-
 def _get_filter_clauses(current_user, filter_by, status_filter=None):
     user_id = current_user["user_id"]
     where_clauses = []
@@ -260,25 +182,25 @@ def _get_filter_clauses(current_user, filter_by, status_filter=None):
         params["user_id"] = user_id
     elif filter_by == "team":
         with get_engine().connect() as connection:
-            team_result = connection.execute(
-                text("SELECT team FROM users WHERE id = :user_id"),
+            team_id = connection.execute(
+                text("SELECT team_id FROM users WHERE id = :user_id"),
                 {"user_id": user_id}
             ).scalar()
 
-        if team_result:
-            where_clauses.append("p.user_id IN (SELECT id FROM users WHERE team = :team)")
-            params["team"] = team_result
+        if team_id:
+            where_clauses.append("p.user_id IN (SELECT id FROM users WHERE team_id = :team_id)")
+            params["team_id"] = team_id
         else:
-            # Fallback to user filter if team not found
+            # Fallback to user filter if the user is not in a team
             where_clauses.append("p.user_id = :user_id")
             params["user_id"] = user_id
-
+    
     if status_filter == "approved":
         where_clauses.append("p.status = 'approved'")
 
     if where_clauses:
         return "WHERE " + " AND ".join(where_clauses), params
-
+    
     return "", params
 
 @router.get("/metrics/average-funding-amount")
@@ -336,6 +258,8 @@ async def get_proposal_volume_metrics(
             proposals p
         JOIN
             users u ON p.user_id = u.id
+        WHERE
+            u.name IS NOT NULL
         GROUP BY
             u.name
         ORDER BY
@@ -344,16 +268,18 @@ async def get_proposal_volume_metrics(
 
     team_volume_query = """
         SELECT
-            u.team as team_name,
+            t.name as team_name,
             COUNT(p.id) as proposal_count
         FROM
             proposals p
         JOIN
             users u ON p.user_id = u.id
+        JOIN
+            teams t ON u.team_id = t.id
         WHERE
-            u.team IS NOT NULL
+            u.team_id IS NOT NULL
         GROUP BY
-            u.team
+            t.name
         ORDER BY
             proposal_count DESC
     """

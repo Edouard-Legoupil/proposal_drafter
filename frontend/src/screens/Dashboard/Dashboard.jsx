@@ -205,7 +205,7 @@ export default function Dashboard ()
                 <div className="Dashboard">
                         <header className="Dashboard_top">
                                 <div className='Dashboard_label'>
-                                     Draft Smart Project Proposals with AI, Curated Knowledge and Peer Review. 
+                                Draft Smart Project Proposals with AI, Curated Knowledge and Peer Review. ⚠️ Beta Version ⚠️  
                                          
                                 </div> 
                         </header>  
