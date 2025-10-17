@@ -1,0 +1,62 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  font-family: "Noto";
+  padding: 20px;
+  border-radius: 8px;
+  width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.modal-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.modal-content button {
+  font-family: "Noto";
+  padding: 10px 20px;
+  border: none;
+  background-color: #0072bc;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.linked-element {
+  font-size: 0.8em;
+  color: #666;
+}
+
+.modal-option p {
+  margin: 5px 0 0 0;
+  font-size: 0.9em;
+}

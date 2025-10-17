@@ -1,82 +1,126 @@
 import './Project.css'
+import { useState } from 'react';
 
-import { useNavigate } from 'react-router-dom'
-import Markdown from 'react-markdown'
+import view from '../../../../assets/images/dashboard-fileIcon.svg';
+import bin from '../../../../assets/images/delete.svg';
+import transfer from '../../../../assets/images/prop.svg';
+import tripleDots from '../../../../assets/images/dashboard-tripleDots.svg';
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
 
-import tripleDots from "../../../../assets/images/dashboard-tripleDots.svg"
-import calendar from "../../../../assets/images/dashboard-calendar.svg"
-import view from "../../../../assets/images/login_showPassword.svg"
-import bin from "../../../../assets/images/delete.svg"
-
-export default function Project (props)
+export default function Project ({ project, date, onClick, isReview = false, projectIndex, handleDeleteProject, handleTransferOwnership })
 {
-        const navigate = useNavigate()
-        async function handleDeleteProject ()
-        {
-                const response  = await fetch(`${API_BASE_URL}/delete-draft/${props?.proposal_id}`, {
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include'
-                })
+        const [popoverVisible, setPopoverVisible] = useState(false);
 
-                if(response.ok)
-                        navigate(0)
-                else if(response.status === 401)
-                {
-                        sessionStorage.setItem("session_expired", "Session expired. Please login again.")
-                        navigate("/login")
+        const getStatusInfo = (project) => {
+                if (project.is_accepted) {
+                        return { text: 'Shared', className: 'status-shared' };
                 }
-                else
-                {
-                        navigate(0)
+                switch (project.status) {
+                        case 'draft':
+                                return { text: 'Drafting', className: 'status-draft' };
+                        case 'in_review':
+                                return { text: 'Pending Peer Review', className: 'status-review' };
+                        case 'submission':
+                                return { text: 'Pending Submission', className: 'status-submission' };
+                        case 'submitted':
+                                return { text: 'Submitted', className: 'status-submitted' };
+                        case 'approved':
+                                return { text: 'Approved', className: 'status-approved' };
+                        default:
+                                return { text: 'Drafting', className: 'status-draft' };
                 }
+        };
+
+        const togglePopover = (e) => {
+                e.stopPropagation(); // Prevent card's onClick from firing
+                setPopoverVisible(!popoverVisible);
+        };
+
+        const trimSummary = (summary) => {
+                const summaryText = typeof summary === 'string' ? summary : '';
+                if (!summaryText) return 'No summary available.';
+                const lines = summaryText.split('\n');
+                if (lines.length > 5) {
+                    return lines.slice(0, 5).join('\n') + '...';
+                }
+                return summaryText;
+        };
+
+        const statusInfo = getStatusInfo(project);
+
+        if (isReview) {
+                return (
+                        <article className="card" onClick={onClick} data-testid="review-card">
+                                <div className="Dashboard_project_title">
+                                        <h3 id={`review-${project.proposal_id}`}>{project.project_title}</h3>
+                                        <button className="Dashboard_project_tripleDotsContainer" onClick={togglePopover} aria-haspopup="true" aria-expanded={popoverVisible} data-testid="project-options-button">
+                                                <img src={tripleDots} alt="Options" />
+                                        </button>
+                                        <div className={`Project_optionsPopover ${popoverVisible ? 'visible' : ''}`} id={`popover-${projectIndex+1}`} >
+                                            <div className={`Project_optionsPopover_option`} onClick={(e) => { e.stopPropagation(); onClick(e); }} data-testid="project-view-button">
+                                                    <img src={view} alt="View" />
+                                                    View
+                                            </div>
+                                            <div className={`Project_optionsPopover_option ${project.status === 'in_review' ? 'disabled' : ''}`} onClick={(e) => { e.stopPropagation(); if(project.status !== 'in_review') {handleTransferOwnership(project.proposal_id)} }} data-testid="project-transfer-button">
+                                                    <img className='Project_optionsPopover_option_transfer' src={transfer} alt="Transfer" />
+                                                    Transfer
+                                            </div>
+                                            <div className={`Project_optionsPopover_option ${project.status === 'in_review' ? 'disabled' : ''}`} onClick={(e) => { e.stopPropagation(); if(project.status !== 'in_review') {handleDeleteProject(project.proposal_id)} }} data-testid="project-delete-button">
+                                                    <img className='Project_optionsPopover_option_delete' src={bin} alt="Delete" />
+                                                    Delete
+                                            </div>
+                                        </div>
+                                </div>
+                                <h2>Requester: {project.requester_name || 'N/A'}</h2>
+                                {project.review_status !== 'completed' && project.deadline && (
+                                    <p><strong>Deadline:</strong> <time dateTime={project.deadline}>{new Date(project.deadline).toLocaleDateString()}</time></p>
+                                )}
+                                <p>
+                                        <i className="fa-solid fa-earth-americas field-context" aria-hidden="true"></i> {project.country || 'N/A'} -
+                                        <i className="fa-solid fa-money-bill-wave donor" aria-hidden="true"></i> {project.donor || 'N/A'} -
+                                        <i className="fa-solid fa-bullseye outcome" aria-hidden="true"></i> {project.outcomes?.join(', ') || 'N/A'} -
+                                        <i className="fa-solid fa-money-check-dollar" aria-hidden="true"></i> Budget: {project.budget || 'N/A'}
+                                </p>
+                        </article>
+                )
         }
 
-        return  <div className='Dashboard_project' onClick={e => props?.onClick(e, props?.proposal_id)}>
-                <div className='Dashboard_project_title'>
-                        {props?.project_title}
-                        {!props?.sample ?
-                                <button className='Dashboard_project_tripleDotsContainer' popoverTarget={`popover-${props?.projectIndex+1}`} popoverTargetAction="toggle">
-                                        <img className='Dashboard_project_tripleDots' src={tripleDots} />
+        return  <article className={`Dashboard_project ${popoverVisible ? 'popover-active' : ''}`} onClick={onClick} data-testid="project-card">
+                        <div className="Dashboard_project_title">
+                                <h3 id={`proj-${project.proposal_id}`}>{project.project_title}</h3>
+                                <button className="Dashboard_project_tripleDotsContainer" onClick={togglePopover} aria-haspopup="true" aria-expanded={popoverVisible} data-testid="project-options-button">
+                                        <img src={tripleDots} alt="Options" />
                                 </button>
-                                :
-                                ""
-                        }
-                </div>
-
-                <div popover="auto" className='Project_optionsPopover' id={`popover-${props?.projectIndex+1}`} >
-                        <div className='Project_optionsPopover_option'>
-                                <img src={view} />
-                                View
+                                <div className={`Project_optionsPopover ${popoverVisible ? 'visible' : ''}`} id={`popover-${projectIndex+1}`} >
+                                    <div className={`Project_optionsPopover_option`} onClick={(e) => { e.stopPropagation(); onClick(e); }} data-testid="project-view-button">
+                                            <img src={view} alt="View" />
+                                            View
+                                    </div>
+                                    <div className={`Project_optionsPopover_option ${project.status === 'in_review' ? 'disabled' : ''}`} onClick={(e) => { e.stopPropagation(); if(project.status !== 'in_review') {handleTransferOwnership(project.proposal_id)} }} data-testid="project-transfer-button">
+                                            <img className='Project_optionsPopover_option_transfer' src={transfer} alt="Transfer" />
+                                            Transfer
+                                    </div>
+                                    <div className={`Project_optionsPopover_option ${project.status === 'in_review' ? 'disabled' : ''}`} onClick={(e) => { e.stopPropagation(); if(project.status !== 'in_review') {handleDeleteProject(project.proposal_id)} }} data-testid="project-delete-button">
+                                            <img className='Project_optionsPopover_option_delete' src={bin} alt="Delete" />
+                                            Delete
+                                    </div>
+                                </div>
                         </div>
-
-                        <div className='Project_optionsPopover_option' onClick={handleDeleteProject}>
-                                <img className='Project_optionsPopover_option_delete' src={bin} />
-                                Delete
+                        <p>
+                                <i className="fa-solid fa-earth-americas field-context" aria-hidden="true"></i> {project.country || 'N/A'} -
+                                <i className="fa-solid fa-money-bill-wave donor" aria-hidden="true"></i> {project.donor || 'N/A'} -
+                                <i className="fa-solid fa-bullseye outcome" aria-hidden="true"></i> {project.outcomes?.join(', ') || 'N/A'} -
+                                <i className="fa-solid fa-money-check-dollar" aria-hidden="true"></i> Budget: {project.budget || 'N/A'}
+                        </p>
+                        <div className="Dashboard_project_description">
+                            <div className="Dashboard_project_fade"></div>
+                            <p><small> {trimSummary(project.summary)} </small></p>
                         </div>
-                </div>
-
-                <div className='Dashboard_project_description'>
-                        <Markdown>
-                                {props?.children}
-                        </Markdown>
-                        <div className='Dashboard_project_fade' />
-                </div>
-
-                <div className='Dashboard_project_footer'>
-                        <div className='Dashboard_project_date'>
-                                <img src={calendar} />
-                                {props?.date}
+                        <div className="Dashboard_project_footer">
+                            <span className={`Dashboard_project_label ${statusInfo.className}`}>{statusInfo.text}</span>
+                            <span className="Dashboard_project_date">
+                                Last Updated: <time dateTime={date}>{date}</time>
+                            </span>
                         </div>
-
-                        <div
-                                className='Dashboard_project_label'
-                                style={{background: props?.status ? "#01A89A" : "#FF671F"}}
-                        >
-                                {props?.status ? "Shared" : "Draft"}
-                        </div>
-                </div>
-        </div>
+                </article>
 }

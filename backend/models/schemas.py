@@ -1,6 +1,6 @@
 #  Standard Library
 import uuid
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, List
 
 #  Third-Party Libraries
 from pydantic import BaseModel
@@ -16,6 +16,7 @@ class BaseDataRequest(BaseModel):
     """
     form_data: Dict[str, Any]
     project_description: str
+    associated_knowledge_cards: Optional[List[Dict[str, Any]]] = None
     template_name: str
 
 class SectionRequest(BaseModel):
@@ -69,6 +70,7 @@ class CreateSessionRequest(BaseModel):
     """
     form_data: Dict[str, Any]
     project_description: str
+    associated_knowledge_cards: Optional[List[Dict[str, Any]]] = None
 
 
 class UpdateSectionRequest(BaseModel):
@@ -80,52 +82,48 @@ class UpdateSectionRequest(BaseModel):
     content: str
 
 
-# class Donor(BaseModel):
-#     id: uuid.UUID
-#     name: str
+from datetime import datetime
 
-#     class Config:
-#         orm_mode = True
+class PeerReviewerInfo(BaseModel):
+    user_id: uuid.UUID
+    deadline: Optional[datetime] = None
 
-# class Outcome(BaseModel):
-#     id: uuid.UUID
-#     name: str
+class SubmitPeerReviewRequest(BaseModel):
+    """
+    Schema for submitting a proposal for peer review.
+    """
+    reviewers: list[PeerReviewerInfo]
 
-#     class Config:
-#         orm_mode = True
 
-# class FieldContext(BaseModel):
-#     id: uuid.UUID
-#     name: str
+class ReviewComment(BaseModel):
+    section_name: str
+    review_text: str
+    type_of_comment: str
+    severity: str
 
-#     class Config:
-#         orm_mode = True
+class SubmitReviewRequest(BaseModel):
+    """
+    Schema for submitting a peer review.
+    """
+    comments: list[ReviewComment]
 
-# class KnowledgeCardReference(BaseModel):
-#     id: uuid.UUID
-#     url: str
+class CreateDonorRequest(BaseModel):
+    name: str
 
-#     class Config:
-#         orm_mode = True
+class CreateOutcomeRequest(BaseModel):
+    name: str
 
-# class KnowledgeCardBase(BaseModel):
-#     title: str
-#     summary: Optional[str] = None
-#     status: Optional[str] = 'draft'
-#     donor_id: Optional[uuid.UUID] = None
-#     outcome_id: Optional[uuid.UUID] = None
-#     field_context_id: Optional[uuid.UUID] = None
+class CreateFieldContextRequest(BaseModel):
+    name: str
+    geographic_coverage: Optional[str] = None
+    category: str
 
-# class KnowledgeCardCreate(KnowledgeCardBase):
-#     reference_urls: List[str] = []
+class UpdateProposalStatusRequest(BaseModel):
+    status: str
 
-# class KnowledgeCard(KnowledgeCardBase):
-#     id: uuid.UUID
-#     generated_sections: Optional[dict] = None
-#     is_accepted: bool
-#     created_at: datetime
-#     updated_at: datetime
-#     references: List[KnowledgeCardReference] = []
+class TransferOwnershipRequest(BaseModel):
+    new_owner_id: uuid.UUID
 
-#     class Config:
-#         orm_mode = True
+class AuthorResponseRequest(BaseModel):
+    author_response: str
+

@@ -1,36 +1,62 @@
 import './MultiSelectModal.css'
 
-export default function MultiSelectModal({ isOpen, onClose, options, selectedOptions, onSelectionChange }) {
+import { useState } from 'react';
+
+export default function MultiSelectModal({ isOpen, onClose, options, selectedOptions, onSelectionChange, title, onConfirm, showDeadline = false }) {
+  const [deadline, setDeadline] = useState('');
+  const today = new Date().toISOString().split('T')[0];
+
   if (!isOpen) {
     return null;
   }
 
+  const handleConfirm = () => {
+    if (new Date(deadline) > new Date()) {
+      onConfirm({ selectedUsers: selectedOptions, deadline });
+      onClose();
+    }
+  };
+
   const handleCheckboxChange = (option) => {
-    const newSelection = selectedOptions.includes(option)
-      ? selectedOptions.filter(item => item !== option)
-      : [...selectedOptions, option];
+    const optionValue = option.id || option;
+    const newSelection = selectedOptions.includes(optionValue)
+      ? selectedOptions.filter(item => item !== optionValue)
+      : [...selectedOptions, optionValue];
     onSelectionChange(newSelection);
   };
 
   return (
     <div className="modal-overlay">
       <div className="modal-content">
-        <h2>Select Outcomes</h2>
+        <h2>{title || 'Select Options'}</h2>
         <div className="modal-options">
-          {options.map(option => (
-            <div key={option} className="modal-option">
-              <input
-                type="checkbox"
-                id={option}
-                value={option}
-                checked={selectedOptions.includes(option)}
-                onChange={() => handleCheckboxChange(option)}
-              />
-              <label htmlFor={option}>{option}</label>
-            </div>
-          ))}
+          {options.map(option => {
+            const optionValue = option.id || option;
+            const optionLabel = option.name || option;
+            return (
+              <div key={optionValue} className="modal-option">
+                <input
+                  type="checkbox"
+                  id={optionValue}
+                  value={optionValue}
+                  checked={selectedOptions.includes(optionValue)}
+                  onChange={() => handleCheckboxChange(option)}
+                  data-testid={`user-select-checkbox-${optionValue}`}
+                />
+                <label htmlFor={optionValue}>{optionLabel}</label>
+              </div>
+            );
+          })}
         </div>
-        <button onClick={onClose}>Close</button>
+        {showDeadline && (
+          <div className="modal-deadline">
+            <label htmlFor="deadline">Deadline:</label>
+            <input type="date" id="deadline" value={deadline} min={today} onChange={e => setDeadline(e.target.value)} data-testid="deadline-input" />
+          </div>
+        )}
+        <div className="modal-actions">
+          {onConfirm && <button onClick={handleConfirm} disabled={selectedOptions.length === 0 || !deadline || new Date(deadline) <= new Date()} data-testid="confirm-button">Confirm</button>}
+        </div>
       </div>
     </div>
   );

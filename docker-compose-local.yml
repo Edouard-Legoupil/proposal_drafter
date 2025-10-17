@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME:-proposalgen}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-mysecretpassword}
+    volumes:
+      - ./db/database-setup.sql:/docker-entrypoint-initdb.d/database-setup.sql
+      - ./db/seed.sql:/docker-entrypoint-initdb.d/seed.sql
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    depends_on:
+      - postgres
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend:/app/backend
+      - ./frontend:/app/frontend
+
+volumes:
+  db_data:

@@ -1,5 +1,6 @@
 #  Third-Party Libraries
 import logging
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
@@ -32,7 +33,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 #  Internal Modules
-from backend.api import auth, proposals, session, documents, health #, Knowledge
+from backend.api import auth, proposals, session, documents, health, users, knowledge, metrics
 from backend.core.middleware import (
     setup_cors_middleware,
     custom_http_exception_handler,
@@ -43,6 +44,19 @@ from backend.core.db import test_connection
 
 # This is the main application file. It brings together all the different
 # parts of the application: API routers, middleware, and event handlers.
+
+# --- Lifespan Management ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Manages application startup and shutdown events.
+    """
+    logging.info("Application is starting up...")
+    setup_scheduler()
+    logging.info("Background scheduler has been started.")
+    yield
+    # Cleanup tasks can be added here if needed
+    logging.info("Application is shutting down...")
 
 # --- FastAPI Application Initialization ---
 app = FastAPI(
@@ -59,7 +73,8 @@ app = FastAPI(
     license_info={
         "name": "MIT",
         "url": "https://opensource.org/licenses/MIT",
-    }
+    },
+    lifespan=lifespan
 )
 
 
@@ -79,7 +94,9 @@ app.include_router(auth.router, prefix="/api", tags=["Authentication"])
 app.include_router(session.router, prefix="/api", tags=["Session Management"])
 app.include_router(proposals.router, prefix="/api", tags=["Proposals"])
 app.include_router(documents.router, prefix="/api", tags=["Documents"])
-#app.include_router(knowledge.router, prefix="/api/knowledge", tags=["Knowledge"])
+app.include_router(users.router, prefix="/api", tags=["Users"])
+app.include_router(knowledge.router, prefix="/api", tags=["Knowledge"])
+app.include_router(metrics.router, prefix="/api", tags=["Metrics"])
 app.include_router(health.router, tags=["Health & Debugging"])
 
 # --- Serve React Frontend ---
@@ -124,31 +141,6 @@ if os.path.isdir(frontend_path):
             return FileResponse(index_file)
         
         return {"detail": "Frontend not built"}
-
-
-# --- Application Startup Events ---
-# Code in this block is executed when the application starts up.
-# Instead of connecting at import, do it in your startup event for lazy loading
-# If DB is unavailable, Cloud Run can retry health checks instead of killing container instantly.
-@app.on_event("startup")
-async def startup_event():
-    """
-    Performs application startup tasks, such as initializing the background scheduler.
-    """
-    logging.info("Application is starting up...")
-    
-    # Debug: Check database configuration
-   # logging.info(f"Database config - on_gcp: {on_gcp}, host: {db_host}, db: {db_name}")
-   # logging.info(f"DB username: {db_username}, password set: {bool(db_password)}")
-    
-    # Test connection
-    #if test_connection():
-    #    logging.info("✅ Database connection test passed")
-    #else:
-    #    logging.error("❌ Database connection test failed")
-        # Don't raise error immediately, let health checks handle it
-    setup_scheduler()
-    logging.info("Background scheduler has been started.")
 
 
 # --- Main Execution Block ---

@@ -1,0 +1,196 @@
+---  
+config: 
+    theme: neutral  
+---  
+
+erDiagram
+    teams {
+        UUID id PK
+        string name UK
+    }
+
+    users {
+        UUID id PK
+        string email UK
+        string password
+        string name
+        UUID team_id FK
+        JSONB security_questions
+        boolean session_active
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    donors {
+        UUID id PK
+        string account_id UK
+        string name UK
+        string country
+        string donor_group
+        UUID created_by FK
+        timestamptz created_at
+        timestamptz last_updated
+    }
+
+    outcomes {
+        UUID id PK
+        string name UK
+        UUID created_by FK
+        timestamptz created_at
+        timestamptz last_updated
+    }
+
+    field_contexts {
+        UUID id PK
+        string title
+        string name UK
+        string category
+        string geographic_coverage
+        UUID created_by FK
+        timestamptz created_at
+        timestamptz last_updated
+    }
+
+    proposals {
+        UUID id PK
+        UUID user_id FK
+        string template_name
+        JSONB form_data
+        text project_description
+        JSONB generated_sections
+        JSONB reviews
+        boolean is_accepted
+        proposal_status status
+        UUID created_by FK
+        timestamptz created_at
+        UUID updated_by FK
+        timestamptz updated_at
+    }
+
+    proposal_status_history {
+        UUID id PK
+        UUID proposal_id FK
+        proposal_status status
+        JSONB generated_sections_snapshot
+        timestamptz created_at
+    }
+
+    proposal_peer_reviews {
+        UUID id PK
+        UUID proposal_id FK
+        UUID reviewer_id FK
+        UUID proposal_status_history_id FK
+        string section_name
+        string status
+        timestamptz deadline
+        text review_text
+        text author_response
+        string type_of_comment
+        string severity
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    knowledge_cards {
+        UUID id PK
+        string template_name
+        text summary
+        JSONB generated_sections
+        boolean is_accepted
+        proposal_status status
+        UUID donor_id FK
+        UUID outcome_id FK
+        UUID field_context_id FK
+        UUID created_by FK
+        timestamptz created_at
+        UUID updated_by FK
+        timestamptz updated_at
+    }
+
+    knowledge_card_history {
+        UUID id PK
+        UUID knowledge_card_id FK
+        JSONB generated_sections_snapshot
+        UUID created_by FK
+        timestamptz created_at
+    }
+
+    knowledge_card_references {
+        UUID id PK
+        UUID knowledge_card_id FK
+        string url
+        string reference_type
+        text summary
+        UUID created_by FK
+        timestamptz created_at
+        UUID updated_by FK
+        timestamptz updated_at
+        timestamptz scraped_at
+        boolean scraping_error
+    }
+
+    knowledge_card_reference_vectors {
+        UUID id PK
+        UUID reference_id FK
+        text text_chunk
+        vector embedding
+    }
+
+    proposal_donors {
+        UUID proposal_id FK
+        UUID donor_id FK
+    }
+
+    proposal_outcomes {
+        UUID proposal_id FK
+        UUID outcome_id FK
+    }
+
+    proposal_field_contexts {
+        UUID proposal_id FK
+        UUID field_context_id FK
+    }
+
+    users ||--o{ teams : belongs_to
+    users ||--o{ donors : creates
+    users ||--o{ outcomes : creates
+    users ||--o{ field_contexts : creates
+    users ||--o{ proposals : creates
+    users ||--o{ proposals : updates
+    users ||--o{ knowledge_cards : creates
+    users ||--o{ knowledge_cards : updates
+    users ||--o{ knowledge_card_history : creates
+    users ||--o{ knowledge_card_references : creates
+    users ||--o{ knowledge_card_references : updates
+    users ||--o{ proposal_peer_reviews : reviews
+
+    proposals ||--o{ proposal_status_history : has
+    proposals ||--o{ proposal_peer_reviews : has
+    proposals }o--o{ donors : "has many through proposal_donors"
+    proposals }o--o{ outcomes : "has many through proposal_outcomes"
+    proposals }o--o{ field_contexts : "has many through proposal_field_contexts"
+
+    knowledge_cards ||--o{ knowledge_card_history : has
+    knowledge_cards ||--o{ knowledge_card_references : has
+    knowledge_card_references ||--o{ knowledge_card_reference_vectors : has
+
+    knowledge_cards }|--|| donors : "optional link to"
+    knowledge_cards }|--|| outcomes : "optional link to"
+    knowledge_cards }|--|| field_contexts : "optional link to"
+
+    proposal_status_history ||--o{ proposal_peer_reviews : references
+
+    proposals ||--o{ proposal_donors : "has many"
+    donors ||--o{ proposal_donors : "has many"
+    proposal_donors }|--|| proposals : "belongs to"
+    proposal_donors }|--|| donors : "belongs to"
+
+    proposals ||--o{ proposal_outcomes : "has many"
+    outcomes ||--o{ proposal_outcomes : "has many"
+    proposal_outcomes }|--|| proposals : "belongs to"
+    proposal_outcomes }|--|| outcomes : "belongs to"
+
+    proposals ||--o{ proposal_field_contexts : "has many"
+    field_contexts ||--o{ proposal_field_contexts : "has many"
+    proposal_field_contexts }|--|| proposals : "belongs to"
+    proposal_field_contexts }|--|| field_contexts : "belongs to"

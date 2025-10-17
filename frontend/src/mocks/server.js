@@ -86,6 +86,53 @@ export const server = setupServer(
                 })
         ),
 
+        http.get(`${API_BASE_URL}/users`, () => {
+                return HttpResponse.json({
+                        users: [
+                                { id: '1', name: 'User 1' },
+                                { id: '2', name: 'User 2' },
+                        ]
+                })
+        }),
+
+        http.get(`${API_BASE_URL}/outcomes`, () => {
+                return HttpResponse.json({
+                        outcomes: [
+                                { id: '1', name: 'OA1-Access/Documentation' },
+                                { id: '2', name: 'OA2-Something Else' },
+                        ]
+                })
+        }),
+
+        http.post(`${API_BASE_URL}/donors`, async ({ request }) => {
+                const { name } = await request.json()
+                return HttpResponse.json({ id: `new_${name}`, name: name })
+        }),
+
+        http.post(`${API_BASE_URL}/field-contexts`, async ({ request }) => {
+                const { name } = await request.json()
+                return HttpResponse.json({ id: `new_${name}`, name: name })
+        }),
+
+        http.post(`${API_BASE_URL}/outcomes`, async ({ request }) => {
+                const { name } = await request.json()
+                return HttpResponse.json({ id: `new_${name}`, name: name })
+        }),
+
+        http.get(`${API_BASE_URL}/proposals/reviews`, () => {
+                return HttpResponse.json({
+                        reviews: [
+                                {
+                                        proposal_id: '3',
+                                        project_title: 'Third Project',
+                                        summary: 'Sum3',
+                                        updated_at: '2025-05-12T12:00:00.123Z',
+                                        is_accepted: false
+                                }
+                        ]
+                })
+        }),
+
         http.get(new RegExp(`${API_BASE_URL}/load-draft/.*`), async ({ request }) => {
                 const url = new URL(request.url)
                 const segments = url.pathname.split('/')
@@ -125,7 +172,7 @@ export const server = setupServer(
                         //         Evaluation: '',
                         //         'Results Matrix': '',
                         //         'Work Plan': '',
-                        //         Budget: '',
+                        //         'Budget': '',
                         //         'Annex 1. Risk Assessment Plan': ''
                         // },
                         is_accepted: isAccepted
@@ -158,5 +205,21 @@ export const server = setupServer(
 
         http.post(`${API_BASE_URL}/finalize-proposal`, () =>
                 HttpResponse.json({ success: true })
-        )
+        ),
+
+        http.get(`${API_BASE_URL}/metrics/development-time`, () => {
+                return HttpResponse.json({ "Proposal": 30, "Revision": 15 });
+        }),
+
+        http.get(`${API_BASE_URL}/metrics/funding-by-category`, () => {
+                return HttpResponse.json({ "Health": 5, "Education": 10 });
+        }),
+
+        http.get(`${API_BASE_URL}/metrics/donor-interest`, () => {
+                return HttpResponse.json({ "USAID": 20, "UNICEF": 5 });
+        }),
+
+        http.get(`${API_BASE_URL}/knowledge-cards`, () => {
+                return HttpResponse.json({ knowledge_cards: [] });
+        })
 )

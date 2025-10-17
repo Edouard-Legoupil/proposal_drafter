@@ -17,7 +17,13 @@
         cursor: pointer;
 
         box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.06) 0px 2px 4px -1px;
+        position: relative;
 }
+
+.Dashboard_project.popover-active {
+    z-index: 10;
+}
+
 
 .Dashboard_project_title {
         display: flex;
@@ -42,6 +48,7 @@
 }
 
 .Project_optionsPopover {
+        display: none;
         width: 105px;
 
         position: absolute;
@@ -49,8 +56,8 @@
         margin: 0;
         inset: auto;
 
-        top: anchor(top);
-        right: anchor(right);
+        top: 24px;
+        right: 0;
 
         margin-top: 24px;
 
@@ -59,6 +66,12 @@
         border: none;
 
         border-radius: 8px;
+        background-color: white;
+        z-index: 20;
+}
+
+.Project_optionsPopover.visible {
+    display: block;
 }
 
 .Project_optionsPopover_option {
@@ -80,6 +93,16 @@
 
 .Project_optionsPopover_option > img {
         height: 16px;
+}
+
+.Project_optionsPopover_option.disabled {
+    color: #ccc;
+    cursor: not-allowed;
+    background-color: #f9f9f9;
+}
+
+.Project_optionsPopover_option.disabled:hover {
+    background-color: #f9f9f9;
 }
 
 .Dashboard_project_description {

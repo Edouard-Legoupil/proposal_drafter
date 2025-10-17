@@ -34,7 +34,7 @@
         align-items: center;
 }
 
-.Header_iomLogo {
+.Header_orgLogo {
         margin-right: 20px;
 
         height: 35px;
@@ -161,5 +161,5 @@
         display: flex;
         flex-direction: column;
         flex-grow: 1;
-        overflow: hidden;
+        overflow: auto;
 }

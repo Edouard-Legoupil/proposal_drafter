@@ -5,15 +5,45 @@
         overflow: hidden;
 }
 
+.Chat_menuButton {
+    display: none;
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 1001;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+}
+
 .Chat_sidebar {
         background: #17223B;
-
         list-style-type: none;
-
         width: 200px;
         height: 100%;
-
+        overflow-y: auto;
         padding-top: 20px;
+        transition: transform 0.3s ease-in-out;
+}
+
+@media (max-width: 768px) {
+    .Chat_menuButton {
+        display: block;
+    }
+
+    .Chat_sidebar {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        transform: translateX(-100%);
+        z-index: 1000;
+    }
+
+    .mobile-menu-open .Chat_sidebar {
+        transform: translateX(0);
+    }
 }
 
 .Chat_sidebarOption {
@@ -129,6 +159,11 @@
 
 .Chat_inputArea_additionalDetails.expanded > img {
         transform: scaleY(1);
+}
+
+.Chat_inputArea_additionalDetails.disabled {
+    color: #ccc;
+    cursor: not-allowed;
 }
 
 .Chat_form {
@@ -543,9 +578,157 @@
         align-items: center;
         gap: 5px;
     }
+
+.Chat_workflow_status_container {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.workflow-stage-box {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background-color: #f9f9f9;
+}
+
+.workflow-stage-label {
+    font-weight: bold;
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.workflow-badges {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.status-badge-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.revert-btn {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 10px;
+    cursor: pointer;
+}
+
+.revert-btn:hover {
+    background-color: #5a6268;
+}
+
+.reviews-container {
+    margin-top: 20px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+}
+
+.review {
+    margin-bottom: 15px;
+}
+
+.review p {
+    margin: 0 0 5px 0;
+}
+
+.author-response textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    resize: vertical;
+}
+
+.upload-approved-container {
+    margin-left: 20px;
+}
+
+.upload-label {
+    background-color: #28a745;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    display: inline-block;
+}
+
+#approved-doc-upload {
+    display: none;
+}
+
+.status-badge.inactive {
+    background-color: transparent !important;
+    color: #333 !important;
+    border: 1px solid #ccc;
+    opacity: 0.6;
+}
+
+.status-badge:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.associated-knowledge-display {
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 10px;
+    margin-bottom: 15px;
+}
+
+.associated-knowledge-display h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.associated-knowledge-display ul {
+    max-height: 150px;
+    overflow-y: auto;
+    list-style-type: none;
+    padding-left: 0;
+    margin-bottom: 0;
+}
+
+.associated-knowledge-display li {
+    background-color: #f0f0f0;
+    padding: 5px 10px;
+    border-radius: 3px;
+    margin-bottom: 5px;
+}
     
     .multi-select-tag-close {
         cursor: pointer;
         font-weight: bold;
     }
+
+.status-draft {
+    background: #757575;
+}
+
+.status-review {
+    background: #FF9800;
+}
+
+.status-submission {
+    background: #0072BC;
+}
+
+.status-submitted {
+    background: #6A1B9A;
+}
+
+.status-approved {
+    background: #2E7D32;
+}
     

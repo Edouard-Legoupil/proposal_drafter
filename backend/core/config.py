@@ -13,59 +13,59 @@ logger = logging.getLogger(__name__)
 # --- Install Configuration ---
 
 # Print Python version
-logger.info("Python Version:")
-logger.info(sys.version)
-logger.info("-----")
+#logger.info("Python Version:")
+#logger.info(sys.version)
+#logger.info("-----")
 
 # Print Python Install Directory
-logger.info("Python Install Directory:")
-logger.info(sys.prefix)
-logger.info("-----")
+#logger.info("Python Install Directory:")
+#logger.info(sys.prefix)
+#logger.info("-----")
 
 # Print the PATH environment variable
-logger.info("PATH Environment Variable:")
-logger.info(os.getenv("PATH"))
-logger.info("-----")
+#logger.info("PATH Environment Variable:")
+#logger.info(os.getenv("PATH"))
+#logger.info("-----")
 
 # Print PYTHONPATH if it's set
-logger.info("PYTHONPATH Environment Variable:")
-pythonpath = os.getenv("PYTHONPATH")
-if pythonpath:
-    logger.info(pythonpath)
-else:
-    logger.info("Not Set")
-logger.info("-----")
+#logger.info("PYTHONPATH Environment Variable:")
+#pythonpath = os.getenv("PYTHONPATH")
+#if pythonpath:
+#    logger.info(pythonpath)
+#else:
+#    logger.info("Not Set")
+#logger.info("-----")
 
 # Print PYTHONHOME if it's set
-logger.info("PYTHONHOME Environment Variable:")
-pythonhome = os.getenv("PYTHONHOME")
-if pythonhome:
-    logger.info(pythonhome)
-else:
-    logger.info("Not Set")
-logger.info("-----")
+# logger.info("PYTHONHOME Environment Variable:")
+# pythonhome = os.getenv("PYTHONHOME")
+# if pythonhome:
+#     logger.info(pythonhome)
+# else:
+#     logger.info("Not Set")
+# logger.info("-----")
 
-# Attempt to import the 'openai' module and print its version and file location
-try:
-    # Importing the openai module
-    import openai
+# # Attempt to import the 'openai' module and print its version and file location
+# try:
+#     # Importing the openai module
+#     import openai
     
-    # Print openai module version if available
-    logger.info("OpenAI Module Version:")
-    if hasattr(openai, '__version__'):
-        logger.info(openai.__version__)
-    else:
-        logger.info("Version not specified")
-    logger.info("-----")
+#     # Print openai module version if available
+#     logger.info("OpenAI Module Version:")
+#     if hasattr(openai, '__version__'):
+#         logger.info(openai.__version__)
+#     else:
+#         logger.info("Version not specified")
+#     logger.info("-----")
 
-    # Print location of the openai module
-    logger.info("OpenAI Module Location:")
-    logger.info(importlib.util.find_spec("openai").origin)
-    logger.info("-----")
+#     # Print location of the openai module
+#     logger.info("OpenAI Module Location:")
+#     logger.info(importlib.util.find_spec("openai").origin)
+#     logger.info("-----")
 
-except ImportError:
-    logger.info("OpenAI module is not installed")
-    logger.info("-----")
+# except ImportError:
+#     logger.info("OpenAI module is not installed")
+#     logger.info("-----")
 
 
 
@@ -92,12 +92,12 @@ enable_iam_auth = os.getenv('ENABLE_IAM_AUTH', 'true').lower() == 'true'
 
 # Log the loaded database configuration for debugging purposes.
 # Note: Be cautious about logging sensitive information in production.
-logger.info(f"DEBUG: enable_iam_auth: {enable_iam_auth}")
-logger.info(f"GAE_ENV: {os.getenv('GAE_ENV')}")
-logger.info(f"K_SERVICE: {os.getenv('K_SERVICE')}")
-logger.info(f"DEBUG: db_username from env: {db_username}")
-logger.info(f"DEBUG: db_password (first 3 chars): {db_password[:3] if db_password else 'None'}")
-logger.info(f"DEBUG: db_host from env: {db_host}")
+# logger.info(f"DEBUG: enable_iam_auth: {enable_iam_auth}")
+# logger.info(f"GAE_ENV: {os.getenv('GAE_ENV')}")
+# logger.info(f"K_SERVICE: {os.getenv('K_SERVICE')}")
+# logger.info(f"DEBUG: db_username from env: {db_username}")
+# logger.info(f"DEBUG: db_password (first 3 chars): {db_password[:3] if db_password else 'None'}")
+# logger.info(f"DEBUG: db_host from env: {db_host}")
 
 # --- Critical Environment Variable Checks ---
 # Ensure that essential database configuration is present.
@@ -161,26 +161,21 @@ def get_available_templates():
                 with open(template_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
 
-                # Ensure the loaded data is a dictionary, skipping files like sample_templates.json
                 if not isinstance(data, dict):
                     logger.info(f"Skipping non-dictionary template file: {filename}")
                     continue
 
-                # Handle multiple donors per template
-                if "donors" in data and isinstance(data["donors"], list):
-                    for donor_name in data["donors"]:
+                donors = data.get("donors", [])
+                if isinstance(donors, list):
+                    for donor_name in donors:
                         templates_map[donor_name] = filename
-                # Fallback to single donor field for backward compatibility
-                elif "donor" in data:
-                    templates_map[data["donor"]] = filename
-                else:
-                    # Fallback for templates without a 'donors' or 'donor' field
-                    base_name = filename.replace(".json", "").replace("_", " ").title()
-                    templates_map[base_name] = filename
-                    logger.warning(f"Template '{filename}' is missing a 'donors' or 'donor' field. Falling back to filename.")
+
+                # Also map the template by its filename for direct access
+                templates_map[filename] = filename
 
             except (json.JSONDecodeError, IOError) as e:
                 logger.error(f"Failed to read or parse template file: {filename}. Error: {e}")
+                continue # Skip to the next file
 
     # Ensure "Not Yet Specified" option points to the default UNHCR template.
     unhcr_template_file = "unhcr_proposal_template.json"

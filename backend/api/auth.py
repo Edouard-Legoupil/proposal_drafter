@@ -38,10 +38,11 @@ async def signup(request: Request):
     name = data.get('username')
     email = data.get('email')
     password = data.get('password')
+    team_id = data.get('team_id')
     security_question = data.get('security_question')
     security_answer = data.get('security_answer')
 
-    if not all([name, email, password, security_question, security_answer]):
+    if not all([name, email, password, security_question, security_answer, team_id]):
         return JSONResponse(status_code=400, content={"error": "All fields are required."})
 
     hashed_password = generate_password_hash(password)
@@ -57,13 +58,14 @@ async def signup(request: Request):
             # Insert the new user into the database.
             connection.execute(
                 text("""
-                    INSERT INTO users (id, email, name, password, security_questions)
-                    VALUES (:id, :email, :name, :password, :security_questions)
+                    INSERT INTO users (id, email, name, team_id, password, security_questions)
+                    VALUES (:id, :email, :name, :team_id, :password, :security_questions)
                 """),
                 {
                     'id': str(uuid.uuid4()),
                     'email': email,
                     'name': name,
+                    'team_id': team_id,
                     'password': hashed_password,
                     'security_questions': json.dumps(hashed_questions)
                 }
@@ -114,13 +116,13 @@ async def login(request: Request):
         
         # 3. Create a JWT token and set Redis session
         token = jwt.encode(
-            {"email": email, "exp": datetime.utcnow() + timedelta(minutes=30)},
+            {"email": email, "exp": datetime.utcnow() + timedelta(minutes=480)},
             SECRET_KEY,
             algorithm="HS256"
         )
         
         try:
-            redis_client.setex(f"user_session:{user_id}", 1800, token)
+            redis_client.setex(f"user_session:{user_id}", 28800, token)
         except RedisError as redis_error:
             # Catch specific Redis-related errors
             logging.error(f"Redis error setting session for user ID {user_id}: {redis_error}")
@@ -137,7 +139,7 @@ async def login(request: Request):
             value=token,
             httponly=True,
             path="/",
-            max_age=1800,
+            max_age=28800,
             **cookie_settings
         )
         logging.info(f"User {email} logged in successfully.")

@@ -2,6 +2,32 @@
 
 This directory contains the frontend of the proposal drafting application, built with React and Vite.
 
+## High-Level Design Philosophy
+
+This application is designed around a two-level knowledge management system to enhance proposal generation, minimize hallucinations, and ensure human accountability throughout the process.
+
+### Two-Level Knowledge Management
+
+1.  **Knowledge Card Creation**: The first level focuses on building a curated knowledge base.
+    *   **Reference Identification**: The system identifies and ingests relevant information from web sources to serve as references.
+    *   **RAG-Based Content**: It then uses a Retrieval-Augmented Generation (RAG) model to create structured "Knowledge Cards" from these references.
+    *   **Human in the Loop**: Crucially, these cards are not final. They can be reviewed and edited by users, ensuring that the knowledge is accurate, well-curated, and fit for purpose.
+
+2.  **Grounded Proposal Generation**: The second level leverages this curated knowledge.
+    *   **Consistent Knowledge Injection**: When generating proposals, users can associate specific Knowledge Cards with the generation process. This ensures that precise, pre-approved information is consistently used across multiple proposals.
+    *   **Optimal Context Management**: This approach helps to manage the context window of the language model effectively, feeding it only the most relevant information and reducing the risk of content mismatch or deviation from the core message.
+
+### Continuous Learning
+
+The application is built for continuous improvement. The peer review workflow for proposals allows the system to learn from fully reviewed and approved documents over time. This creates a feedback loop where the quality of generated content improves with each successful proposal cycle.
+
+### Core Benefits
+
+This design ensures:
+-   **Better Proposals**: Grounded in curated, specific knowledge.
+-   **Minimized Hallucination**: By relying on RAG and human-verified knowledge cards.
+-   **Human Accountability**: Users are in control of the knowledge base and the final output, maintaining clear accountability.
+
 ## Code Structure
 
 The frontend code is organized into the following directories:
@@ -27,6 +53,10 @@ The core of the user experience is handled by two main screen components:
 -   **User Flow**:
     -   A user can click "Generate New Proposal" to navigate to the `/chat` screen to start a new proposal.
     -   A user can click on an existing draft, which stores the `proposal_id` in `sessionStorage` and navigates to the `/chat` screen to load it for editing.
+-   **New Features**:
+    -   **Project Options**: Each project card now has a popover menu with options to "View", "Delete", or "Transfer Ownership".
+    -   **Soft Delete**: The "Delete" option performs a soft delete by updating the proposal's status to "deleted" in the backend.
+    -   **Transfer Ownership**: The "Transfer Ownership" option opens a modal to select a new owner for the proposal.
 
 ### `screens/Chat/Chat.jsx`
 
@@ -46,11 +76,35 @@ The core of the user experience is handled by two main screen components:
     5.  **Saving Manual Edits**:
         - When a user manually edits a section and clicks "Save", the component calls the `POST /api/update-section-content` endpoint.
         - This provides a direct, fast way to save content without involving the AI generation process.
+-   **New Features**:
+    -   **Grounded Generation**: Users can click "Associate Knowledge" to open a modal and select one or more Knowledge Cards. This links the curated information to the proposal, grounding the AI's output in verified data and optimizing the context window.
+    -   **Workflow Badges**: The status badges have been updated to be more sequential and are now grouped in a "Workflow Stage" box. "Submission" has been renamed to "Pre-Submission", and each badge has a descriptive tooltip.
+    -   **Version Switching**: Users can revert a proposal to a previous status by clicking the "Revert" button next to an inactive status badge.
+    -   **Restricted Editing**: The proposal form and generation buttons are disabled if the proposal's status is not "Drafting".
+    -   **Pre-Submission View**: When a proposal is in the "Pre-Submission" stage, peer review comments are displayed under each section, along with a form for the author to respond.
+    -   **Approved View**: When a proposal is "Approved", an "Upload approved document version" button is displayed.
 
-## Running the Application
+### `screens/KnowledgeCard/KnowledgeCard.jsx`
 
-For detailed instructions on running the application locally, please refer to the main `CICD-SETUP.md` file in the root of the project.
+-   **Responsibility**: This screen allows users to create and manage "Knowledge Cards." It is central to the application's two-level knowledge management system.
+-   **User Flow**:
+    -   **Reference Ingestion**: A user starts by providing a URL to a reference document. The system's AI ingests the content.
+    -   **AI-Powered Creation**: Based on the ingested reference, the AI generates a structured Knowledge Card with content organized according to a predefined template.
+    -   **Human-in-the-Loop Editing**: The user can then review, edit, and refine the AI-generated content to ensure its accuracy and quality.
+    -   **Association**: The curated Knowledge Card can then be associated with proposals to ground the generation process in reliable information.
+-   **New Features**:
+    -   **Updated Form**: The "Reference Type" field is now a compulsory dropdown at the top of the form. When "Field Context" is selected as the link type, a "Geographic Coverage" dropdown appears to filter the items.
+    -   **Restyled Buttons**: The buttons have been restyled and realigned as per the user's request.
+    -   **Save and Navigate**: The "Save Card" button now saves the card and navigates the user back to the "Knowledge Card" tab on the dashboard.
 
-## Environment Variables
+### `screens/Review/Review.jsx`
 
-The application uses environment variables for configuration. The primary variable is `VITE_BACKEND_URL`, which should point to the URL of the running backend API. Refer to `.env.example` for details.
+-   **Responsibility**: This screen is used for the peer review process. It allows a user to review a proposal that has been submitted to them for feedback.
+-   **User Flow**:
+    -   A user navigates to this screen by clicking on a proposal that has been assigned to them for review on their dashboard.
+    -   The user can view the proposal content section by section and provide comments in a dedicated text area for each section.
+    -   Once the review is complete, the user can submit their feedback by clicking the "Review Completed" button.
+-   **New Features**:
+    -   **Scrollable View**: The review screen is now scrollable to accommodate long proposals.
+    -   **Enhanced Comments**: The review form for each section now includes dropdowns for "Type of Comment" and "Severity".
+
