@@ -69,8 +69,8 @@ def process_donors(cur, user_id, donors_file):
         generated_sections = json.dumps({})
         cur.execute("""
             INSERT INTO knowledge_cards (template_name, summary, generated_sections, donor_id, created_by, updated_by)
-            VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
-        """, ("knowledge_card_donor_template.json", summary, generated_sections, donor_id, user_id, user_id))
+            VALUES (NULL, %s, %s, %s, %s, %s) RETURNING id
+        """, (summary, generated_sections, donor_id, user_id, user_id))
         card_id = cur.fetchone()[0]
 
         # Add references
@@ -108,8 +108,8 @@ def process_outcomes(cur, user_id, outcomes_file):
         generated_sections = json.dumps({})
         cur.execute("""
             INSERT INTO knowledge_cards (template_name, summary, generated_sections, outcome_id, created_by, updated_by)
-            VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
-        """, ("knowledge_card_outcome_template.json", summary, generated_sections, outcome_id, user_id, user_id))
+            VALUES (NULL, %s, %s, %s, %s, %s) RETURNING id
+        """, (summary, generated_sections, outcome_id, user_id, user_id))
         card_id = cur.fetchone()[0]
 
         # Add references
@@ -152,8 +152,8 @@ def process_field_contexts(cur, user_id, field_contexts_file):
         generated_sections = json.dumps({})
         cur.execute("""
             INSERT INTO knowledge_cards (template_name, summary, generated_sections, field_context_id, created_by, updated_by)
-            VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
-        """, ("knowledge_card_field_context_template.json", summary, generated_sections, fc_id, user_id, user_id))
+            VALUES (NULL, %s, %s, %s, %s, %s) RETURNING id
+        """, (summary, generated_sections, fc_id, user_id, user_id))
         card_id = cur.fetchone()[0]
 
         # Add references

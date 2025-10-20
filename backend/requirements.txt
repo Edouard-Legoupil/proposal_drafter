@@ -63,7 +63,7 @@ openpyxl
 apscheduler
 
 # ASGI server implementation with enhanced performance (standard extras)
-uvicorn[standard]
+uvicorn[standard]>=0.23.0
 
 # Async PostgreSQL connector for Google Cloud SQL
 cloud-sql-python-connector[asyncpg]
