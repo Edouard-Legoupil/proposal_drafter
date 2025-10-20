@@ -56,11 +56,24 @@ def main():
             user_id = uuid.UUID(args.user_id)
 
             # Get all knowledge cards
-            cur.execute("SELECT id, template_name, generated_sections, updated_at FROM knowledge_cards")
+            cur.execute("""
+                SELECT
+                    kc.id,
+                    kc.template_name,
+                    kc.generated_sections,
+                    kc.updated_at,
+                    d.name as donor_name,
+                    o.name as outcome_name,
+                    fc.name as field_context_name
+                FROM knowledge_cards kc
+                LEFT JOIN donors d ON kc.donor_id = d.id
+                LEFT JOIN outcomes o ON kc.outcome_id = o.id
+                LEFT JOIN field_contexts fc ON kc.field_context_id = fc.id
+            """)
             knowledge_cards = cur.fetchall()
 
             for card in knowledge_cards:
-                card_id, template_name, generated_sections, card_updated_at = card
+                card_id, template_name, generated_sections, card_updated_at, donor_name, outcome_name, field_context_name = card
                 should_generate = False
 
                 if args.force:
@@ -81,8 +94,10 @@ def main():
                 if should_generate:
                     print(f"Generating content for knowledge card {card_id}...")
                     template = load_proposal_template(template_name)
+                    name = donor_name or outcome_name or field_context_name
+                    pre_prompt = f"{template.get('description', '')} for {name}."
                     new_generated_sections = {}
-                    crew = ContentGenerationCrew(knowledge_card_id=str(card_id))
+                    crew = ContentGenerationCrew(knowledge_card_id=str(card_id), pre_prompt=pre_prompt)
 
                     for section in template.get("sections", []):
                         section_name = section.get("section_name")

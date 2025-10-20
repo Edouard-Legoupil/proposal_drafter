@@ -50,9 +50,11 @@ class ContentGenerationCrew:
     agents_config = 'config/agents_knowledge.yaml'
     tasks_config = 'config/tasks_knowledge.yaml'
     knowledge_card_id: str = None
+    pre_prompt: str = ""
 
-    def __init__(self, knowledge_card_id: str):
+    def __init__(self, knowledge_card_id: str, pre_prompt: str = ""):
         self.knowledge_card_id = knowledge_card_id
+        self.pre_prompt = pre_prompt
 
     @agent
     def researcher(self) -> Agent:
@@ -75,15 +77,19 @@ class ContentGenerationCrew:
 
     @task
     def research_task(self) -> Task:
+        research_task_config = self.tasks_config['research_task'].copy()
+        research_task_config['description'] = self.pre_prompt + research_task_config['description']
         return Task(
-            config=self.tasks_config['research_task'],
+            config=research_task_config,
             agent=self.researcher()
         )
 
     @task
     def write_task(self) -> Task:
+        write_task_config = self.tasks_config['write_task'].copy()
+        write_task_config['description'] = self.pre_prompt + write_task_config['description']
         return Task(
-            config=self.tasks_config['write_task'],
+            config=write_task_config,
             agent=self.writer()
         )
 
