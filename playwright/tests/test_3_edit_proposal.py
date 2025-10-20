@@ -7,7 +7,7 @@ def test_edit_and_save_proposal(page: Page):
     Tests that a user can edit and save a proposal.
     NOTE: This test is not independent and depends on a proposal existing on the dashboard.
     """
-        email = "testuser@unhcr.org"
+    email = "testuser@unhcr.org"
     password = "password123"
     base_url = "http://localhost:8502"
 

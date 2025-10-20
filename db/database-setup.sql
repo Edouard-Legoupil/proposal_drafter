@@ -162,8 +162,7 @@ CREATE TABLE IF NOT EXISTS knowledge_card_history (
 -- Create Knowledge Card References table  
 CREATE TABLE IF NOT EXISTS knowledge_card_references (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    knowledge_card_id UUID NOT NULL REFERENCES knowledge_cards(id) ON DELETE CASCADE,
-    url TEXT NOT NULL,
+    url TEXT NOT NULL UNIQUE,
     reference_type TEXT NOT NULL,
     summary TEXT NOT NULL,    
     created_by UUID NOT NULL REFERENCES users(id),
@@ -171,8 +170,14 @@ CREATE TABLE IF NOT EXISTS knowledge_card_references (
     updated_by UUID NOT NULL REFERENCES users(id),
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     scraped_at TIMESTAMPTZ,
-    scraping_error BOOLEAN DEFAULT FALSE,
-    UNIQUE (knowledge_card_id, url)
+    scraping_error BOOLEAN DEFAULT FALSE
+);
+
+-- Create join table for many-to-many relationship between knowledge cards and references
+CREATE TABLE IF NOT EXISTS knowledge_card_to_references (
+    knowledge_card_id UUID NOT NULL REFERENCES knowledge_cards(id) ON DELETE CASCADE,
+    reference_id UUID NOT NULL REFERENCES knowledge_card_references(id) ON DELETE CASCADE,
+    PRIMARY KEY (knowledge_card_id, reference_id)
 );
 
 -- Create Knowledge Card Reference Vectors table

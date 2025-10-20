@@ -33,11 +33,12 @@ class VectorSearchTool(BaseTool):
             # The 1 - (embedding <=> :query_embedding) is for cosine similarity
             # pgvector returns the cosine distance, so we subtract from 1 to get similarity
             query = text("""
-                SELECT text_chunk
+                SELECT kcrv.text_chunk
                 FROM knowledge_card_reference_vectors kcrv
                 JOIN knowledge_card_references kcr ON kcrv.reference_id = kcr.id
-                WHERE kcr.knowledge_card_id = :kc_id
-                ORDER BY embedding <=> :query_embedding
+                JOIN knowledge_card_to_references kctr ON kcr.id = kctr.reference_id
+                WHERE kctr.knowledge_card_id = :kc_id
+                ORDER BY kcrv.embedding <=> :query_embedding
                 LIMIT 5;
             """)
             results = connection.execute(query, {"kc_id": self.knowledge_card_id, "query_embedding": str(query_embedding)}).fetchall()

@@ -202,12 +202,38 @@ async def create_knowledge_card(card: KnowledgeCardIn, current_user: dict = Depe
             )
             if card.references:
                 for ref in card.references:
+                    # Check if reference already exists
+                    existing_ref = connection.execute(
+                        text("SELECT id FROM knowledge_card_references WHERE url = :url"),
+                        {"url": ref.url}
+                    ).fetchone()
+
+                    if existing_ref:
+                        reference_id = existing_ref.id
+                    else:
+                        # Insert new reference
+                        new_ref_id = connection.execute(
+                            text("""
+                                INSERT INTO knowledge_card_references (url, reference_type, summary, created_by, updated_by, created_at, updated_at)
+                                VALUES (:url, :reference_type, :summary, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                                RETURNING id
+                            """),
+                            {
+                                "url": ref.url,
+                                "reference_type": ref.reference_type,
+                                "summary": ref.summary or "", # Ensure summary is not null
+                                "user_id": user_id
+                            }
+                        ).scalar_one()
+                        reference_id = new_ref_id
+
+                    # Link reference to knowledge card
                     connection.execute(
                         text("""
-                            INSERT INTO knowledge_card_references (knowledge_card_id, url, reference_type, summary, created_by, updated_by, created_at, updated_at)
-                            VALUES (:kcid, :url, :reference_type, :summary, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                            INSERT INTO knowledge_card_to_references (knowledge_card_id, reference_id)
+                            VALUES (:kcid, :ref_id)
                         """),
-                        {"kcid": card_id, "url": ref.url, "reference_type": ref.reference_type, "summary": ref.summary, "user_id": user_id}
+                        {"kcid": card_id, "ref_id": reference_id}
                     )
         return {"message": "Knowledge card created successfully.", "knowledge_card_id": card_id}
     except Exception as e:
@@ -246,7 +272,8 @@ async def get_knowledge_cards(
                     fc.name as field_context_name,
                     (SELECT json_agg(json_build_object('id', kcr.id, 'url', kcr.url, 'reference_type', kcr.reference_type, 'summary', kcr.summary, 'scraped_at', kcr.scraped_at, 'scraping_error', kcr.scraping_error))
                      FROM knowledge_card_references kcr
-                     WHERE kcr.knowledge_card_id = kc.id) as "references"
+                     JOIN knowledge_card_to_references kctr ON kcr.id = kctr.reference_id
+                     WHERE kctr.knowledge_card_id = kc.id) as "references"
                 FROM
                     knowledge_cards kc
                 LEFT JOIN
@@ -379,7 +406,8 @@ async def get_knowledge_card(card_id: uuid.UUID, current_user: dict = Depends(ge
                     fc.name as field_context_name,
                     (SELECT json_agg(json_build_object('id', kcr.id, 'url', kcr.url, 'reference_type', kcr.reference_type, 'summary', kcr.summary, 'scraped_at', kcr.scraped_at, 'scraping_error', kcr.scraping_error))
                      FROM knowledge_card_references kcr
-                     WHERE kcr.knowledge_card_id = kc.id) as "references"
+                     JOIN knowledge_card_to_references kctr ON kcr.id = kctr.reference_id
+                     WHERE kctr.knowledge_card_id = kc.id) as "references"
                 FROM
                     knowledge_cards kc
                 LEFT JOIN
@@ -516,19 +544,45 @@ async def update_knowledge_card(card_id: uuid.UUID, card: KnowledgeCardIn, curre
                 }
             )
 
-            # Update references: delete old ones and insert new ones
+            # Update references: delete old associations and create new ones
             connection.execute(
-                text("DELETE FROM knowledge_card_references WHERE knowledge_card_id = :kcid"),
+                text("DELETE FROM knowledge_card_to_references WHERE knowledge_card_id = :kcid"),
                 {"kcid": card_id}
             )
             if card.references:
                 for ref in card.references:
+                    # Check if reference already exists
+                    existing_ref = connection.execute(
+                        text("SELECT id FROM knowledge_card_references WHERE url = :url"),
+                        {"url": ref.url}
+                    ).fetchone()
+
+                    if existing_ref:
+                        reference_id = existing_ref.id
+                    else:
+                        # Insert new reference
+                        new_ref_id = connection.execute(
+                            text("""
+                                INSERT INTO knowledge_card_references (url, reference_type, summary, created_by, updated_by, created_at, updated_at)
+                                VALUES (:url, :reference_type, :summary, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                                RETURNING id
+                            """),
+                            {
+                                "url": ref.url,
+                                "reference_type": ref.reference_type,
+                                "summary": ref.summary or "",
+                                "user_id": user_id
+                            }
+                        ).scalar_one()
+                        reference_id = new_ref_id
+
+                    # Link reference to knowledge card
                     connection.execute(
                         text("""
-                            INSERT INTO knowledge_card_references (knowledge_card_id, url, reference_type, summary, created_by, updated_by, created_at, updated_at)
-                            VALUES (:kcid, :url, :reference_type, :summary, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                            INSERT INTO knowledge_card_to_references (knowledge_card_id, reference_id)
+                            VALUES (:kcid, :ref_id)
                         """),
-                        {"kcid": card_id, "url": ref.url, "reference_type": ref.reference_type, "summary": ref.summary, "user_id": user_id}
+                        {"kcid": card_id, "ref_id": reference_id}
                     )
 
             # Fetch the generated_sections again to get the updated state
@@ -568,33 +622,64 @@ async def update_knowledge_card(card_id: uuid.UUID, card: KnowledgeCardIn, curre
 @router.post("/knowledge-cards/{card_id}/references")
 async def create_knowledge_card_reference(card_id: uuid.UUID, reference: KnowledgeCardReferenceIn, current_user: dict = Depends(get_current_user)):
     """
-    Creates a new reference for a knowledge card.
+    Creates a new reference or links an existing one to a knowledge card.
     """
     user_id = current_user['user_id']
     try:
         with get_engine().begin() as connection:
-            # Validate card exists and user has permission
+            # Validate card exists
             card_check = connection.execute(
-                text("SELECT id FROM knowledge_cards WHERE id = :id"), 
+                text("SELECT id FROM knowledge_cards WHERE id = :id"),
                 {"id": card_id}
             ).fetchone()
-            
             if not card_check:
                 raise HTTPException(status_code=404, detail="Knowledge card not found.")
-            
-            result = connection.execute(
+
+            # Check if reference already exists
+            existing_ref = connection.execute(
+                text("SELECT id FROM knowledge_card_references WHERE url = :url"),
+                {"url": reference.url}
+            ).fetchone()
+
+            if existing_ref:
+                reference_id = existing_ref.id
+            else:
+                # Insert new reference
+                new_ref_id = connection.execute(
+                    text("""
+                        INSERT INTO knowledge_card_references (url, reference_type, summary, created_by, updated_by, created_at, updated_at)
+                        VALUES (:url, :reference_type, :summary, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                        RETURNING id
+                    """),
+                    {
+                        "url": reference.url,
+                        "reference_type": reference.reference_type,
+                        "summary": reference.summary or "",
+                        "user_id": user_id
+                    }
+                ).scalar_one()
+                reference_id = new_ref_id
+
+            # Link reference to knowledge card
+            connection.execute(
                 text("""
-                    INSERT INTO knowledge_card_references (knowledge_card_id, url, reference_type, summary, created_by, updated_by, created_at, updated_at)
-                    VALUES (:kcid, :url, :reference_type, :summary, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                    RETURNING id, url, reference_type, summary
+                    INSERT INTO knowledge_card_to_references (knowledge_card_id, reference_id)
+                    VALUES (:kcid, :ref_id)
+                    ON CONFLICT (knowledge_card_id, reference_id) DO NOTHING
                 """),
-                {"kcid": card_id, "url": reference.url, "reference_type": reference.reference_type, "summary": reference.summary, "user_id": user_id}
+                {"kcid": card_id, "ref_id": reference_id}
             )
-            new_reference = result.fetchone()
-        return {"reference": dict(new_reference)}
+
+            # Return the created or found reference details
+            new_reference_details = connection.execute(
+                text("SELECT id, url, reference_type, summary FROM knowledge_card_references WHERE id = :id"),
+                {"id": reference_id}
+            ).fetchone()
+
+        return {"reference": dict(new_reference_details._mapping)}
     except Exception as e:
         logger.error(f"[CREATE KC REFERENCE ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to create reference.")
+        raise HTTPException(status_code=500, detail="Failed to create or link reference.")
 
 
 @router.put("/knowledge-cards/references/{reference_id}")
@@ -628,30 +713,36 @@ async def update_knowledge_card_reference(reference_id: uuid.UUID, reference: Kn
         raise HTTPException(status_code=500, detail="Failed to update reference.")
 
 
-@router.delete("/knowledge-cards/references/{reference_id}")
-async def delete_knowledge_card_reference(reference_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
+@router.delete("/knowledge-cards/{card_id}/references/{reference_id}")
+async def delete_knowledge_card_reference(card_id: uuid.UUID, reference_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
     """
-    Deletes an existing reference for a knowledge card.
+    Deletes the association between a knowledge card and a reference.
     """
     try:
         with get_engine().begin() as connection:
-            #  Validate reference exists
-            ref_check = connection.execute(
-                text("SELECT id FROM knowledge_card_references WHERE id = :id"), 
-                {"id": reference_id}
+            # Validate the association exists
+            association_check = connection.execute(
+                text("""
+                    SELECT knowledge_card_id FROM knowledge_card_to_references
+                    WHERE knowledge_card_id = :kcid AND reference_id = :ref_id
+                """),
+                {"kcid": card_id, "ref_id": reference_id}
             ).fetchone()
             
-            if not ref_check:
-                raise HTTPException(status_code=404, detail="Reference not found.")
+            if not association_check:
+                raise HTTPException(status_code=404, detail="Reference association not found.")
                 
+            # Delete the association
             connection.execute(
-                text("DELETE FROM knowledge_card_references WHERE id = :id"),
-                {"id": reference_id}
+                text("DELETE FROM knowledge_card_to_references WHERE knowledge_card_id = :kcid AND reference_id = :ref_id"),
+                {"kcid": card_id, "ref_id": reference_id}
             )
-        return {"message": "Reference deleted successfully."}
+        return {"message": "Reference unlinked successfully."}
+    except HTTPException as http_exc:
+        raise http_exc
     except Exception as e:
-        logger.error(f"[DELETE KC REFERENCE ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to delete reference.")
+        logger.error(f"[DELETE KC REFERENCE LINK ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to unlink reference.")
 
 
 def get_embedding(chunk, model, embedder_config):
@@ -1198,30 +1289,50 @@ async def identify_references(card_id: uuid.UUID, data: IdentifyReferencesIn, cu
 
         user_id = current_user['user_id']
         with get_engine().begin() as connection:
-            # First, clear any existing references for this card
+            # First, clear any existing associations for this card
             connection.execute(
-                text("DELETE FROM knowledge_card_references WHERE knowledge_card_id = :kcid"),
+                text("DELETE FROM knowledge_card_to_references WHERE knowledge_card_id = :kcid"),
                 {"kcid": card_id}
             )
-            # Then, insert the new references
+            # Then, process the new references
             for ref in references:
-                #  Validate reference data
                 if not ref.get("url") or not ref.get("reference_type"):
                     logger.warning(f"Skipping invalid reference: {ref}")
                     continue
-                    
+
+                # Check if reference already exists
+                existing_ref = connection.execute(
+                    text("SELECT id FROM knowledge_card_references WHERE url = :url"),
+                    {"url": ref.get("url")}
+                ).fetchone()
+
+                if existing_ref:
+                    reference_id = existing_ref.id
+                else:
+                    # Insert new reference
+                    new_ref_id = connection.execute(
+                        text("""
+                            INSERT INTO knowledge_card_references (url, reference_type, summary, created_by, updated_by, created_at, updated_at)
+                            VALUES (:url, :reference_type, :summary, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                            RETURNING id
+                        """),
+                        {
+                            "url": ref.get("url"),
+                            "reference_type": ref.get("reference_type"),
+                            "summary": ref.get("summary") or "",
+                            "user_id": user_id
+                        }
+                    ).scalar_one()
+                    reference_id = new_ref_id
+
+                # Link reference to knowledge card
                 connection.execute(
                     text("""
-                        INSERT INTO knowledge_card_references (knowledge_card_id, url, reference_type, summary, created_by, updated_by, created_at, updated_at)
-                        VALUES (:kcid, :url, :reference_type, :summary, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                        INSERT INTO knowledge_card_to_references (knowledge_card_id, reference_id)
+                        VALUES (:kcid, :ref_id)
+                        ON CONFLICT (knowledge_card_id, reference_id) DO NOTHING
                     """),
-                    {
-                        "kcid": card_id,
-                        "url": ref.get("url"),
-                        "reference_type": ref.get("reference_type"),
-                        "summary": ref.get("summary"),
-                        "user_id": user_id
-                    }
+                    {"kcid": card_id, "ref_id": reference_id}
                 )
             
             # Handle both string and dict types for generated_sections

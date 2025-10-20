@@ -14,7 +14,7 @@ def test_create_and_update_knowledge_card_saves_content_to_file(authenticated_cl
     """
     # 1. Create a knowledge card
     card_summary = "Test Knowledge Card for File Saving"
-    card_id = str(uuid.uuid4())
+    card_id = uuid.uuid4()
     user_id = authenticated_client.app.dependency_overrides[get_current_user]().get("user_id")
 
     db_session.execute(
@@ -22,7 +22,7 @@ def test_create_and_update_knowledge_card_saves_content_to_file(authenticated_cl
             INSERT INTO knowledge_cards (id, summary, created_by, updated_by, status)
             VALUES (:id, :summary, :user_id, :user_id, 'draft')
         """),
-        {"id": card_id, "summary": card_summary, "user_id": user_id}
+        {"id": str(card_id), "summary": card_summary, "user_id": user_id}
     )
 
     # 2. Generate content for the card
@@ -34,7 +34,7 @@ def test_create_and_update_knowledge_card_saves_content_to_file(authenticated_cl
     # Simulate the background generation process
     db_session.execute(
         text("UPDATE knowledge_cards SET generated_sections = :sections WHERE id = :id"),
-        {"sections": json.dumps(generated_sections), "id": card_id}
+        {"sections": json.dumps(generated_sections), "id": str(card_id)}
     )
 
     # Manually call the file saving function to test its logic
@@ -43,7 +43,9 @@ def test_create_and_update_knowledge_card_saves_content_to_file(authenticated_cl
 
     # 3. Verify that the file was created
     filename = f"{slugify(card_summary)}.json"
-    filepath = os.path.join("backend", "knowledge", filename)
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    knowledge_dir = os.path.join(current_dir, '..', 'knowledge')
+    filepath = os.path.join(knowledge_dir, filename)
     assert os.path.exists(filepath)
 
     # 4. Read the file and verify its content
