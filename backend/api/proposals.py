@@ -266,7 +266,7 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
                     # Correctly construct the full path to the knowledge file
                     knowledge_dir = os.path.join(os.path.dirname(__file__), "..", "knowledge")
                     filepath = os.path.join(knowledge_dir, filename)
-
+                    
                     logger.info(f"Associating knowledge file: {filename} for proposal {proposal_id}")
 
                     if not os.path.exists(filepath):
@@ -281,10 +281,10 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
                             generated_sections = card_content_result.generated_sections
                             if isinstance(generated_sections, str):
                                 generated_sections = json.loads(generated_sections)
-
+                            
                             # This function needs the raw DB connection
                             _save_knowledge_card_content_to_file(connection, uuid.UUID(card_id), generated_sections)
-
+                            
                             # Verify file was created
                             if os.path.exists(filepath):
                                 logger.info(f"Successfully created knowledge file: {filepath}")
