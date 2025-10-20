@@ -872,7 +872,20 @@ async def generate_content_background(card_id: uuid.UUID):
 
         with get_engine().begin() as connection:
             card = connection.execute(
-                text("SELECT donor_id, outcome_id, field_context_id FROM knowledge_cards WHERE id = :id"),
+                text("""
+                    SELECT
+                        kc.donor_id,
+                        kc.outcome_id,
+                        kc.field_context_id,
+                        d.name as donor_name,
+                        o.name as outcome_name,
+                        fc.name as field_context_name
+                    FROM knowledge_cards kc
+                    LEFT JOIN donors d ON kc.donor_id = d.id
+                    LEFT JOIN outcomes o ON kc.outcome_id = o.id
+                    LEFT JOIN field_contexts fc ON kc.field_context_id = fc.id
+                    WHERE kc.id = :id
+                """),
                 {"id": card_id}
             ).fetchone()
 
@@ -881,16 +894,20 @@ async def generate_content_background(card_id: uuid.UUID):
 
         if card.donor_id:
             template_name = "knowledge_card_donor_template.json"
+            name = card.donor_name
         elif card.outcome_id:
             template_name = "knowledge_card_outcome_template.json"
+            name = card.outcome_name
         elif card.field_context_id:
             template_name = "knowledge_card_field_context_template.json"
+            name = card.field_context_name
         else:
             raise Exception("Knowledge card is not linked to any entity.")
 
         template = load_proposal_template(template_name)
+        pre_prompt = f"{template.get('description', '')} for {name}."
         generated_sections = {}
-        crew = ContentGenerationCrew(knowledge_card_id=str(card_id))
+        crew = ContentGenerationCrew(knowledge_card_id=str(card_id), pre_prompt=pre_prompt)
 
         num_sections = len(template.get("sections", []))
         for i, section in enumerate(template.get("sections", [])):
