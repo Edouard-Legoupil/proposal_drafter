@@ -59,6 +59,13 @@ The backend code is organized into the following modules:
 
 -   **`tests/`**: This directory contains the tests for the backend application.
 
+-   **`scripts/`**: This directory contains command-line scripts for various maintenance and administrative tasks. Key scripts include:
+    -   `populate_knowledge_cards.py`: Seeds the database with initial data from an Excel file (`db/seed_data.xlsx`), populating knowledge cards, references, donors, outcomes, and field contexts.
+    -   `generate_card_content.py`: Automatically generates content for knowledge cards that are missing it or require an update.
+    -   `update_embeddings.py`: Updates the text embeddings for all knowledge card references.
+
+    All scripts are equipped with a logging system that outputs to both the console and a corresponding log file in the `log/` directory, ensuring that all operations are recorded and can be easily debugged.
+
 ## API Endpoints
 
 This section provides a detailed, non-technical overview of the API endpoints available in the backend.

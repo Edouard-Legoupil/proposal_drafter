@@ -1,17 +1,14 @@
 # Backend Scripts
 
-This directory contains utility scripts for managing the backend of the Proposal Generator application.
+This directory contains utility scripts for managing the backend of the Proposal Generator application. All scripts are equipped with a logging system that outputs to both the console and a corresponding log file in the `log/` directory, ensuring that all operations are recorded and can be easily debugged.
 
 ## `populate_knowledge_cards.py`
 
-This script populates the database with initial data for donors, outcomes, and field contexts, creating a default knowledge card and associated references for each entry.
+This script populates the database with initial data from a multi-sheet Excel file. It seeds the `donors`, `outcomes`, and `field_contexts` tables, creates a default knowledge card for each entry, and links them to associated references.
 
 ### Prerequisites
 
-1.  **CSV Files**: The script requires three CSV files with specific columns. Examples are provided in the `db/` directory:
-    *   `donors_references.csv`: `name,account_id,country,donor_group,url,reference_type,summary`
-    *   `outcomes_references.csv`: `name,url,reference_type,summary`
-    *   `field_contexts_references.csv`: `name,title,category,geographic_coverage,url,reference_type,summary`
+1.  **Excel File**: The script requires an Excel file with four worksheets: `field_contexts`, `donor`, `outcome`, and `reference`. A template file, `seed_data.xlsx`, is provided in the `db/` directory.
 
 2.  **User ID**: You must provide the UUID of an existing user in the database. The created records will be associated with this user.
 
@@ -25,14 +22,47 @@ psql -h localhost -U <your_username> -d <your_database_name> -c "SELECT id FROM 
 
 ### Usage
 
-Run the script from the root directory of the project, providing the paths to the three CSV files and the `user_id`.
+Run the script from the root directory of the project, providing the `user_id`. The script will use the default Excel file path (`db/seed_data.xlsx`).
 
 ```bash
-python3 backend/scripts/populate_knowledge_cards.py \
-  --donors-file db/donors_references.csv \
-  --outcomes-file db/outcomes_references.csv \
-  --field-contexts-file db/field_contexts_references.csv \
-  --user-id <your_user_id>
+python3 backend/scripts/populate_knowledge_cards.py --user-id <your_user_id>
+```
+
+You can also specify a different path to the Excel file using the `--excel-file` argument:
+
+```bash
+python3 backend/scripts/populate_knowledge_cards.py --excel-file /path/to/your/data.xlsx --user-id <your_user_id>
+```
+
+## `generate_card_content.py`
+
+This script automatically generates content for knowledge cards that are either missing content or have outdated information based on the `updated_at` timestamp of their references.
+
+### How It Works
+
+1.  **Identifies Cards for Generation**: The script determines which knowledge cards need content generation. This includes:
+    *   Cards with no existing generated sections.
+    *   Cards where a linked reference has been updated more recently than the card itself.
+    *   All cards, if the `--force` flag is used.
+
+2.  **Generates Content**: For each identified card, it uses the `ContentGenerationCrew` to generate content for all sections defined in the card's template.
+
+3.  **Saves to Database and File**: The newly generated content is saved to the `generated_sections` column in the `knowledge_cards` table. Additionally, the content is saved to a JSON file in the `backend/knowledge/` directory, ensuring consistency with the API's behavior.
+
+4.  **Creates History Entry**: A new entry is created in the `knowledge_card_history` table to snapshot the changes.
+
+### Usage
+
+To run the script, you must provide the UUID of an existing user to associate with the history entries.
+
+```bash
+python3 backend/scripts/generate_card_content.py --user-id <your_user_id>
+```
+
+To force the regeneration of content for all knowledge cards, regardless of their current state, use the `--force` flag:
+
+```bash
+python3 backend/scripts/generate_card_content.py --force --user-id <your_user_id>
 ```
 
 ## `update_embeddings.py`
