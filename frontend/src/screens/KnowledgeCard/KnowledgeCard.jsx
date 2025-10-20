@@ -10,6 +10,8 @@ import KnowledgeCardHistory from '../../components/KnowledgeCardHistory/Knowledg
 import KnowledgeCardReferences from '../../components/KnowledgeCardReferences/KnowledgeCardReferences';
 import UploadReferenceModal from '../../components/UploadReferenceModal/UploadReferenceModal';
 import { setupSse } from '../../utils/sse';
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 
@@ -1047,9 +1049,7 @@ export default function KnowledgeCard() {
                                         />
                                     ) : (
                                         <div className="kc-section-content">
-                                            {content.split('\n').map((paragraph, idx) => (
-                                                <p key={idx}>{paragraph || '\u00A0'}</p>
-                                            ))}
+                                            <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
                                         </div>
                                     )}
                                     <div className="kc-section-actions">
