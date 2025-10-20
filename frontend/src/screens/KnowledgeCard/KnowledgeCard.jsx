@@ -458,14 +458,14 @@ export default function KnowledgeCard() {
                     setReferences(prev => {
                         const updated = prev.map(ref => ref.id === data.reference_id ? { ...ref, status: data.status, status_message: data.message } : ref);
                         const allDone = updated.every(ref => ['ingested', 'error', 'skipped'].includes(getStatus(ref)));
-
+                        
                         if (allDone) {
                             // All SSE messages received, close the connection
                             if (eventSourceRef.current) {
                                 eventSourceRef.current.close();
                                 eventSourceRef.current = null;
                             }
-
+                            
                             // Start polling to check for DB updates
                             setLoadingMessage("Finalizing ingestion... This might take a moment.");
                             pollingRef.current.attempts = 0; // Reset attempts
@@ -482,7 +482,7 @@ export default function KnowledgeCard() {
                     setLoading(false);
                     setLoadingMessage('');
                 };
-
+                
                 const onTimeout = () => {
                     setLoading(false);
                     setLoadingMessage('');
