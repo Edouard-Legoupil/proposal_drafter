@@ -15,6 +15,7 @@ def main():
     parser = argparse.ArgumentParser(description="Populate the database with knowledge cards and references from an Excel file.")
     parser.add_argument("--excel-file", default='db/seed_data.xlsx', help="Path to the Excel file.")
     parser.add_argument("--user-id", required=True, help="The UUID of the user to associate with the created records.")
+    parser.add_argument("--mode", choices=['update', 'reset'], default='update', help="Choose 'update' to add new data or 'reset' to delete all existing data before populating.")
     args = parser.parse_args()
 
     # Load environment variables from .env file
@@ -38,6 +39,20 @@ def main():
         )
         with conn.cursor() as cur:
             user_id = uuid.UUID(args.user_id)
+
+            if args.mode == 'reset':
+                print("Deleting all existing data from tables...")
+                cur.execute("""
+                    TRUNCATE TABLE
+                        knowledge_card_to_references,
+                        knowledge_card_references,
+                        knowledge_cards,
+                        outcomes,
+                        donors,
+                        field_contexts
+                    RESTART IDENTITY CASCADE;
+                """)
+                print("All tables have been cleared.")
 
             # Read data from Excel file
             xls = pd.ExcelFile(args.excel_file)
@@ -88,25 +103,25 @@ def main():
                 card_id = uuid.uuid4()
                 knowledge_card_ids[('field_contexts', name)] = card_id
                 cur.execute("""
-                    INSERT INTO knowledge_cards (id, summary, field_context_id, created_by, updated_by)
-                    VALUES (%s, 'v1', %s, %s, %s)
-                """, (card_id, fc_id, user_id, user_id))
+                    INSERT INTO knowledge_cards (id, summary, field_context_id, template_name, created_by, updated_by)
+                    VALUES (%s, 'v1', %s, %s, %s, %s)
+                """, (card_id, fc_id, "knowledge_card_field_context_template.json", user_id, user_id))
 
             for name, donor_id in donor_ids.items():
                 card_id = uuid.uuid4()
                 knowledge_card_ids[('donor', name)] = card_id
                 cur.execute("""
-                    INSERT INTO knowledge_cards (id, summary, donor_id, created_by, updated_by)
-                    VALUES (%s, 'v1', %s, %s, %s)
-                """, (card_id, donor_id, user_id, user_id))
+                    INSERT INTO knowledge_cards (id, summary, donor_id, template_name, created_by, updated_by)
+                    VALUES (%s, 'v1', %s, %s, %s, %s)
+                """, (card_id, donor_id, "knowledge_card_donor_template.json", user_id, user_id))
 
             for name, outcome_id in outcome_ids.items():
                 card_id = uuid.uuid4()
                 knowledge_card_ids[('outcome', name)] = card_id
                 cur.execute("""
-                    INSERT INTO knowledge_cards (id, summary, outcome_id, created_by, updated_by)
-                    VALUES (%s, 'v1', %s, %s, %s)
-                """, (card_id, outcome_id, user_id, user_id))
+                    INSERT INTO knowledge_cards (id, summary, outcome_id, template_name, created_by, updated_by)
+                    VALUES (%s, 'v1', %s, %s, %s, %s)
+                """, (card_id, outcome_id, "knowledge_card_outcome_template.json", user_id, user_id))
             print("Populated knowledge_cards table.")
 
             # Deduplicate references by URL and populate knowledge_card_references
