@@ -115,5 +115,5 @@ class ContentGenerationCrew:
             tasks=[self.research_task(), self.write_task()],
             verbose=True,
             process=Process.sequential,
-            output_log_file='log/log_knowledge.txt'
+            output_log_file='logs/log_knowledge.txt'
         )
