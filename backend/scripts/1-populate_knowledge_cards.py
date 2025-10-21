@@ -109,17 +109,24 @@ def main():
                 """, (card_id, outcome_id, user_id, user_id))
             print("Populated knowledge_cards table.")
 
-            # Populate knowledge_card_references
-            for index, row in reference_df.iterrows():
+            # Deduplicate references by URL and populate knowledge_card_references
+            unique_references_df = reference_df.drop_duplicates(subset=['url'])
+            for index, row in unique_references_df.iterrows():
                 ref_id = uuid.uuid4()
                 reference_ids[row['url']] = ref_id
                 cur.execute("""
                     INSERT INTO knowledge_card_references (id, url, reference_type, summary, created_by, updated_by)
                     VALUES (%s, %s, %s, %s, %s, %s) ON CONFLICT (url) DO NOTHING
                 """, (ref_id, row['url'], row['reference_type'], row['summary'], user_id, user_id))
+
+            # Retrieve existing references from the DB to create a complete mapping
+            cur.execute("SELECT id, url FROM knowledge_card_references")
+            existing_references = cur.fetchall()
+            for ref_id, url in existing_references:
+                reference_ids[url] = ref_id
             print("Populated knowledge_card_references table.")
 
-            # Link knowledge_cards and knowledge_card_references
+            # Link knowledge_cards and knowledge_card_references using the original reference_df
             for index, row in reference_df.iterrows():
                 card_id = knowledge_card_ids.get((row['type'], row['name']))
                 ref_id = reference_ids.get(row['url'])
