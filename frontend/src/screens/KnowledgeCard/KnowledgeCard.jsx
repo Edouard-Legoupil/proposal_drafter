@@ -12,6 +12,7 @@ import UploadReferenceModal from '../../components/UploadReferenceModal/UploadRe
 import { setupSse } from '../../utils/sse';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import word_icon from '../../assets/images/word.svg';
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 
@@ -860,6 +861,45 @@ export default function KnowledgeCard() {
         }
     };
 
+    async function handleExport (format)
+    {
+
+
+            const cardId = id;
+
+            if (!cardId || cardId === "undefined") {
+                    setErrorMessage("No draft available to export. Please create or load a draft first.");
+                    return;
+            }
+
+            const response = await fetch(`${API_BASE_URL}/knowledge-cards/${id}/generate-document/?format=${format}`, {
+                    method: "GET",
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: "include"
+            })
+
+            if(response.ok)
+            {
+                    const blob = await response.blob();
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    const selectedItem = linkOptions.find(o => o.id === linkedId);
+                    link.download = selectedItem ? selectedItem.name : "knowledge-card" + "." + format;
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+
+                    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+            }
+            else if(response.status === 401)
+            {
+                    sessionStorage.setItem("session_expired", "Session expired. Please login again.")
+                    navigate("/login")
+            }
+            else
+                    throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+    }
+
     return (
         <Base>
             {/* Modals */}
@@ -1030,7 +1070,13 @@ export default function KnowledgeCard() {
                 {/* Generated Content Section - Automatically shows when content exists */}
                 {generatedSections && proposal_template && proposal_template.sections && (
                     <div className="kc-content-container">
-                        <h2>Generated Content</h2>
+                        <div className="kc-content-header">
+                            <h2>Generated Content</h2>
+                            <button type="button" onClick={() => handleExport("docx")} className="download-word-btn">
+                                <img src={word_icon} alt="Download as Word" />
+                                Download as Word
+                            </button>
+                        </div>
                         {proposal_template.sections.map(sectionInfo => {
                             const section = sectionInfo.section_name;
                             const content = generatedSections[section];
