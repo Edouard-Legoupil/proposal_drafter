@@ -18,11 +18,13 @@ export default function Dashboard ()
         const [projects, setProjects] = useState([])
         const [reviews, setReviews] = useState([])
         const [knowledgeCards, setKnowledgeCards] = useState([])
+        const [displayKnowledgeCards, setDisplayKnowledgeCards] = useState([])
         const [selectedTab, setSelectedTab] = useState('proposals')
         const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
         const [isTransferModalOpen, setIsTransferModalOpen] = useState(false)
         const [transferProposalId, setTransferProposalId] = useState(null)
         const [users, setUsers] = useState([])
+        const [knowledgeCardTypeFilter, setKnowledgeCardTypeFilter] = useState('')
 
         const tabRefs = {
                 proposals: useRef(null),
@@ -181,6 +183,30 @@ export default function Dashboard ()
                 }
             }, [projects, reviews, searchTerm, selectedTab]);
 
+        useEffect(() => {
+                let filteredCards = knowledgeCards;
+
+                if (knowledgeCardTypeFilter) {
+                    filteredCards = filteredCards.filter(card => {
+                        if (knowledgeCardTypeFilter === 'donor') return card.donor_name;
+                        if (knowledgeCardTypeFilter === 'outcome') return card.outcome_name;
+                        if (knowledgeCardTypeFilter === 'field_context') return card.field_context_name;
+                        return true;
+                    });
+                }
+
+                if (searchTerm) {
+                    filteredCards = filteredCards.filter(card =>
+                        (card.summary && card.summary.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                        (card.donor_name && card.donor_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                        (card.outcome_name && card.outcome_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                        (card.field_context_name && card.field_context_name.toLowerCase().includes(searchTerm.toLowerCase()))
+                    );
+                }
+
+                setDisplayKnowledgeCards(filteredCards);
+            }, [knowledgeCards, searchTerm, knowledgeCardTypeFilter]);
+
         const activateTab = (tabId) => {
                 setSelectedTab(tabId);
         }
@@ -311,7 +337,7 @@ export default function Dashboard ()
                                         <div className="card card--cta">
                                                 <button className="btn" type="button" aria-label="Start a new knowledge card" onClick={() => navigate("/knowledge-card/new")} data-testid="new-knowledge-card-button">Create New Knowledge Card</button>
                                         </div>
-                                        {knowledgeCards && knowledgeCards.map((card, i) =>
+                                        {displayKnowledgeCards && displayKnowledgeCards.map((card, i) =>
                                                 <KnowledgeCard
                                                         key={i}
                                                         card={card}
@@ -365,6 +391,16 @@ export default function Dashboard ()
                                 <div className="filter-section" data-tab="reviews" hidden={selectedTab !== 'reviews'}>
                                         <label htmlFor="deadline-filter">Deadline before</label>
                                         <input type="date" id="deadline-filter" data-testid="deadline-filter" />
+                                </div>
+
+                                <div className="filter-section" data-tab="knowledge" hidden={selectedTab !== 'knowledge'}>
+                                        <label htmlFor="knowledge-card-type-filter">Card Type</label>
+                                        <select id="knowledge-card-type-filter" data-testid="knowledge-card-type-filter" value={knowledgeCardTypeFilter} onChange={e => setKnowledgeCardTypeFilter(e.target.value)}>
+                                                <option value="">All</option>
+                                                <option value="donor">Donor</option>
+                                                <option value="outcome">Outcome</option>
+                                                <option value="field_context">Field Context</option>
+                                        </select>
                                 </div>
                         </div>
                 </div>
