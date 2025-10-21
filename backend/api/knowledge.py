@@ -34,6 +34,8 @@ from backend.utils.embedding_utils import process_and_store_text
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import litellm
 import numpy as np
+import io
+from backend.utils.doc_export import create_word_from_sections
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -1304,3 +1306,121 @@ async def identify_references(card_id: uuid.UUID, data: IdentifyReferencesIn, cu
     except Exception as e:
         logger.error(f"[IDENTIFY REFERENCES ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to identify references.")
+
+
+@router.get("/knowledge-cards/{card_id}/generate-document/")
+async def generate_and_download_document(
+    card_id: uuid.UUID,
+    format: str = "docx",  # Query parameter to specify 'docx' or 'pdf'
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Generates a final proposal document in either .docx or .pdf format.
+    It fetches the completed proposal from the database, assembles the document,
+    and returns it as a file download.
+    """
+    try:
+        # Fetch the proposal data from the database.
+        with get_engine().connect() as connection:
+            result = connection.execute(
+                text("""
+                    SELECT
+                        kc.id,
+                        kc.summary,
+                        kc.template_name,
+                        kc.status,
+                        kc.created_at,
+                        kc.updated_at,
+                        kc.generated_sections,
+                        kc.donor_id,
+                        kc.outcome_id,
+                        kc.field_context_id,
+                        d.name as donor_name,
+                        o.name as outcome_name,
+                        fc.name as field_context_name,
+                        (SELECT json_agg(json_build_object('id', kcr.id, 'url', kcr.url, 'reference_type', kcr.reference_type, 'summary', kcr.summary, 'scraped_at', kcr.scraped_at, 'scraping_error', kcr.scraping_error))
+                        FROM knowledge_card_references kcr
+                        JOIN knowledge_card_to_references kctr ON kcr.id = kctr.reference_id
+                        WHERE kctr.knowledge_card_id = kc.id) as "references"
+                    FROM
+                        knowledge_cards kc
+                    LEFT JOIN
+                        donors d ON kc.donor_id = d.id
+                    LEFT JOIN
+                        outcomes o ON kc.outcome_id = o.id
+                    LEFT JOIN
+                        field_contexts fc ON kc.field_context_id = fc.id
+                    WHERE
+                        kc.id = :card_id
+                """),
+                {"card_id": card_id}
+            )
+            card = result.mappings().fetchone()
+
+        if not card:
+            raise HTTPException(status_code=404, detail="Knowledge card not found for this user.")
+
+        card_dict = dict(card)
+        if card_dict.get('references') is None:
+            card_dict['references'] = []
+        if card_dict.get('generated_sections'):
+            #  Handle both string and dict types
+            if isinstance(card_dict['generated_sections'], str):
+                try:
+                    card_dict['generated_sections'] = json.loads(card_dict['generated_sections'])
+                except json.JSONDecodeError:
+                    logger.warning(f"Failed to parse generated_sections for card {card_id}")
+                    card_dict['generated_sections'] = {}
+            elif isinstance(card_dict['generated_sections'], dict):
+                # Already a dict, no need to parse
+                pass
+            else:
+                card_dict['generated_sections'] = {}
+        else:
+            card_dict['generated_sections'] = {}
+
+        form_data = {
+            "Title": card_dict.get("donor_name") or card_dict.get("outcome_name") or card_dict.get("field_context_name"),
+            "Summary": card_dict.get("summary")
+        }
+
+        # Load the template to get the correct section order and list.
+        if not card_dict.get("template_name"):
+            # Fallback to a default if no template is stored with the proposal.
+            template_name = "proposal_template_unhcr.json"
+            logger.warning(f"Proposal {card_id} has no template_name, falling back to default.")
+        else:
+            template_name = card_dict.get("template_name")
+
+        proposal_template = load_proposal_template(template_name)
+        template_sections = [s.get("section_name") for s in proposal_template.get("sections", [])]
+
+
+        # # Ensure all required sections are present before generating.
+        # if len(generated_sections) < len(template_sections):
+        #     missing = [s for s in template_sections if s not in generated_sections]
+        #     raise HTTPException(status_code=400, detail=f"Cannot generate document. Missing sections: {', '.join(missing)}")
+
+        ordered_sections = {section: card_dict['generated_sections'].get(section, "") for section in template_sections}
+
+        if format == "pdf":
+            raise HTTPException(status_code=400, detail="PDF export is not supported for knowledge cards.")
+        else:
+            # Return the DOCX file by default.
+            try:
+                doc = create_word_from_sections(form_data, ordered_sections)
+                docx_buffer = io.BytesIO()
+                doc.save(docx_buffer)
+                docx_buffer.seek(0)
+                return StreamingResponse(
+                    docx_buffer,
+                    media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    headers={"Content-Disposition": f"attachment; filename=KnowledgeCard_{card_id}.docx"}
+                )
+            except Exception as e:
+                logger.error(f"[DOCX Generation Error] {e}", exc_info=True)
+                raise HTTPException(status_code=500, detail="Failed to generate DOCX document.")
+
+    except Exception as e:
+        logger.error(f"An unexpected error occurred during document generation: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
