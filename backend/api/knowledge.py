@@ -977,7 +977,11 @@ async def ingest_knowledge_card_references(card_id: uuid.UUID, background_tasks:
     async def ingest_references_background(card_id: uuid.UUID):
         with get_engine().begin() as connection:
             references = connection.execute(
-                text("SELECT id FROM knowledge_card_references WHERE knowledge_card_id = :card_id"),
+                text("""
+                    SELECT kcr.id FROM knowledge_card_references kcr
+                    JOIN knowledge_card_to_references kctr ON kcr.id = kctr.reference_id
+                    WHERE kctr.knowledge_card_id = :card_id
+                """),
                 {"card_id": card_id}
             ).fetchall()
 
