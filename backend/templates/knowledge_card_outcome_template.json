@@ -2,7 +2,7 @@
   "donors": [],
     "template_type": "Knowledge Card",
     "template_name": "Humanitarian Outcome Knowledge Card",
-    "description": "A template for creating a knowledge card that synthesizes evidence on the effectiveness of humanitarian interventions to achieve specific outcomes.",
+    "description": "You are building a detailed knowledge cards that synthesizes evidence on the effectiveness of humanitarian interventions to specifically achieve the following: ",
     "sections": [
       {
         "section_name": "1. Outcome Definition & Rationale",
@@ -12,7 +12,7 @@
       },
       {
         "section_name": "2. Evidence-Based Interventions",
-        "instructions": "List and describe interventions that have strong, clear evidence of contributing to this outcome. For each intervention, present the information within a table using the the PICO framework - P: Population & Problem Statement /I: Intervention Description / C: Comparison / O: Outcome & Evidence Synthesis. Then, in bullet points, for each potential intervention, provide a brief summary of the evidence base. Include key findings from past evaluations, meta-analyses, or research studies. Include reference to the specific Evaluation reports where each evidence is presented.",
+        "instructions": "List and describe interventions that have strong, clear evidence of contributing to this outcome. For each intervention, present the information within a table using the PICO framework - P: Population & Problem Statement /I: Intervention Description / C: Comparison / O: Outcome & Evidence Synthesis. Then, in bullet points, for each potential intervention, provide a brief summary of the evidence base. Include key findings from past evaluations, meta-analyses, or research studies. Include references /url to the specific Evaluation reports where each evidences are presented.",
         "word_limit": 2000,
         "key_word": "humanitarian evidence-based interventions evaluations meta-analysis"
       },

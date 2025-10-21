@@ -4,11 +4,9 @@ import json
 import os
 import sys
 import uuid
-import logging
 from dotenv import load_dotenv
 import psycopg2
 from psycopg2.extras import register_uuid
-from slugify import slugify
 
 # Add the project root to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
@@ -153,15 +151,28 @@ def main():
             user_id = uuid.UUID(args.user_id)
 
             # Get all knowledge cards
-            cur.execute("SELECT id, template_name, generated_sections, updated_at FROM knowledge_cards")
+            cur.execute("""
+                SELECT 
+                    kc.id, 
+                    kc.template_name, 
+                    kc.generated_sections, 
+                    kc.updated_at,
+                    d.name as donor_name,
+                    o.name as outcome_name,
+                    fc.name as field_context_name
+                FROM knowledge_cards kc
+                LEFT JOIN donors d ON kc.donor_id = d.id
+                LEFT JOIN outcomes o ON kc.outcome_id = o.id
+                LEFT JOIN field_contexts fc ON kc.field_context_id = fc.id
+            """)
             knowledge_cards = cur.fetchall()
             logging.info(f"Found {len(knowledge_cards)} knowledge cards to process.")
 
             for card in knowledge_cards:
-                card_id, template_name, generated_sections, card_updated_at = card
+                card_id, template_name, generated_sections, card_updated_at, donor_name, outcome_name, field_context_name = card
                 should_generate = False
-
                 try:
+
                     if args.force:
                         should_generate = True
                     elif not generated_sections or generated_sections == '{}':
@@ -180,8 +191,10 @@ def main():
                     if should_generate:
                         logging.info(f"Generating content for knowledge card {card_id}...")
                         template = load_proposal_template(template_name)
+                        name = donor_name or outcome_name or field_context_name
+                        pre_prompt = f"{template.get('description', '')} {name}."
                         new_generated_sections = {}
-                        crew = ContentGenerationCrew(knowledge_card_id=str(card_id))
+                        crew = ContentGenerationCrew(knowledge_card_id=str(card_id), pre_prompt=pre_prompt)
 
                         for section in template.get("sections", []):
                             section_name = section.get("section_name")
@@ -200,9 +213,6 @@ def main():
                             WHERE id = %s
                         """, (json.dumps(new_generated_sections), card_id))
 
-                        # Save content to file
-                        _save_knowledge_card_content_to_file(cur, card_id, new_generated_sections)
-
                         # Create a history entry
                         create_knowledge_card_history_entry(cur, card_id, new_generated_sections, user_id)
                         logging.info(f"Successfully generated content for knowledge card {card_id}")
@@ -210,11 +220,15 @@ def main():
                     logging.error(f"Error processing knowledge card {card_id}: {e}", exc_info=True)
                     conn.rollback() # Rollback the transaction for the failed card
 
+
             conn.commit()
+            logging.info("Content generation process finished.")
     except Exception as e:
         logging.critical("A critical error occurred in the main process.", exc_info=True)
+
         if conn:
             conn.rollback()
+        print(f"Error: {e}")
     finally:
         if conn:
             conn.close()

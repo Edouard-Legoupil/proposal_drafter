@@ -2,7 +2,7 @@
 
 This directory contains utility scripts for managing the backend of the Proposal Generator application. All scripts are equipped with a logging system that outputs to both the console and a corresponding log file in the `log/` directory, ensuring that all operations are recorded and can be easily debugged.
 
-## `populate_knowledge_cards.py`
+## `1-populate_knowledge_cards.py`
 
 This script populates the database with initial data from a multi-sheet Excel file. It seeds the `donors`, `outcomes`, and `field_contexts` tables, creates a default knowledge card for each entry, and links them to associated references.
 
@@ -25,7 +25,7 @@ psql -h localhost -U <your_username> -d <your_database_name> -c "SELECT id FROM 
 Run the script from the root directory of the project, providing the `user_id`. The script will use the default Excel file path (`db/seed_data.xlsx`).
 
 ```bash
-python3 backend/scripts/populate_knowledge_cards.py --user-id <your_user_id>
+python3 backend/scripts/1-populate_knowledge_cards.py --user-id <your_user_id>
 ```
 
 You can also specify a different path to the Excel file using the `--excel-file` argument:
@@ -35,7 +35,7 @@ python3 backend/scripts/populate_knowledge_cards.py --excel-file /path/to/your/d
 ```
 
 
-## `update_embeddings.py`
+## `2-update_embeddings.py`
 
 This script updates the vector embeddings for all references stored in the `knowledge_card_references` table. It can be used to generate embeddings for new references or to refresh existing ones.
 
@@ -52,7 +52,7 @@ By default, the script will:
 To run the script, execute the following command from the root directory of the project:
 
 ```bash
-python3 backend/scripts/update_embeddings.py
+python3 backend/scripts/2-update_embeddings.py
 ```
 
 ### Forcing Re-scraping
@@ -60,12 +60,12 @@ python3 backend/scripts/update_embeddings.py
 If you want to force the script to re-scrape the content from all reference URLs, even if they have already been processed, use the `--force-rescrape` flag:
 
 ```bash
-python3 backend/scripts/update_embeddings.py --force-rescrape
+python3 backend/scripts/2-update_embeddings.py --force-rescrape
 ```
 
 
 
-## `generate_card_content.py`
+## `g3-enerate_card_content.py`
 
 This script automatically generates content for knowledge cards that are either missing content or have outdated information based on the `updated_at` timestamp of their references.
 
@@ -87,11 +87,11 @@ This script automatically generates content for knowledge cards that are either 
 To run the script, you must provide the UUID of an existing user to associate with the history entries.
 
 ```bash
-python3 backend/scripts/generate_card_content.py --user-id <your_user_id>
+python3 backend/scripts/3-generate_card_content.py --user-id <your_user_id>
 ```
 
 To force the regeneration of content for all knowledge cards, regardless of their current state, use the `--force` flag:
 
 ```bash
-python3 backend/scripts/generate_card_content.py --force --user-id <your_user_id>
+python3 backend/scripts/3-generate_card_content.py --force --user-id <your_user_id>
 ```

@@ -2,7 +2,7 @@
   "donors": [],
     "template_type": "Knowledge Card",
     "template_name": "Humanitarian Field Context Knowledge Card",
-    "description": "A template for creating a comprehensive knowledge card that provides a structured overview of a humanitarian field context.",
+    "description": "You are building a comprehensive knowledge card that provides a structured overview of a humanitarian field context focusing on: ",
     "sections": [
       {
         "section_name": "1. Protection & Legal Landscape",
