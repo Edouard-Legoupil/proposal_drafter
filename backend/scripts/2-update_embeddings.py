@@ -5,6 +5,7 @@ import sys
 import csv
 from datetime import datetime
 from sqlalchemy import text, create_engine
+from sqlalchemy.engine import URL
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 
@@ -26,15 +27,22 @@ def main():
     load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
     # Database connection
-    db_username = os.getenv("DB_USERNAME").strip('"')
-    db_password = os.getenv("DB_PASSWORD")
-    db_name = os.getenv("DB_NAME")
-    DATABASE_URL = f"postgresql+psycopg2://{db_username}:{db_password}@localhost:5432/{db_name}"
+    db_username = os.getenv("DB_USERNAME", "").strip().strip('"')
+    db_password = os.getenv("DB_PASSWORD", "")
+    db_name = os.getenv("DB_NAME", "").strip()
 
     if not all([db_username, db_password, db_name]):
         print("Error: Database credentials not found in .env file.")
         sys.exit(1)
 
+    DATABASE_URL = URL.create(
+        drivername="postgresql+psycopg2",
+        username=db_username,
+        password=db_password,
+        host="localhost",
+        port="5432",
+        database=db_name
+    )
     engine = create_engine(DATABASE_URL)
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
