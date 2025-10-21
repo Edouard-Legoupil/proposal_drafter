@@ -65,7 +65,7 @@ python3 backend/scripts/2-update_embeddings.py --force-rescrape
 
 
 
-## `g3-enerate_card_content.py`
+## `3-generate_card_content.py`
 
 This script automatically generates content for knowledge cards that are either missing content or have outdated information based on the `updated_at` timestamp of their references.
 
