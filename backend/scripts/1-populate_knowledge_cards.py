@@ -41,6 +41,48 @@ def main():
             user_id = uuid.UUID(args.user_id)
 
             if args.mode == 'reset':
+                print("Backing up existing data...")
+
+                # Fetch data from tables
+                cur.execute("SELECT name, geographic_coverage, category FROM field_contexts")
+                field_contexts_backup_df = pd.DataFrame(cur.fetchall(), columns=['name', 'geographic_coverage', 'category'])
+
+                cur.execute("SELECT name, account_id, country, donor_group FROM donors")
+                donors_backup_df = pd.DataFrame(cur.fetchall(), columns=['name', 'account_id', 'country', 'donor_group'])
+
+                cur.execute("SELECT name FROM outcomes")
+                outcomes_backup_df = pd.DataFrame(cur.fetchall(), columns=['name'])
+
+                cur.execute("""
+                    SELECT
+                        CASE
+                            WHEN kc.donor_id IS NOT NULL THEN 'donor'
+                            WHEN kc.outcome_id IS NOT NULL THEN 'outcome'
+                            WHEN kc.field_context_id IS NOT NULL THEN 'field_context'
+                        END as type,
+                        COALESCE(d.name, o.name, fc.name) as name,
+                        kcr.url,
+                        kcr.reference_type,
+                        kcr.summary
+                    FROM knowledge_card_to_references kctr
+                    JOIN knowledge_cards kc ON kctr.knowledge_card_id = kc.id
+                    JOIN knowledge_card_references kcr ON kctr.reference_id = kcr.id
+                    LEFT JOIN donors d ON kc.donor_id = d.id
+                    LEFT JOIN outcomes o ON kc.outcome_id = o.id
+                    LEFT JOIN field_contexts fc ON kc.field_context_id = fc.id
+                """)
+                references_backup_df = pd.DataFrame(cur.fetchall(), columns=['type', 'name', 'url', 'reference_type', 'summary'])
+
+                # Save to Excel
+                backup_path = 'db/seed_data_backup.xlsx'
+                with pd.ExcelWriter(backup_path) as writer:
+                    field_contexts_backup_df.to_excel(writer, sheet_name='field_contexts', index=False)
+                    donors_backup_df.to_excel(writer, sheet_name='donor', index=False)
+                    outcomes_backup_df.to_excel(writer, sheet_name='outcome', index=False)
+                    references_backup_df.to_excel(writer, sheet_name='reference', index=False)
+
+                print(f"Backup created at {backup_path}")
+
                 print("Deleting all existing data from tables...")
                 cur.execute("""
                     TRUNCATE TABLE
