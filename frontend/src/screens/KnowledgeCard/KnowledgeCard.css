@@ -209,6 +209,28 @@
     border-bottom: none;
 }
 
+.kc-content-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.download-word-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.download-word-btn:hover {
+    background-color: #e0e0e0;
+}
+
 .kc-section-editing {
     flex-basis: 100%;
     border-color: #007bff;
