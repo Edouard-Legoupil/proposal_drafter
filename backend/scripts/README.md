@@ -34,6 +34,37 @@ You can also specify a different path to the Excel file using the `--excel-file`
 python3 backend/scripts/populate_knowledge_cards.py --excel-file /path/to/your/data.xlsx --user-id <your_user_id>
 ```
 
+
+## `update_embeddings.py`
+
+This script updates the vector embeddings for all references stored in the `knowledge_card_references` table. It can be used to generate embeddings for new references or to refresh existing ones.
+
+### How It Works
+
+By default, the script will:
+1.  Fetch all references from the database.
+2.  For each reference, it will try to reconstruct the original text content from the `knowledge_card_reference_vectors` table.
+3.  If no existing text chunks are found, it will scrape the content from the reference's URL.
+4.  It will then re-generate the embeddings for the content and store them in the database.
+
+### Usage
+
+To run the script, execute the following command from the root directory of the project:
+
+```bash
+python3 backend/scripts/update_embeddings.py
+```
+
+### Forcing Re-scraping
+
+If you want to force the script to re-scrape the content from all reference URLs, even if they have already been processed, use the `--force-rescrape` flag:
+
+```bash
+python3 backend/scripts/update_embeddings.py --force-rescrape
+```
+
+
+
 ## `generate_card_content.py`
 
 This script automatically generates content for knowledge cards that are either missing content or have outdated information based on the `updated_at` timestamp of their references.
@@ -63,32 +94,4 @@ To force the regeneration of content for all knowledge cards, regardless of thei
 
 ```bash
 python3 backend/scripts/generate_card_content.py --force --user-id <your_user_id>
-```
-
-## `update_embeddings.py`
-
-This script updates the vector embeddings for all references stored in the `knowledge_card_references` table. It can be used to generate embeddings for new references or to refresh existing ones.
-
-### How It Works
-
-By default, the script will:
-1.  Fetch all references from the database.
-2.  For each reference, it will try to reconstruct the original text content from the `knowledge_card_reference_vectors` table.
-3.  If no existing text chunks are found, it will scrape the content from the reference's URL.
-4.  It will then re-generate the embeddings for the content and store them in the database.
-
-### Usage
-
-To run the script, execute the following command from the root directory of the project:
-
-```bash
-python3 backend/scripts/update_embeddings.py
-```
-
-### Forcing Re-scraping
-
-If you want to force the script to re-scrape the content from all reference URLs, even if they have already been processed, use the `--force-rescrape` flag:
-
-```bash
-python3 backend/scripts/update_embeddings.py --force-rescrape
 ```
