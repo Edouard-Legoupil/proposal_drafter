@@ -61,6 +61,7 @@ export default function KnowledgeCard() {
     const eventSourceRef = useRef(eventSource);
     const pollingRef = useRef({ intervalId: null, attempts: 0 });
     const [pollingFor, setPollingFor] = useState(null); // 'ingest' or 'populate'
+    const fetchDataRef = useRef(null);
 
     // Sync refs with state
     useEffect(() => {
@@ -100,51 +101,6 @@ export default function KnowledgeCard() {
             }
         };
     }, []);
-
-    useEffect(() => {
-        if (!pollingRef.current.intervalId) {
-            return; // Not polling, do nothing
-        }
-
-        pollingRef.current.attempts += 1;
-
-        if (pollingFor === 'ingest') {
-            const maxAttempts = 15; // Poll for a max of 30 seconds
-            // In case of ingestion, we need to ensure all references are settled
-            const allReferencesSettled = references.every(ref =>
-                ['ingested', 'error', 'skipped'].includes(getStatus(ref))
-            );
-
-            // A safeguard to avoid stopping polling prematurely if references array is temporarily empty
-            const hasPendingReferences = references.some(ref => getStatus(ref) === 'pending');
-
-            if (allReferencesSettled && !hasPendingReferences) {
-                console.log("All references settled. Stopping polling.");
-                clearInterval(pollingRef.current.intervalId);
-                pollingRef.current.intervalId = null;
-                setLoading(false);
-                setLoadingMessage('');
-                alert("Reference ingestion completed successfully!");
-            } else if (pollingRef.current.attempts >= maxAttempts) {
-                console.warn("Polling timeout reached for ingestion. Stopping polling.");
-                clearInterval(pollingRef.current.intervalId);
-                pollingRef.current.intervalId = null;
-                setLoading(false);
-                setLoadingMessage('');
-            }
-        } else if (pollingFor === 'populate') {
-            const maxAttempts = 5; // Poll for 10 seconds to allow DB to update
-            if (pollingRef.current.attempts >= maxAttempts) {
-                console.log("Finished polling for content generation.");
-                clearInterval(pollingRef.current.intervalId);
-                pollingRef.current.intervalId = null;
-                setLoading(false);
-                setLoadingMessage('');
-                fetchData(); // Final fetch to get the latest data
-                alert("Content generation completed successfully!");
-            }
-        }
-    }, [references, getStatus, pollingFor, fetchData]);
 
     const authenticatedFetch = useCallback(async (url, options) => {
         const response = await fetch(url, options);
@@ -228,6 +184,44 @@ export default function KnowledgeCard() {
             console.error("Error fetching data for KC form:", error);
         }
     }, [id, navigate, authenticatedFetch]);
+
+    useEffect(() => {
+        fetchDataRef.current = fetchData;
+    }, [fetchData]);
+
+    useEffect(() => {
+        if (!pollingRef.current.intervalId) {
+            return; // Not polling, do nothing
+        }
+
+        pollingRef.current.attempts += 1;
+
+        if (pollingFor === 'ingest') {
+            const maxAttempts = 15; // Poll for 30 seconds
+            if (pollingRef.current.attempts >= maxAttempts) {
+                console.log("Finished polling for reference ingestion.");
+                clearInterval(pollingRef.current.intervalId);
+                pollingRef.current.intervalId = null;
+                setLoading(false);
+                setLoadingMessage('');
+                if (fetchDataRef.current) {
+                    fetchDataRef.current(); // Final fetch to get the latest data
+                }
+                alert("Reference ingestion completed successfully!");
+            }
+        } else if (pollingFor === 'populate') {
+            const maxAttempts = 5; // Poll for 10 seconds to allow DB to update
+            if (pollingRef.current.attempts >= maxAttempts) {
+                console.log("Finished polling for content generation.");
+                clearInterval(pollingRef.current.intervalId);
+                pollingRef.current.intervalId = null;
+                setLoading(false);
+                setLoadingMessage('');
+                fetchData(); // Final fetch to get the latest data
+                alert("Content generation completed successfully!");
+            }
+        }
+    }, [references, getStatus, pollingFor, fetchData]);
 
     useEffect(() => {
         fetchData();
@@ -470,41 +464,39 @@ export default function KnowledgeCard() {
             });
     
             if (response.ok) {
-                setLoadingMessage("Reference ingestion started...");
+                setLoadingMessage("Reference ingestion started... This may take a while, the screen will refresh automatically when it is done.");
     
+                // Start polling immediately, like the 'populate' function does.
+                setPollingFor('ingest');
+                pollingRef.current.attempts = 0;
+                pollingRef.current.intervalId = setInterval(() => {
+                    console.log(`Polling for ingestion updates... Attempt: ${pollingRef.current.attempts + 1}`);
+                    if (fetchDataRef.current) {
+                        fetchDataRef.current();
+                    }
+                }, 2000);
+    
+                // The SSE events will now only update the UI with statuses, but not control the polling.
                 const onMessage = (data) => {
-                    setReferences(prev => {
-                        const updated = prev.map(ref => ref.id === data.reference_id ? { ...ref, status: data.status, status_message: data.message } : ref);
-                        const allDone = updated.every(ref => ['ingested', 'error', 'skipped'].includes(getStatus(ref)));
-                        
-                        if (allDone) {
-                            // All SSE messages received, close the connection
-                            if (eventSourceRef.current) {
-                                eventSourceRef.current.close();
-                                eventSourceRef.current = null;
-                            }
-                            
-                            // Start polling to check for DB updates
-                            setLoadingMessage("Finalizing ingestion... This might take a moment.");
-                            setPollingFor('ingest');
-                            pollingRef.current.attempts = 0; // Reset attempts
-                            pollingRef.current.intervalId = setInterval(() => {
-                                console.log(`Polling for updates... Attempt: ${pollingRef.current.attempts + 1}`);
-                                fetchData();
-                            }, 2000); // Poll every 2 seconds
-                        }
-                        return updated;
-                    });
+                    setReferences(prev => 
+                        prev.map(ref => ref.id === data.reference_id ? { ...ref, status: data.status, status_message: data.message } : ref)
+                    );
                 };
     
-                const onError = () => {
-                    setLoading(false);
-                    setLoadingMessage('');
+                const onError = (error) => {
+                    console.error("Ingestion SSE error:", error);
+                    if (eventSourceRef.current) {
+                        eventSourceRef.current.close();
+                        eventSourceRef.current = null;
+                    }
                 };
                 
                 const onTimeout = () => {
-                    setLoading(false);
-                    setLoadingMessage('');
+                    console.warn("Ingestion SSE timeout.");
+                    if (eventSourceRef.current) {
+                        eventSourceRef.current.close();
+                        eventSourceRef.current = null;
+                    }
                 };
     
                 const closeSse = setupSse(`${API_BASE_URL}/knowledge-cards/${cardId}/ingest-status`, onMessage, onError, onTimeout);
@@ -692,7 +684,9 @@ export default function KnowledgeCard() {
                                     pollingRef.current.attempts = 0; // Reset attempts
                                     pollingRef.current.intervalId = setInterval(() => {
                                         console.log(`Polling for content updates... Attempt: ${pollingRef.current.attempts + 1}`);
-                                        fetchData();
+                                        if (fetchDataRef.current) {
+                                            fetchDataRef.current();
+                                        }
                                     }, 2000); // Poll every 2 seconds
                                 } else {
                                     alert("Content generation failed. Please try again.");
