@@ -3,6 +3,14 @@ import logging
 from sqlalchemy import text
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import litellm
+import nltk
+from nltk.tokenize import sent_tokenize
+
+# Download the 'punkt' tokenizer if not already present
+try:
+    nltk.data.find('tokenizers/punkt')
+except nltk.downloader.DownloadError:
+    nltk.download('punkt')
 
 from backend.core.llm import get_embedder_config
 
@@ -37,9 +45,21 @@ async def process_and_store_text(reference_id, text_content, connection):
         )
         logger.info(f"Existing vectors deleted for reference_id: {reference_id}")
 
-        # Chunk the text
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-        chunks = text_splitter.split_text(text_content.replace('\x00', ''))
+        # Chunk the text using a semantic approach
+        sentences = sent_tokenize(text_content.replace('\x00', ''))
+
+        chunks = []
+        current_chunk = ""
+        for sentence in sentences:
+            if len(current_chunk) + len(sentence) <= 1000:
+                current_chunk += " " + sentence
+            else:
+                chunks.append(current_chunk.strip())
+                current_chunk = sentence
+
+        if current_chunk:
+            chunks.append(current_chunk.strip())
+
         logger.info(f"Content for reference_id: {reference_id} chunked into {len(chunks)} chunks.")
 
         if not chunks:
