@@ -114,3 +114,6 @@ websockets>=12.0
  
 ## # WSGI HTTP Server for UNIX concurrent connection
 gunicorn
+
+# NLP library for tasks like tokenization and sentence splitting
+nltk
