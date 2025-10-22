@@ -35,7 +35,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 import litellm
 import numpy as np
 import io
-from backend.utils.doc_export import create_word_from_sections
+from backend.utils.doc_export import create_word_from_knowledge_card, create_word_from_sections
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -1412,7 +1412,8 @@ async def generate_and_download_document(
         else:
             # Return the DOCX file by default.
             try:
-                doc = create_word_from_sections(form_data, ordered_sections)
+                card_name = form_data["Title"]
+                doc = create_word_from_knowledge_card(card_name, ordered_sections)
                 docx_buffer = io.BytesIO()
                 doc.save(docx_buffer)
                 docx_buffer.seek(0)
