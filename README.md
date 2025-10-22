@@ -74,7 +74,7 @@ This system leverages the agent-based framework of [CrewAI](https://docs.crewai.
 
 
 ## 🧱 System Architecture
-
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Edouard-Legoupil/proposal_drafter)
 
 Each agent is powered by an LLM and follows a role-specific prompt and toolset.
 
