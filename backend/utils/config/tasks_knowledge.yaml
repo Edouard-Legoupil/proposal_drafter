@@ -1,9 +1,9 @@
 research_task:
-description: "For the given section name and instructions, find the most relevant information from the knowledge base. The section name is '{section_name}' and the instructions are '{instructions}'."
+  description: "For the given section name and instructions, find the most relevant information from the knowledge base. The section name is '{section_name}' and the instructions are '{instructions}'."
   expected_output: "A bulleted list of key findings and supporting evidence from the knowledge base that directly addresses the instructions for the section. Each finding must include the source URL."
 
 write_task:
   description: "Using the research findings, write the content for the section '{section_name}'. The instructions for this section are: '{instructions}'. Your response must be only the text for the section, without any additional titles or formatting. Be sure to cite your sources."
   expected_output: "A well-written, clear, and concise text that fulfills all the requirements of the section instructions, with citations for all sources."
-context:
-- research_task
+  context:
+    - research_task
