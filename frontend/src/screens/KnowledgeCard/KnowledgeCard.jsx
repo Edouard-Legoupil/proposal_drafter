@@ -60,6 +60,7 @@ export default function KnowledgeCard() {
     const referencesRef = useRef(references);
     const eventSourceRef = useRef(eventSource);
     const pollingRef = useRef({ intervalId: null, attempts: 0 });
+    const [pollingFor, setPollingFor] = useState(null); // 'ingest' or 'populate'
 
     // Sync refs with state
     useEffect(() => {
@@ -106,28 +107,44 @@ export default function KnowledgeCard() {
         }
 
         pollingRef.current.attempts += 1;
-        const maxAttempts = 15; // Poll for a max of 30 seconds
 
-        // Check if all references have a final status according to the latest fetched data
-        const allReferencesSettled = references.every(ref =>
-            ['ingested', 'error', 'skipped'].includes(getStatus(ref))
-        );
+        if (pollingFor === 'ingest') {
+            const maxAttempts = 15; // Poll for a max of 30 seconds
+            // In case of ingestion, we need to ensure all references are settled
+            const allReferencesSettled = references.every(ref =>
+                ['ingested', 'error', 'skipped'].includes(getStatus(ref))
+            );
 
-        if (allReferencesSettled) {
-            console.log("All references settled. Stopping polling.");
-            clearInterval(pollingRef.current.intervalId);
-            pollingRef.current.intervalId = null;
-            setLoading(false); // Hide any lingering loading indicators
-            setLoadingMessage('');
-        } else if (pollingRef.current.attempts >= maxAttempts) {
-            console.warn("Polling timeout reached. Stopping polling.");
-            clearInterval(pollingRef.current.intervalId);
-            pollingRef.current.intervalId = null;
-            setLoading(false);
-            setLoadingMessage('');
+            // A safeguard to avoid stopping polling prematurely if references array is temporarily empty
+            const hasPendingReferences = references.some(ref => getStatus(ref) === 'pending');
+
+            if (allReferencesSettled && !hasPendingReferences) {
+                console.log("All references settled. Stopping polling.");
+                clearInterval(pollingRef.current.intervalId);
+                pollingRef.current.intervalId = null;
+                setLoading(false);
+                setLoadingMessage('');
+                alert("Reference ingestion completed successfully!");
+            } else if (pollingRef.current.attempts >= maxAttempts) {
+                console.warn("Polling timeout reached for ingestion. Stopping polling.");
+                clearInterval(pollingRef.current.intervalId);
+                pollingRef.current.intervalId = null;
+                setLoading(false);
+                setLoadingMessage('');
+            }
+        } else if (pollingFor === 'populate') {
+            const maxAttempts = 5; // Poll for 10 seconds to allow DB to update
+            if (pollingRef.current.attempts >= maxAttempts) {
+                console.log("Finished polling for content generation.");
+                clearInterval(pollingRef.current.intervalId);
+                pollingRef.current.intervalId = null;
+                setLoading(false);
+                setLoadingMessage('');
+                fetchData(); // Final fetch to get the latest data
+                alert("Content generation completed successfully!");
+            }
         }
-
-    }, [references, getStatus]);
+    }, [references, getStatus, pollingFor, fetchData]);
 
     const authenticatedFetch = useCallback(async (url, options) => {
         const response = await fetch(url, options);
@@ -469,6 +486,7 @@ export default function KnowledgeCard() {
                             
                             // Start polling to check for DB updates
                             setLoadingMessage("Finalizing ingestion... This might take a moment.");
+                            setPollingFor('ingest');
                             pollingRef.current.attempts = 0; // Reset attempts
                             pollingRef.current.intervalId = setInterval(() => {
                                 console.log(`Polling for updates... Attempt: ${pollingRef.current.attempts + 1}`);
@@ -661,17 +679,24 @@ export default function KnowledgeCard() {
                             }
 
                             if (statusData.progress >= 100 || statusData.progress === -1) {
-                                if (statusData.progress >= 100) {
-                                    // Refresh complete data to ensure all sections are loaded
-                                    fetchData();
-                                    alert("Content generation completed successfully!");
-                                } else {
-                                    alert("Content generation failed. Please try again.");
-                                }
                                 es.close();
                                 setEventSource(null);
                                 eventSourceRef.current = null;
                                 setIsProgressModalOpen(false);
+
+                                if (statusData.progress >= 100) {
+                                    // Start polling to ensure DB is updated before showing success
+                                    setLoading(true);
+                                    setLoadingMessage("Finalizing content generation... This might take a moment.");
+                                    setPollingFor('populate');
+                                    pollingRef.current.attempts = 0; // Reset attempts
+                                    pollingRef.current.intervalId = setInterval(() => {
+                                        console.log(`Polling for content updates... Attempt: ${pollingRef.current.attempts + 1}`);
+                                        fetchData();
+                                    }, 2000); // Poll every 2 seconds
+                                } else {
+                                    alert("Content generation failed. Please try again.");
+                                }
                             }
                         } catch (error) {
                             console.error("Error processing generation status:", error);
