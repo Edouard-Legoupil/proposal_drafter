@@ -10,7 +10,8 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Logging configuration
-LOG_DIR="logs"
+ROOT_DIR=$(pwd)
+LOG_DIR="$ROOT_DIR/logs"
 LOG_FILE="$LOG_DIR/startup_$(date '+%Y%m%d_%H%M%S').log"
 ERROR_LOG="$LOG_DIR/error_$(date '+%Y%m%d_%H%M%S').log"
 
@@ -206,7 +207,7 @@ main() {
     if [ ! -d "frontend/node_modules" ]; then
         log_warning "Frontend node_modules not found, running npm install..."
         cd frontend
-        if ! npm install >> "../$LOG_FILE" 2>&1; then
+        if ! npm install >> "$LOG_FILE" 2>&1; then
             log_error "Failed to install frontend dependencies"
             cd ..
             graceful_shutdown 1
@@ -253,8 +254,35 @@ main() {
     # Install dependencies
     pip install -r requirements.txt
 
+    # Check for and download NLTK data if necessary
+    log_info "🔎 Checking for NLTK 'punkt' tokenizer..."
+    if ! python3 -c "import nltk.data; nltk.data.find('tokenizers/punkt')" >/dev/null 2>&1; then
+      log_info "⬇️ NLTK 'punkt' tokenizer not found. Downloading..."
+      if python3 -c "import nltk; nltk.download('punkt')" >> "$LOG_FILE" 2>&1; then
+        log_info "✅ NLTK data downloaded successfully"
+      else
+        log_error "Failed to download NLTK data. Please check your network connection."
+        graceful_shutdown 1
+      fi
+    else
+      log_info "✅ NLTK 'punkt' tokenizer already present"
+    fi
+
+    log_info "🔎 Checking for NLTK 'punkt_tab' resource..."
+    if ! python3 -c "import nltk.data; nltk.data.find('tokenizers/punkt_tab')" >/dev/null 2>&1; then
+      log_info "⬇️ NLTK 'punkt_tab' resource not found. Downloading..."
+      if python3 -c "import nltk; nltk.download('punkt_tab')" >> "$LOG_FILE" 2>&1; then
+        log_info "✅ NLTK 'punkt_tab' downloaded successfully"
+      else
+        log_error "Failed to download NLTK 'punkt_tab' data. Please check your network connection."
+        graceful_shutdown 1
+      fi
+    else
+      log_info "✅ NLTK 'punkt_tab' resource already present"
+    fi
+
     # Start backend with Gunicorn
-    gunicorn main:app --conf gunicorn.conf.py >> "../$LOG_FILE" 2>&1 &
+    gunicorn main:app --conf gunicorn.conf.py >> "$LOG_FILE" 2>&1 &
     BACKEND_PID=$!
     cd ..
     
@@ -267,7 +295,7 @@ main() {
     npm install
     # Set environment variable to suppress browser opening
     export BROWSER=none
-    npm run build >> "../$LOG_FILE" 2>&1 &
+    npm run build >> "$LOG_FILE" 2>&1 &
     FRONTEND_PID=$!
     cd ..
     log_info "Frontend server started with PID: $FRONTEND_PID"
