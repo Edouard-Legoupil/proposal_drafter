@@ -1417,10 +1417,11 @@ async def generate_and_download_document(
                 docx_buffer = io.BytesIO()
                 doc.save(docx_buffer)
                 docx_buffer.seek(0)
+                sanitized_filename = slugify(card_name)
                 return StreamingResponse(
                     docx_buffer,
                     media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                    headers={"Content-Disposition": f"attachment; filename=KnowledgeCard_{card_id}.docx"}
+                    headers={"Content-Disposition": f"attachment; filename=KnowledgeCard_{sanitized_filename}.docx"}
                 )
             except Exception as e:
                 logger.error(f"[DOCX Generation Error] {e}", exc_info=True)
