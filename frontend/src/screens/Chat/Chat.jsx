@@ -392,12 +392,64 @@ export default function Chat (props)
                 return () => clearInterval(intervalId);
         }, [generateLoading]);
 
+        async function fetchAndAssociateKnowledgeCards() {
+                const donorId = formData["Targeted Donor"].value;
+                const outcomeIds = formData["Main Outcome"].value;
+                const fieldContextId = formData["Country / Location(s)"].value;
+
+                const fetchPromises = [];
+
+                if (donorId && !donorId.startsWith("new_")) {
+                        fetchPromises.push(
+                                fetch(`${API_BASE_URL}/knowledge-cards?donor_id=${donorId}`, { credentials: 'include' })
+                                        .then(res => res.ok ? res.json() : Promise.resolve({ knowledge_cards: [] }))
+                                        .then(data => data.knowledge_cards.length > 0 ? data.knowledge_cards[0] : null)
+                        );
+                }
+
+                if (fieldContextId && !fieldContextId.startsWith("new_")) {
+                        fetchPromises.push(
+                                fetch(`${API_BASE_URL}/knowledge-cards?field_context_id=${fieldContextId}`, { credentials: 'include' })
+                                        .then(res => res.ok ? res.json() : Promise.resolve({ knowledge_cards: [] }))
+                                        .then(data => data.knowledge_cards.length > 0 ? data.knowledge_cards[0] : null)
+                        );
+                }
+
+                if (outcomeIds && outcomeIds.length > 0) {
+                        outcomeIds.forEach(outcomeId => {
+                                if (!outcomeId.startsWith("new_")) {
+                                        fetchPromises.push(
+                                                fetch(`${API_BASE_URL}/knowledge-cards?outcome_id=${outcomeId}`, { credentials: 'include' })
+                                                        .then(res => res.ok ? res.json() : Promise.resolve({ knowledge_cards: [] }))
+                                                        .then(data => data.knowledge_cards.length > 0 ? data.knowledge_cards[0] : null)
+                                        );
+                                }
+                        });
+                }
+
+                try {
+                        const results = await Promise.all(fetchPromises);
+                        const newAssociatedCards = results.filter(Boolean); // Filter out any nulls
+
+                        // Combine with already associated cards, ensuring uniqueness
+                        const combinedCards = [...associatedKnowledgeCards, ...newAssociatedCards];
+                        const uniqueAssociatedCards = Array.from(new Map(combinedCards.map(card => [card.id, card])).values());
+
+                        setAssociatedKnowledgeCards(uniqueAssociatedCards);
+                        return uniqueAssociatedCards;
+                } catch (error) {
+                        console.error("Error auto-associating knowledge cards:", error);
+                        return associatedKnowledgeCards; // Return original cards on error
+                }
+        }
+
         async function handleGenerateClick ()
         {
                 setGenerateLoading(true);
                 setFormExpanded(false);
 
                 try {
+                        const finalAssociatedCards = await fetchAndAssociateKnowledgeCards();
                         const updatedFormData = { ...Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])) };
 
                         const createNewOption = async (endpoint, value) => {
@@ -443,7 +495,7 @@ export default function Chat (props)
                                 body: JSON.stringify({
                                         project_description: userPrompt,
                                         form_data: updatedFormData,
-                                        associated_knowledge_cards: associatedKnowledgeCards
+                                        associated_knowledge_cards: finalAssociatedCards
                                 }),
                                 credentials: 'include'
                         });
@@ -1044,7 +1096,7 @@ export default function Chat (props)
 
                                                         <div className="Chat_inputArea_buttonContainer">
                                                                 <div style={{ position: 'relative' }}>
-                                                                        <CommonButton onClick={() => setIsAssociateKnowledgeModalOpen(true)} label="Associate Knowledge" disabled={proposalStatus !== 'draft'} icon={knowIcon}/>
+                                                                        <CommonButton onClick={() => setIsAssociateKnowledgeModalOpen(true)} label="Manage Knowledge" disabled={proposalStatus !== 'draft'} icon={knowIcon}/>
                                                                         {associatedKnowledgeCards.length > 0 && (
                                                                                 <div className="associated-knowledge-display">
                                                                                         <h4>Associated Knowledge Cards:</h4>
@@ -1056,7 +1108,13 @@ export default function Chat (props)
                                                                                                                 card.outcome_name,
                                                                                                                 card.field_context_name,
                                                                                                         ].filter(Boolean).join(' - ');
-                                                                                                        return (<li key={card.id}>{title}</li>);
+                                                                                                        return (
+                                                                                                                <li key={card.id}>
+                                                                                                                        <a href={`/knowledge-card/${card.id}`} target="_blank" rel="noopener noreferrer">
+                                                                                                                                {title}
+                                                                                                                        </a>
+                                                                                                                </li>
+                                                                                                        );
                                                                                                 })}
                                                                                         </ul>
                                                                                 </div>
