@@ -6,11 +6,6 @@ import litellm
 import nltk
 from nltk.tokenize import sent_tokenize
 
-# Download the 'punkt' tokenizer if not already present
-try:
-    nltk.data.find('tokenizers/punkt')
-except nltk.downloader.DownloadError:
-    nltk.download('punkt')
 
 from backend.core.llm import get_embedder_config
 
