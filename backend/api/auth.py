@@ -1,12 +1,14 @@
 #  Standard Library
 import json
 import logging
+import os
 import uuid
 from datetime import datetime, timedelta
 
 #  Third-Party Libraries
+import httpx
 from fastapi import APIRouter, Request, Depends
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from redis.exceptions import RedisError   
@@ -20,12 +22,140 @@ from backend.core.security import (
     generate_password_hash,
     check_password_hash,
     SECRET_KEY,
-    jwt
+    jwt,
+    ENTRA_TENANT_ID,
+    ENTRA_CLIENT_ID,
+    ENTRA_CLIENT_SECRET,
 )
 
 # This router handles all authentication-related endpoints, including user
 # registration, login, logout, profile management, and password recovery.
 router = APIRouter()
+
+
+@router.get("/sso-status")
+async def sso_status():
+    """
+    Returns the status of SSO.
+    """
+    return {"enabled": all([ENTRA_TENANT_ID, ENTRA_CLIENT_ID, ENTRA_CLIENT_SECRET])}
+
+
+@router.get("/sso-login")
+async def sso_login():
+    """
+    Redirects the user to the Microsoft identity platform for authentication.
+    """
+    if not all([ENTRA_TENANT_ID, ENTRA_CLIENT_ID, ENTRA_CLIENT_SECRET]):
+        return JSONResponse(status_code=404, content={"error": "SSO not configured"})
+    redirect_uri = os.getenv("VITE_BACKEND_URL", "http://localhost:8000") + "/callback"
+    url = (
+        f"https://login.microsoftonline.com/{ENTRA_TENANT_ID}/oauth2/v2.0/authorize"
+        f"?client_id={ENTRA_CLIENT_ID}"
+        f"&response_type=code"
+        f"&redirect_uri={redirect_uri}"
+        f"&response_mode=query"
+        f"&scope=User.Read"
+    )
+    return RedirectResponse(url=url)
+
+
+@router.get("/callback")
+async def callback(request: Request, code: str):
+    """
+    Handles the response from the Microsoft identity platform.
+    """
+    if not all([ENTRA_TENANT_ID, ENTRA_CLIENT_ID, ENTRA_CLIENT_SECRET]):
+        return JSONResponse(status_code=404, content={"error": "SSO not configured"})
+    redirect_uri = os.getenv("VITE_BACKEND_URL", "http://localhost:8000") + "/callback"
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(
+                f"https://login.microsoftonline.com/{ENTRA_TENANT_ID}/oauth2/v2.0/token",
+                data={
+                    "client_id": ENTRA_CLIENT_ID,
+                    "scope": "User.Read",
+                    "code": code,
+                    "redirect_uri": redirect_uri,
+                    "grant_type": "authorization_code",
+                    "client_secret": ENTRA_CLIENT_SECRET,
+                },
+            )
+            response.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            logging.error(f"Failed to get token: {e.response.text}")
+            return JSONResponse(status_code=400, content={"error": "Failed to get token"})
+
+    access_token = response.json()["access_token"]
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(
+                "https://graph.microsoft.com/v1.0/me",
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            response.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            logging.error(f"Failed to get user data: {e.response.text}")
+            return JSONResponse(status_code=400, content={"error": "Failed to get user data"})
+
+    user_data = response.json()
+    email = user_data.get("userPrincipalName") or user_data.get("mail")
+    name = user_data.get("displayName")
+    if not email:
+        return JSONResponse(status_code=400, content={"error": "Could not get user email"})
+
+    with get_engine().connect() as connection:
+        result = connection.execute(
+            text("SELECT id, email, name FROM users WHERE email = :email"),
+            {"email": email},
+        )
+        user = result.fetchone()
+
+    if not user:
+        with get_engine().begin() as connection:
+            result = connection.execute(
+                text("SELECT id FROM teams WHERE name = :name"), {"name": "SSO Users"}
+            )
+            team = result.fetchone()
+            if not team:
+                team_id = str(uuid.uuid4())
+                connection.execute(
+                    text("INSERT INTO teams (id, name) VALUES (:id, :name)"),
+                    {"id": team_id, "name": "SSO Users"},
+                )
+            else:
+                team_id = team[0]
+
+            user_id = str(uuid.uuid4())
+            connection.execute(
+                text("INSERT INTO users (id, email, name, team_id) VALUES (:id, :email, :name, :team_id)"),
+                {"id": user_id, "email": email, "name": name, "team_id": team_id},
+            )
+    else:
+        user_id = user[0]
+
+    token = jwt.encode(
+        {"email": email, "exp": datetime.utcnow() + timedelta(minutes=480)},
+        SECRET_KEY,
+        algorithm="HS256",
+    )
+    try:
+        redis_client.setex(f"user_session:{user_id}", 28800, token)
+    except RedisError as redis_error:
+        logging.error(f"Redis error setting session for user ID {user_id}: {redis_error}")
+        pass
+
+    response = RedirectResponse(url="/dashboard")
+    cookie_settings = get_cookie_settings(request)
+    response.set_cookie(
+        key="auth_token",
+        value=token,
+        httponly=True,
+        path="/",
+        max_age=28800,
+        **cookie_settings,
+    )
+    return response
 
 
 @router.post("/signup")

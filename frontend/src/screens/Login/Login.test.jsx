@@ -26,7 +26,7 @@ describe('Login Form Validation', () => {
 
                 const emailInput = screen.getByLabelText(/email/i)
                 const passwordInput = screen.getByLabelText(/password/i)
-                const loginButton = screen.getByRole('button', { name: /login/i })
+                const loginButton = screen.getByTestId('submit-button')
 
                 // 1. Initially disabled
                 expect(loginButton).toBeDisabled()
@@ -74,7 +74,7 @@ describe('Login', () => {
 
                 const emailInput = screen.getByLabelText(/email/i)
                 const passwordInput = screen.getByLabelText(/password/i)
-                const loginButton = screen.getByRole('button', { name: /login/i })
+                const loginButton = screen.getByTestId('submit-button')
 
                 await userEvent.type(emailInput, 'test@example.com')
                 await userEvent.type(passwordInput, 'password123')

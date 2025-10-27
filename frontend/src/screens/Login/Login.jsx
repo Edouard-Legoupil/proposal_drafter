@@ -62,6 +62,22 @@ export default function Login (props)
 
         const [submitButtonText, setSubmitButtonText] = useState(props?.register ? "REGISTER" : "LOGIN")
         const [loading, setLoading] = useState(false)
+        const [ssoEnabled, setSsoEnabled] = useState(false)
+
+        useEffect(() => {
+                async function fetchSsoStatus() {
+                        try {
+                                const response = await fetch(`${API_BASE_URL}/sso-status`);
+                                if (response.ok) {
+                                        const data = await response.json();
+                                        setSsoEnabled(data.enabled);
+                                }
+                        } catch (error) {
+                                console.error("Failed to fetch SSO status:", error);
+                        }
+                }
+                fetchSsoStatus();
+        }, []);
 
         useEffect(() => {
                 if(errorPopover.current?.hidePopover && password) {
@@ -261,6 +277,20 @@ export default function Login (props)
                                                                 </>
                                                                 :
                                                                 <>
+                                                                        {ssoEnabled && (
+                                                                                <>
+                                                                                        <CommonButton
+                                                                                                label="LOGIN WITH MICROSOFT"
+                                                                                                onClick={() => window.location.href = `${API_BASE_URL}/sso-login`}
+                                                                                                style={{ marginTop: "20px", backgroundColor: "#2F2F2F" }}
+                                                                                        />
+                                                                                        <div className='Login-divider'>
+                                                                                                <hr/>
+                                                                                                <span>OR</span>
+                                                                                                <hr/>
+                                                                                        </div>
+                                                                                </>
+                                                                        )}
                                                                         Don't have an account?
                                                                         <a href="/register" data-testid="register-link"> Sign up</a>
                                                                 </>
