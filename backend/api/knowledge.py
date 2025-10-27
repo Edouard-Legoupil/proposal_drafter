@@ -1417,7 +1417,7 @@ async def generate_and_download_document(
                 docx_buffer = io.BytesIO()
                 doc.save(docx_buffer)
                 docx_buffer.seek(0)
-                sanitized_filename = slugify(card_name)
+                sanitized_filename = slugify(card_name.replace('.', '-'))
                 return StreamingResponse(
                     docx_buffer,
                     media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
