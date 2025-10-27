@@ -75,6 +75,11 @@ logger = logging.getLogger(__name__)
 # It's crucial to set this in the environment for production.
 SECRET_KEY = os.getenv("SECRET_KEY", "your_default_dev_secret")
 
+# --- EntraID Configuration ---
+ENTRA_TENANT_ID = os.getenv("ENTRA_TENANT_ID")
+ENTRA_CLIENT_ID = os.getenv("ENTRA_CLIENT_ID")
+ENTRA_CLIENT_SECRET = os.getenv("ENTRA_CLIENT_SECRET")
+
 # --- Database Configuration ---
 
 # Load database credentials and settings from environment variables.
