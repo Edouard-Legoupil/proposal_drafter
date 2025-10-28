@@ -89,73 +89,12 @@ A powerful and scalable method for RAG evaluation is the "LLM as a Judge" patter
 *   **Setup Complexity:** Requires a well-defined evaluation dataset and carefully crafted prompts for the judge LLM.
 *   **Cost:** While cheaper than human evaluation, it still incurs costs for the LLM judge's API calls.
 
-#### Implementation Plan for CrewAI
+#### Build the Evaluation Pipeline
 
-This plan details how to instrument our CrewAI agents to log the necessary data for an "LLM as a Judge" evaluation.
+The `_run` method of the `VectorSearchTool` in `backend/utils/crew_knowledge.py` must be modified. After retrieving the context, it should insert a new record into the `rag_evaluation_logs` table and pass the `id` of this new record forward.
 
-1.  **Create a `rag_evaluation_logs` Table:**
-    *   A new table is needed to store the data for each RAG operation. Add the following SQL to `db/database-setup.sql`:
-    ```sql
-    -- Create RAG Evaluation Logs table
-    CREATE TABLE IF NOT EXISTS rag_evaluation_logs (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        knowledge_card_id UUID NOT NULL REFERENCES knowledge_cards(id) ON DELETE CASCADE,
-        query TEXT NOT NULL,
-        retrieved_context TEXT NOT NULL,
-        generated_answer TEXT,
-        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-    );
-    ```
-
-2.  **Modify the `VectorSearchTool` to Log Queries and Context:**
-    *   The `_run` method of the `VectorSearchTool` in `backend/utils/crew_knowledge.py` must be modified. After retrieving the context, it should insert a new record into the `rag_evaluation_logs` table and pass the `id` of this new record forward.
-    *   The tool should return a string that includes a special marker with the log ID, like this: `f"[RAG_LOG_ID={log_id}]\n\n{retrieved_context}"`.
-
-3.  **Implement a Task Output Callback:**
-    *   Create a callback function in `backend/utils/crew_knowledge.py` that can parse the `log_id` from the tool's output and update the corresponding database record with the final generated answer.
-    ```python
-    import re
-    from backend.core.db import get_engine
-    from sqlalchemy import text
-
-    def log_rag_output(output):
-        """Callback function to log the final answer of a RAG task."""
-        raw_tool_output = output.raw_output
-        final_answer = output.exported_output
-
-        match = re.search(r"\[RAG_LOG_ID=([^\]]+)\]", raw_tool_output)
-
-        if match:
-            log_id = match.group(1)
-
-            with get_engine().connect() as connection:
-                query = text("""
-                    UPDATE rag_evaluation_logs
-                    SET generated_answer = :generated_answer
-                    WHERE id = :log_id;
-                """)
-                connection.execute(query, {
-                    "generated_answer": final_answer,
-                    "log_id": log_id
-                })
-                connection.commit()
-    ```
-
-4.  **Attach the Callback to the Final Task:**
-    *   In the `ContentGenerationCrew` in `backend/utils/crew_knowledge.py`, attach this callback function to the final task in the sequence (the `write_task`).
-    ```python
-    @task
-    def write_task(self) -> Task:
-        # ...
-        return Task(
-            # ...
-            output_callback=log_rag_output
-        )
-    ```
-
-5.  **Build the Evaluation Pipeline:**
-    *   With the logging in place, an external script can now be created to:
-        *   Query the `rag_evaluation_logs` table.
-        *   For each record, send the `query`, `retrieved_context`, and `generated_answer` to a judge LLM.
-        *   Use a framework like **RAGAs** to score the results on metrics like Faithfulness and Relevancy.
-        *   Store these scores to benchmark the performance of the RAG system over time.
+With the logging in place - implemented through the function log_rag_output to the rag_evaluation_logs table, an external script can now be created to:
+ *   Query the `rag_evaluation_logs` table.
+ *   For each record, send the `query`, `retrieved_context`, and `generated_answer` to a judge LLM.
+ *   Use a framework like **RAGAs** to score the results on metrics like Faithfulness and Relevancy.
+ *   Store these scores to benchmark the performance of the RAG system over time.
