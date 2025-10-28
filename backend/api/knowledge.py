@@ -1007,8 +1007,12 @@ async def reingest_knowledge_card_reference(card_id: uuid.UUID, reference_id: uu
     #  Validate card and reference exist
     with get_engine().connect() as connection:
         ref_check = connection.execute(
-            text("SELECT id FROM knowledge_card_references WHERE id = :ref_id AND knowledge_card_id = :card_id"),
-            {"ref_id": reference_id, "card_id": card_id}
+            text("""
+                SELECT kcr.id FROM knowledge_card_references kcr
+                JOIN knowledge_card_to_references kctr ON kcr.id = kctr.reference_id
+                WHERE kctr.knowledge_card_id = :card_id AND kcr.id = :ref_id
+            """),
+            {"card_id": card_id, "ref_id": reference_id}
         ).fetchone()
 
         if not ref_check:
