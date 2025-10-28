@@ -1,5 +1,6 @@
 import os
 from typing import Type
+import re
 from pydantic import BaseModel, Field
 from crewai import Agent, Task, Crew, Process
 from crewai.project import CrewBase, agent, crew, task
@@ -8,6 +9,42 @@ from backend.core.llm import llm, get_embedder_config
 from backend.core.db import get_engine
 from sqlalchemy import text
 import litellm
+
+def log_rag_output(output):
+    """Callback function to log the final answer of a RAG task."""
+    # The raw_output from the tool is passed to the agent, which then forms its answer.
+    # The final output of the task will be the agent's answer, not the tool's direct output.
+    # We need to parse the log_id from the task's output if it's included,
+    # or find a way to access the tool's output from the callback.
+    # For now, we assume the agent includes the log_id in its final answer for clarity.
+
+    # A cleaner way would be to pass the log_id through the agent's memory or shared context,
+    # but this is a simple approach that works for now.
+
+    # Let's assume the agent is prompted to pass the RAG_LOG_ID through.
+    # A more robust solution might be needed if the agent filters this out.
+
+    # This callback receives the TaskOutput object
+    # The actual tool output is in output.raw_output
+    raw_tool_output = output.raw_output
+    final_answer = output.exported_output
+
+    match = re.search(r"\[RAG_LOG_ID=([^\]]+)\]", raw_tool_output)
+
+    if match:
+        log_id = match.group(1)
+
+        with get_engine().connect() as connection:
+            query = text("""
+                UPDATE rag_evaluation_logs
+                SET generated_answer = :generated_answer
+                WHERE id = :log_id;
+            """)
+            connection.execute(query, {
+                "generated_answer": final_answer,
+                "log_id": log_id
+            })
+            connection.commit()
 
 class VectorSearchTool(BaseTool):
     name: str = "Vector Search"
@@ -56,7 +93,22 @@ class VectorSearchTool(BaseTool):
                 "query_embedding": str(query_embedding),
                 "fts_query": fts_query
             }).fetchall()
-            return "\n\n".join([f"Source: {row[1]}\nChunk: {row[0]}" for row in results])
+
+            retrieved_context = "\n\n".join([f"Source: {row[1]}\nChunk: {row[0]}" for row in results])
+
+            log_query = text("""
+                INSERT INTO rag_evaluation_logs (knowledge_card_id, query, retrieved_context)
+                VALUES (:kc_id, :query, :retrieved_context)
+                RETURNING id;
+            """)
+            log_result = connection.execute(log_query, {
+                "kc_id": self.knowledge_card_id,
+                "query": search_query,
+                "retrieved_context": retrieved_context
+            }).fetchone()
+            log_id = log_result[0]
+
+            return f"[RAG_LOG_ID={log_id}]\n\n{retrieved_context}"
 
 @CrewBase
 class ContentGenerationCrew:
@@ -104,7 +156,8 @@ class ContentGenerationCrew:
         write_task_config['description'] = self.pre_prompt + write_task_config['description']
         return Task(
             config=write_task_config,
-            agent=self.writer()
+            agent=self.writer(),
+            output_callback=log_rag_output
         )
 
     @crew

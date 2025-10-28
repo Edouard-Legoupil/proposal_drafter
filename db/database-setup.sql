@@ -187,6 +187,16 @@ CREATE TABLE IF NOT EXISTS knowledge_card_reference_vectors (
     embedding vector(1536)
 );
 
+-- Create RAG Evaluation Logs table
+CREATE TABLE IF NOT EXISTS rag_evaluation_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    knowledge_card_id UUID NOT NULL REFERENCES knowledge_cards(id) ON DELETE CASCADE,
+    query TEXT NOT NULL,
+    retrieved_context TEXT NOT NULL,
+    generated_answer TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create join tables for many-to-many relationships  
 CREATE TABLE IF NOT EXISTS proposal_donors (
     proposal_id UUID NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
