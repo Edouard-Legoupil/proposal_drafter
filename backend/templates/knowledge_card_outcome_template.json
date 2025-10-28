@@ -18,7 +18,7 @@
       },
       {
         "section_name": "3. Implementation Guidance & Best Practices",
-        "instructions": "Provide practical, actionable guidance on how to effectively implement each of the previously listed interventions. Include best practices, lessons learned, and recommendations from related past evaluations, policies and guidance (Include reference). Highlight critical success factors and common pitfalls to avoid.",
+        "instructions": "Provide practical, actionable guidance on how to effectively implement each of the previously listed interventions. Include best practices, enabling factors, lessons learned, and recommendations from related past evaluations, policies and guidance (Include reference). Highlight critical success factors and common pitfalls to avoid.",
         "word_limit": 1000,
         "key_word": "humanitarian implementation guidance best practices lessons learned"
       },
@@ -30,7 +30,7 @@
       },
       {
         "section_name": "5. Cross-Cutting Considerations",
-        "instructions": "Describe important cross-cutting issues that impact this specific outcome, such as gender equality, disability inclusion, and environmental sustainability. Explain how these should be integrated into program design and implementation.",
+        "instructions": "Describe important cross-cutting issues that impact this specific outcome, such as gender equality, disability inclusion, accountability to affected population, localisation, and environmental sustainability. Explain how these should be integrated into program design and implementation.",
         "word_limit": 150,
         "key_word": "humanitarian cross-cutting issues gender disability environment"
       },

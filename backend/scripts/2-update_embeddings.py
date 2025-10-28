@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import concurrent.futures
 import os
 import sys
 import csv
@@ -15,10 +16,50 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 from backend.utils.embedding_utils import process_and_store_text
 from backend.utils.scraper import scrape_url
 
+def process_reference_safely(ref_id, ref_url, force_rescrape, SessionLocal):
+    """
+    A self-contained worker function that processes a single reference.
+    It manages its own database session and asyncio event loop to ensure isolation.
+    """
+    print(f"Starting worker for reference {ref_id}...")
+    try:
+        with SessionLocal() as session:
+            with session.begin():
+                content = ""
+                if force_rescrape:
+                    print(f"  - Force re-scraping URL: {ref_url}")
+                    content = scrape_url(ref_url)
+                else:
+                    # Reconstruct content from existing chunks
+                    chunks_result = session.execute(
+                        text("SELECT text_chunk FROM knowledge_card_reference_vectors WHERE reference_id = :ref_id ORDER BY id"),
+                        {"ref_id": ref_id}
+                    ).fetchall()
+                    if chunks_result:
+                        content = "".join([chunk[0] for chunk in chunks_result])
+                        print(f"  - Reconstructed content from {len(chunks_result)} chunks.")
+                    else:
+                        print(f"  - No existing chunks found, scraping URL: {ref_url}")
+                        content = scrape_url(ref_url)
+
+                if content:
+                    # Each thread gets its own asyncio event loop
+                    asyncio.run(process_and_store_text(ref_id, content, session))
+                    print(f"  - Successfully processed and stored embeddings for reference {ref_id}")
+                else:
+                    print(f"  - No content to process for reference {ref_id}")
+        print(f"Worker for reference {ref_id} finished successfully.")
+    except Exception as e:
+        print(f"  - Worker for reference {ref_id} failed with error: {e}")
+        # The transaction will be rolled back automatically by the `with` statement
+
+
+
 def main():
     parser = argparse.ArgumentParser(description="Update embeddings for all knowledge card references.")
     parser.add_argument("--force-rescrape", action="store_true", help="Force re-scraping of all references.")
     parser.add_argument("--test-scrap", action="store_true", help="Test scraping of all reference URLs and log failures.")
+    parser.add_argument("--max-workers", type=int, default=5, help="Maximum number of concurrent workers.")
     args = parser.parse_args()
 
     print("Starting embedding update process...")
@@ -46,6 +87,7 @@ def main():
     engine = create_engine(DATABASE_URL)
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+    # Scrape Test Mode
     with SessionLocal() as session:
         if args.test_scrap:
             print("Starting scrape test...")
@@ -77,39 +119,27 @@ def main():
             else:
                 print("Scrape test finished. All URLs were successfully scraped.")
 
+        # Main Embedding Update Logic
         else:
             with session.begin():
                 references = session.execute(text("SELECT id, url FROM knowledge_card_references")).fetchall()
                 print(f"Found {len(references)} references to process.")
 
-                for ref in references:
-                    print(f"Processing reference {ref.id} from URL: {ref.url}")
-                    try:
-                        content = ""
-                        if args.force_rescrape:
-                            print(f"  - Force re-scraping URL: {ref.url}")
-                            content = scrape_url(ref.url)
-                        else:
-                            # Reconstruct content from existing chunks
-                            chunks_result = session.execute(
-                                text("SELECT text_chunk FROM knowledge_card_reference_vectors WHERE reference_id = :ref_id ORDER BY id"),
-                                {"ref_id": ref.id}
-                            ).fetchall()
-                            if chunks_result:
-                                content = "".join([chunk[0] for chunk in chunks_result])
-                                print(f"  - Reconstructed content from {len(chunks_result)} chunks.")
-                            else:
-                                print(f"  - No existing chunks found, scraping URL: {ref.url}")
-                                content = scrape_url(ref.url)
+                with concurrent.futures.ThreadPoolExecutor(max_workers=args.max_workers) as executor:
+                    future_to_ref = {
+                        executor.submit(process_reference_safely, ref.id, ref.url, args.force_rescrape, SessionLocal): ref
+                        for ref in references
+                    }
+                    completed_count = 0
+                    for future in concurrent.futures.as_completed(future_to_ref):
+                        completed_count += 1
+                        ref = future_to_ref[future]
+                        try:
+                            future.result()  # We call result() to raise any exceptions that occurred
+                            print(f"({completed_count}/{len(references)}) COMPLETED processing for reference {ref.id}.")
+                        except Exception as exc:
+                            print(f'({completed_count}/{len(references)}) FAILED processing for reference {ref.id} ({ref.url}): {exc}')
 
-                        if content:
-                            asyncio.run(process_and_store_text(ref.id, content, session))
-                            print(f"  - Successfully processed and stored embeddings for reference {ref.id}")
-                        else:
-                            print(f"  - No content to process for reference {ref.id}")
-
-                    except Exception as e:
-                        print(f"  - Error processing reference {ref.id}: {e}")
 
                 print("Embedding update process finished.")
 
