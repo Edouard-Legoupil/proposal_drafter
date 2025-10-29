@@ -267,7 +267,7 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
                     knowledge_dir = os.path.join(os.path.dirname(__file__), "..", "knowledge")
                     filepath = os.path.join(knowledge_dir, filename)
                     
-                    logger.info(f"Associating knowledge file: {filename} for proposal {proposal_id}")
+                    logger.info(f"Associating knowledge file: {filename} / {filepath} for proposal {proposal_id}")
 
                     if not os.path.exists(filepath):
                         logger.warning(f"Knowledge file not found at path: {filepath}. Attempting to create it.")
@@ -288,14 +288,15 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
                             # Verify file was created
                             if os.path.exists(filepath):
                                 logger.info(f"Successfully created knowledge file: {filepath}")
-                                knowledge_file_paths.append(filepath)
+                                knowledge_file_paths.append(filename)
                             else:
                                 logger.error(f"Failed to create knowledge file: {filepath}")
                         else:
                             logger.warning(f"No content found for knowledge card {card_id} to create file.")
                     else:
-                        knowledge_file_paths.append(filepath)
-
+                        knowledge_file_paths.append(filename)
+                        
+        # The JSONKnowledgeSource expects relative paths from the `knowledge` directory
         crew_instance = ProposalCrew(knowledge_file_paths=knowledge_file_paths).generate_proposal_crew()
 
         for section_config in proposal_template["sections"]:
