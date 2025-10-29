@@ -1416,7 +1416,8 @@ async def generate_and_download_document(
         else:
             # Return the DOCX file by default.
             try:
-                card_name = form_data["Title"]
+
+                card_name = card_dict.get("donor_name") or card_dict.get("outcome_name") or card_dict.get("field_context_name")
                 doc = create_word_from_knowledge_card(card_name, ordered_sections)
                 docx_buffer = io.BytesIO()
                 doc.save(docx_buffer)

@@ -19,6 +19,7 @@ from backend.core.db import get_engine
 from backend.core.redis import redis_client
 from backend.core.security import get_current_user
 from backend.core.config import get_available_templates, load_proposal_template
+from backend.utils.crew_actions import handle_text_format, handle_fixed_text_format, handle_number_format, handle_table_format
 from backend.models.schemas import (
     SectionRequest,
     RegenerateRequest,
@@ -300,32 +301,18 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
 
         for section_config in proposal_template["sections"]:
             section_name = section_config["section_name"]
-            logger.info(f"Generating section: {section_name} for proposal {proposal_id}")
+            format_type = section_config.get("format_type", "text")
+            logger.info(f"Generating section: {section_name} with format_type: {format_type} for proposal {proposal_id}")
 
-            result = crew_instance.kickoff(inputs={
-                "section": section_name,
-                "form_data": form_data,
-                "project_description": project_description,
-                "instructions": section_config.get("instructions", ""),
-                "word_limit": section_config.get("word_limit", 350)
-            })
-
-            try:
-                raw_output = result.raw if hasattr(result, 'raw') and result.raw else ""
-                clean_output = re.sub(r'[`\x00-\x1F\x7F]', '', raw_output)
-                parsed = json.loads(clean_output)
-            except (AttributeError, json.JSONDecodeError) as e:
-                logger.error(f"[CREWAI PARSE ERROR] for section {section_name}: {e}")
-                continue
-
-            generated_text = parsed.get("generated_content", "").strip()
-            evaluation_status = parsed.get("evaluation_status", "")
-            feedback = parsed.get("feedback", "")
-
-            if evaluation_status.lower() == "flagged" and feedback:
-                generated_text = regenerate_section_logic(
-                    session_id, section_name, feedback, proposal_id
-                )
+            generated_text = ""
+            if format_type == "text":
+                generated_text = handle_text_format(section_config, crew_instance, form_data, project_description, session_id, proposal_id)
+            elif format_type == "fixed_text":
+                generated_text = handle_fixed_text_format(section_config)
+            elif format_type == "number":
+                generated_text = handle_number_format(section_config, crew_instance, form_data, project_description)
+            elif format_type == "table":
+                generated_text = handle_table_format(section_config, crew_instance, form_data, project_description)
 
             all_sections[section_name] = generated_text
 
@@ -415,53 +402,20 @@ async def process_section(session_id: str, request: SectionRequest, current_user
 
     # Initialize and run the generation crew.
     crew_instance = ProposalCrew().generate_proposal_crew()
-    result = crew_instance.kickoff(inputs={
-        "section": request.section,
-        "form_data": form_data,
-        "project_description": project_description,
-        "instructions": section_config.get("instructions", ""),
-        "word_limit": section_config.get("word_limit", 350)
-    })
+    format_type = section_config.get("format_type", "text")
+    logger.info(f"Generating section: {request.section} with format_type: {format_type} for proposal {request.proposal_id}")
 
-    # Parse and handle crew output.
-    #raw_output = result.raw.replace("`", "")
-    #raw_output = re.sub(r'[\x00-\x1F\x7F]', '', raw_output)
-    #parsed = json.loads(raw_output)
-    try:
-        raw_output = result.raw if hasattr(result, 'raw') and result.raw else ""
-        logger.debug(
-            f"[CREWAI RAW OUTPUT] Proposal {request.proposal_id}, "
-            f"Session {session_id}, Section {request.section} :: {raw_output[:1000]}..."
-        )
-        clean_output = re.sub(r'[`\x00-\x1F\x7F]', '', raw_output)
-        logger.debug(
-            f"[CREWAI CLEANED OUTPUT] Proposal {request.proposal_id}, "
-            f"Session {session_id}, Section {request.section} :: {clean_output[:1000]}..."
-        )
-        parsed = json.loads(clean_output)
-    except (AttributeError, json.JSONDecodeError) as e:
-        print(f"[CREWAI PARSE ERROR] {e}")
-        raise HTTPException(status_code=500, detail="Failed to parse CrewAI output. It may not be valid JSON.")
+    generated_text = ""
+    if format_type == "text":
+        generated_text = handle_text_format(section_config, crew_instance, form_data, project_description, session_id, request.proposal_id)
+    elif format_type == "fixed_text":
+        generated_text = handle_fixed_text_format(section_config)
+    elif format_type == "number":
+        generated_text = handle_number_format(section_config, crew_instance, form_data, project_description)
+    elif format_type == "table":
+        generated_text = handle_table_format(section_config, crew_instance, form_data, project_description)
 
-
-    generated_text = parsed.get("generated_content", "").strip()
-    evaluation_status = parsed.get("evaluation_status", "")
-    feedback = parsed.get("feedback", "")
-
-    if not generated_text:
-        logger.warning(
-            f"[CREWAI MISSING CONTENT] No 'generated_content' for Proposal {request.proposal_id}, "
-            f"Session {session_id}, Section {request.section} :: Parsed Keys: {list(parsed.keys())}"
-        )
-    
-    if evaluation_status.lower() == "flagged" and feedback:
-        # If flagged, automatically regenerate with feedback.
-        generated_text = regenerate_section_logic(
-            session_id, request.section, feedback, request.proposal_id
-        )
-        message = f"Initial content flagged. Regenerated using evaluator feedback for {request.section}"
-    else:
-        message = f"Content generated for {request.section}"
+    message = f"Content generated for {request.section}"
 
     # Persist the generated text to the database.
     try:
