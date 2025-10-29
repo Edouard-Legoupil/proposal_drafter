@@ -761,6 +761,10 @@ export default function Chat (props)
                                 });
                                 setProposal(sectionState);
 
+                                if (data.associated_knowledge_cards) {
+                                    setAssociatedKnowledgeCards(data.associated_knowledge_cards);
+                                }
+
                                 setIsApproved(data.is_accepted)
                                 setProposalStatus(data.status)
                                 setSidebarOpen(true)
