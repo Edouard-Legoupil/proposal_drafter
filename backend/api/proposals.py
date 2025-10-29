@@ -846,6 +846,28 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
                 if not draft:
                     raise HTTPException(status_code=404, detail="Draft not found.")
 
+                # This query finds all knowledge cards linked to the same donor, outcomes, or field context as the proposal.
+                associated_cards_result = conn.execute(
+                    text("""
+                        SELECT DISTINCT
+                            kc.id, kc.title, kc.summary, kc.donor_id, kc.outcome_id, kc.field_context_id,
+                            d.name as donor_name,
+                            o.name as outcome_name,
+                            fc.name as field_context_name
+                        FROM knowledge_cards kc
+                        LEFT JOIN donors d ON kc.donor_id = d.id
+                        LEFT JOIN outcomes o ON kc.outcome_id = o.id
+                        LEFT JOIN field_contexts fc ON kc.field_context_id = fc.id
+                        WHERE
+                            kc.donor_id IN (SELECT donor_id FROM proposal_donors WHERE proposal_id = :pid) OR
+                            kc.outcome_id IN (SELECT outcome_id FROM proposal_outcomes WHERE proposal_id = :pid) OR
+                            kc.field_context_id IN (SELECT field_context_id FROM proposal_field_contexts WHERE proposal_id = :pid)
+                    """),
+                    {"pid": proposal_id}
+                ).mappings().fetchall()
+
+                associated_knowledge_cards = [dict(card) for card in associated_cards_result]
+
                 template_name = draft.template_name or "unhcr_proposal_template.json" # Default if null
                 proposal_template = load_proposal_template(template_name)
                 section_names = [s.get("section_name") for s in proposal_template.get("sections", [])]
@@ -865,7 +887,8 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
                     "is_sample": False,
                     "template_name": template_name,
                     "proposal_template": proposal_template,
-                    "proposal_id": str(proposal_id)
+                    "proposal_id": str(proposal_id),
+                    "associated_knowledge_cards": associated_knowledge_cards
                 }
         else:
             # Handle sample drafts, which are loaded from a JSON file.
