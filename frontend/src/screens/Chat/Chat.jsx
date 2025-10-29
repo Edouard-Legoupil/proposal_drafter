@@ -509,6 +509,10 @@ export default function Chat (props)
                         // Store the new session and proposal IDs received from the backend.
                         sessionStorage.setItem("session_id", data.session_id);
                         sessionStorage.setItem("proposal_id", data.proposal_id);
+                        if (data.proposal_template) {
+                                setProposalTemplate(data.proposal_template);
+                                sessionStorage.setItem("proposal_template", JSON.stringify(data.proposal_template));
+                        }
 
                         // Initialize the proposal sections based on the template received from the backend.
                         const sectionState = {};
@@ -577,12 +581,13 @@ export default function Chat (props)
         async function handleRegenerateButtonClick (ip = regenerateInput)
         {
                 setRegenerateSectionLoading(true)
+                const sectionName = proposalTemplate.sections[selectedSection].section_name;
 
                 const response = await fetch(`${API_BASE_URL}/regenerate_section/${sessionStorage.getItem("session_id")}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                                section: Object.keys(proposal)[selectedSection],
+                                section: sectionName,
                                 concise_input: ip,
                                 proposal_id: sessionStorage.getItem("proposal_id"),
                                 form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])),
@@ -595,8 +600,8 @@ export default function Chat (props)
                         const data = await response.json()
                         setProposal(p => ({
                                 ...p,
-                                [Object.keys(proposal)[selectedSection]]: {
-                                        open: Object.values(p)[selectedSection].open,
+                                [sectionName]: {
+                                        open: p[sectionName].open,
                                         content: data.generated_text
                                 }
                         }))
@@ -621,12 +626,13 @@ export default function Chat (props)
 
         function handleExpanderToggle (section)
         {
+                const sectionName = proposalTemplate.sections[section].section_name;
                 setProposal(p => {
                         return ({
                                 ...p,
-                                [Object.keys(p)[section]]: {
-                                        content: Object.values(p)[section].content,
-                                        open: !Object.values(p)[section].open
+                                [sectionName]: {
+                                        content: p[sectionName].content,
+                                        open: !p[sectionName].open
                                 }
                         })
                 })
@@ -634,6 +640,7 @@ export default function Chat (props)
 
         const [isEdit, setIsEdit] = useState(false)
         const [editorContent, setEditorContent] = useState("")
+        const [proposalTemplate, setProposalTemplate] = useState(null)
         async function handleEditClick (section)
         {
                 if(!isEdit)
@@ -646,7 +653,7 @@ export default function Chat (props)
                 else
                 {
                         // Saving the edit
-                        const sectionKey = Object.keys(proposal)[selectedSection];
+                        const sectionName = proposalTemplate.sections[selectedSection].section_name;
                         
                         try {
                                 const response = await fetch(`${API_BASE_URL}/update-section-content`, {
@@ -654,7 +661,7 @@ export default function Chat (props)
                                         headers: { 'Content-Type': 'application/json' },
                                         body: JSON.stringify({
                                                 proposal_id: sessionStorage.getItem("proposal_id"),
-                                                section: sectionKey,
+                                                section: sectionName,
                                                 content: editorContent
                                         }),
                                         credentials: 'include'
@@ -667,8 +674,8 @@ export default function Chat (props)
                                 // On successful save, update the local state to reflect the change.
                                 setProposal(p => ({
                                         ...p,
-                                        [sectionKey]: {
-                                                ...Object.values(p)[selectedSection],
+                                        [sectionName]: {
+                                                ...p[sectionName],
                                                 content: editorContent
                                         }
                                 }));
@@ -760,6 +767,11 @@ export default function Chat (props)
                                 getStatusHistory()
                                 if(data.status === 'submission') {
                                     getPeerReviews()
+                                }
+
+                                const storedTemplate = sessionStorage.getItem("proposal_template");
+                                if (storedTemplate) {
+                                        setProposalTemplate(JSON.parse(storedTemplate));
                                 }
                         }
                         else if(response.status === 401)
@@ -1026,13 +1038,13 @@ export default function Chat (props)
                                                 Proposal Prompt
                                         </li>
 
-                                        {Object.keys(proposal).map((section, i) =>
+                                        {proposalTemplate && proposalTemplate.sections.map((section, i) =>
                                                 <li
                                                         key={i}
                                                         className={`Chat_sidebarOption ${selectedSection === i ? "selectedSection" : ""}`}
                                                         onClick={() => handleSidebarSectionClick(i)}
                                                 >
-                                                        {section}
+                                                        {section.section_name}
                                                 </li>
                                         )}
                                 </ul>
@@ -1206,12 +1218,15 @@ export default function Chat (props)
                                         </div>
 
                                         <div ref={proposalRef} className="Chat_proposalContainer">
-                                                 {Object.entries(proposal).map((sectionObj, i) => {
-                                                     const sectionName = sectionObj[0];
-                                                     const sectionReviews = reviews.filter(r => r.section_name === sectionName);
+                                                {proposalTemplate && proposalTemplate.sections.map((section, i) => {
+                                                        const sectionName = section.section_name;
+                                                        const sectionObj = proposal[sectionName];
+                                                        const sectionReviews = reviews.filter(r => r.section_name === sectionName);
 
-                                                     return (
-                                                        <div key={i} className="Chat_proposalSection">
+                                                        if (!sectionObj) return null;
+
+                                                        return (
+                                                                <div key={i} className="Chat_proposalSection">
                                                                 <div className="Chat_sectionHeader">
                                                                          <div className="Chat_sectionTitle">{sectionName}</div>
 
@@ -1246,12 +1261,12 @@ export default function Chat (props)
                                                                         </div> : ""}
                                                                 </div>
 
-                                                                {sectionObj[1].open || !sectionObj[1].content ? <div className='Chat_sectionContent'>
-                                                                        {sectionObj[1].content ?
+                                                                {sectionObj.open || !sectionObj.content ? <div className='Chat_sectionContent'>
+                                                                        {sectionObj.content ?
                                                                                 (selectedSection === i && isEdit) ?
-                                                                                        <textarea value={editorContent} onChange={e => setEditorContent(e.target.value)} aria-label={`editor for ${sectionObj[0]}`} />
+                                                                                        <textarea value={editorContent} onChange={e => setEditorContent(e.target.value)} aria-label={`editor for ${sectionName}`} />
                                                                                         :
-                                                                                        <Markdown remarkPlugins={[remarkGfm]}>{sectionObj[1].content}</Markdown>
+                                                                                        <Markdown remarkPlugins={[remarkGfm]}>{sectionObj.content}</Markdown>
                                                                                 :
                                                                                 <div className='Chat_sectionContent_loading'>
                                                                                         <span className='submitButtonSpinner' />
@@ -1286,7 +1301,7 @@ export default function Chat (props)
 
                         <dialog ref={dialogRef} className='Chat_regenerate'>
                                 <header className='Chat_regenerate_header'>
-                                        Regenerate — {Object.keys(proposal)[selectedSection]}
+                                        Regenerate — {proposalTemplate?.sections[selectedSection]?.section_name}
                                         <img src={regenerateClose} onClick={() => {setRegenerateSectionLoading(false); setRegenerateInput(""); dialogRef.current.close()}} />
                                 </header>
 
