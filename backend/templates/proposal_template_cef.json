@@ -48,6 +48,14 @@
     },
     "sections": [
       {
+        "section_name": "Introduction",
+        "section_label": "1. Introduction",
+        "section_parent": "1. Overview",
+        "format_type": "fixed_text",
+        "fixed_text": "This is a fixed text introduction.",
+        "mandatory": true
+      },
+      {
         "section_name": "Project title",
         "section_label": "1.5. Project title",
         "section_parent": "1. Overview",
@@ -94,7 +102,7 @@
         "section_name": "Funds Requested from CERF for this Proposal",
         "section_label": "2.3. Total Funds Requested from CERF for this Proposal",
         "section_parent": "2. Funding summary and Country Context",
-        "format_type": "Number",
+        "format_type": "number",
         "instructions": "Specify the CERF request amount ensuring: 1) Consistency with budget section 2) Clear justification of how amount was calculated 3) Demonstration of cost-efficiency 4) Explanation of how this complements other funding.",
         "mandatory": true
       },
@@ -111,34 +119,33 @@
         "section_name": "Logical Framework",
         "section_label": "5. Logical Framework by Sector",
         "section_parent": "",
-        "instructions": "Develop a results framework with: 1) 1-2 outcomes (sector-level changes) 2) 3-5 outputs (direct deliverables) 3) SMART indicators (specific metrics) 4) Disaggregated targets (gender/age) 5) Verification methods 6) Linked activities. Use CERF standard indicators where possible.",
+        "instructions": "Develop a results framework with outcomes, outputs, and SMART indicators.",
         "format_type": "table",
         "columns": [
-          "Indicator",
-          "Target (Men/Women/Boys/Girls)",
-          "Means of Verification",
-          "Comments"
+          {
+            "name": "Indicator",
+            "format_type": "text",
+            "instructions": "Quantitative or qualitative factors to measure achievement."
+          },
+          {
+            "name": "Target (Men/Women/Boys/Girls)",
+            "format_type": "number",
+            "instructions": "Provide a target number for each group: XX/XX/XX/XX"
+          },
+          {
+            "name": "Means of Verification",
+            "format_type": "text",
+            "instructions": "How will the indicator be measured? Example: Partner reports, UNHCR reports, post-distribution monitoring"
+          }
         ],
         "rows": [
           {
             "row_title": "Outcome 1",
-            "row_description": "The intended changes in institutional performance, individual or group behaviour or attitudes, or the political, economic, or social position of the beneficiaries. Example: Conflict-affected population accesses integrated protection services",
-            "cells": {
-              "Indicator": "Quantitative or qualitative factors or variables to measure achievement or to reflect expected changes. Example: # of people receiving protection assistance",
-              "Target (Men/Women/Boys/Girls)": "XX/XX/XX/XX",
-              "Means of Verification": "Partner reports, UNHCR reports, post-distribution monitoring",
-              "Comments": ""
-            }
+            "instructions": "The intended changes in institutional performance or group behaviour."
           },
           {
             "row_title": "Output 1.1",
-            "row_description": "The intended changes in the skills or abilities of the beneficiaries, or the availability of new products or services as a result of project activities. Example: Provision of MPCA and protection referrals",
-            "cells": {
-              "Indicator": "Quantitative or qualitative factors or variables to measure achievement or to reflect expected changes. Example: # of individuals receiving MPCA",
-              "Target (Men/Women/Boys/Girls)": "XX/XX/XX/XX",
-              "Means of Verification": "Distribution records, partner reports",
-              "Comments": ""
-            }
+            "instructions": "The intended changes in the skills or abilities of the beneficiaries."
           }
         ],
         "mandatory": true
@@ -151,36 +158,50 @@
         "columns": [
           {
             "name": "Activity Description",
-            "type": "fillable"
+            "format_type": "text",
+            "instructions": "Describe the activity."
           },
           {
             "name": "Responsible Partner",
-            "type": "fillable"
+            "format_type": "text",
+            "instructions": "Name the partner responsible for the activity."
           },
           {
             "name": "Month 1",
-            "type": "fillable"
+            "format_type": "text",
+            "instructions": "Indicate if the activity is planned for this month."
           },
           {
             "name": "Month 2",
-            "type": "fillable"
+            "format_type": "text",
+            "instructions": "Indicate if the activity is planned for this month."
           },
           {
             "name": "Month 3",
-            "type": "fillable"
+            "format_type": "text",
+            "instructions": "Indicate if the activity is planned for this month."
           },
           {
             "name": "Month 4",
-            "type": "fillable"
+            "format_type": "text",
+            "instructions": "Indicate if the activity is planned for this month."
           },
           {
             "name": "Month 5",
-            "type": "fillable"
+            "format_type": "text",
+            "instructions": "Indicate if the activity is planned for this month."
           },
           {
             "name": "Month 6",
-            "type": "fillable"
+            "format_type": "text",
+            "instructions": "Indicate if the activity is planned for this month."
           }
+        ],
+        "rows": [
+            {
+                "row_title": "Activity 1",
+                "instructions": "Describe the first activity"
+            }
         ],
         "instructions": "Create a monthly workplan that: 1) Lists key activities from the logframe 2) Assigns clear responsibility 3) Shows phasing across months (use 'X' for active months) 4) Notes dependencies between activities 5) Aligns with seasonal factors. Use CERF activity codes where available.",
         "mandatory": true
