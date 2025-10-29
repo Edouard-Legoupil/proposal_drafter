@@ -4,6 +4,7 @@ import json
 import os
 import sys
 import uuid
+import logging
 from dotenv import load_dotenv
 import psycopg2
 from psycopg2.extras import register_uuid

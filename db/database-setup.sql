@@ -52,7 +52,6 @@ CREATE TABLE IF NOT EXISTS outcomes (
 -- Create Field Contexts table  
 CREATE TABLE IF NOT EXISTS field_contexts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    title TEXT NOT NULL,
     name TEXT UNIQUE NOT NULL,
     category TEXT NOT NULL,
     geographic_coverage TEXT,

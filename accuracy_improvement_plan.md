@@ -1,10 +1,73 @@
-# Chunking Strategy Proposals
+# CrewAI-Enhanced RAG Optimisation Framework for Proposal Drafting
 
-This document outlines three alternative chunking strategies to improve the relevance and accuracy of our RAG system.
+This document outlines an integrated optimisation framework for a **CrewAI-powered humanitarian proposal drafting solution**, focused on improving factual consistency, contextual grounding, and system scalability.
 
-### 1. Semantic Chunking
+The system relies on **two hierarchical context layers**:
 
-Semantic chunking splits text based on meaning, using NLP libraries to identify sentence or paragraph boundaries. This approach aims to keep related concepts within the same chunk, improving contextual relevance.
+1. **Level 1 – Knowledge Card Construction:**  
+   Retrieve, chunk, and synthesise relevant information from the RAG database into structured, reusable **Knowledge Cards**.  
+
+2. **Level 2 – Proposal Drafting:**  
+   Use these Knowledge Cards as the authoritative context for the **CrewAI proposal drafting agent**, ensuring factual grounding, narrative consistency, and alignment with donor or organisational requirements.
+
+To achieve optimal results, three dimensions of optimisation are applied:
+
+1. **Prompt Optimisation**  
+2. **Context Optimisation (RAG Layer)**  
+3. **Model Optimisation**
+
+---
+
+## 1. Prompt Optimisation
+
+Prompt engineering defines how the CrewAI agents interact with retrieved knowledge and how proposals are progressively composed from factual building blocks.
+
+### 1.1 Multi-Agent Prompt Framework
+
+Each agent in the CrewAI pipeline (e.g., *Retriever*, *Knowledge Curator*, *Proposal Writer*, *Evaluator*) must have its own role-specific prompt templates that follow a **consistent instruction hierarchy**:
+
+| Agent | Role | Example Prompt Focus |
+|--------|------|----------------------|
+| Retriever | Extracts relevant chunks from RAG | "Retrieve documents relevant to the thematic and geographic scope of this query." |
+| Curator | Synthesises chunks into Knowledge Cards | "Summarise the retrieved evidence into structured knowledge cards with clear references." |
+| Writer | Generates proposal sections | "Draft a coherent section using the provided knowledge card content as factual basis. Do not add unsupported claims." |
+| Evaluator | Validates coherence and consistency | "Check if the proposal aligns with the evidence base and organisational templates." |
+
+### 1.2 Prompt Design Principles
+
+* **Instruction Clarity:** Explicitly separate *source material* (Knowledge Card) from *generation tasks* (writing, summarising, evaluating).  
+* **Context Anchoring:** Embed the Knowledge Card text in the system prompt before proposal generation.  
+* **Hierarchical Consistency:** Ensure every agent passes clean, structured outputs downstream — for example, the *Curator* agent outputs JSON-formatted Knowledge Cards that the *Writer* agent can parse directly.  
+* **Adaptive Framing:** Adjust prompts dynamically based on donor type, project scope, or language preference.  
+
+### 1.3 Evaluation
+
+* Conduct A/B testing of prompts for **faithfulness**, **style coherence**, and **information density**.  
+* Use a *proposal validation script* comparing outputs across CrewAI runs with identical inputs but different prompt templates.
+
+---
+
+## 2. Context Optimisation (RAG Layer)
+
+The context layer underpins Level 1 (Knowledge Card generation) and determines how effectively the system retrieves, filters, and synthesises relevant material from the document corpus.
+
+### 2.1 Level 1 – Knowledge Card Generation
+
+**Goal:** Transform raw retrieved chunks into structured, reusable **Knowledge Cards** that encapsulate facts, data, and verified references.
+
+
+
+**RAG Retrieval Process:**
+1. **Chunk Documents:** Apply one of the strategies below (Semantic, Agentic, or Content-Aware).  
+2. **Embed and Store:** Vectorise each chunk using the selected embedding model.  
+3. **Query Expansion:** Optionally use **HyDE** to create a hypothetical “ideal” summary before retrieval.  
+4. **Curate:** Synthesize retrieved chunks into concise, verified Knowledge Cards.
+
+
+### 2.2 Chunking Strategies
+
+#### a. Semantic Chunking
+Semantic chunking splits text based on meaning, using NLP libraries to identify sentence or paragraph boundaries. This approach aims to keep related concepts within the same chunk, improving contextual relevance. Ideal for narrative and report-like content (e.g., needs assessments, evaluations).
 
 **Pros:**
 *   **Higher Relevance:** Chunks are more likely to contain complete thoughts or ideas, leading to better search results.
@@ -13,10 +76,11 @@ Semantic chunking splits text based on meaning, using NLP libraries to identify 
 **Cons:**
 *   **Complexity:** Requires NLP libraries (e.g., NLTK, spaCy), adding dependencies and processing overhead.
 *   **Variable Chunk Size:** Chunks will have inconsistent lengths, which may be suboptimal for some embedding models.
+ 
 
-### 2. Agentic Chunking
+#### b. Agentic Chunking
 
-Agentic chunking uses a language model to analyze the text and decide on the most logical split points. This is the most advanced and flexible approach, as the LLM can make nuanced decisions based on the content's meaning and structure.
+Agentic chunking uses a language model to analyze the text and decide on the most logical split points. This is the most advanced and flexible approach, as the LLM can make nuanced decisions based on the content's meaning and structure. Can adapt to different document types (e.g., PDFs, Excel tables, markdown reports).
 
 **Pros:**
 *   **Highest Accuracy:** The LLM can theoretically produce the most semantically coherent chunks possible.
@@ -26,9 +90,8 @@ Agentic chunking uses a language model to analyze the text and decide on the mos
 *   **Cost and Latency:** Requires calls to a powerful LLM, which can be expensive and slow.
 *   **Implementation Complexity:** The logic for interacting with the LLM and processing its output is more complex.
 
-### 3. Content-Aware Chunking
-
-Content-aware chunking adapts the splitting strategy based on the document's structure. For example, it could use Markdown headers, code blocks, or HTML tags to define chunk boundaries.
+#### c. Content-Aware Chunking
+Content-aware chunking adapts the splitting strategy based on the document's structure. For example, it could use Markdown headers, code blocks, or HTML tags to define chunk boundaries.Best for structured data (project logframes, budget tables, ToC diagrams).
 
 **Pros:**
 *   **Structured Data:** Works exceptionally well for structured documents like Markdown, code, or technical manuals.
@@ -38,11 +101,8 @@ Content-aware chunking adapts the splitting strategy based on the document's str
 *   **Less Effective for Unstructured Text:** Offers little advantage for plain text documents without clear structural cues.
 *   **Requires Custom Logic:** Different logic is needed to handle each content type (e.g., a Markdown parser, an HTML parser).
 
----
 
-My recommendation is to start with **Semantic Chunking** as it offers a significant improvement over the current fixed-size approach with manageable complexity.
-
-### Complementary Strategy: HyDE Retrieval
+### 2.3 Complementary Technique: HyDE Retrieval
 
 It is important to note that chunking is only one part of the retrieval process. Another powerful technique that can be used in conjunction with any of the above chunking strategies is **HyDE (Hypothetical Document Embeddings)**.
 
@@ -63,99 +123,87 @@ HyDE is a retrieval technique, not a chunking one. It works as follows:
 **Implementation:**
 HyDE can be implemented as a layer on top of our existing retrieval system. It would not replace the need for a good chunking strategy but would instead enhance the process of finding the best chunks for a given query.
 
----
 
-### Measuring RAG Accuracy
+### 2.4 Level 2 – Proposal Generation from Knowledge Cards
 
-To systematically improve the accuracy of our RAG system, we need a robust evaluation framework. This allows us to benchmark changes and ensure that new strategies (like different chunking methods or HyDE retrieval) are having a positive impact.
+At this stage, the **CrewAI Proposal Writer** agent uses the Knowledge Cards as the factual anchor for drafting coherent and consistent proposal narratives.
 
-#### Evaluation Approach: LLM as a Judge
+**Mechanism:**
+1. Retrieve Knowledge Cards relevant to the current proposal section.  
+2. Pass them into the CrewAI prompt as structured input.  
+3. Generate text grounded strictly on these cards.  
+4. The **Evaluator Agent** then validates consistency.
 
-A powerful and scalable method for RAG evaluation is the "LLM as a Judge" pattern. In this approach, we use a powerful language model to assess the quality of the RAG system's output based on several key metrics.
+This two-level design ensures:
+* All generated text remains **traceable** to a factual evidence base.  
+* Proposal narratives maintain **semantic consistency** across multiple sections.  
+* Knowledge Cards can be **reused** across different proposals or donors.
+
+
+
+### 2.5 Evaluating RAG and Knowledge Card Quality
+
+We employ a **RAG evaluation pipeline** with a *Judge LLM* and metrics inspired by **RAGAs**.
 
 **Key Metrics:**
-*   **Faithfulness:** Does the generated answer stay true to the retrieved context? (i.e., no hallucinations)
-*   **Answer Relevancy:** Is the answer relevant to the user's original query?
-*   **Context Precision:** Are the retrieved chunks relevant to the query?
-*   **Context Recall:** Were all the necessary chunks retrieved to answer the query completely?
+* **Faithfulness:** Does each Knowledge Card accurately represent its sources?  
+* **Context Precision:** Are retrieved chunks relevant to the query?  
+* **Proposal Consistency:** Does the proposal text align with the Knowledge Card content?  
 
-**Pros:**
-*   **Scalability:** Can be automated to evaluate hundreds or thousands of query-response pairs without human intervention.
-*   **Nuanced Evaluation:** The LLM judge can provide qualitative feedback and reasoning, not just a simple score.
-*   **Cost-Effective:** Cheaper than manual evaluation by human experts, especially at scale.
+**Pipeline Steps:**
+1. Log all RAG retrievals and outputs in `rag_evaluation_logs`.  
+2. Periodically sample records for evaluation.  
+3. Submit `(query, retrieved_context, knowledge_card, generated_answer)` to a judge LLM.  
+4. Compute automated scores and store results.  
 
-**Cons:**
-*   **Judge Bias:** The judge LLM can have its own biases or may favor certain styles of answers.
-*   **Setup Complexity:** Requires a well-defined evaluation dataset and carefully crafted prompts for the judge LLM.
-*   **Cost:** While cheaper than human evaluation, it still incurs costs for the LLM judge's API calls.
+---
 
-#### Implementation Plan for CrewAI
+## 3. Model Optimisation
 
-This plan details how to instrument our CrewAI agents to log the necessary data for an "LLM as a Judge" evaluation.
+Model optimisation enhances both retrieval and generation efficiency while maintaining contextual accuracy across CrewAI agents.
 
-1.  **Create a `rag_evaluation_logs` Table:**
-    *   A new table is needed to store the data for each RAG operation. Add the following SQL to `db/database-setup.sql`:
-    ```sql
-    -- Create RAG Evaluation Logs table
-    CREATE TABLE IF NOT EXISTS rag_evaluation_logs (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        knowledge_card_id UUID NOT NULL REFERENCES knowledge_cards(id) ON DELETE CASCADE,
-        query TEXT NOT NULL,
-        retrieved_context TEXT NOT NULL,
-        generated_answer TEXT,
-        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-    );
-    ```
+### 3.1 Embedding Model Optimisation
 
-2.  **Modify the `VectorSearchTool` to Log Queries and Context:**
-    *   The `_run` method of the `VectorSearchTool` in `backend/utils/crew_knowledge.py` must be modified. After retrieving the context, it should insert a new record into the `rag_evaluation_logs` table and pass the `id` of this new record forward.
-    *   The tool should return a string that includes a special marker with the log ID, like this: `f"[RAG_LOG_ID={log_id}]\n\n{retrieved_context}"`.
+* Use **domain-tuned embeddings** (e.g., `text-embedding-3-large` or `bge-m3`) fine-tuned on humanitarian texts.  
+* Apply **semantic clustering** in Redis or Postgres pgvector to group thematically related knowledge chunks.  
+* Optimise query speed with FAISS or HNSW indexing.  
+* Employ **hybrid retrieval** (vector + BM25) for keyword-rich technical documents.  
 
-3.  **Implement a Task Output Callback:**
-    *   Create a callback function in `backend/utils/crew_knowledge.py` that can parse the `log_id` from the tool's output and update the corresponding database record with the final generated answer.
-    ```python
-    import re
-    from backend.core.db import get_engine
-    from sqlalchemy import text
+### 3.2 Generation Model and Instruction Optimisation
 
-    def log_rag_output(output):
-        """Callback function to log the final answer of a RAG task."""
-        raw_tool_output = output.raw_output
-        final_answer = output.exported_output
+* Fine-tune the **Proposal Writer** agent using **LoRA adapters** on a corpus of approved proposals.  
+* Adjust temperature and `top_p` values to maintain factual precision over creative variability.  
+* Include **Knowledge Card verification layers** before final text output (the Evaluator agent can reject ungrounded statements).  
+* Maintain deterministic “style adapters” for specific donors (e.g., ECHO, USAID, UN OCHA).  
 
-        match = re.search(r"\[RAG_LOG_ID=([^\]]+)\]", raw_tool_output)
+### 3.3 System-Level Optimisations
 
-        if match:
-            log_id = match.group(1)
+* **Caching:** Cache embeddings and generated Knowledge Cards to minimise recomputation.  
+* **Batch Inference:** Embed multiple documents or queries concurrently.  
+* **Async Retrieval:** Run parallel searches across RAG sources.  
+* **Feedback Loop:** Store proposal sections and validation results for iterative fine-tuning of both retrieval and generation layers.  
 
-            with get_engine().connect() as connection:
-                query = text("""
-                    UPDATE rag_evaluation_logs
-                    SET generated_answer = :generated_answer
-                    WHERE id = :log_id;
-                """)
-                connection.execute(query, {
-                    "generated_answer": final_answer,
-                    "log_id": log_id
-                })
-                connection.commit()
-    ```
+---
 
-4.  **Attach the Callback to the Final Task:**
-    *   In the `ContentGenerationCrew` in `backend/utils/crew_knowledge.py`, attach this callback function to the final task in the sequence (the `write_task`).
-    ```python
-    @task
-    def write_task(self) -> Task:
-        # ...
-        return Task(
-            # ...
-            output_callback=log_rag_output
-        )
-    ```
+## Implementation Roadmap
 
-5.  **Build the Evaluation Pipeline:**
-    *   With the logging in place, an external script can now be created to:
-        *   Query the `rag_evaluation_logs` table.
-        *   For each record, send the `query`, `retrieved_context`, and `generated_answer` to a judge LLM.
-        *   Use a framework like **RAGAs** to score the results on metrics like Faithfulness and Relevancy.
-        *   Store these scores to benchmark the performance of the RAG system over time.
+| Phase | Focus | Outputs |
+|-------|--------|----------|
+| **Phase 1** | Baseline Upgrade | Implement **Semantic Chunking** and **Knowledge Card creation** pipeline with RAG logging |
+| **Phase 2** | Context Maturity | Integrate **HyDE retrieval**, **Content-Aware chunking**, and automated **RAG evaluation** |
+| **Phase 3** | Intelligent Drafting | Deploy **CrewAI multi-agent proposal drafting**, grounded on Knowledge Cards |
+| **Phase 4** | Adaptive Optimisation | Add **Agentic Chunking** and continuous **evaluation-driven tuning** |
+
+---
+
+## Conclusion
+
+By combining **Prompt**, **Context**, and **Model Optimisation**, this CrewAI-enhanced RAG system enables proposal teams to move from *document retrieval* to *knowledge synthesis and narrative generation*.
+
+The **two-level context management**—Knowledge Cards (Level 1) feeding grounded proposal drafts (Level 2)—ensures:
+* **Traceability** of all facts used in proposal writing  
+* **Consistency** across proposal sections and iterations  
+* **Scalability** across multiple donors and response contexts  
+
+This framework represents a foundational step toward **AI-assisted, evidence-grounded humanitarian proposal generation** that balances automation with control and transparency.
+
