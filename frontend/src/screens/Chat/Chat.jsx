@@ -1158,7 +1158,7 @@ export default function Chat (props)
                                                         Results
                                                 </div>
 
-                                                {Object.keys(proposal).length > 0 && Object.values(proposal).every(section => section.content) ? <div className='Chat_exportButtons'>
+                                                {Object.keys(proposal).length > 0 ? <div className='Chat_exportButtons'>
                                                         <button type="button" onClick={() => handleExport("docx")}>
                                                                 <img src={word_icon} />
                                                                 Download Document
@@ -1226,8 +1226,7 @@ export default function Chat (props)
                                         </div>
 
                                         <div ref={proposalRef} className="Chat_proposalContainer">
-                                                {proposalTemplate ? proposalTemplate.sections.map((section, i) => {
-                                                        const sectionName = section.section_name;
+                                                {(proposalTemplate ? proposalTemplate.sections.map(s => s.section_name) : Object.keys(proposal)).map((sectionName, i) => {
                                                         const sectionObj = proposal[sectionName];
                                                         const sectionReviews = reviews.filter(r => r.section_name === sectionName);
 
@@ -1301,78 +1300,6 @@ export default function Chat (props)
                                                                              </div>
                                                                          )}
                                                                 </div>
-                                                )}) : Object.entries(proposal).map((sectionObj, i) => {
-                                                     const sectionName = sectionObj[0];
-                                                     const sectionReviews = reviews.filter(r => r.section_name === sectionName);
-
-                                                     return (
-                                                        <div key={i} className="Chat_proposalSection">
-                                                                <div className="Chat_sectionHeader">
-                                                                         <div className="Chat_sectionTitle">{sectionName}</div>
-
-                                                                        {!generateLoading && sectionObj.content && sectionObj.open && !isApproved ? <div className="Chat_sectionOptions" data-testid={`section-options-${i}`}>
-                                                                                {!isEdit || (selectedSection === i && isEdit) ? <button type="button" onClick={() => handleEditClick(i)} style={(selectedSection === i && isEdit && regenerateSectionLoading) ? {pointerEvents: "none"} : {}} aria-label={`edit-section-${i}`} disabled={proposalStatus === 'in_review'}>
-                                                                                        <img src={(selectedSection === i && isEdit) ? save : edit} />
-                                                                                        <span>{(selectedSection === i && isEdit) ? "Save" : "Edit"}</span>
-                                                                                </button> : "" }
-
-                                                                                {selectedSection === i && isEdit ? <button type="button" onClick={() => setIsEdit(false)}>
-                                                                                        <img src={cancel} />
-                                                                                        <span>Cancel</span>
-                                                                                </button> : "" }
-
-                                                                                {!isEdit ?
-                                                                                        <>
-                                                                                                <button type="button" onClick={() => handleCopyClick(i, sectionObj.content)}>
-                                                                                                        <img src={(selectedSection === i && isCopied) ? tick : copy} />
-                                                                                                        <span>{(selectedSection === i && isCopied) ? "Copied" : "Copy"}</span>
-                                                                                                </button>
-
-                                                                                                <button type="button" className='Chat_sectionOptions_regenerate' onClick={() => handleRegenerateIconClick(i)} disabled={proposalStatus !== 'draft'} >
-                                                                                                        <img src={regenerate} />
-                                                                                                        <span>Regenerate</span>
-                                                                                                </button>
-                                                                                        </>
-                                                                                : "" }
-                                                                        </div> : ""}
-
-                                                                        {sectionObj.content && !(isEdit && selectedSection === i) ? <div className={`Chat_expanderArrow ${sectionObj.open ? "" : "closed"}`} onClick={() => handleExpanderToggle(i)}>
-                                                                                <img src={arrow} />
-                                                                        </div> : ""}
-                                                                </div>
-
-                                                                {(sectionObj[1].open || !sectionObj[1].content) ? <div className='Chat_sectionContent'>
-                                                                        {sectionObj[1].content ?
-                                                                                (selectedSection === i && isEdit) ?
-                                                                                        <textarea value={editorContent} onChange={e => setEditorContent(e.target.value)} aria-label={`editor for ${sectionName}`} />
-                                                                                        :
-                                                                                        <Markdown remarkPlugins={[remarkGfm]}>{sectionObj[1].content}</Markdown>
-                                                                                :
-                                                                                <div className='Chat_sectionContent_loading'>
-                                                                                        <span className='submitButtonSpinner' />
-                                                                                        <span className='Chat_sectionContent_loading'>Loading</span>
-                                                                                </div>
-                                                                        }
-                                                                </div> : ""}
-
-                                                                 {proposalStatus === 'submission' && sectionReviews.length > 0 && (
-                                                                     <div className="reviews-container">
-                                                                         <h4>Peer Reviews</h4>
-                                                                         {sectionReviews.map(review => (
-                                                                             <div key={review.id} className="review">
-                                                                                 <p><strong>{review.reviewer_name}:</strong> {review.review_text}</p>
-                                                                                 <div className="author-response">
-                                                                                     <textarea
-                                                                                         placeholder="Respond to this review..."
-                                                                                         defaultValue={review.author_response || ''}
-                                                                                         onBlur={(e) => handleSaveResponse(review.id, e.target.value)}
-                                                                                     />
-                                                                                 </div>
-                                                                             </div>
-                                                                         ))}
-                                                                     </div>
-                                                                 )}
-                                                        </div>
                                                      )
                                                  })}
                                         </div>
