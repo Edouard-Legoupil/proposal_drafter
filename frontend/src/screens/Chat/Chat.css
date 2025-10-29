@@ -731,4 +731,18 @@
 .status-approved {
     background: #2E7D32;
 }
+
+.Chat_proposalContainer table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.Chat_proposalContainer th, .Chat_proposalContainer td {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+.Chat_proposalContainer th {
+  background-color: #f2f2f2;
+}
     

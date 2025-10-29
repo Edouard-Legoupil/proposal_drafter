@@ -1,6 +1,6 @@
 import { render, screen, waitFor, vi } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, afterEach, beforeEach } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
 import { BrowserRouter } from 'react-router-dom'
@@ -76,6 +76,13 @@ describe('Proposal Drafter – Form validation', () => {
 })
 
 describe('Proposal Drafter – One‑Section Generation Flow', () => {
+        beforeEach(() => {
+                vi.useFakeTimers()
+        })
+
+        afterEach(() => {
+                vi.useRealTimers()
+        })
         it('calls process_section with session and body, renders all cards', async () => {
                 server.use(
                         http.get('http://localhost:8502/api/templates', () => HttpResponse.json({ templates: { "UNHCR": {} } })),
@@ -226,6 +233,7 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
 
                 const editor = screen.getByRole('textbox', { name: /editor for Summary/i })
                 expect(editor).toBeInTheDocument()
+                await vi.advanceTimersByTimeAsync(1000)
                 expect(editor).toHaveValue('Mocked text for Summary')
 
                 await userEvent.clear(editor)
@@ -266,7 +274,10 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                                         },
                                         generated_sections: { 'Summary': 'Mocked text for Summary' },
                                         is_accepted: true,
-                                        status: 'approved'
+                                        status: 'approved',
+                                        proposal_template: {
+                                                sections: [{ section_name: 'Summary' }]
+                                        }
                                 })
                         }),
                         http.get('http://localhost:8502/api/proposals/:proposal_id/status-history', () => {
