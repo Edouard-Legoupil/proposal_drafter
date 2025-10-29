@@ -35,7 +35,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 import litellm
 import numpy as np
 import io
-from backend.utils.doc_export import create_word_from_knowledge_card
+from backend.utils.doc_export import create_word_from_sections
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -1007,12 +1007,8 @@ async def reingest_knowledge_card_reference(card_id: uuid.UUID, reference_id: uu
     #  Validate card and reference exist
     with get_engine().connect() as connection:
         ref_check = connection.execute(
-            text("""
-                SELECT kcr.id FROM knowledge_card_references kcr
-                JOIN knowledge_card_to_references kctr ON kcr.id = kctr.reference_id
-                WHERE kctr.knowledge_card_id = :card_id AND kcr.id = :ref_id
-            """),
-            {"card_id": card_id, "ref_id": reference_id}
+            text("SELECT id FROM knowledge_card_references WHERE id = :ref_id AND knowledge_card_id = :card_id"),
+            {"ref_id": reference_id, "card_id": card_id}
         ).fetchone()
 
         if not ref_check:
@@ -1416,9 +1412,7 @@ async def generate_and_download_document(
         else:
             # Return the DOCX file by default.
             try:
-
-                card_name = card_dict.get("donor_name") or card_dict.get("outcome_name") or card_dict.get("field_context_name")
-                doc = create_word_from_knowledge_card(card_name, ordered_sections)
+                doc = create_word_from_sections(form_data, proposal_template, ordered_sections)
                 docx_buffer = io.BytesIO()
                 doc.save(docx_buffer)
                 docx_buffer.seek(0)

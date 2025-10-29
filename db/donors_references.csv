@@ -1,0 +1,4 @@
+name,account_id,country,donor_group,url,reference_type,summary
+USAID,USA-001,USA,Government,"https://www.usaid.gov","Official Website","Official website for the United States Agency for International Development."
+Bill & Melinda Gates Foundation,BMGF-001,USA,Private Foundation,"https://www.gatesfoundation.org","Official Website","Official website for the Bill & Melinda Gates Foundation."
+USAID,USA-001,USA,Government,"https://www.usaid.gov/work-with-us/resources","Resource Page","Resources for working with USAID."
