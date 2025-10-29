@@ -50,6 +50,7 @@
       {
           "section_name": "Summary",
           "word_limit": 2000,
+          "format_type": "text",
           "instructions": "Summarize the crisis/emergency context, including the main humanitarian needs of the target population. Detail the target population by specifying who they are, where they are located, and their number. Describe key activities, grouped by sector (e.g., protection, shelter/NFIs). Ensure this summary does not duplicate text from the allocation strategy. Explain how the project will be catalytic/transformational and how its results will be sustainable beyond the CERF allocation period."
       },
       {
@@ -148,7 +149,7 @@
         },
         {
           "section_name": "2. Impact and Expected Outcomes",
-          "format_type": "structured_text",
+          "format_type": "text",
           "instructions": "Develop results framework: 1) Overall impact statement capturing project essence 2) For each outcome, write one paragraph describing activities and results with beneficiary numbers 3) For each outcome, specify 1-2 outputs with clear deliverables 4) For each output, create SMART indicators (Specific, Measurable, Achievable, Relevant, Time-bound)",
           "mandatory": true,
           "subsections": [
@@ -236,20 +237,38 @@
         {
           "section_name": "8. Monitoring, Audit and Reporting",
           "format_type": "fixed_text",
-          "instructions": "Reproduce the standard text exactly as provided without modification: 1) Monitoring and Evaluation procedures 2) Audit framework 3) Reporting timeline and requirements:    **8.1. Monitoring and Evaluation**: UNHCR adheres to a comprehensive annual programme cycle within a multi-year strategy, where monitoring and evaluation are intrinsic parts of the Results-Based Programme Management cycle. Throughout the year, progress of activities is monitored based on the M&E plan, which includes field visits, missions, and regular consultations with community members, partners, service providers, and other stakeholders.  **8.2. Audit**: UNHCR is audited in accordance with the UN Financial Regulations and the UNHCR Financial Rules. All financial transactions and related activities covered by these regulations and rules are subject to audit by internal auditors and the United Nations Board of Auditors. UNHCR's annual financial statements are published on the Board of Auditors' website here.  **8.3. Reporting**: UNHCR will submit a final narrative report, including a financial component, three months after the completion of the project.",
+          "instructions": "Reproduce the standard text exactly as provided without modification",
           "mandatory": true,
-          "fixed_content": [
+          "fixed_content": ["UNHCR adheres to a comprehensive annual programme cycle within a multi-year strategy, where monitoring and evaluation are intrinsic parts of the Results-Based Programme Management cycle. Throughout the year, progress of activities is monitored based on the M&E plan, which includes field visits, missions, and regular consultations with community members, partners, service providers, and other stakeholders.  **8.2. Audit**: UNHCR is audited in accordance with the UN Financial Regulations and the UNHCR Financial Rules. All financial transactions and related activities covered by these regulations and rules are subject to audit by internal auditors and the United Nations Board of Auditors. UNHCR's annual financial statements are published on the Board of Auditors' website here.  **8.3. Reporting**: UNHCR will submit a final narrative report, including a financial component, three months after the completion of the project."
           ]
         },
         {
           "section_name": "9. UNHCR Office",
-          "format_type": "fields",
+          "format_type": "table",
           "instructions": "Provide complete office contact information: 1) Full name of responsible officer 2) Official title 3) Exact office name and location",
           "mandatory": true,
-          "fields": [
-          {"field": "Name", "instructions": "Full name of UNHCR representative"},
-          {"field": "Title", "instructions": "Official position title"},
-          {"field": "Office Name", "instructions": "Complete office designation and location"}
+          "columns": [
+            {
+              "name": "Name", 
+              "format_type": "text",
+              "instructions": "Full name of UNHCR representative"
+            },
+            {
+              "name": "Title",
+              "format_type": "text",
+              "instructions": "Official position title"
+            },
+            {
+              "name":  "Office Name", 
+              "format_type": "number",
+              "instructions": "Complete office designation and location"
+            }
+          ],
+          "rows": [
+            {
+              "row_title": "People",
+              "instructions": "List persons."
+            }
           ]
         },
         {

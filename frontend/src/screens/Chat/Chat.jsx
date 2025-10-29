@@ -1122,7 +1122,7 @@ export default function Chat (props)
                                                                 </div>
                                                                 
                                                                 <div style={{ marginLeft: 'auto' }}>
-                                                                        <CommonButton onClick={handleGenerateClick} icon={generateIcon} label={generateLabel} loading={generateLoading} loadingLabel={generateLabel === "Generate" ? "Generating" : "Regenerating"} disabled={!buttonEnable || proposalStatus !== 'draft'}/>
+                                                                        <CommonButton onClick={handleGenerateClick} icon={generateIcon} label={generateLabel} loading={generateLoading} loadingLabel={generateLabel === "Generate" ? "Generating (~ 2 mins) " : "Regenerating (~ 2 mins)"} disabled={!buttonEnable || proposalStatus !== 'draft'}/>
                                                                 </div>
                                                         </div>
                                                 </div>

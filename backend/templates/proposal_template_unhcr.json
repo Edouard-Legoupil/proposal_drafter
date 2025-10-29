@@ -50,38 +50,42 @@
     {
       "section_name": "Summary",
       "word_limit": 4000,
+      "format_type": "text",
       "instructions": "Summarize the crisis/emergency context, humanitarian needs, target population (who, where, how many), and key activities grouped by sector (protection, shelter/NFIs, etc.). Do not duplicate text from the allocation strategy. Explain how the project will be catalytic/transformational and how it will be sustainable beyond the CERF allocation"
     },
     {
       "section_name": "Rationale",
       "word_limit": 1000,
+      "format_type": "text",
       "instructions": "Justify the project: What is the crisis/emergency? Why is this response necessary now? Explain the emergency or gap being addressed. Who is affected, and why is CERF funding urgently needed now? Explain how the proposed project will impact the lives of affected people."
     },
     {
       "section_name": "Project Description",
       "word_limit": 1000,
+      "format_type": "text",
       "instructions": "Describe proposed interventions per sector. Define expected outputs, activities, outcomes, geographic coverage, delivery modality (in-kind, CVA, services), and any special focus (e.g., disabilities, GBV, AAP). Explain what is the pursued impact for each proposed activity."
     },
     {
       "section_name": "Implementation and Coordination Arrangements",
       "word_limit": 1000,
+      "format_type": "text",
       "instructions": "Describe coordination arrangements with government, with relevant clusters/sectors, local authorities, and humanitarian actors. Indicate roles of sub-partners and how their actions complement UNHCR’s efforts. Make sure that any software or digital solutions developed using the CERF are available to the entire community by releasing it as a Digital Public Good"
     },
     {
       "section_name": "Monitoring",
       "word_limit": 1000,
-      "instructions": "Explain how results will be monitored. Include data sources (e.g. partner reports, post-distribution monitoring), roles of partners, and  means of verification. Describe how data for the project indicators will be collected, what data collection tools will be used, and how often data will be collected and analysed. If working through implementing partners, mention how they will be monitored and their reporting requirements, and in particular if working in a remote management situation with difficult access due to security.",
-      "reference": "Refer to IASC guidance and standards, such as the Collective AAP Framework, the CBCM guidance, the PSEA referral procedures, the Gender Age Marker, Guidelines on the Inclusion of Persons with Disabilities in Humanitarian Action, and Guidelines on Data Responsibility"
+      "format_type": "text",
+      "instructions": "Explain how results will be monitored. Include data sources (e.g. partner reports, post-distribution monitoring), roles of partners, and  means of verification. Describe how data for the project indicators will be collected, what data collection tools will be used, and how often data will be collected and analysed. If working through implementing partners, mention how they will be monitored and their reporting requirements, and in particular if working in a remote management situation with difficult access due to security. Refer to IASC guidance and standards, such as the Collective AAP Framework, the CBCM guidance, the PSEA referral procedures, the Gender Age Marker, Guidelines on the Inclusion of Persons with Disabilities in Humanitarian Action, and Guidelines on Data Responsibility"
     },
     {
       "section_name": "Evaluation",
       "word_limit": 350,
+      "format_type": "text",
       "instructions": "Specify whether an internal or external evaluation is planned. State its objective, scope, and when it will occur (during or after implementation). Briefly describe the expected methodology to be employed in realizing the evaluation purpose."
     },
     {
       "section_name": "Results Matrix",
-      "instructions": "Provide a results framework with outcomes, outputs, SMART indicators, sex- and age-disaggregated targets, means of verification, and linkage to the activities in the project description. Use at least 1 output (with corresponding indicators/activities) per sector and a maximum of 5 output. Ensure clear link between indicator targets and beneficiary table. Ensure clear link between indicator targets and beneficiary table. CERF encourages the use of cash & vouchers where feasible/appropriate",
-      "reference": "Use CERF Logical Framework and  standard indicators where possible.",
+      "instructions": "Provide a results framework with outcomes, outputs, SMART indicators, sex- and age-disaggregated targets, means of verification, and linkage to the activities in the project description. Use at least 1 output (with corresponding indicators/activities) per sector and a maximum of 5 output. Ensure clear link between indicator targets and beneficiary table. Ensure clear link between indicator targets and beneficiary table. CERF encourages the use of cash & vouchers where feasible/appropriate. Use CERF Logical Framework and  standard indicators where possible.",
       "format_type": "table",
       "columns": [
           {
@@ -118,8 +122,7 @@
     },
     {
       "section_name": "Work Plan",
-      "instructions": "Indicate the timing and responsible partners for each key activity. Use activity codes and mark the expected duration across the project period. Mark the start and end of each activity across months using a visual cue (e.g., X or ✓). The reference sector in the workplan should corresponds to the sector used in the Result Matrix",
-      "reference": "Use as muchas possible CERF list of activities.",
+      "instructions": "Indicate the timing and responsible partners for each key activity. Use activity codes and mark the expected duration across the project period. Mark the start and end of each activity across months using a visual cue (e.g., X or ✓). The reference sector in the workplan should corresponds to the sector used in the Result Matrix. Use as muchas possible CERF list of activities.",
       "format_type": "table",
       "columns": [
         {

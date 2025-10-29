@@ -48,14 +48,6 @@
     },
     "sections": [
       {
-        "section_name": "Introduction",
-        "section_label": "1. Introduction",
-        "section_parent": "1. Overview",
-        "format_type": "fixed_text",
-        "fixed_text": "This is a fixed text introduction.",
-        "mandatory": true
-      },
-      {
         "section_name": "Project title",
         "section_label": "1.5. Project title",
         "section_parent": "1. Overview",
@@ -215,8 +207,8 @@
         "columns": [
           {
             "name": "Categories",
-            "type": "select",
-            "selectvalue": [
+            "format_type": "text",
+            "instructions": """ Use one of the following values: [
               "Displacement related",
               "IDP",
               "Refugees",
@@ -225,27 +217,32 @@
               "Non-Displacement related",
               "Total Directly Targeted",
               "Persons with Disabilities"
-            ]
+            ] """
           },
           {
             "name": "Women (>18)",
-            "type": "fillable"
+            "format_type": "number",
+            "instructions": "Provide a target number for Women (>18)"
           },
           {
             "name": "Girls (<18)",
-            "type": "fillable"
+            "format_type": "number",
+            "instructions": "Provide a target number for Girls (<18)"
           },
           {
             "name": "Men (>18)",
-            "type": "fillable"
+            "format_type": "number",
+            "instructions": "Provide a target number for Men (>18)"
           },
           {
             "name": "Boys (<18)",
-            "type": "fillable"
+            "format_type": "number",
+            "instructions": "Provide a target number for Boys (<18)"
           },
           {
             "name": "Total",
-            "type": "fillable"
+            "format_type": "number",
+            "instructions": "Provide a target number for Total - aka equal the sum of previous columns"
           }
         ],
         "mandatory": true
@@ -259,8 +256,8 @@
         "columns": [
           {
             "name": "Categories",
-            "type": "select",
-            "selectvalue": [
+            "format_type": "text",
+            "instructions": """ Use one of the following values: [
               "Displacement related",
               "IDP",
               "Refugees",
@@ -268,27 +265,32 @@
               "Host Communities",
               "Non-Displacement related",
               "Total Directly Targeted"
-            ]
+            ]"""
           },
           {
             "name": "Women (>18)",
-            "type": "fillable"
+            "format_type": "number",
+            "instructions": "Provide a target number for Women (>18)"
           },
           {
             "name": "Girls (<18)",
-            "type": "fillable"
+            "format_type": "number",
+            "instructions": "Provide a target number for Girls (<18)"
           },
           {
             "name": "Men (>18)",
-            "type": "fillable"
+            "format_type": "number",
+            "instructions": "Provide a target number for Men (>18)"
           },
           {
             "name": "Boys (<18)",
-            "type": "fillable"
+            "format_type": "number",
+            "instructions": "Provide a target number for Boys (<18)"
           },
           {
             "name": "Total",
-            "type": "fillable"
+            "format_type": "number",
+            "instructions": "Provide a target number for Total - aka equal the sum of previous columns"
           }
         ],
         "mandatory": true
@@ -321,35 +323,35 @@
         "columns": [
           {
             "name": "Budget Line Description",
-            "type": "fillable"
+            "format_type": "text"
           },
           {
             "name": "Remarks (max. 1,500 characters)",
-            "type": "fillable"
+            "format_type": "text"
           },
           {
             "name": "Unit description",
-            "type": "fillable"
+            "format_type": "text"
           },
           {
             "name": "Unit Quantity:",
-            "type": "number"
+            "format_type": "number"
           },
           {
             "name": "Unit Cost (USD)",
-            "type": "number"
+            "format_type": "number"
           },
           {
             "name": "Duration (month)",
-            "type": "number"
+            "format_type": "number"
           },
           {
             "name": "% Charged to CERF",
-            "type": "number"
+            "format_type": "number"
           },
           {
             "name": "Total cost (USD)",
-            "type": "number"
+            "format_type": "number"
           }
         ]
       },
@@ -363,35 +365,35 @@
         "columns": [
           {
             "name": "Budget Line Description",
-            "type": "fillable"
+            "format_type": "text"
           },
           {
             "name": "Remarks (max. 1,500 characters)",
-            "type": "fillable"
+            "format_type": "text"
           },
           {
             "name": "Unit description",
-            "type": "fillable"
+            "format_type": "text"
           },
           {
             "name": "Unit Quantity:",
-            "type": "number"
+            "format_type": "number"
           },
           {
             "name": "Unit Cost (USD)",
-            "type": "number"
+            "format_type": "number"
           },
           {
             "name": "Duration (month)",
-            "type": "number"
+            "format_type": "number"
           },
           {
             "name": "% Charged to CERF",
-            "type": "number"
+            "format_type": "number"
           },
           {
             "name": "Total cost (USD)",
-            "type": "number"
+            "format_type": "number"
           }
         ]
       },
@@ -405,35 +407,35 @@
         "columns": [
           {
             "name": "Budget Line Description",
-            "type": "fillable"
+            "format_type": "text"
           },
           {
             "name": "Remarks (max. 1,500 characters)",
-            "type": "fillable"
+            "format_type": "text"
           },
           {
             "name": "Unit description",
-            "type": "fillable"
+            "format_type": "text"
           },
           {
             "name": "Unit Quantity:",
-            "type": "number"
+            "format_type": "number"
           },
           {
             "name": "Unit Cost (USD)",
-            "type": "number"
+            "format_type": "number"
           },
           {
             "name": "Duration (month)",
-            "type": "number"
+            "format_type": "number"
           },
           {
             "name": "% Charged to CERF",
-            "type": "number"
+            "format_type": "number"
           },
           {
             "name": "Total cost (USD)",
-            "type": "number"
+            "format_type": "number"
           }
         ]
       },
@@ -447,35 +449,35 @@
         "columns": [
           {
             "name": "Budget Line Description",
-            "type": "fillable"
+            "format_type": "text"
           },
           {
             "name": "Remarks (max. 1,500 characters)",
-            "type": "fillable"
+            "format_type": "text"
           },
           {
             "name": "Unit description",
-            "type": "fillable"
+            "format_type": "text"
           },
           {
             "name": "Unit Quantity:",
-            "type": "number"
+            "format_type": "number"
           },
           {
             "name": "Unit Cost (USD)",
-            "type": "number"
+            "format_type": "number"
           },
           {
             "name": "Duration (month)",
-            "type": "number"
+            "format_type": "number"
           },
           {
             "name": "% Charged to CERF",
-            "type": "number"
+            "format_type": "number"
           },
           {
             "name": "Total cost (USD)",
-            "type": "number"
+            "format_type": "number"
           }
         ]
       },
@@ -489,35 +491,35 @@
         "columns": [
           {
             "name": "Budget Line Description",
-            "type": "fillable"
+            "format_type": "text"
           },
           {
             "name": "Remarks (max. 1,500 characters)",
-            "type": "fillable"
+            "format_type": "text"
           },
           {
             "name": "Unit description",
-            "type": "fillable"
+            "format_type": "text"
           },
           {
             "name": "Unit Quantity:",
-            "type": "fillable"
+            "format_type": "number"
           },
           {
             "name": "Unit Cost",
-            "type": "fillable"
+            "format_type": "number"
           },
           {
             "name": "Duration",
-            "type": "fillable"
+            "format_type": "number"
           },
           {
             "name": "% Charged to CERF",
-            "type": "fillable"
+            "format_type": "number"
           },
           {
             "name": "Total cost (USD)",
-            "type": "fillable"
+            "format_type": "number"
           }
         ]
       },
@@ -531,35 +533,35 @@
         "columns": [
           {
             "name": "Budget Line Description",
-            "type": "fillable"
+            "format_type": "number"
           },
           {
             "name": "Remarks (max. 1,500 characters)",
-            "type": "fillable"
+            "format_type": "number"
           },
           {
             "name": "Unit description",
-            "type": "fillable"
+            "format_type": "number"
           },
           {
             "name": "Unit Quantity:",
-            "type": "fillable"
+            "format_type": "number"
           },
           {
             "name": "Unit Cost",
-            "type": "fillable"
+            "format_type": "number"
           },
           {
             "name": "Duration",
-            "type": "fillable"
+            "format_type": "number"
           },
           {
             "name": "% Charged to CERF",
-            "type": "fillable"
+            "format_type": "number"
           },
           {
             "name": "Total cost (USD)",
-            "type": "fillable"
+            "format_type": "number"
           }
         ]
       },
@@ -573,35 +575,35 @@
         "columns": [
           {
             "name": "Budget Line Description",
-            "type": "fillable"
+            "format_type": "number"
           },
           {
             "name": "Remarks (max. 1,500 characters)",
-            "type": "fillable"
+            "format_type": "number"
           },
           {
             "name": "Unit description",
-            "type": "fillable"
+            "format_type": "number"
           },
           {
             "name": "Unit Quantity:",
-            "type": "fillable"
+            "format_type": "number"
           },
           {
             "name": "Unit Cost",
-            "type": "fillable"
+            "format_type": "number"
           },
           {
             "name": "Duration",
-            "type": "fillable"
+            "format_type": "number"
           },
           {
             "name": "% Charged to CERF",
-            "type": "fillable"
+            "format_type": "number"
           },
           {
             "name": "Total cost (USD)",
-            "type": "fillable"
+            "format_type": "number"
           }
         ]
       },
@@ -615,15 +617,15 @@
         "columns": [
           {
             "name": "Sector/Cluster Name",
-            "type": "pre-populated"
+            "format_type": "text"
           },
           {
             "name": "Percentage of Budget Requested",
-            "type": "fillable"
+            "format_type": "number"
           },
           {
             "name": "Budget Value",
-            "type": "pre-populated"
+            "format_type": "text"
           }
         ]
       },
@@ -637,7 +639,7 @@
         "columns": [
           {
             "name": "Category",
-            "type": "select",
+            "format_type": "text",
             "selectvalue": [
               "Programming - Protection",
               "Programming - GBV",
@@ -648,7 +650,7 @@
           },
           {
             "name": "Value",
-            "type": "pre-populated"
+            "format_type": "number"
           }
         ]
       },
@@ -678,23 +680,23 @@
         "columns": [
           {
             "name": "Sector/Cluster",
-            "type": "pre-populated"
+            "format_type": "text"
           },
           {
             "name": "Sector Budget",
-            "type": "number"
+            "format_type": "number"
           },
           {
             "name": "Protection Budget Percent",
-            "type": "percentage"
+            "format_type": "number"
           },
           {
             "name": "Protection Budget Value",
-            "type": "number"
+            "format_type": "number"
           },
           {
             "name": "Protection People Target",
-            "type": "number"
+            "format_type": "number"
           }
         ],
         "instructions": "Calculate protection-specific allocations by: 1) Sector 2) Percentage for targeted protection (exclude mainstreaming) 3) Dollar value 4) Beneficiary numbers. Enter 0 for sectors without targeted protection.",
@@ -735,23 +737,23 @@
         "columns": [
           {
             "name": "Sector/Cluster",
-            "type": "pre-populated"
+            "format_type": "text"
           },
           {
             "name": "Sector Budget",
-            "type": "number"
+            "format_type": "number"
           },
           {
             "name": "GBV Budget Percent",
-            "type": "percentage"
+            "format_type": "number"
           },
           {
             "name": "GBV Budget Value",
-            "type": "number"
+            "format_type": "number"
           },
           {
             "name": "GBV People Target",
-            "type": "number"
+            "format_type": "number"
           }
         ],
         "instructions": "Complete only if GBV is included. Show: 1) Sector-specific GBV allocations 2) Percentage calculations 3) Dollar values 4) Target beneficiaries. Ensure consistency with protection budget above.",
@@ -846,23 +848,23 @@
         "columns": [
           {
             "name": "Sector Name",
-            "type": "pre-populated"
+            "format_type": "text"
           },
           {
             "name": "Sector Budget",
-            "type": "number"
+            "format_type": "number"
           },
           {
             "name": "Gender Equality Budget Percent",
-            "type": "percentage"
+            "format_type": "number"
           },
           {
             "name": "Gender Equality Budget Value",
-            "type": "number"
+            "format_type": "number"
           },
           {
             "name": "Gender Equality People Target",
-            "type": "number"
+            "format_type": "number"
           }
         ],
         "instructions": "Complete if gender equality is a component. Show: 1) Sector allocations 2) Percentage calculations 3) Dollar values 4) Target beneficiaries. Differentiate from GBV budgets if both exist.",
@@ -911,19 +913,19 @@
         "columns": [
           {
             "name": "Sector Name",
-            "type": "pre-populated"
+            "format_type": "text"
           },
           {
             "name": "Sector Budget",
-            "type": "number"
+            "format_type": "number"
           },
           {
             "name": "Disability Budget Percent",
-            "type": "percentage"
+            "format_type": "number"
           },
           {
             "name": "Disability Budget Value",
-            "type": "number"
+            "format_type": "number"
           }
         ],
         "instructions": "Complete if disability component exists. Show: 1) Sector allocations 2) Percentage calculations 3) Dollar values. Differentiate between accessibility costs and targeted interventions.",
@@ -981,10 +983,32 @@
         "instructions": "Assess key risks using: 1) Risk matrix methodology 2) Likelihood/impact ratings 3) Mitigation measures 4) Contingency planning. Focus on operational and contextual risks.",
         "format_type": "table",
         "columns": [
-          "Risk Factor",
-          "Consequence (Rank 1 to 6)",
-          "Likelihood & Timeline",
-          "Risk Treatment Plan"
+          {
+            "name": "Risk Factor",
+            "format_type": "text",
+            "instructions": "Describe the risk factor."
+          },
+          {
+            "name": "Consequence (Rank 1 to 6)",
+            "format_type": "number",
+            "instructions": "Rank the consequence from 1 to 6."
+          },
+          {
+            "name": "Likelihood & Timeline",
+            "format_type": "text",
+            "instructions": "Describe the likelihood and timeline of the risk."
+          },
+          {
+            "name": "Risk Treatment Plan",
+            "format_type": "text",
+            "instructions": "Describe the plan to treat the risk."
+          }
+        ],
+        "rows": [
+          {
+            "row_title": "Risk 1",
+            "instructions": "Describe the first risk."
+          }
         ],
         "mandatory": true
       },
@@ -1009,17 +1033,17 @@
           },
           {
             "name": "Sub-partner Type",
-            "type": "select",
+            "format_type": "text",
             "optional": true
           },
           {
             "name": "Budget",
-            "type": "number"
+            "format_type": "number"
           },
           {
             "name": "Activities",
-            "type": "select",
-            "guidance": "select from logframe (optional)"
+            "format_type": "text",
+            "instructions": "select from logframe (optional)"
           }
         ],
         "instructions": "List all sub-partners with: 1) Organization details 2) Type (NNGO/INGO/etc.) 3) Budget allocation 4) Linked activities. Include capacity assessment information if available."
