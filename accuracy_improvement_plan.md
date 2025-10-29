@@ -191,8 +191,7 @@ Model optimisation enhances both retrieval and generation efficiency while maint
 |-------|--------|----------|
 | **Phase 1** | Baseline Upgrade | Implement **Semantic Chunking** and **Knowledge Card creation** pipeline with RAG logging |
 | **Phase 2** | Context Maturity | Integrate **HyDE retrieval**, **Content-Aware chunking**, and automated **RAG evaluation** |
-| **Phase 3** | Intelligent Drafting | Deploy **CrewAI multi-agent proposal drafting**, grounded on Knowledge Cards |
-| **Phase 4** | Adaptive Optimisation | Add **Agentic Chunking** and continuous **evaluation-driven tuning** |
+| **Phase 3** | Adaptive Optimisation | Add **Agentic Chunking** and continuous **evaluation-driven tuning** |
 
 ---
 
