@@ -1,9 +1,13 @@
 #  Standard Library
 import json
 import re
+import logging
 
 #  Internal Modules
 from backend.utils.proposal_logic import regenerate_section_logic
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 def handle_text_format(section_config, crew_instance, form_data, project_description, session_id, proposal_id):
     """Handles 'text' format_type."""
@@ -102,48 +106,73 @@ def handle_table_format(section_config, crew_instance, form_data, project_descri
         clean_output = re.sub(r'[`\x00-\x1F\x7F]', '', raw_output)
         # The AI's output is a JSON object with 'generated_content'
         parsed_crew_output = json.loads(clean_output)
-        generated_content_str = parsed_crew_output.get("generated_content", "").strip()
+        generated_content = parsed_crew_output.get("generated_content")
+
+        generated_content = parsed_crew_output.get("generated_content", "")
+        logger.info(f"Generated content for section '{section_name}':\n{generated_content}")
+
+        # Handle both dict and str for generated_content
+        if isinstance(generated_content, dict):
+            content_str = json.dumps(generated_content)
+        else:
+            content_str = str(generated_content).strip()
         
-        # The generated content itself is a JSON string.
+        # Regex to find JSON block within the string
+        json_match = re.search(r'\{.*\}', content_str, re.DOTALL)
+        
+        if not json_match:
+            # If no JSON is found, return the content as is, assuming it's just text.
+            logger.warning(f"No JSON object found in the content for section '{section_name}'. Returning as is.")
+            return content_str
+
+        json_str = json_match.group(0)
+        pre_text = content_str[:json_match.start()].strip()
+        post_text = content_str[json_match.end():].strip()
+        logger.info(f"Extracted pre-text: '{pre_text}'")
+        logger.info(f"Extracted post-text: '{post_text}'")
+
         try:
-            # Clean up potential markdown code fences around the JSON
-            if generated_content_str.startswith("```json"):
-                generated_content_str = generated_content_str[7:]
-            if generated_content_str.endswith("```"):
-                generated_content_str = generated_content_str[:-3]
+            table_data = json.loads(json_str)
             
-            table_data = json.loads(generated_content_str)
-            
-            # Extract data from the expected structure
             section_data = table_data.get(section_name, {})
             table_rows = section_data.get("table", [])
             notes = section_data.get("notes", "")
 
             if not table_rows:
-                return "" # Return empty if no table data
+                # If table is empty, return original text content
+                logger.warning(f"No rows found in the table for section '{section_name}'. Returning original content.")
+                return content_str
 
             headers = list(table_rows[0].keys())
             
-            # Build markdown table
             header_line = f"| {' | '.join(headers)} |"
             separator_line = f"| {' | '.join(['---'] * len(headers))} |"
             
-            row_lines = []
-            for row in table_rows:
-                values = [str(row.get(h, '')) for h in headers]
-                row_lines.append(f"| {' | '.join(values)} |")
+            row_lines = [f"| {' | '.join([str(row.get(h, '')) for h in headers])} |" for row in table_rows]
             
             markdown_table = "\n".join([header_line, separator_line] + row_lines)
 
-            if notes:
-                markdown_table += f"\n\n{notes}"
+            final_content = []
+            if pre_text:
+                final_content.append(pre_text)
             
-            return markdown_table
+            final_content.append(markdown_table)
+            
+            if notes:
+                final_content.append(f"\n{notes}")
+            
+            if post_text:
+                final_content.append(f"\n{post_text}")
+            
+            final_output = "\n".join(final_content)
+            logger.info(f"Successfully formatted section '{section_name}' with a Markdown table.")
+            return final_output
 
         except (json.JSONDecodeError, AttributeError, IndexError) as e:
-            print(f"[MARKDOWN CONVERSION ERROR] for section {section_name}: {e}. Raw content: {generated_content_str}")
-            return f"Error: Could not parse table from AI output.\n\n{generated_content_str}"
+            logger.error(f"[MARKDOWN CONVERSION ERROR] for section {section_name}: {e}. Raw content: {content_str}", exc_info=True)
+            # Fallback to returning the original content if table parsing fails
+            return content_str
 
     except (AttributeError, json.JSONDecodeError) as e:
-        print(f"[CREWAI PARSE ERROR] for section {section_name}: {e}")
+        logger.error(f"[CREWAI PARSE ERROR] for section {section_name}: {e}", exc_info=True)
         return ""
