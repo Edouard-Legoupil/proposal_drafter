@@ -126,12 +126,13 @@ def add_markdown_to_doc(doc: Document, text: str):
 
 
 
-def create_word_from_sections(form_data: Dict, ordered_sections: Dict) -> Document:
+def create_word_from_sections(form_data: Dict, proposal_template: Dict, ordered_sections: Dict) -> Document:
     """
     Generates a .docx document from proposal data.
 
     Args:
         form_data: A dictionary containing the proposal's metadata.
+        proposal_template: The proposal template dictionary.
         ordered_sections: A dictionary of the proposal sections and their content.
 
     Returns:
@@ -151,6 +152,12 @@ def create_word_from_sections(form_data: Dict, ordered_sections: Dict) -> Docume
     style2.font.name = 'Arial'
     style2.font.size = Pt(14)
     style2.font.color.rgb = RGBColor(0x00, 0x72, 0xbc)
+
+    # Set the style for section headings (Heading 3)
+    style3 = doc.styles['Heading 3']
+    style3.font.name = 'Arial'
+    style3.font.size = Pt(12)
+    style3.font.color.rgb = RGBColor(0x00, 0x72, 0xbc)
 
     # Set the style for the normal body text
     normal_style = doc.styles['Normal']
@@ -177,10 +184,24 @@ def create_word_from_sections(form_data: Dict, ordered_sections: Dict) -> Docume
         print(f"Error adding form data table: {e}")
 
     # Add each proposal section to the document.
-    for section, content in ordered_sections.items():
+    processed_parents = set()
+    for section_config in proposal_template["sections"]:
+        section_name = section_config["section_name"]
+        content = ordered_sections.get(section_name)
         if not content:
-            continue  # Skip empty sections.
-        doc.add_heading(section, level=2)
+            continue
+
+        section_label = section_config.get("section_label", section_name)
+        section_parent = section_config.get("section_parent")
+
+        if section_parent:
+            if section_parent not in processed_parents:
+                doc.add_heading(section_parent, level=2)
+                processed_parents.add(section_parent)
+            doc.add_heading(section_label, level=3)
+        else:
+            doc.add_heading(section_label, level=2)
+
         add_markdown_to_doc(doc, content)
 
     return doc
