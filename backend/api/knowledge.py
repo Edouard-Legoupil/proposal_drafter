@@ -190,8 +190,8 @@ async def create_knowledge_card(card: KnowledgeCardIn, current_user: dict = Depe
         with get_engine().begin() as connection:
             connection.execute(
                 text("""
-                    INSERT INTO knowledge_cards (id, title, summary, template_name, status, donor_id, outcome_id, field_context_id, created_by, updated_by, created_at, updated_at)
-                    VALUES (:id, :summary, :summary, :template_name, 'draft', :donor_id, :outcome_id, :field_context_id, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    INSERT INTO knowledge_cards (id, summary, template_name, status, donor_id, outcome_id, field_context_id, created_by, updated_by, created_at, updated_at)
+                    VALUES (:id, :summary, :template_name, 'draft', :donor_id, :outcome_id, :field_context_id, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 """),
                 {
                     "id": card_id,
