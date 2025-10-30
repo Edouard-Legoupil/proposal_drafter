@@ -850,7 +850,7 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
                 associated_cards_result = conn.execute(
                     text("""
                         SELECT DISTINCT
-                            kc.id, kc.title, kc.summary, kc.donor_id, kc.outcome_id, kc.field_context_id,
+                            kc.id, kc.summary as title, kc.summary, kc.donor_id, kc.outcome_id, kc.field_context_id,
                             d.name as donor_name,
                             o.name as outcome_name,
                             fc.name as field_context_name
