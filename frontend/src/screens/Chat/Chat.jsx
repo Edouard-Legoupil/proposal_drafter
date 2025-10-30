@@ -9,6 +9,7 @@ import Base from '../../components/Base/Base'
 import CommonButton from '../../components/CommonButton/CommonButton'
 import MultiSelectModal from '../../components/MultiSelectModal/MultiSelectModal'
 import AssociateKnowledgeModal from '../../components/AssociateKnowledgeModal/AssociateKnowledgeModal'
+import WizzardModal from './WizzardModal'
 import CreatableSelect from 'react-select/creatable';
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
@@ -54,6 +55,7 @@ export default function Chat (props)
         const [isModalOpen, setIsModalOpen] = useState(false)
         const [isPeerReviewModalOpen, setIsPeerReviewModalOpen] = useState(false)
         const [isAssociateKnowledgeModalOpen, setIsAssociateKnowledgeModalOpen] = useState(false)
+        const [isWizzardModalOpen, setIsWizzardModalOpen] = useState(false)
         const [users, setUsers] = useState([])
         const [selectedUsers, setSelectedUsers] = useState([])
         const [associatedKnowledgeCards, setAssociatedKnowledgeCards] = useState([]);
@@ -1017,6 +1019,12 @@ export default function Chat (props)
                                 fieldContextId={formData["Country / Location(s)"].value}
                                 initialSelection={associatedKnowledgeCards}
                         />
+                        <WizzardModal
+                                isOpen={isWizzardModalOpen}
+                                onClose={() => setIsWizzardModalOpen(false)}
+                                formData={Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value]))}
+                                userPrompt={userPrompt}
+                        />
                         {((!isMobile && sidebarOpen) || (isMobile && isMobileMenuOpen)) && <aside>
                                 <ul className='Chat_sidebar'>
                                         <li
@@ -1097,6 +1105,7 @@ export default function Chat (props)
                                                         <div className="Chat_inputArea_buttonContainer">
                                                                 <div style={{ position: 'relative' }}>
                                                                         <CommonButton onClick={() => setIsAssociateKnowledgeModalOpen(true)} label="Manage Knowledge" disabled={proposalStatus !== 'draft'} icon={knowIcon}/>
+                                                                        <CommonButton onClick={() => setIsWizzardModalOpen(true)} label="Wizzard" disabled={proposalStatus !== 'draft'} icon={knowIcon}/>
                                                                         {associatedKnowledgeCards.length > 0 && (
                                                                                 <div className="associated-knowledge-display">
                                                                                         <h4>Associated Knowledge Cards:</h4>

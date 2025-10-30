@@ -23,3 +23,4 @@ prez/samples/*
 prez/voices//*
 prez/venv/*
 frontend_dev.log
+node_modules/

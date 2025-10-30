@@ -216,6 +216,27 @@ CREATE TABLE IF NOT EXISTS proposal_field_contexts (
     PRIMARY KEY (proposal_id, field_context_id)
 );
 
+CREATE TABLE IF NOT EXISTS successful_proposals_insights (
+    id UUID PRIMARY KEY,
+    donor_id UUID REFERENCES donors(id),
+    outcome_id UUID REFERENCES outcomes(id),
+    field_context_id UUID REFERENCES field_contexts(id),
+    budget_range VARCHAR(255),
+    beneficiaries_profile TEXT,
+    success_likelihood FLOAT,
+    analysis_summary TEXT,
+    suggested_donor_id UUID REFERENCES donors(id),
+    suggested_outcome_id UUID REFERENCES outcomes(id),
+    suggested_field_context_id UUID REFERENCES field_contexts(id),
+    suggested_budget_range VARCHAR(255),
+    suggested_prompt TEXT,
+    key_themes TEXT,
+    common_keywords TEXT,
+    dos_and_donts TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create index for faster user lookup
 CREATE INDEX IF NOT EXISTS idx_proposals_user_id ON proposals(user_id);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);

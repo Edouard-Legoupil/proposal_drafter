@@ -74,7 +74,7 @@ def test_create_and_update_knowledge_card_saves_content_to_file(authenticated_cl
     os.remove(filepath)
 
 
-@patch('backend.api.knowledge._process_and_store_text', new_callable=AsyncMock)
+@patch('backend.api.knowledge.process_and_store_text', new_callable=AsyncMock)
 @patch('backend.api.knowledge.PdfReader')
 def test_upload_pdf_reference_success(mock_pdf_reader, mock_process_and_store, authenticated_client: TestClient, db_session):
     """
