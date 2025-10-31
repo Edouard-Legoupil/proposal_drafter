@@ -472,11 +472,22 @@ async def regenerate_section(proposal_id: str, request: RegenerateRequest, curre
 
     # Create a temporary session for the regeneration process
     session_id = str(uuid.uuid4())
+
+    with get_engine().connect() as connection:
+        # Get the template name from the proposal
+        template_name = connection.execute(
+            text("SELECT template_name FROM proposals WHERE id = :id"),
+            {"id": proposal_id}
+        ).scalar() or "proposal_template_unhcr.json"
+
+    proposal_template = load_proposal_template(template_name)
+
     session_data = {
         "user_id": current_user["user_id"],
         "proposal_id": proposal_id,
         "form_data": request.form_data,
         "project_description": request.project_description,
+        "proposal_template": proposal_template,
     }
     redis_client.setex(session_id, 3600, json.dumps(session_data, default=str))
 
