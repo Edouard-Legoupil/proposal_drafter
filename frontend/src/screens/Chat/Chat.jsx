@@ -418,10 +418,9 @@ export default function Chat (props)
                 if (outcomeIds && outcomeIds.length > 0) {
                         const validOutcomeIds = outcomeIds.filter(id => !id.startsWith("new_"));
                         if (validOutcomeIds.length > 0) {
-                                const queryParams = new URLSearchParams();
-                                validOutcomeIds.forEach(id => queryParams.append('outcome_id', id));
+                                const outcomeQuery = validOutcomeIds.map(id => `outcome_id=${id}`).join('&');
                                 fetchPromises.push(
-                                        fetch(`${API_BASE_URL}/knowledge-cards?${queryParams.toString()}`, { credentials: 'include' })
+                                        fetch(`${API_BASE_URL}/knowledge-cards?${outcomeQuery}`, { credentials: 'include' })
                                                 .then(res => res.ok ? res.json() : Promise.resolve({ knowledge_cards: [] }))
                                                 .then(data => data.knowledge_cards) // This will be an array of cards
                                 );
