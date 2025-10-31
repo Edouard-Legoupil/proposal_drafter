@@ -179,9 +179,13 @@ export const server = setupServer(
                 })
         }),
 
-        http.post(new RegExp(`${API_BASE_URL}/regenerate_section/.*`), async ({ request }) => {
+        http.post(`${API_BASE_URL}/regenerate_section/:proposal_id`, async ({ request }) => {
                 const { section } = await request.json()
                 return HttpResponse.json({ generated_text: `Custom ${section} text` })
+        }),
+
+        http.get(`${API_BASE_URL}/sso-status`, () => {
+                return HttpResponse.json({ sso_enabled: false })
         }),
 
         http.post(`${API_BASE_URL}/store_base_data`, async () => {
