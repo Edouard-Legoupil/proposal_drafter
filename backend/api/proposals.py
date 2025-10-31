@@ -456,8 +456,8 @@ async def process_section(session_id: str, request: SectionRequest, current_user
     return {"message": message, "generated_text": generated_text}
 
 
-@router.post("/regenerate_section/{session_id}")
-async def regenerate_section(session_id: str, request: RegenerateRequest, current_user: dict = Depends(get_current_user)):
+@router.post("/regenerate_section/{proposal_id}")
+async def regenerate_section(proposal_id: str, request: RegenerateRequest, current_user: dict = Depends(get_current_user)):
     """
     Manually regenerates a section using concise user input.
     """
@@ -470,18 +470,18 @@ async def regenerate_section(session_id: str, request: RegenerateRequest, curren
         if res:
             raise HTTPException(status_code=403, detail="This proposal is finalized and cannot be modified.")
 
-    # Load session data and update it with fresh data from the request.
-    session_data_str = redis_client.get(session_id)
-    if not session_data_str:
-        raise HTTPException(status_code=400, detail="Session data not found for regeneration.")
-
-    session_data = json.loads(session_data_str)
-    session_data["form_data"] = request.form_data
-    session_data["project_description"] = request.project_description
+    # Create a temporary session for the regeneration process
+    session_id = str(uuid.uuid4())
+    session_data = {
+        "user_id": current_user["user_id"],
+        "proposal_id": proposal_id,
+        "form_data": request.form_data,
+        "project_description": request.project_description,
+    }
     redis_client.setex(session_id, 3600, json.dumps(session_data, default=str))
 
     generated_text = regenerate_section_logic(
-        session_id, request.section, request.concise_input, request.proposal_id
+        session_id, request.section, request.concise_input, proposal_id
     )
     return {"message": f"Content regenerated for {request.section}", "generated_text": generated_text}
 
