@@ -416,22 +416,22 @@ export default function Chat (props)
                 }
 
                 if (outcomeIds && outcomeIds.length > 0) {
-                        outcomeIds.forEach(outcomeId => {
-                                if (!outcomeId.startsWith("new_")) {
-                                        fetchPromises.push(
-                                                fetch(`${API_BASE_URL}/knowledge-cards?outcome_id=${outcomeId}`, { credentials: 'include' })
-                                                        .then(res => res.ok ? res.json() : Promise.resolve({ knowledge_cards: [] }))
-                                                        .then(data => data.knowledge_cards.length > 0 ? data.knowledge_cards[0] : null)
-                                        );
-                                }
-                        });
+                        const validOutcomeIds = outcomeIds.filter(id => !id.startsWith("new_"));
+                        if (validOutcomeIds.length > 0) {
+                                const queryParams = new URLSearchParams();
+                                validOutcomeIds.forEach(id => queryParams.append('outcome_id', id));
+                                fetchPromises.push(
+                                        fetch(`${API_BASE_URL}/knowledge-cards?${queryParams.toString()}`, { credentials: 'include' })
+                                                .then(res => res.ok ? res.json() : Promise.resolve({ knowledge_cards: [] }))
+                                                .then(data => data.knowledge_cards) // This will be an array of cards
+                                );
+                        }
                 }
 
                 try {
                         const results = await Promise.all(fetchPromises);
-                        const newAssociatedCards = results.filter(Boolean); // Filter out any nulls
-                        
-                        // Combine with already associated cards, ensuring uniqueness
+                        const newAssociatedCards = results.flat().filter(Boolean);
+
                         const combinedCards = [...associatedKnowledgeCards, ...newAssociatedCards];
                         const uniqueAssociatedCards = Array.from(new Map(combinedCards.map(card => [card.id, card])).values());
 
@@ -439,7 +439,7 @@ export default function Chat (props)
                         return uniqueAssociatedCards;
                 } catch (error) {
                         console.error("Error auto-associating knowledge cards:", error);
-                        return associatedKnowledgeCards; // Return original cards on error
+                        return associatedKnowledgeCards;
                 }
         }
 
@@ -587,6 +587,7 @@ export default function Chat (props)
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
+                                session_id: sessionStorage.getItem("session_id"),
                                 section: sectionName,
                                 concise_input: ip,
                                 form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])),
