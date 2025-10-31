@@ -18,16 +18,23 @@ export default function AssociateKnowledgeModal({ isOpen, onClose, onConfirm, do
       setSelectedOptions(initialIds);
       setInitialSelectedOptions(initialIds);
       setIsLoading(true);
-      const queryParams = new URLSearchParams();
-      if (donorId) queryParams.append('donor_id', donorId);
+      let queryString = '';
+      if (donorId) queryString += `donor_id=${encodeURIComponent(donorId)}&`;
       if (Array.isArray(outcomeId)) {
-        outcomeId.forEach(id => id && queryParams.append('outcome_id', id));
+        outcomeId.forEach(id => {
+          if (id) queryString += `outcome_id=${encodeURIComponent(id)}&`;
+        });
       } else if (outcomeId) {
-        queryParams.append('outcome_id', outcomeId);
+        queryString += `outcome_id=${encodeURIComponent(outcomeId)}&`;
       }
-      if (fieldContextId) queryParams.append('field_context_id', fieldContextId);
+      if (fieldContextId) queryString += `field_context_id=${encodeURIComponent(fieldContextId)}&`;
 
-      fetch(`${API_BASE_URL}/knowledge-cards?${queryParams.toString()}`, {
+      // Remove the trailing '&'
+      if (queryString.length > 0) {
+        queryString = queryString.substring(0, queryString.length - 1);
+      }
+
+      fetch(`${API_BASE_URL}/knowledge-cards?${queryString}`, {
         credentials: 'include'
       })
         .then(response => {
