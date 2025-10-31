@@ -583,7 +583,7 @@ export default function Chat (props)
                 setRegenerateSectionLoading(true)
                 const sectionName = proposalTemplate ? proposalTemplate.sections[selectedSection].section_name : Object.keys(proposal)[selectedSection];
 
-                const response = await fetch(`${API_BASE_URL}/regenerate_section/${sessionStorage.getItem("session_id")}`, {
+                const response = await fetch(`${API_BASE_URL}/regenerate_section/${sessionStorage.getItem("proposal_id")}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({

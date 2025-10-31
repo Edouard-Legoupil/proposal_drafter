@@ -1,6 +1,7 @@
-import { render, screen, waitFor, vi } from '@testing-library/react'
+/// <reference types="vitest" />
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, it, expect, afterEach, beforeEach } from 'vitest'
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
 import { BrowserRouter } from 'react-router-dom'
@@ -76,13 +77,6 @@ describe('Proposal Drafter – Form validation', () => {
 })
 
 describe('Proposal Drafter – One‑Section Generation Flow', () => {
-        beforeEach(() => {
-                vi.useFakeTimers()
-        })
-
-        afterEach(() => {
-                vi.useRealTimers()
-        })
         it('calls process_section with session and body, renders all cards', async () => {
                 server.use(
                         http.get('http://localhost:8502/api/templates', () => HttpResponse.json({ templates: { "UNHCR": {} } })),
@@ -115,14 +109,23 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                                 return new HttpResponse(null, { status: 200 });
                         }),
                         http.get('http://localhost:8502/api/proposals/:proposal_id/status', async ({request}) => {
-                                return HttpResponse.json({ status: 'done', generated_sections: {
-                                        'Summary': 'Mocked text for Summary',
-                                        'Rationale': 'Mocked text for Rationale',
-                                        'Project Description': 'Mocked text for Project Description',
-                                        'Partnerships and Coordination': 'Mocked text for Partnerships and Coordination',
-                                        'Monitoring': 'Mocked text for Monitoring',
-                                        'Evaluation': 'Mocked text for Evaluation',
-                                }})
+                                return HttpResponse.json({
+                                        status: 'done',
+                                        generated_sections: {
+                                                'Summary': 'Mocked text for Summary',
+                                                'Rationale': 'Mocked text for Rationale',
+                                                'Project Description': 'Mocked text for Project Description',
+                                                'Partnerships and Coordination': 'Mocked text for Partnerships and Coordination',
+                                                'Monitoring': 'Mocked text for Monitoring',
+                                                'Evaluation': 'Mocked text for Evaluation',
+                                        },
+                                        proposal_template: {
+                                                sections: [
+                                                        { section_name: 'Summary' }, { section_name: 'Rationale' }, { section_name: 'Project Description' },
+                                                        { section_name: 'Partnerships and Coordination' }, { section_name: 'Monitoring' }, { section_name: 'Evaluation' },
+                                                ]
+                                        }
+                                })
                         })
                 )
                 render(
@@ -233,7 +236,6 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
 
                 const editor = screen.getByRole('textbox', { name: /editor for Summary/i })
                 expect(editor).toBeInTheDocument()
-                await vi.advanceTimersByTimeAsync(1000)
                 expect(editor).toHaveValue('Mocked text for Summary')
 
                 await userEvent.clear(editor)
