@@ -384,7 +384,7 @@ async def process_section(session_id: str, request: SectionRequest, current_user
     with get_engine().connect() as connection:
         res = connection.execute(
             text("SELECT is_accepted FROM proposals WHERE id = :id AND user_id = :uid"),
-            {"id": request.proposal_id, "uid": current_user["user_id"]}
+            {"id": proposal_id, "uid": current_user["user_id"]}
         ).scalar()
         if res:
             raise HTTPException(status_code=403, detail="This proposal is finalized and cannot be modified.")
@@ -465,7 +465,7 @@ async def regenerate_section(proposal_id: str, request: RegenerateRequest, curre
     with get_engine().connect() as connection:
         res = connection.execute(
             text("SELECT is_accepted FROM proposals WHERE id = :id AND user_id = :uid"),
-            {"id": request.proposal_id, "uid": current_user["user_id"]}
+            {"id": proposal_id, "uid": current_user["user_id"]}
         ).scalar()
         if res:
             raise HTTPException(status_code=403, detail="This proposal is finalized and cannot be modified.")
