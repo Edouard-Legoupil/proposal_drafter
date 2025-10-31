@@ -589,7 +589,6 @@ export default function Chat (props)
                         body: JSON.stringify({
                                 section: sectionName,
                                 concise_input: ip,
-                                proposal_id: sessionStorage.getItem("proposal_id"),
                                 form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])),
                                 project_description: userPrompt
                         }),

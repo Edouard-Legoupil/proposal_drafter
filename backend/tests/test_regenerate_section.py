@@ -28,7 +28,6 @@ async def test_regenerate_section(authenticated_client, mocker):
     regenerate_payload = {
         "section": "Introduction",
         "concise_input": "Make it better.",
-        "proposal_id": proposal_id, # This is still expected in the body by the Pydantic model
         "form_data": {"Project title": "Child Protection"},
         "project_description": "A project for regenerate section test."
     }
