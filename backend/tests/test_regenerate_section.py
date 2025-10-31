@@ -13,9 +13,9 @@ async def test_regenerate_section(authenticated_client, mocker):
         return_value="Regenerated Content"
     )
 
-    # Mock Redis to return session data
-    mocker.patch('backend.api.proposals.redis_client.get', return_value='{"key": "value"}')
+    # Mock Redis `setex` as a new session is created
     mocker.patch('backend.api.proposals.redis_client.setex')
+
     # Mock the database check for is_accepted
     mock_engine = MagicMock()
     mock_connection = MagicMock()
@@ -24,18 +24,17 @@ async def test_regenerate_section(authenticated_client, mocker):
     mocker.patch('backend.api.proposals.get_engine', return_value=mock_engine)
 
     # Prepare payload
-    session_id = str(uuid.uuid4())
     proposal_id = str(uuid.uuid4())
     regenerate_payload = {
         "section": "Introduction",
         "concise_input": "Make it better.",
-        "proposal_id": proposal_id,
+        "proposal_id": proposal_id, # This is still expected in the body by the Pydantic model
         "form_data": {"Project title": "Child Protection"},
         "project_description": "A project for regenerate section test."
     }
 
-    # Make the API call
-    response = client.post(f"/api/regenerate_section/{session_id}", json=regenerate_payload)
+    # Make the API call using the proposal_id in the URL
+    response = client.post(f"/api/regenerate_section/{proposal_id}", json=regenerate_payload)
 
     # Assert the response
     assert response.status_code == 200
