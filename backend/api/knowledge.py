@@ -5,7 +5,7 @@ import uuid
 import logging
 import asyncio
 import concurrent.futures
-from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File, BackgroundTasks, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
@@ -252,7 +252,7 @@ async def create_knowledge_card(card: KnowledgeCardIn, current_user: dict = Depe
 @router.get("/knowledge-cards")
 async def get_knowledge_cards(
     donor_id: Optional[uuid.UUID] = None,
-    outcome_id: Optional[uuid.UUID] = None,
+    outcome_id: Optional[List[uuid.UUID]] = Query(None),
     field_context_id: Optional[uuid.UUID] = None,
     current_user: dict = Depends(get_current_user)
 ):
@@ -293,7 +293,7 @@ async def get_knowledge_cards(
                 filters.append("kc.donor_id = :donor_id")
                 params["donor_id"] = donor_id
             if outcome_id:
-                filters.append("kc.outcome_id = :outcome_id")
+                filters.append("kc.outcome_id = ANY(:outcome_id)")
                 params["outcome_id"] = outcome_id
             if field_context_id:
                 filters.append("kc.field_context_id = :field_context_id")
