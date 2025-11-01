@@ -111,7 +111,7 @@ async def generate_and_download_document(
         else:
             # Return the DOCX file by default.
             try:
-                doc = create_word_from_sections(form_data, ordered_sections)
+                doc = create_word_from_sections(form_data, proposal_template, ordered_sections)
                 docx_buffer = io.BytesIO()
                 doc.save(docx_buffer)
                 docx_buffer.seek(0)
