@@ -656,6 +656,8 @@ async def get_proposals_for_review(current_user: dict = Depends(get_current_user
                     u.name AS requester_name,
                     -- Determine the review status by checking for any 'completed' status for this reviewer and proposal
                     MAX(CASE WHEN pp.status = 'completed' THEN 1 ELSE 0 END) as is_completed,
+                    -- Determine if there is a draft review
+                    MAX(CASE WHEN pp.status = 'draft' THEN 1 ELSE 0 END) as is_draft,
                     -- Get the deadline from the 'pending' review row
                     MAX(CASE WHEN pp.status = 'pending' THEN pp.deadline ELSE NULL END) as deadline,
                     -- Get the completion date from the latest 'completed' review row
@@ -693,6 +695,12 @@ async def get_proposals_for_review(current_user: dict = Depends(get_current_user
             for row in rows:
                 form_data = json.loads(row['form_data']) if isinstance(row['form_data'], str) else row['form_data']
 
+                review_status = "pending"
+                if row['is_completed']:
+                    review_status = "completed"
+                elif row['is_draft']:
+                    review_status = "draft"
+
                 review_list.append({
                     "proposal_id": row['id'],
                     "project_title": form_data.get("Project Draft Short name") or form_data.get("Project title", "Untitled Proposal"),
@@ -708,7 +716,7 @@ async def get_proposals_for_review(current_user: dict = Depends(get_current_user
                     "country": row['country_name'],
                     "outcomes": row['outcome_names'].split(', ') if row['outcome_names'] else [],
                     "budget": form_data.get("Budget Range", "N/A"),
-                    "review_status": "completed" if row['is_completed'] else "pending",
+                    "review_status": review_status,
                     "review_completed_at": row['review_completed_at'].isoformat() if row['review_completed_at'] else None
                 })
         return {"message": "Proposals for review fetched successfully.", "reviews": review_list}
@@ -1022,17 +1030,17 @@ async def finalize_proposal(request: FinalizeProposalRequest, current_user: dict
         raise HTTPException(status_code=500, detail="Failed to finalize proposal.")
 
 
-@router.post("/proposals/{proposal_id}/review")
-async def submit_review(proposal_id: uuid.UUID, request: SubmitReviewRequest, current_user: dict = Depends(get_current_user)):
+@router.post("/proposals/{proposal_id}/save-draft-review")
+async def save_draft_review(proposal_id: uuid.UUID, request: SubmitReviewRequest, current_user: dict = Depends(get_current_user)):
     """
-    Submits a peer review for a proposal, with comments for each section.
+    Saves a draft of a peer review for a proposal.
     """
     user_id = current_user["user_id"]
     try:
         with get_engine().begin() as connection:
             # Check if the user is assigned to review this proposal
             reviewer_id_from_db = connection.execute(
-                text("SELECT reviewer_id FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND status = 'pending'"),
+                text("SELECT reviewer_id FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND (status = 'pending' OR status = 'draft')"),
                 {"proposal_id": proposal_id, "user_id": user_id}
             ).scalar()
 
@@ -1045,9 +1053,63 @@ async def submit_review(proposal_id: uuid.UUID, request: SubmitReviewRequest, cu
                 {"pid": proposal_id}
             ).scalar()
 
-            # Mark the original review request as completed by deleting it, since comments are now individual rows
+            # Delete existing draft comments for this user and proposal
             connection.execute(
-                text("DELETE FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND status = 'pending'"),
+                text("DELETE FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND status = 'draft'"),
+                {"proposal_id": proposal_id, "user_id": user_id}
+            )
+
+            # Insert each comment as a new row with 'draft' status
+            for comment in request.comments:
+                if comment.review_text: # Only save comments that have text
+                    connection.execute(
+                        text("""
+                            INSERT INTO proposal_peer_reviews (proposal_id, reviewer_id, proposal_status_history_id, section_name, review_text, type_of_comment, severity, status)
+                            VALUES (:pid, :rid, :hid, :section, :text, :type, :severity, 'draft')
+                        """),
+                        {
+                            "pid": proposal_id,
+                            "rid": user_id,
+                            "hid": history_id,
+                            "section": comment.section_name,
+                            "text": comment.review_text,
+                            "type": comment.type_of_comment,
+                            "severity": comment.severity
+                        }
+                    )
+
+        return {"message": "Draft review saved successfully."}
+    except Exception as e:
+        logger.error(f"[SAVE DRAFT REVIEW ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to save draft review.")
+
+
+@router.post("/proposals/{proposal_id}/review")
+async def submit_review(proposal_id: uuid.UUID, request: SubmitReviewRequest, current_user: dict = Depends(get_current_user)):
+    """
+    Submits a peer review for a proposal, with comments for each section.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().begin() as connection:
+            # Check if the user is assigned to review this proposal
+            reviewer_id_from_db = connection.execute(
+                text("SELECT reviewer_id FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND (status = 'pending' OR status = 'draft')"),
+                {"proposal_id": proposal_id, "user_id": user_id}
+            ).scalar()
+
+            if not reviewer_id_from_db:
+                raise HTTPException(status_code=403, detail="You are not assigned to review this proposal or the review is already completed.")
+
+            # Get the latest 'in_review' status history ID
+            history_id = connection.execute(
+                text("SELECT id FROM proposal_status_history WHERE proposal_id = :pid AND status = 'in_review' ORDER BY created_at DESC LIMIT 1"),
+                {"pid": proposal_id}
+            ).scalar()
+
+            # Delete existing draft/pending comments for this user and proposal
+            connection.execute(
+                text("DELETE FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND (status = 'pending' OR status = 'draft')"),
                 {"proposal_id": proposal_id, "user_id": user_id}
             )
 
@@ -1069,6 +1131,18 @@ async def submit_review(proposal_id: uuid.UUID, request: SubmitReviewRequest, cu
                             "severity": comment.severity
                         }
                     )
+
+            # Check if all reviews are completed
+            pending_reviews = connection.execute(
+                text("SELECT COUNT(*) FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND status = 'pending'"),
+                {"proposal_id": proposal_id}
+            ).scalar()
+
+            if pending_reviews == 0:
+                connection.execute(
+                    text("UPDATE proposals SET status = 'submission', updated_at = CURRENT_TIMESTAMP WHERE id = :id"),
+                    {"id": proposal_id}
+                )
 
         return {"message": "Review submitted successfully."}
     except Exception as e:
@@ -1235,7 +1309,7 @@ async def get_proposal_for_review(proposal_id: uuid.UUID, current_user: dict = D
         with get_engine().connect() as connection:
             # Check if the user is assigned to review this proposal, regardless of status
             review_assignment = connection.execute(
-                text("SELECT status FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id LIMIT 1"),
+                text("SELECT status FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id ORDER BY created_at DESC LIMIT 1"),
                 {"proposal_id": proposal_id, "user_id": user_id}
             ).fetchone()
 
@@ -1258,6 +1332,19 @@ async def get_proposal_for_review(proposal_id: uuid.UUID, current_user: dict = D
             if not draft:
                 raise HTTPException(status_code=404, detail="Proposal not found.")
 
+            draft_comments = {}
+            if review_status == 'draft':
+                comments_result = connection.execute(
+                    text("SELECT section_name, review_text, type_of_comment, severity FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND status = 'draft'"),
+                    {"proposal_id": proposal_id, "user_id": user_id}
+                ).mappings().fetchall()
+                for comment in comments_result:
+                    draft_comments[comment['section_name']] = {
+                        "review_text": comment['review_text'],
+                        "type_of_comment": comment['type_of_comment'],
+                        "severity": comment['severity']
+                    }
+
             template_name = draft.template_name or "unhcr_proposal_template.json"
             proposal_template = load_proposal_template(template_name)
             section_names = [s.get("section_name") for s in proposal_template.get("sections", [])]
@@ -1273,7 +1360,8 @@ async def get_proposal_for_review(proposal_id: uuid.UUID, current_user: dict = D
                 "status": draft.status,
                 "created_at": draft.created_at.isoformat() if draft.created_at else None,
                 "updated_at": draft.updated_at.isoformat() if draft.updated_at else None,
-                "review_status": review_status
+                "review_status": review_status,
+                "draft_comments": draft_comments
             }
         return data_to_load
     except HTTPException as http_exc:

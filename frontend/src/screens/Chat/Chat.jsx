@@ -771,7 +771,7 @@ export default function Chat (props)
                                 setProposalStatus(data.status)
                                 setSidebarOpen(true)
                                 getStatusHistory()
-                                if(data.status === 'submission') {
+                                if(data.status === 'submission' || data.status === 'in_review') {
                                     getPeerReviews()
                                 }
 
@@ -807,10 +807,19 @@ export default function Chat (props)
 
                 if(response.ok)
                 {
+                        const contentDisposition = response.headers.get('Content-Disposition');
+                        let filename = "proposal.docx"; // Default filename
+                        if (contentDisposition) {
+                            const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+                            if (filenameMatch && filenameMatch[1]) {
+                                filename = filenameMatch[1];
+                            }
+                        }
+
                         const blob = await response.blob();
                         const link = document.createElement('a');
                         link.href = URL.createObjectURL(blob);
-                link.download = formData["Project Draft Short name"].value ?? "proposal" + "." + format;
+                        link.download = filename;
                         document.body.appendChild(link);
                         link.click();
                         link.remove();
@@ -843,10 +852,19 @@ export default function Chat (props)
 
                 if(response.ok)
                 {
+                        const contentDisposition = response.headers.get('Content-Disposition');
+                        let filename = "proposal-tables.xlsx"; // Default filename
+                        if (contentDisposition) {
+                            const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+                            if (filenameMatch && filenameMatch[1]) {
+                                filename = filenameMatch[1];
+                            }
+                        }
+
                         const blob = await response.blob();
                         const link = document.createElement('a');
                         link.href = URL.createObjectURL(blob);
-                        link.download = formData["Project Draft Short name"].value ?? "proposal" + "_tables.xlsx";
+                        link.download = filename;
                         document.body.appendChild(link);
                         link.click();
                         link.remove();
@@ -1294,23 +1312,23 @@ export default function Chat (props)
                                                                                 }
                                                                         </div> : ""}
 
-                                                                         {proposalStatus === 'submission' && sectionReviews.length > 0 && (
-                                                                             <div className="reviews-container" data-testid={`reviews-container-${kebabSectionName}`}>
-                                                                                 <h4>Peer Reviews</h4>
-                                                                                 {sectionReviews.map(review => (
-                                                                                     <div key={review.id} className="review">
-                                                                                         <p><strong>{review.reviewer_name}:</strong> {review.review_text}</p>
-                                                                                         <div className="author-response">
-                                                                                             <textarea
-                                                                                                 placeholder="Respond to this review..."
-                                                                                                 defaultValue={review.author_response || ''}
-                                                                                                 onBlur={(e) => handleSaveResponse(review.id, e.target.value)}
-                                                                                                 data-testid={`review-response-textarea-${review.id}`}
-                                                                                             />
-                                                                                         </div>
-                                                                                     </div>
-                                                                                 ))}
-                                                                             </div>
+                                                                         {proposalStatus === 'submission' && reviews.length > 0 && (
+                                                                            <div className="reviews-container"data-testid={`reviews-container-${kebabSectionName}`}>
+                                                                                <h4>Peer Reviews</h4>
+                                                                                {reviews.filter(r => r.section_name === sectionName).map(review => (
+                                                                                    <div key={review.id} className="review">
+                                                                                        <p><strong>{review.reviewer_name}:</strong> {review.review_text}</p>
+                                                                                        <div className="author-response">
+                                                                                            <textarea
+                                                                                                placeholder="Respond to this review..."
+                                                                                                defaultValue={review.author_response || ''}
+                                                                                                onBlur={(e) => handleSaveResponse(review.id, e.target.value)}
+																								                                                data-testid={`review-response-textarea-${review.id}`}
+                                                                                            />
+                                                                                        </div>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>  
                                                                          )}
                                                                 </div>
                                                      )
