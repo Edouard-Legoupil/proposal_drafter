@@ -7,6 +7,10 @@ import { server } from '../../mocks/server'
 import { BrowserRouter } from 'react-router-dom'
 import Chat from './Chat'
 
+vi.mock('../../utils/downloadFile', () => ({
+        default: vi.fn(),
+}))
+
 describe('Proposal Drafter – Form validation', () => {
         it('disables the Generate button until all required inputs are filled', async () => {
                 server.use(
@@ -148,6 +152,10 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
 
                 await userEvent.click(screen.getByRole('button', { name: /generate/i }))
 
+                await waitFor(async () => {
+                        await screen.findByText('Results')
+                })
+
                 const sections = ['Summary','Rationale','Project Description', "Partnerships and Coordination", "Monitoring", "Evaluation"]
 
                 for (const sec of sections) {
@@ -225,6 +233,10 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
 
                 await userEvent.click(screen.getByRole('button', { name: /generate/i }))
 
+                await waitFor(async () => {
+                        await screen.findByText('Results')
+                })
+
                 const sections = ['Summary','Rationale','Project Description', "Partnerships and Coordination", "Monitoring", "Evaluation"]
 
                 for (const sec of sections) {
@@ -300,7 +312,9 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                         </BrowserRouter>
                 )
 
-                await screen.findByText('Results')
+                await waitFor(async () => {
+                        await screen.findByText('Results')
+                })
 
                 expect(screen.queryByPlaceholderText(/Provide as much details as possible on your initial project idea!/i)).not.toBeInTheDocument()
         })

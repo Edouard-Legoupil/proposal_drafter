@@ -158,7 +158,7 @@ async def generate_and_download_tables(
         with get_engine().connect() as connection:
             result = connection.execute(
                 text("""
-                    SELECT generated_sections, template_name
+                    SELECT form_data, generated_sections, template_name
                     FROM proposals
                     WHERE id = :proposal_id AND user_id = :user_id
                 """),
@@ -169,7 +169,7 @@ async def generate_and_download_tables(
         if not draft:
             raise HTTPException(status_code=404, detail="Proposal not found for this user.")
 
-        generated_sections, template_name = draft
+        form_data, generated_sections, template_name = draft
         generated_sections = generated_sections if isinstance(generated_sections, dict) else {}
 
         if not template_name:
