@@ -1014,7 +1014,8 @@ export default function KnowledgeCard() {
                                 <label htmlFor="kc-linked-id">Select Item*</label>
                                 <CreatableSelect
                                     isClearable
-                                    id="kc-linked-id"
+                                    inputId="kc-linked-id"
+                                    classNamePrefix="kc-linked-item-select"
                                     name="kc-linked-id"
                                     value={linkOptions.find(o => o.id === linkedId) ?
                                         { value: linkedId, label: linkOptions.find(o => o.id === linkedId).name } : null}
