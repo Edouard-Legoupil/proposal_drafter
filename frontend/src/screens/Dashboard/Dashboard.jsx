@@ -25,6 +25,7 @@ export default function Dashboard ()
         const [transferProposalId, setTransferProposalId] = useState(null)
         const [users, setUsers] = useState([])
         const [knowledgeCardTypeFilter, setKnowledgeCardTypeFilter] = useState('')
+        const [statusFilter, setStatusFilter] = useState('')
 
         const tabRefs = {
                 proposals: useRef(null),
@@ -169,19 +170,25 @@ export default function Dashboard ()
         useEffect(() => {
                 let source = [];
                 if (selectedTab === 'proposals') {
-                    source = projects;
+                        source = projects;
                 } else if (selectedTab === 'reviews') {
-                    source = reviews;
+                        source = reviews;
                 }
 
                 if (source && source.length > 0) {
-                    setDisplayProjects(source.filter(project =>
-                        project.project_title.toLowerCase().includes(searchTerm.toLowerCase())
-                    ));
+                        let filteredProjects = source.filter(project =>
+                                project.project_title.toLowerCase().includes(searchTerm.toLowerCase())
+                        );
+
+                        if (statusFilter) {
+                                filteredProjects = filteredProjects.filter(project => project.status === statusFilter);
+                        }
+
+                        setDisplayProjects(filteredProjects);
                 } else {
-                    setDisplayProjects([]); // Reset if source is empty or not applicable
+                        setDisplayProjects([]);
                 }
-            }, [projects, reviews, searchTerm, selectedTab]);
+        }, [projects, reviews, searchTerm, selectedTab, statusFilter]);
 
         useEffect(() => {
                 let filteredCards = knowledgeCards;
@@ -376,7 +383,7 @@ export default function Dashboard ()
 
                                 <div className="filter-section" data-tab="proposals" hidden={selectedTab !== 'proposals'}>
                                         <label htmlFor="status-filter">Status</label>
-                                        <select id="status-filter" data-testid="status-filter">
+                                        <select id="status-filter" data-testid="status-filter" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
                                                 <option value="">All</option>
                                                 <option value="draft">Drafting</option>
                                                 <option value="review">Pending Review</option>
