@@ -9,6 +9,7 @@ import Base from '../../components/Base/Base'
 import CommonButton from '../../components/CommonButton/CommonButton'
 import MultiSelectModal from '../../components/MultiSelectModal/MultiSelectModal'
 import AssociateKnowledgeModal from '../../components/AssociateKnowledgeModal/AssociateKnowledgeModal'
+import PdfUploadModal from '../../components/PdfUploadModal/PdfUploadModal'
 import CreatableSelect from 'react-select/creatable';
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
@@ -54,6 +55,7 @@ export default function Chat (props)
         const [isModalOpen, setIsModalOpen] = useState(false)
         const [isPeerReviewModalOpen, setIsPeerReviewModalOpen] = useState(false)
         const [isAssociateKnowledgeModalOpen, setIsAssociateKnowledgeModalOpen] = useState(false)
+        const [isPdfUploadModalOpen, setIsPdfUploadModalOpen] = useState(false)
         const [users, setUsers] = useState([])
         const [selectedUsers, setSelectedUsers] = useState([])
         const [associatedKnowledgeCards, setAssociatedKnowledgeCards] = useState([]);
@@ -690,10 +692,26 @@ export default function Chat (props)
                 }
         }
 
-        const [isApproved, setIsApproved] = useState(false)
         const [proposalStatus, setProposalStatus] = useState("draft")
+        const [contributionId, setContributionId] = useState("")
         const [statusHistory, setStatusHistory] = useState([])
         const [reviews, setReviews] = useState([])
+
+        async function handleSaveContributionId() {
+                const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/save-contribution-id`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contribution_id: contributionId }),
+                        credentials: 'include'
+                });
+
+                if (response.ok) {
+                        alert("Contribution ID saved!");
+                } else {
+                        console.error("Failed to save Contribution ID");
+                        alert("Failed to save Contribution ID.");
+                }
+        }
 
         async function getPeerReviews() {
                 if (sessionStorage.getItem("proposal_id")) {
@@ -767,11 +785,11 @@ export default function Chat (props)
                                     setAssociatedKnowledgeCards(data.associated_knowledge_cards);
                                 }
 
-                                setIsApproved(data.is_accepted)
                                 setProposalStatus(data.status)
+                                setContributionId(data.contribution_id || "")
                                 setSidebarOpen(true)
                                 getStatusHistory()
-                                if(data.status === 'submission' || data.status === 'in_review') {
+                                if(data.status === 'pre_submission' || data.status === 'in_review') {
                                     getPeerReviews()
                                 }
 
@@ -880,25 +898,6 @@ export default function Chat (props)
                         throw new Error(`Download failed: ${response.status} ${response.statusText}`);
         }
 
-        async function handleRequestSubmission ()
-        {
-                const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/request-submission`, {
-                        method: "POST",
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: "include"
-                })
-
-                if(response.ok)
-                {
-                        await getContent()
-                }
-                else if(response.status === 401)
-                {
-                        sessionStorage.setItem("session_expired", "Session expired. Please login again.")
-                        navigate("/login")
-                }
-        }
-
         async function handleRevert (status)
         {
                 const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/revert-to-status/${status}`, {
@@ -929,28 +928,6 @@ export default function Chat (props)
             }
         }
 
-        async function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (!file) {
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('file', file);
-
-            const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/upload-approved-document`, {
-                method: 'POST',
-                body: formData,
-                credentials: 'include'
-            });
-
-            if (response.ok) {
-                alert('File uploaded successfully');
-            } else {
-                alert('File upload failed');
-            }
-        }
-
         async function handleSetStatus(status) {
                 const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/status`, {
                         method: "PUT",
@@ -968,41 +945,25 @@ export default function Chat (props)
 
         async function handleSubmit ()
         {
-                const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/submit`, {
-                        method: "POST",
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: "include"
-                })
-
-                if(response.ok)
-                {
-                        await getContent()
-                }
-                else if(response.status === 401)
-                {
-                        sessionStorage.setItem("session_expired", "Session expired. Please login again.")
-                        navigate("/login")
-                }
+                setIsPdfUploadModalOpen(true);
         }
 
-        async function handleApprove ()
-        {
-                const response = await fetch(`${API_BASE_URL}/finalize-proposal`, {
-                        method: "POST",
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ proposal_id: sessionStorage.getItem("proposal_id")}),
-                        credentials: "include"
-                })
+        async function handlePdfUpload(file) {
+                const formData = new FormData();
+                formData.append('file', file);
 
-                if(response.ok)
-                {
-                        await getContent()
+                const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/upload-submitted-pdf`, {
+                        method: 'POST',
+                        body: formData,
+                        credentials: 'include'
+                });
+
+                if (response.ok) {
+                        await getContent();
+                } else {
+                        console.error("Failed to upload PDF");
                 }
-                else if(response.status === 401)
-                {
-                        sessionStorage.setItem("session_expired", "Session expired. Please login again.")
-                        navigate("/login")
-                }
+                setIsPdfUploadModalOpen(false);
         }
 
         async function handleSubmitForPeerReview ({ selectedUsers, deadline })
@@ -1053,6 +1014,11 @@ export default function Chat (props)
                                 fieldContextId={formData["Country / Location(s)"].value}
                                 initialSelection={associatedKnowledgeCards}
                         />
+                        <PdfUploadModal
+                                isOpen={isPdfUploadModalOpen}
+                                onClose={() => setIsPdfUploadModalOpen(false)}
+                                onConfirm={handlePdfUpload}
+                        />
                         {((!isMobile && sidebarOpen) || (isMobile && isMobileMenuOpen)) && <aside>
                                 <ul className='Chat_sidebar' data-testid="chat-sidebar">
                                         <li
@@ -1089,7 +1055,7 @@ export default function Chat (props)
                                 <button className="Chat_menuButton" onClick={() => setIsMobileMenuOpen(p => !p)} data-testid="mobile-menu-button">
                                         <i className="fa-solid fa-bars"></i>
                                 </button>
-                                {!isApproved ?
+                                {proposalStatus !== 'submitted' ?
                                         <>
                                                 <div className='Dashboard_top'>
                                                         <div className='Dashboard_label' data-testid="chat-title">
@@ -1199,20 +1165,18 @@ export default function Chat (props)
                                                             <div className="workflow-stage-box">
                                                                 <span className="workflow-stage-label">Workflow Stage</span>
                                                                 <div className="workflow-badges">
-                                                                    {['draft', 'in_review', 'submission', 'submitted', 'approved'].map(status => {
+                                                                    {['draft', 'in_review', 'pre_submission', 'submitted'].map(status => {
                                                                             const statusDetails = {
                                                                                     draft: { text: 'Drafting', className: 'status-draft', message: "Initial drafting stage - Author + AI" },
                                                                                     in_review: { text: 'Peer Review', className: 'status-review', message: "Wait while proposal sent for quality review to other users" },
-                                                                                    submission: { text: 'Pre-Submission', className: 'status-submission', message: "Edit to address the comments from all your reviewers" },
-                                                                                    submitted: { text: 'Submitted', className: 'status-submitted', message: "Non editable Record of Initial version as submitted to donor" },
-                                                                                    approved: { text: 'Approved', className: 'status-approved', message: "Non editable uploaded record of the Final version as approved by donor" }
+                                                                                    pre_submission: { text: 'Pre-Submission', className: 'status-submission', message: "Edit to address the comments from all your reviewers" },
+                                                                                    submitted: { text: 'Submitted', className: 'status-submitted', message: "Non editable Record of Initial version as submitted to donor" }
                                                                             };
                                                                             const isActive = proposalStatus === status;
                                                                             const isClickable = (proposalStatus === 'draft' && status === 'in_review') ||
-                                                                                                    (proposalStatus === 'in_review' && status === 'submission') ||
+                                                                                                    (proposalStatus === 'in_review' && status === 'pre_submission') ||
                                                                                                     (proposalStatus === 'in_review' && status === 'draft') ||
-                                                                                                    (proposalStatus === 'submission' && status === 'submitted') ||
-                                                                                                    (proposalStatus === 'submitted' && status === 'approved');
+                                                                                                    (proposalStatus === 'pre_submission' && status === 'submitted');
 
                                                                             return (
                                                                                 <div key={status} className="status-badge-container">
@@ -1223,9 +1187,7 @@ export default function Chat (props)
                                                                                             onClick={() => {
                                                                                                     if (status === 'in_review' && proposalStatus === 'draft') setIsPeerReviewModalOpen(true);
                                                                                                     if (status === 'draft' && proposalStatus === 'in_review') handleSetStatus('draft');
-                                                                                                    if (status === 'submission' && proposalStatus === 'in_review') handleRequestSubmission();
-                                                                                                    if (status === 'submitted' && proposalStatus === 'submission') handleSubmit();
-                                                                                                    if (status === 'approved' && proposalStatus === 'submitted') handleApprove();
+                                                                                                    if (status === 'submitted' && proposalStatus === 'pre_submission') handleSubmit();
                                                                                             }}
                                                                                             disabled={!isClickable && !isActive}
                                                                                             data-testid={`workflow-status-badge-${status}`}
@@ -1241,18 +1203,30 @@ export default function Chat (props)
                                                                             );
                                                                     })}
                                                                 </div>
+                                                                {proposalStatus === 'pre_submission' && (
+                                                                    <button className="revert-btn" onClick={() => handleRevert('draft')} data-testid="revert-to-draft-button">
+                                                                        Revert to Draft
+                                                                    </button>
+                                                                )}
                                                             </div>
-                                                             {proposalStatus === 'approved' && (
-                                                                <div className="upload-approved-container">
-                                                                    <label htmlFor="approved-doc-upload" className="upload-label" data-testid="upload-approved-doc-label">
-                                                                        Upload Approved Document
-                                                                    </label>
-                                                                    <input id="approved-doc-upload" type="file" onChange={handleFileUpload} data-testid="upload-approved-doc-input"/>
-                                                                </div>
-                                                             )}
                                                         </div>
                                                 </div> : ""}
                                         </div>
+
+                                        {proposalStatus === 'submitted' && (
+                                                <div className="contribution-id-container">
+                                                        <label htmlFor="contribution-id">Contribution ID:</label>
+                                                        <p>Only submitted proposal with a confirmed ContributionID are counted as approved</p>
+                                                        <input
+                                                                type="text"
+                                                                id="contribution-id"
+                                                                value={contributionId}
+                                                                onChange={(e) => setContributionId(e.target.value)}
+                                                                data-testid="contribution-id-input"
+                                                        />
+                                                        <CommonButton onClick={handleSaveContributionId} label="Save ID" data-testid="save-contribution-id-button"/>
+                                                </div>
+                                        )}
 
                                         <div ref={proposalRef} className="Chat_proposalContainer" data-testid="proposal-container">
                                                 {(proposalTemplate ? proposalTemplate.sections.map(s => s.section_name) : Object.keys(proposal)).map((sectionName, i) => {
@@ -1267,7 +1241,7 @@ export default function Chat (props)
                                                                         <div className="Chat_sectionHeader" data-testid={`section-header-${kebabSectionName}`}>
                                                                                  <div className="Chat_sectionTitle" data-testid={`section-title-${kebabSectionName}`}>{sectionName}</div>
 
-                                                                                {!generateLoading && sectionObj.content && sectionObj.open && !isApproved ? <div className="Chat_sectionOptions" data-testid={`section-options-${kebabSectionName}`}>
+                                                                                 {!generateLoading && sectionObj.content && sectionObj.open && proposalStatus !== 'submitted' ? <div className="Chat_sectionOptions" data-testid={`section-options-${kebabSectionName}`}>
                                                                                         {!isEdit || (selectedSection === i && isEdit) ? <button type="button" onClick={() => handleEditClick(i)} style={(selectedSection === i && isEdit && regenerateSectionLoading) ? {pointerEvents: "none"} : {}} aria-label={`edit-section-${i}`} disabled={proposalStatus === 'in_review'} data-testid={`edit-save-button-${kebabSectionName}`}>
                                                                                                 <img src={(selectedSection === i && isEdit) ? save : edit} />
                                                                                                 <span>{(selectedSection === i && isEdit) ? "Save" : "Edit"}</span>
@@ -1312,7 +1286,7 @@ export default function Chat (props)
                                                                                 }
                                                                         </div> : ""}
 
-                                                                         {proposalStatus === 'submission' && reviews.length > 0 && (
+                                                                         {(proposalStatus === 'pre_submission' || proposalStatus === 'submission') && reviews.length > 0 && (
                                                                             <div className="reviews-container"data-testid={`reviews-container-${kebabSectionName}`}>
                                                                                 <h4>Peer Reviews</h4>
                                                                                 {reviews.filter(r => r.section_name === sectionName).map(review => (
@@ -1323,12 +1297,12 @@ export default function Chat (props)
                                                                                                 placeholder="Respond to this review..."
                                                                                                 defaultValue={review.author_response || ''}
                                                                                                 onBlur={(e) => handleSaveResponse(review.id, e.target.value)}
-																								                                                data-testid={`review-response-textarea-${review.id}`}
+                                                                                                                                                                data-testid={`review-response-textarea-${review.id}`}
                                                                                             />
                                                                                         </div>
                                                                                     </div>
                                                                                 ))}
-                                                                            </div>  
+                                                                            </div>
                                                                          )}
                                                                 </div>
                                                      )

@@ -6,7 +6,7 @@ import os
 #  Third-Party Libraries
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
-from google.cloud.sql.connector import Connector
+# from google.cloud.sql.connector import Connector
 import pg8000.dbapi
 import psycopg2
 
@@ -22,11 +22,12 @@ logger = logging.getLogger(__name__)
 connector = None
 
 
-def get_connector() -> Connector:
+def get_connector() -> "Connector":
     """Initializes and returns a Cloud SQL Connector instance."""
     global connector
     if connector is None:
         #logger.info("Initializing Cloud SQL Connector for this process...")
+        from google.cloud.sql.connector import Connector
         connector = Connector()
     return connector
 
@@ -179,5 +180,4 @@ def test_connection():
 #         # Re-raising the exception to prevent the application from starting
 #         # with a faulty database connection.
 #         raise
-
 

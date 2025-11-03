@@ -34,7 +34,8 @@ export default function Review ()
                             initialComments[section] = data.draft_comments[section] || {
                                 review_text: "",
                                 type_of_comment: "General",
-                                severity: "Medium"
+                                severity: "Medium",
+                                author_response: ""
                             }
                         })
                         setReviewComments(initialComments)
@@ -113,14 +114,18 @@ export default function Review ()
                 return <Base><div className="loading">Loading...</div></Base>
         }
 
+        const isReviewEditable = proposal.status === 'in_review';
+
         return <Base>
                 <div className="Review" data-testid="review-container">
                         <div className="Review_header">
                                 <h1>Reviewing: {proposal.form_data['Project Draft Short name']}</h1>
-                                <div>
-                                    <CommonButton label="Save as draft review" onClick={handleSaveDraft} data-testid="save-draft-button-header" />
-                                    <CommonButton label="Peer review completed" onClick={handleSubmitReview} data-testid="review-completed-button-header" />
-                                </div>
+                                {isReviewEditable && (
+                                    <div>
+                                        <CommonButton label="Save as draft review" onClick={handleSaveDraft} data-testid="save-draft-button-header" />
+                                        <CommonButton label="Peer review completed" onClick={handleSubmitReview} data-testid="review-completed-button-header" />
+                                    </div>
+                                )}
                         </div>
                         <div className="Review_proposal" data-testid="review-proposal-content">
                                 {Object.entries(proposal.generated_sections).map(([section, content]) => (
@@ -130,13 +135,13 @@ export default function Review ()
                                                         <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
                                                 </div>
                                                 <div className="Review_comment_controls">
-                                                    <select value={reviewComments[section]?.type_of_comment || 'General'} onChange={e => handleCommentChange(section, 'type_of_comment', e.target.value)} data-testid={`comment-type-select-${section}`}>
+                                                    <select value={reviewComments[section]?.type_of_comment || 'General'} onChange={e => handleCommentChange(section, 'type_of_comment', e.target.value)} data-testid={`comment-type-select-${section}`} disabled={!isReviewEditable}>
                                                         <option value="General">General</option>
                                                         <option value="Clarity">Clarity</option>
                                                         <option value="Compliance">Compliance</option>
                                                         <option value="Impact">Impact</option>
                                                     </select>
-                                                    <select value={reviewComments[section]?.severity || 'Medium'} onChange={e => handleCommentChange(section, 'severity', e.target.value)} data-testid={`severity-select-${section}`}>
+                                                    <select value={reviewComments[section]?.severity || 'Medium'} onChange={e => handleCommentChange(section, 'severity', e.target.value)} data-testid={`severity-select-${section}`} disabled={!isReviewEditable}>
                                                         <option value="Low">Low</option>
                                                         <option value="Medium">Medium</option>
                                                         <option value="High">High</option>
@@ -144,18 +149,27 @@ export default function Review ()
                                                 </div>
                                                 <textarea
                                                         className="Review_comment_textarea"
-                                                        placeholder={`Your comments for ${section}...`}
+                                                        placeholder={isReviewEditable ? `Your comments for ${section}...` : ""}
                                                         value={reviewComments[section]?.review_text || ""}
                                                         onChange={e => handleCommentChange(section, 'review_text', e.target.value)}
                                                         data-testid={`comment-textarea-${section}`}
+                                                        disabled={!isReviewEditable}
                                                 />
+                                                {reviewComments[section]?.author_response && (
+                                                    <div className="author-response-display" data-testid={`author-response-display-${section}`}>
+                                                        <strong>Author's Response:</strong>
+                                                        <p>{reviewComments[section].author_response}</p>
+                                                    </div>
+                                                )}
                                         </div>
                                 ))}
                         </div>
-                        <div className="Review_footer">
-                                <CommonButton label="Save as draft review" onClick={handleSaveDraft} data-testid="save-draft-button-footer" />
-                                <CommonButton label="Peer review completed" onClick={handleSubmitReview} data-testid="review-completed-button-footer" />
-                        </div>
+                        {isReviewEditable && (
+                            <div className="Review_footer">
+                                    <CommonButton label="Save as draft review" onClick={handleSaveDraft} data-testid="save-draft-button-footer" />
+                                    <CommonButton label="Peer review completed" onClick={handleSubmitReview} data-testid="review-completed-button-footer" />
+                            </div>
+                        )}
                 </div>
         </Base>
 }
