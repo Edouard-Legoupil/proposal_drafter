@@ -899,11 +899,19 @@ export default function KnowledgeCard() {
 
             if(response.ok)
             {
+                    const contentDisposition = response.headers.get('Content-Disposition');
+                    let filename = "knowledge-card.docx"; // Default filename
+                    if (contentDisposition) {
+                        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+                        if (filenameMatch && filenameMatch[1]) {
+                            filename = filenameMatch[1];
+                        }
+                    }
+
                     const blob = await response.blob();
                     const link = document.createElement('a');
                     link.href = URL.createObjectURL(blob);
-                    const selectedItem = linkOptions.find(o => o.id === linkedId);
-                    link.download = selectedItem ? selectedItem.name : "knowledge-card" + "." + format;
+                    link.download = filename;
                     document.body.appendChild(link);
                     link.click();
                     link.remove();
