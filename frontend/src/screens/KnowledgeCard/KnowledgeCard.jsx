@@ -5,6 +5,7 @@ import CreatableSelect from 'react-select/creatable';
 import Base from '../../components/Base/Base';
 import CommonButton from '../../components/CommonButton/CommonButton';
 import LoadingModal from '../../components/LoadingModal/LoadingModal';
+import ConfirmationModal from '../../components/ConfirmationModal/ConfirmationModal';
 import ProgressModal from '../../components/ProgressModal/ProgressModal';
 import KnowledgeCardHistory from '../../components/KnowledgeCardHistory/KnowledgeCardHistory';
 import KnowledgeCardReferences from '../../components/KnowledgeCardReferences/KnowledgeCardReferences';
@@ -40,6 +41,7 @@ export default function KnowledgeCard() {
     const [outcomes, setOutcomes] = useState([]);
     const [fieldContexts, setFieldContexts] = useState([]);
     const [geographicCoverages, setGeographicCoverages] = useState([]);
+    const [allKnowledgeCards, setAllKnowledgeCards] = useState([]);
     const [selectedGeoCoverage, setSelectedGeoCoverage] = useState('');
     const [linkOptions, setLinkOptions] = useState([]);
     const [newDonors, setNewDonors] = useState([]);
@@ -49,6 +51,8 @@ export default function KnowledgeCard() {
     const [editingReferenceIndex, setEditingReferenceIndex] = useState(null);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [currentReference, setCurrentReference] = useState(null);
+    const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
+    const [existingCard, setExistingCard] = useState(null);
 
     // Use refs to track current state without stale closures
     const summaryRef = useRef(summary);
@@ -168,13 +172,15 @@ export default function KnowledgeCard() {
                 }
             }
             
-            const [donorsRes, outcomesRes, allFieldContextsRes] = await Promise.all([
+            const [donorsRes, outcomesRes, allFieldContextsRes, allKnowledgeCardsRes] = await Promise.all([
                 authenticatedFetch(`${API_BASE_URL}/donors`, { credentials: 'include' }),
                 authenticatedFetch(`${API_BASE_URL}/outcomes`, { credentials: 'include' }),
-                authenticatedFetch(`${API_BASE_URL}/field-contexts`, { credentials: 'include' })
+                authenticatedFetch(`${API_BASE_URL}/field-contexts`, { credentials: 'include' }),
+                authenticatedFetch(`${API_BASE_URL}/knowledge-cards`, { credentials: 'include' })
             ]);
             if (donorsRes.ok) setDonors((await donorsRes.json()).donors);
             if (outcomesRes.ok) setOutcomes((await outcomesRes.json()).outcomes);
+            if (allKnowledgeCardsRes.ok) setAllKnowledgeCards((await allKnowledgeCardsRes.json()).knowledge_cards);
             if (allFieldContextsRes.ok) {
                 const allContexts = (await allFieldContextsRes.json()).field_contexts;
                 const uniqueGeos = [...new Set(allContexts.map(fc => fc.geographic_coverage))];
@@ -278,8 +284,9 @@ export default function KnowledgeCard() {
         if (!id) setLinkedId('');
     }, [linkType, donors, outcomes, fieldContexts, newDonors, newOutcomes, newFieldContexts, id, selectedGeoCoverage]);
 
-    const handleSave = useCallback(async (navigateOnSuccess = true) => {
-        // Validate required fields
+
+    const proceedWithSave = useCallback(async (navigateOnSuccess = true) => {
+        // This function contains the original logic of handleSave
         if (!summaryRef.current.trim()) {
             alert("Description is required.");
             return { ok: false };
@@ -292,7 +299,7 @@ export default function KnowledgeCard() {
 
         setLoading(true);
         setLoadingMessage("Saving knowledge card...");
-        
+
         let finalLinkedId = linkedIdRef.current;
         if (finalLinkedId && finalLinkedId.startsWith('new_')) {
             const endpointMap = {
@@ -302,7 +309,7 @@ export default function KnowledgeCard() {
             };
             const endpoint = endpointMap[linkTypeRef.current];
             const value = finalLinkedId.substring(4);
-            
+
             if (!value.trim()) {
                 alert("Please enter a valid name for the new item.");
                 setLoading(false);
@@ -371,7 +378,26 @@ export default function KnowledgeCard() {
             setLoading(false);
             setLoadingMessage('');
         }
-    }, [id, navigate, authenticatedFetch]);
+    }, [id, navigate, authenticatedFetch, newDonors, newOutcomes, newFieldContexts]);
+
+    const handleSave = useCallback(async (navigateOnSuccess = true) => {
+        if (!id) { // Only check for duplicates on new cards
+            const linkTypeKey = `${linkType}s`;
+            const existing = allKnowledgeCards.find(card => {
+                if (linkType === 'donor') return card.donor_id === linkedId;
+                if (linkType === 'outcome') return card.outcome_id === linkedId;
+                if (linkType === 'field_context') return card.field_context_id === linkedId;
+                return false;
+            });
+
+            if (existing) {
+                setExistingCard(existing);
+                setIsConfirmationModalOpen(true);
+                return { ok: false }; // Prevent immediate save
+            }
+        }
+        return proceedWithSave(navigateOnSuccess);
+    }, [id, linkType, linkedId, allKnowledgeCards, proceedWithSave]);
 
     const handleIdentifyReferences = useCallback(async () => {
         //  Validate required fields before proceeding
@@ -887,6 +913,16 @@ export default function KnowledgeCard() {
     return (
         <Base>
             {/* Modals */}
+            <ConfirmationModal
+                isOpen={isConfirmationModalOpen}
+                message="A knowledge card with this selection already exists. Ad-hoc knowledge cards with specific references and content can be added to offer flexibility. Do you want to create another one?"
+                link={existingCard ? `/knowledge-card/${existingCard.id}` : ''}
+                onConfirm={() => {
+                    setIsConfirmationModalOpen(false);
+                    proceedWithSave();
+                }}
+                onCancel={() => setIsConfirmationModalOpen(false)}
+            />
             <ProgressModal
                 isOpen={isProgressModalOpen}
                 onClose={() => {

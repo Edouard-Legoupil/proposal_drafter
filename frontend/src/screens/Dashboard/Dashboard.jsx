@@ -26,6 +26,7 @@ export default function Dashboard ()
         const [users, setUsers] = useState([])
         const [knowledgeCardTypeFilter, setKnowledgeCardTypeFilter] = useState('')
         const [statusFilter, setStatusFilter] = useState('')
+        const [duplicateCardIds, setDuplicateCardIds] = useState(new Set());
 
         const tabRefs = {
                 proposals: useRef(null),
@@ -214,6 +215,50 @@ export default function Dashboard ()
                 setDisplayKnowledgeCards(filteredCards);
             }, [knowledgeCards, searchTerm, knowledgeCardTypeFilter]);
 
+        useEffect(() => {
+            const findDuplicates = () => {
+                const seen = new Map();
+                const duplicates = new Set();
+
+                knowledgeCards.forEach(card => {
+                    let key = null;
+                    if (card.donor_id) {
+                        key = `donor-${card.donor_id}`;
+                    } else if (card.outcome_id) {
+                        key = `outcome-${card.outcome_id}`;
+                    } else if (card.field_context_id) {
+                        key = `field_context-${card.field_context_id}`;
+                    }
+
+                    if (key) {
+                        if (seen.has(key)) {
+                            duplicates.add(card.id);
+                            duplicates.add(seen.get(key));
+                        } else {
+                            seen.set(key, card.id);
+                        }
+                    }
+                });
+                setDuplicateCardIds(duplicates);
+            };
+
+            findDuplicates();
+        }, [knowledgeCards]);
+
+        async function handleDeleteKnowledgeCard(cardId) {
+            const response = await fetch(`${API_BASE_URL}/knowledge-cards/${cardId}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                getKnowledgeCards();
+            } else {
+                alert('Failed to delete knowledge card.');
+            }
+        }
+
         const activateTab = (tabId) => {
                 setSelectedTab(tabId);
         }
@@ -350,6 +395,8 @@ export default function Dashboard ()
                                                         card={card}
                                                         date={cleanedDate(card.updated_at)}
                                                         onClick={() => navigate(`/knowledge-card/${card.id}`)}
+                                                        isDuplicate={duplicateCardIds.has(card.id)}
+                                                        onDelete={() => handleDeleteKnowledgeCard(card.id)}
                                                 />
                                         )}
                                 </div>
