@@ -191,14 +191,23 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                                 return new HttpResponse(null, { status: 200 });
                         }),
                         http.get('http://localhost:8502/api/proposals/:proposal_id/status', async ({request}) => {
-                                return HttpResponse.json({ status: 'done', generated_sections: {
-                                        'Summary': 'Mocked text for Summary',
-                                        'Rationale': 'Mocked text for Rationale',
-                                        'Project Description': 'Mocked text for Project Description',
-                                        'Partnerships and Coordination': 'Mocked text for Partnerships and Coordination',
-                                        'Monitoring': 'Mocked text for Monitoring',
-                                        'Evaluation': 'Mocked text for Evaluation',
-                                }})
+                                return HttpResponse.json({
+                                        status: 'done',
+                                        generated_sections: {
+                                                'Summary': 'Mocked text for Summary',
+                                                'Rationale': 'Mocked text for Rationale',
+                                                'Project Description': 'Mocked text for Project Description',
+                                                'Partnerships and Coordination': 'Mocked text for Partnerships and Coordination',
+                                                'Monitoring': 'Mocked text for Monitoring',
+                                                'Evaluation': 'Mocked text for Evaluation',
+                                        },
+                                        proposal_template: {
+                                                sections: [
+                                                        { section_name: 'Summary' }, { section_name: 'Rationale' }, { section_name: 'Project Description' },
+                                                        { section_name: 'Partnerships and Coordination' }, { section_name: 'Monitoring' }, { section_name: 'Evaluation' },
+                                                ]
+                                        }
+                                })
                         }),
                         http.post('http://localhost:8502/api/update-section-content', async ({request}) => {
                                 const body = await request.json()
