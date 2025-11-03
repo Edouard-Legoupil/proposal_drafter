@@ -30,7 +30,7 @@ export default function UploadReferenceModal({
       <div className="upload-modal-content">
         <h2>Upload PDF for Reference</h2>
         <p>
-          Could not ingest the reference from the URL. Please upload the PDF
+          Sorry. We could not automatically ingest the reference from the URL (likely because of bot scrapping prevention policy on that server). Please visit manuualy that page, save it as PDF and upload the PDF here
           manually.
         </p>
         <p>

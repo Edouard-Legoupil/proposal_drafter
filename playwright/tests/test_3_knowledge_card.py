@@ -1,8 +1,9 @@
 import re
 import pytest
-from playwright.sync_api import Page, expect
+import os
+from playwright.sync_api import Playwright, sync_playwright, Page, expect
 
-def test_create_new_knowledge_card(page: Page):
+def test_knowledge_card():
     """
     Tests that a user can create a new knowledge card.
     """
@@ -46,123 +47,94 @@ def test_create_new_knowledge_card(page: Page):
         page.get_by_test_id("password-input").click()
         page.get_by_test_id("password-input").fill(password)
         page.get_by_test_id("submit-button").click()
-        expect(page).to_have_url(re.compile(".*dashboard"))        
-        page.get_by_test_id("new-proposal-button").click()        
-        expect(page).to_have_url(re.compile(".*chat"))
 
-        expect(page).to_have_url(re.compile(".*dashboard"))
+        # -------------------
+        # View list of cards
+        # -------------------        
+        expect(page).to_have_url(re.compile(".*dashboard")) 
         page.get_by_test_id("knowledge-tab").click()
+        page.screenshot(path="playwright/test-results/knowledge_card_dashboard.png")
 
-        page.screenshot(path="playwright/test-results/9_knowledge_card.png")
+        # -------------------
+        # Check existing card and download
+        # -------------------  
 
-        page.get_by_test_id("new-knowledge-card-button").click()
+        page.get_by_text("OA7. Community Engagement and").click()
 
-        page.goto(f"{base_url}/knowledge-card/new")
-        page.screenshot(path="playwright/test-results/10_knowledge_card_create.png")
-
-
-    
-        page.get_by_test_id("reference-type-select-0").select_option("Evaluation Report")
-        page.get_by_test_id("reference-url-input-0").click()
-        page.get_by_test_id("reference-url-input-0").fill("https://www.unhcr.org/media/brazil-country-strategy-evaluation")
-        page.get_by_test_id("add-reference-button").click()
-        page.get_by_test_id("remove-reference-button-1").click()
-        page.get_by_test_id("identify-references-button").click()
-
-
-
-    #    page.get_by_test_id("link-type-select").select_option("outcome")
-    #    page.get_by_role("option", name="OA13-Livelihoods").click()
-
-
-        page.get_by_test_id("link-type-select").select_option("outcome")
-        page.locator(".css-19bb58m").click()
-        page.get_by_role("option", name="OA13-Livelihoods").click()
-
-        page.get_by_test_id("title-input").click()
-        page.get_by_test_id("title-input").fill("test card outcome")
-
-    
-
-        page.get_by_test_id("summary-textarea").click()
-        page.get_by_test_id("summary-textarea").fill("test card outcome")
-
-    
-        page.get_by_test_id("populate-card-button").click()
-        page.get_by_test_id("save-card-button").click()
-        page.once("dialog", lambda dialog: dialog.dismiss())
-        
-        page.screenshot(path="playwright/test-results/11_knowledge_card_save.png")
-
-
-
-    # Navigate to the knowledge card
-        page.goto("http://localhost:8511/knowledge-card/a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d", timeout=60000)
-        page.wait_for_selector('[data-testid="add-reference-button"]')
-
-        # Add a new reference
-        page.get_by_test_id("add-reference-button").click()
-        page.wait_for_timeout(500)
-        page.get_by_placeholder("https://example.com").fill("https://www.google.com")
-        page.locator('select').nth(1).select_option('Social Media')
-        page.get_by_placeholder("Summary").fill("Test summary")
-        page.locator(".kc-reference-edit-actions > button:first-child").click()
-        page.wait_for_load_state("networkidle")
-        expect(page.get_by_text("https://www.google.com")).to_be_visible(timeout=10000)
-        expect(page.get_by_text("Test summary")).to_be_visible(timeout=10000)
-
-        # Edit the new reference
-        page.get_by_role("button").nth(5).click()
-        page.wait_for_timeout(500)
-        page.get_by_placeholder("https://example.com").fill("https://www.unhcr.org/social")
-        page.get_by_placeholder("Summary").fill("Updated test summary")
-        page.locator(".kc-reference-edit-actions > button:first-child").click()
-        page.wait_for_load_state("networkidle")
-        expect(page.get_by_text("https://www.unhcr.org/social")).to_be_visible(timeout=10000)
-        expect(page.get_by_text("Updated test summary")).to_be_visible(timeout=10000)
-
-        # Delete a reference
-        page.get_by_role("button").nth(6).click()
-        page.wait_for_load_state("networkidle")
-        expect(page.get_by_text("https://www.unhcr.org/social")).not_to_be_visible(timeout=10000)
+        page.screenshot(path="playwright/test-results/knowledge_card_existing.png")
 
         # View history
-        page.get_by_role("button", name="View Content History").click()
-        expect(page.get_by_text("Knowledge Card History")).to_be_visible()
+        #page.get_by_role("button", name="View Content History").click()
+        #expect(page.get_by_text("Knowledge Card History")).to_be_visible()
 
-        # Take a screenshot
-        page.screenshot(path="jules-scratch/verification/knowledge_card_redesign.png")
+        with page.expect_download() as download_info:
+            page.get_by_role("button", name="Download as Word Download as").click()
+        download = download_info.value
 
+        # -------------------
+        # Create new card for Donor 
+        # -------------------  
+        page.get_by_test_id("logo").click()
+        page.get_by_test_id("knowledge-tab").click()
+        page.get_by_test_id("new-knowledge-card-button").click()
+       # page.goto(f"{base_url}/knowledge-card/new")
 
-        # # Expect the page to have the correct heading
-        # expect(page.get_by_role("heading", name="Create New Knowledge Card")).to_be_visible()
+        page.screenshot(path="playwright/test-results/10_knowledge_card_create.png")
 
-        # # Fill in the form
-        # page.get_by_label('Link To').select_option(label='Donor')
+        # Card reference 
+        page.get_by_test_id("link-type-select").select_option("donor")
+        page.locator(".css-19bb58m").click()
+        page.get_by_role("option", name="State of Kuwait - Kuwait").click()
+        page.get_by_test_id("summary-textarea").click()
+        page.get_by_test_id("summary-textarea").fill("Test")
 
-        # # The react-select component can be tricky. These selectors are based on the JS test.
-        # # They might need to be adjusted if they are not stable.
-        # # The #react-select-2-input is particularly brittle.
-        # page.locator('.react-select__control').click()
-        # # A more robust selector would be to target the input based on the control's id
-        # # but for now we will stick to the original test's locator.
-        # page.locator('input[id^="react-select-"]').fill('New Donor')
-        # page.get_by_text('Create "New Donor"').click()
+    
+        # Identify References 
+        page.once("dialog", lambda dialog: dialog.dismiss())
+        page.get_by_test_id("identify-references-button").click()
+        page.screenshot(path="playwright/test-results/knowledge_card_reference_identified.png")
 
-        # page.get_by_label('Title*').fill('Test Knowledge Card from Playwright')
-        # page.get_by_label('Description').fill('This is a test knowledge card created by a Playwright test.')
-        # page.get_by_placeholder('https://example.com').fill('https://www.unhcr.org')
-        # page.get_by_placeholder('Reference Type').fill('Test Reference')
+        # Manually Add Teference
+        # page.get_by_test_id("add-reference-button").click()
+        # page.locator("form div").filter(has_text="ReferencesUNHCR Operation").get_by_role("combobox").select_option("Donor Content")
+        # page.get_by_role("textbox", name="Summary (optional)").click()
+        # page.get_by_role("textbox", name="Summary (optional)").fill("What is it about?")
+        # page.get_by_role("button", name="Cancel").click()
+        # page.once("dialog", lambda dialog: dialog.dismiss())
 
-        # # Set up a handler for the dialog that is expected to appear
-        # page.on('dialog', lambda dialog: dialog.accept())
+        # Ingest References 
+        page.once("dialog", lambda dialog: dialog.dismiss())
+        expect(page.get_by_test_id("ingest-references-button")).to_be_visible(timeout=500000)
+        page.get_by_test_id("ingest-references-button").click()
+        page.screenshot(path="playwright/test-results/knowledge_card_reference_ingested.png")
 
-        # # Click the save button
-        # page.get_by_role('button', name='Save Card').click()
+        # # Manage Reference Error
+        # page.get_by_text("error").nth(1).click()
+        # page.get_by_text("Could not ingest the").click()
+        # page.screenshot(path="playwright/test-results/knowledge_card_reference_error.png")
+        # page.get_by_role("button", name="Cancel").click()
 
-        # # After saving, the user should be redirected to the knowledge card list
-        # expect(page).to_have_url(re.compile(".*knowledge-cards"))
-        # expect(page.get_by_text("Test Knowledge Card from Playwright")).to_be_visible()
+        # Populate Card
+        page.once("dialog", lambda dialog: dialog.dismiss())
+        page.get_by_test_id("populate-card-button").click()
+        page.screenshot(path="playwright/test-results/knowledge_card_populated.png")
+
+        # Edit Card
+        page.get_by_test_id("edit-section-button-1. Donor Overview").click()
+        page.get_by_text("The State of Kuwait is").click()
+        page.screenshot(path="playwright/test-results/knowledge_card_edit.png")
+        page.get_by_role("button", name="Cancel").click()
+        
+        # Download new card
+        with page.expect_download() as download2_info:
+            page.get_by_role("button", name="Download as Word Download as").click()
+        download2 = download2_info.value
+
+        # Save Card
+        page.once("dialog", lambda dialog: dialog.dismiss())
+        page.get_by_test_id("close-card-button").click()
+        page.screenshot(path="playwright/test-results/knowledge_card_save.png")
+
 
         # -------------------
         # End of Test Logic

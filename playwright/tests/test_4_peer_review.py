@@ -3,7 +3,7 @@ import pytest
 import os
 from playwright.sync_api import Playwright, sync_playwright, Page, expect
 
-def test_generate_new_proposal():
+def test_peer_review():
     """
     Tests that a user can generate a new proposal and records the video.
     """
@@ -47,52 +47,70 @@ def test_generate_new_proposal():
         page.get_by_test_id("password-input").fill(password)
         page.get_by_test_id("submit-button").click()
         expect(page).to_have_url(re.compile(".*dashboard"))        
-        page.get_by_test_id("new-proposal-button").click()        
-        expect(page).to_have_url(re.compile(".*chat"))
+
+        # Open Existing Project
+        page.get_by_text("Project: Refugee Children Education InitiativeViewTransferDelete Afghanistan -").click()
 
 
-
-        page.get_by_role("heading", name="Project: Refugee Children").first.click()
-        #page.get_by_role("article").filter(has_text="Refugee Children Education Initiative Establishing a comprehensive #primary").get_by_test_id("project-options-button").click()
-
+        # Submit for Peer Review
         page.get_by_role("button", name="Peer Review").click()
-        page.get_by_test_id("user-select-checkbox-5c092577-1230-4473-acf8-b6e3bfb02bca").check()
+        #page.get_by_test_id("user-select-checkbox-5c092577-1230-4473-acf8-b6e3bfb02bca").check()
+        page.get_by_text("Test User bis").click()
         page.get_by_test_id("deadline-input").fill("2025-11-19")
-
-        # page.get_by_role("button", name="Peer Review").click()
-        # page.locator("div").filter(has_text=re.compile(r"^Test User bis$")).nth(1).click()
-        # page.get_by_test_id("user-select-checkbox-5c092577-1230-4473-acf8-b6e3bfb02bca").check()
-        # page.get_by_test_id("deadline-input").fill("2025-11-19")
-        # page.get_by_test_id("confirm-button").click()
-        # page.get_by_test_id("logo").click()
-        
-        # Peer Review steps
-        # page.get_by_role("button", name="Peer Review").click()
-        # page.get_by_text("Test User bis").click()
-        # page.get_by_test_id("deadline-input").fill("2025-09-11")
-        
-
-        # Peer Review steps
-        #page.get_by_role("button", name="Peer Review").click()
-        #page.get_by_text("Test User bis").click()
-        #page.get_by_test_id("deadline-input").fill("2025-09-11")
-        
-        # Take screenshot  
-        #page.screenshot(path="playwright/test-results/6_peer_review.png")
-        #page.get_by_test_id("confirm-button").click()
-
-        # Take screenshot  
-        page.screenshot(path="playwright/test-results/6_peer_review.png")
-
+        page.screenshot(path="playwright/test-results/peer_review_set.png")
         page.get_by_test_id("confirm-button").click()
-        page.get_by_test_id("logo").click()
 
-       
-        #page.get_by_test_id("confirm-button").click()
 
+        # Log Out
+        page.get_by_test_id("user-menu-button").click()
+        page.get_by_test_id("logout-button").click()
+
+
+        # Log in with Peer Review User
+        page.get_by_test_id("email-input").click()
+        page.get_by_test_id("email-input").fill("test_user_bis@unhcr.org")
+        page.get_by_test_id("password-input").click()
+        page.get_by_test_id("password-input").fill("password123")
+        page.get_by_test_id("submit-button").click()
+
+
+        # Go to review and select the first one
+        page.get_by_test_id("reviews-tab").click()
+        page.get_by_test_id("review-card").first.click()
+
+
+        # Add Comments
+        page.get_by_test_id("comment-type-select-Summary").select_option("Clarity")
+        page.get_by_test_id("severity-select-Summary").select_option("High")
+        page.get_by_test_id("comment-textarea-Summary").click()
+        page.get_by_test_id("comment-textarea-Summary").fill("revise this whole part to make it clearer")
+        page.screenshot(path="playwright/test-results/peer_review_comment.png")
+
+        page.get_by_test_id("comment-type-select-Rationale").select_option("Impact")
+        page.get_by_test_id("comment-textarea-Rationale").click()
+        page.get_by_test_id("comment-textarea-Rationale").fill("Stress more the impact")
+        
+        # Put Review as completed and log out
+        page.get_by_test_id("review-completed-button-header").click()
+        page.screenshot(path="playwright/test-results/peer_review_completed.png")
+        page.get_by_test_id("user-menu-button").click()
+        page.get_by_test_id("logout-button").click()
+
+
+        # Log in with First user
+        page.get_by_test_id("email-input").click()
+        page.get_by_test_id("email-input").fill("test_user@unhcr.org")
+        page.get_by_test_id("password-input").click()
+        page.get_by_test_id("password-input").fill("password123")
+        page.get_by_test_id("submit-button").click()
+
+        # Open the project
+        page.get_by_text("Project: Refugee Children Education InitiativeViewTransferDelete Afghanistan -").click()
+        page.screenshot(path="playwright/test-results/peer_review_use.png")
+        
+        #page.get_by_role("button", name="Pre-Submission").click()
         page.get_by_test_id("logo").click()
         
-
         # -------------------
         # End of Test Logic
         # -------------------

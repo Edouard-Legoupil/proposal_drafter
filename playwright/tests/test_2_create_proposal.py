@@ -3,7 +3,7 @@ import pytest
 import os
 from playwright.sync_api import Playwright, sync_playwright, Page, expect
 
-def test_generate_new_proposal():
+def test_proposal():
     """
     Tests that a user can generate a new proposal and records the video.
     """
@@ -90,10 +90,7 @@ def test_generate_new_proposal():
         # Targeted Donor (creatable select)  -------
         page.locator(".targeted-donor__input-container").click()
         page.get_by_role("option", name="Sweden - Ministry for Foreign").click()
-
-
-        # Optional Screenshot - Video is being recorded anyway
-        page.screenshot(path="playwright/test-results/4_generate_proposal.png")
+        page.screenshot(path="playwright/test-results/proposal_generate.png")
         
         # Click the "Generate" button  -------
         page.get_by_role('button', name='Generate').click()
@@ -105,24 +102,27 @@ def test_generate_new_proposal():
         expect(page.get_by_test_id("section-options-0").get_by_role("button", name="edit-section-")).to_be_visible(timeout=500000)
         
 
-#    page.get_by_role("heading", name="Project: Refugee Children").first.click()
+# page.get_by_role("heading", name="Project: Refugee Children").first.click()
         page.get_by_role("complementary").get_by_text("Monitoring").click()
         page.get_by_test_id("section-options-4").get_by_role("button", name="edit-section-").click()
         page.get_by_role("button", name="edit-section-").click()
-        page.screenshot(path="playwright/test-results/6_edit_section.png")
+        page.screenshot(path="playwright/test-results/proposal_edit_section.png")
         page.get_by_text("Proposal Prompt").click()
-    # page.get_by_role("button", name="Button Icon Manage Knowledge").click()
-    # page.get_by_role("button", name="Cancel").click()
-    # page.get_by_role("button", name="Peer Review").click()
-    # page.get_by_test_id("user-select-checkbox-5c092577-1230-4473-acf8-b6e3bfb02bca").check()
-    # page.get_by_test_id("deadline-input").fill("2025-11-19")
-    # page.get_by_test_id("confirm-button").click()
-    # page.get_by_test_id("logo").click()
+        
+   # page.get_by_test_id("proposals-panel").get_by_text("Afghanistan - Sweden - Ministry for Foreign Affairs - OA7. Community Engagement").first.click()
+    # page.get_by_role("button", name="Regenerate").click()
+    # page.locator("header").filter(has_text="Regenerate — Summary").get_by_role("img").click()
+        
+        page.get_by_test_id("section-options-0").get_by_role("button", name="Regenerate").click()
+        page.locator("#regenerate-prompt").fill("Revise this section to fit in 200 characters")
+        page.screenshot(path="playwright/test-results/proposal_regenerate_section.png")
+        page.get_by_role("button", name="Button Icon Regenerate").click()
+        page.screenshot(path="playwright/test-results/proposal_regenerated_section.png")
 
+   # page.get_by_test_id("section-options-0").get_by_role("button", name="edit-section-").click()
+   # page.get_by_role("button", name="Cancel").click()
 
         #page.get_by_role("button", name="Regenerate").click()
-        #page.locator("#regenerate-prompt").fill("revise this section to fit in 200 characters")
-        #page.get_by_role("button", name="Button Icon Regenerate").click()
         #page.get_by_role("button", name="edit-section-").click()
         #page.get_by_test_id("section-options-0").get_by_role("button", name="edit-section-").click()
         #page.get_by_role("textbox", name="editor for Summary").click()
@@ -146,7 +146,7 @@ def test_generate_new_proposal():
         browser.close()
         
         # Optional: Rename the file to something more descriptive
-        new_video_path = os.path.join(VIDEO_DIR, "proposal_generation.webm")
+        new_video_path = os.path.join(VIDEO_DIR, "Proposal_Generation.webm")
         os.rename(video_path, new_video_path)
         print(f"Video saved successfully to: {new_video_path}")
 
