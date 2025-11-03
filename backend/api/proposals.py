@@ -1655,12 +1655,22 @@ async def get_peer_reviews(proposal_id: uuid.UUID, current_user: dict = Depends(
     user_id = current_user["user_id"]
     try:
         with get_engine().connect() as connection:
-            # Verify user has access
+            # Verify the user has access to the proposal (owner, reviewer, or admin)
             proposal_owner = connection.execute(
                 text("SELECT user_id FROM proposals WHERE id = :id"),
                 {"id": proposal_id}
             ).scalar()
-            if not proposal_owner or proposal_owner != user_id:
+
+            is_reviewer = connection.execute(
+                text("SELECT 1 FROM proposal_peer_reviews WHERE proposal_id = :pid AND reviewer_id = :rid"),
+                {"pid": proposal_id, "rid": user_id}
+            ).scalar()
+
+            if not proposal_owner:
+                raise HTTPException(status_code=404, detail="Proposal not found.")
+
+            user_role = current_user.get("role")
+            if user_role not in ["focal_point", "admin"] and proposal_owner != user_id and not is_reviewer:
                 raise HTTPException(status_code=403, detail="You do not have permission to view this proposal's reviews.")
 
             query = text("""
