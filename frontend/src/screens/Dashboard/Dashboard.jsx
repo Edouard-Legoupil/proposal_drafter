@@ -217,6 +217,7 @@ export default function Dashboard ()
 
         useEffect(() => {
             const findDuplicates = () => {
+                if (knowledgeCards.length === 0) return;
                 const groups = {};
                 knowledgeCards.forEach(card => {
                     let key = null;
