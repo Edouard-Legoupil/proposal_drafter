@@ -31,7 +31,7 @@ from backend.utils.crew_reference import ReferenceIdentificationCrew
 from backend.utils.crew_knowledge import ContentGenerationCrew
 from backend.utils.scraper import scrape_url
 from backend.utils.embedding_utils import process_and_store_text
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 import litellm
 import numpy as np
 import io

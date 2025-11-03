@@ -1,7 +1,7 @@
 import concurrent.futures
 import logging
 from sqlalchemy import text
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 import litellm
 import nltk
 from nltk.tokenize import sent_tokenize

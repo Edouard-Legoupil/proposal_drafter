@@ -31,7 +31,7 @@ export default function Review ()
                         setProposal(data)
                         const initialComments = {}
                         Object.keys(data.generated_sections).forEach(section => {
-                            initialComments[section] = {
+                            initialComments[section] = data.draft_comments[section] || {
                                 review_text: "",
                                 type_of_comment: "General",
                                 severity: "Medium"
@@ -58,6 +58,30 @@ export default function Review ()
                                 [field]: value
                         }
                 }))
+        }
+
+        async function handleSaveDraft() {
+                const comments = Object.entries(reviewComments).map(([section_name, comment_data]) => ({
+                        section_name,
+                        ...comment_data
+                }));
+
+                const response = await fetch(`${API_BASE_URL}/proposals/${proposal_id}/save-draft-review`, {
+                        method: "POST",
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ comments }),
+                        credentials: "include"
+                })
+
+                if(response.ok)
+                {
+                        alert("Draft saved successfully!")
+                }
+                else if(response.status === 401)
+                {
+                        sessionStorage.setItem("session_expired", "Session expired. Please login again.")
+                        navigate("/login")
+                }
         }
 
         async function handleSubmitReview() {
@@ -93,7 +117,10 @@ export default function Review ()
                 <div className="Review">
                         <div className="Review_header">
                                 <h1>Reviewing: {proposal.form_data['Project Draft Short name']}</h1>
-                                <CommonButton label="Review Completed" onClick={handleSubmitReview} data-testid="review-completed-button-header" />
+                                <div>
+                                    <CommonButton label="Save as draft review" onClick={handleSaveDraft} data-testid="save-draft-button-header" />
+                                    <CommonButton label="Peer review completed" onClick={handleSubmitReview} data-testid="review-completed-button-header" />
+                                </div>
                         </div>
                         <div className="Review_proposal">
                                 {Object.entries(proposal.generated_sections).map(([section, content]) => (
@@ -126,7 +153,8 @@ export default function Review ()
                                 ))}
                         </div>
                         <div className="Review_footer">
-                                <CommonButton label="Review Completed" onClick={handleSubmitReview} data-testid="review-completed-button-footer" />
+                                <CommonButton label="Save as draft review" onClick={handleSaveDraft} data-testid="save-draft-button-footer" />
+                                <CommonButton label="Peer review completed" onClick={handleSubmitReview} data-testid="review-completed-button-footer" />
                         </div>
                 </div>
         </Base>
