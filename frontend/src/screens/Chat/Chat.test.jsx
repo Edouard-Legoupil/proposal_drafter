@@ -151,8 +151,11 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                 const sections = ['Summary','Rationale','Project Description', "Partnerships and Coordination", "Monitoring", "Evaluation"]
 
                 for (const sec of sections) {
-                        const card = await screen.findByText(new RegExp(`Mocked text for ${sec}`, 'i'), { timeout: 10000 });
-                        expect(card).toBeInTheDocument();
+                        const kebabSectionName = sec.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+                        await waitFor(async () => {
+                                const sectionContent = await screen.findByTestId(`section-content-${kebabSectionName}`);
+                                expect(sectionContent).toHaveTextContent(new RegExp(`Mocked text for ${sec}`, 'i'));
+                        });
                 }
         }, 20000)
 
@@ -225,16 +228,19 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                 const sections = ['Summary','Rationale','Project Description', "Partnerships and Coordination", "Monitoring", "Evaluation"]
 
                 for (const sec of sections) {
-                        const card = await screen.findByText(new RegExp(`Mocked text for ${sec}`, 'i'), { timeout: 10000 });
-                        expect(card).toBeInTheDocument();
+                        const kebabSectionName = sec.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+                        await waitFor(async () => {
+                                const sectionContent = await screen.findByTestId(`section-content-${kebabSectionName}`);
+                                expect(sectionContent).toHaveTextContent(new RegExp(`Mocked text for ${sec}`, 'i'));
+                        });
                 }
 
-                const editButton = screen.getByLabelText('edit-section-0')
+                const editButton = screen.getByTestId('edit-save-button-summary')
                 expect(editButton).toBeInTheDocument()
 
                 await userEvent.click(editButton)
 
-                const editor = screen.getByRole('textbox', { name: /editor for Summary/i })
+                const editor = screen.getByTestId('section-editor-summary')
                 expect(editor).toBeInTheDocument()
                 expect(editor).toHaveValue('Mocked text for Summary')
 

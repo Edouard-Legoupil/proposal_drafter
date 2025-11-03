@@ -1417,12 +1417,30 @@ async def generate_and_download_document(
             # Return the DOCX file by default.
             try:
 
-                card_name = card_dict.get("donor_name") or card_dict.get("outcome_name") or card_dict.get("field_context_name")
-                doc = create_word_from_knowledge_card(card_name, ordered_sections)
+                base_name = card_dict.get("donor_name") or card_dict.get("outcome_name") or card_dict.get("field_context_name")
+                summary_text = card_dict.get("summary")
+
+                # Combine the base name and summary for the filename
+                file_name_parts = []
+                if base_name:
+                    file_name_parts.append(base_name)
+                if summary_text:
+                    file_name_parts.append(summary_text)
+
+                combined_name = " ".join(file_name_parts)
+
+                # Fallback if both are missing
+                if not combined_name:
+                    combined_name = "untitled-knowledge-card"
+
+                # Use the base name for the document title, fallback to summary or generic title
+                doc_title = base_name or summary_text or "Knowledge Card"
+                doc = create_word_from_knowledge_card(doc_title, ordered_sections)
+
                 docx_buffer = io.BytesIO()
                 doc.save(docx_buffer)
                 docx_buffer.seek(0)
-                sanitized_filename = slugify(card_name).replace('.', '-')
+                sanitized_filename = slugify(combined_name)
                 return StreamingResponse(
                     docx_buffer,
                     media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',

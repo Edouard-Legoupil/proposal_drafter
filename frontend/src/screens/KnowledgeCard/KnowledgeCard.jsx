@@ -899,11 +899,19 @@ export default function KnowledgeCard() {
 
             if(response.ok)
             {
+                    const contentDisposition = response.headers.get('Content-Disposition');
+                    let filename = "knowledge-card.docx"; // Default filename
+                    if (contentDisposition) {
+                        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+                        if (filenameMatch && filenameMatch[1]) {
+                            filename = filenameMatch[1];
+                        }
+                    }
+
                     const blob = await response.blob();
                     const link = document.createElement('a');
                     link.href = URL.createObjectURL(blob);
-                    const selectedItem = linkOptions.find(o => o.id === linkedId);
-                    link.download = selectedItem ? selectedItem.name : "knowledge-card" + "." + format;
+                    link.download = filename;
                     document.body.appendChild(link);
                     link.click();
                     link.remove();
@@ -953,27 +961,28 @@ export default function KnowledgeCard() {
 
             <LoadingModal isOpen={loading} message={loadingMessage} />
 
-            <div className="kc-container">
+            <div className="kc-container" data-testid="knowledge-card-container">
                 <div className="kc-form-container">
-                    <form onSubmit={handlePopulate} className="kc-form">
+                    <form onSubmit={handlePopulate} className="kc-form" data-testid="knowledge-card-form">
                         {/* Header */}
                         <div className="kc-form-header">
-                            <h2>{id ? 'View/Edit Knowledge Card' : 'Create New Knowledge Card'}</h2>
+                            <h2 data-testid="kc-form-header-title">{id ? 'View/Edit Knowledge Card' : 'Create New Knowledge Card'}</h2>
                             {id && (
-                                <CommonButton 
-                                    type="button" 
-                                    onClick={fetchHistory} 
-                                    label="View Content History" 
+                                <CommonButton
+                                    type="button"
+                                    onClick={fetchHistory}
+                                    label="View Content History"
+                                    data-testid="view-history-button"
                                 />
                             )}
                         </div>
 
                         {/* Form Fields */}
                         <label htmlFor="kc-link-type">Link To</label>
-                        <select 
-                            id="kc-link-type" 
-                            value={linkType} 
-                            onChange={e => setLinkType(e.target.value)} 
+                        <select
+                            id="kc-link-type"
+                            value={linkType}
+                            onChange={e => setLinkType(e.target.value)}
                             data-testid="link-type-select"
                             required
                         >
@@ -986,10 +995,10 @@ export default function KnowledgeCard() {
                         {linkType === 'field_context' && (
                             <>
                                 <label htmlFor="kc-geo-coverage">Geographic Coverage</label>
-                                <select 
-                                    id="kc-geo-coverage" 
-                                    value={selectedGeoCoverage} 
-                                    onChange={e => setSelectedGeoCoverage(e.target.value)} 
+                                <select
+                                    id="kc-geo-coverage"
+                                    value={selectedGeoCoverage}
+                                    onChange={e => setSelectedGeoCoverage(e.target.value)}
                                     data-testid="geo-coverage-select"
                                 >
                                     <option value="">All</option>
@@ -1007,7 +1016,7 @@ export default function KnowledgeCard() {
                                     isClearable
                                     id="kc-linked-id"
                                     name="kc-linked-id"
-                                    value={linkOptions.find(o => o.id === linkedId) ? 
+                                    value={linkOptions.find(o => o.id === linkedId) ?
                                         { value: linkedId, label: linkOptions.find(o => o.id === linkedId).name } : null}
                                     onChange={option => setLinkedId(option ? option.value : '')}
                                     onCreateOption={inputValue => {
@@ -1025,12 +1034,12 @@ export default function KnowledgeCard() {
                         )}
 
                         <label htmlFor="kc-summary">Description*</label>
-                        <textarea 
-                            id="kc-summary" 
-                            value={summary} 
-                            onChange={e => setSummary(e.target.value)} 
-                            required 
-                            data-testid="summary-textarea" 
+                        <textarea
+                            id="kc-summary"
+                            value={summary}
+                            onChange={e => setSummary(e.target.value)}
+                            required
+                            data-testid="summary-textarea"
                             placeholder="Enter a description for this knowledge card..."
                         />
 
@@ -1051,34 +1060,34 @@ export default function KnowledgeCard() {
                         {/* Form Actions */}
                         <div className="kc-form-actions-box">
                             <div className="kc-form-actions">
-                                <CommonButton 
-                                    type="button" 
-                                    onClick={handleIdentifyReferences} 
-                                    label="1. Identify References" 
-                                    className="squared-btn" 
+                                <CommonButton
+                                    type="button"
+                                    onClick={handleIdentifyReferences}
+                                    label="1. Identify References"
+                                    className="squared-btn"
                                     data-testid="identify-references-button"
                                     disabled={!linkType || !linkedId}
                                 />
-                                <CommonButton 
-                                    type="button" 
-                                    onClick={handleIngestReferences} 
-                                    label="2. Ingest References" 
-                                    className="squared-btn" 
+                                <CommonButton
+                                    type="button"
+                                    onClick={handleIngestReferences}
+                                    label="2. Ingest References"
+                                    className="squared-btn"
                                     data-testid="ingest-references-button"
                                     disabled={references.length === 0}
                                 />
-                                <CommonButton 
-                                    type="submit" 
-                                    label="3. Populate Card Content" 
-                                    className="squared-btn" 
+                                <CommonButton
+                                    type="submit"
+                                    label="3. Populate Card Content"
+                                    className="squared-btn"
                                     data-testid="populate-card-button"
                                     disabled={!linkType || !linkedId}
                                 />
-                                <CommonButton 
-                                    type="button" 
-                                    onClick={() => handleSave()} 
-                                    label="Save & Close" 
-                                    className="squared-btn" 
+                                <CommonButton
+                                    type="button"
+                                    onClick={() => handleSave()}
+                                    label="Save & Close"
+                                    className="squared-btn"
                                     data-testid="close-card-button"
                                 />
                             </div>
@@ -1088,10 +1097,10 @@ export default function KnowledgeCard() {
 
                 {/* Generated Content Section - Automatically shows when content exists */}
                 {generatedSections && proposal_template && proposal_template.sections && (
-                    <div className="kc-content-container">
+                    <div className="kc-content-container" data-testid="generated-content-container">
                         <div className="kc-content-header">
                             <h2>Generated Content</h2>
-                            <button type="button" onClick={() => handleExport("docx")} className="download-word-btn">
+                            <button type="button" onClick={() => handleExport("docx")} className="download-word-btn" data-testid="export-word-button">
                                 <img src={word_icon} alt="Download as Word" />
                                 Download as Word
                             </button>
@@ -1101,9 +1110,9 @@ export default function KnowledgeCard() {
                             const content = generatedSections[section];
                             // Only show sections that have content
                             if (!content) return null;
-                            
+
                             return (
-                                <div key={section} className={`kc-section ${editingSection === section ? 'kc-section-editing' : ''}`}>
+                                <div key={section} className={`kc-section ${editingSection === section ? 'kc-section-editing' : ''}`} data-testid={`generated-section-${section}`}>
                                     <h3>{section}</h3>
                                     {editingSection === section ? (
                                         <textarea
@@ -1111,30 +1120,33 @@ export default function KnowledgeCard() {
                                             value={editedContent}
                                             onChange={(e) => setEditedContent(e.target.value)}
                                             rows={10}
+                                            data-testid={`edit-section-textarea-${section}`}
                                         />
                                     ) : (
-                                        <div className="kc-section-content">
+                                        <div className="kc-section-content" data-testid={`section-content-${section}`}>
                                             <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
                                         </div>
                                     )}
                                     <div className="kc-section-actions">
                                         {editingSection === section ? (
                                             <>
-                                                <button 
+                                                <button
                                                     type="button"
                                                     onClick={() => handleSaveClick(section)}
+                                                    data-testid={`save-section-button-${section}`}
                                                 >
                                                     Save
                                                 </button>
-                                                <button 
+                                                <button
                                                     type="button"
                                                     onClick={handleCancelClick}
+                                                    data-testid={`cancel-edit-button-${section}`}
                                                 >
                                                     Cancel
                                                 </button>
                                             </>
                                         ) : (
-                                            <button 
+                                            <button
                                                 type="button"
                                                 onClick={() => handleEditClick(section, content)}
                                                 data-testid={`edit-section-button-${section}`}

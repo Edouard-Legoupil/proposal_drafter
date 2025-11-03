@@ -26,6 +26,7 @@ def setup_cors_middleware(app):
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["Content-Disposition"],
     )
 
 def get_cookie_settings(request: Request) -> dict:
