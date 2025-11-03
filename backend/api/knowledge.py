@@ -894,6 +894,12 @@ async def upload_pdf_reference(
         with engine.begin() as connection:
             await process_and_store_text(reference_id, text_content, connection)
 
+            # Clear any previous scraping errors
+            connection.execute(
+                text("UPDATE knowledge_card_references SET scraping_error = FALSE WHERE id = :id"),
+                {"id": str(reference_id)}
+            )
+
         return {"status": "success", "message": "PDF content ingested successfully."}
     except Exception as e:
         logger.error(f"Error processing PDF for reference {reference_id}: {e}", exc_info=True)

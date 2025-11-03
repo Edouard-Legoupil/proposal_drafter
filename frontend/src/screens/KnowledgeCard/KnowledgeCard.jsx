@@ -810,74 +810,28 @@ export default function KnowledgeCard() {
 
     const handleUploadReference = async (referenceId, file) => {
         setLoading(true);
-        setLoadingMessage('Uploading file...');
+        setLoadingMessage('Uploading and processing file...');
         const formData = new FormData();
         formData.append('file', file);
 
         try {
-            // Step 1: Upload the file
             const uploadResponse = await authenticatedFetch(
                 `${API_BASE_URL}/knowledge-cards/references/${referenceId}/upload`,
                 { method: 'POST', body: formData, credentials: 'include' }
             );
 
-            if (!uploadResponse.ok) {
+            if (uploadResponse.ok) {
+                setIsUploadModalOpen(false);
+                //  The backend now clears the error, so we just need to refresh.
+                await fetchData();
+            } else {
                 const error = await uploadResponse.json();
-                console.error(`Upload failed: ${error.detail}`);
-                setLoading(false);
-                setLoadingMessage('');
-                return;
+                alert(`Upload failed: ${error.detail}`);
             }
-
-            // Step 2: Close modal and trigger re-ingestion of the single reference
-            setIsUploadModalOpen(false);
-            setLoadingMessage('File uploaded. Re-ingesting reference...');
-
-            const reingestResponse = await authenticatedFetch(
-                `${API_BASE_URL}/knowledge-cards/${id}/references/${referenceId}/reingest`,
-                { method: 'POST', credentials: 'include' }
-            );
-
-            if (!reingestResponse.ok) {
-                const error = await reingestResponse.json();
-                console.error(`Failed to start re-ingestion: ${error.detail}`);
-                setLoading(false);
-                setLoadingMessage('');
-                return;
-            }
-
-            // Step 3: Listen for SSE updates for the single reference
-            const onMessage = (data) => {
-                if (data.reference_id === referenceId) {
-                    setReferences(prev => prev.map(ref =>
-                        ref.id === referenceId ? { ...ref, status: data.status, status_message: data.message } : ref
-                    ));
-
-                    if (['ingested', 'error', 'skipped'].includes(data.status)) {
-                        if (eventSourceRef.current) eventSourceRef.current.close();
-                        setLoading(false);
-                        setLoadingMessage('');
-                    }
-                }
-            };
-
-            const onError = (error) => {
-                console.error('Re-ingestion SSE error:', error);
-                setLoading(false);
-                setLoadingMessage('');
-            };
-
-            const onTimeout = () => {
-                console.warn('Re-ingestion timed out.');
-                setLoading(false);
-                setLoadingMessage('');
-            };
-
-            const closeSse = setupSse(`${API_BASE_URL}/knowledge-cards/${id}/ingest-status`, onMessage, onError, onTimeout);
-            eventSourceRef.current = { close: closeSse };
-
         } catch (error) {
-            console.error('An error occurred during the upload/re-ingest process:', error);
+            console.error('An error occurred during the upload process:', error);
+            alert('An unexpected error occurred during the file upload.');
+        } finally {
             setLoading(false);
             setLoadingMessage('');
         }
