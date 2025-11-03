@@ -1013,7 +1013,7 @@ export default function Chat (props)
         }
 
         return  <Base>
-                <div className={`Chat ${isMobile && isMobileMenuOpen ? 'mobile-menu-open' : ''}`}>
+                <div className={`Chat ${isMobile && isMobileMenuOpen ? 'mobile-menu-open' : ''}`} data-testid="chat-container">
                         <MultiSelectModal
                                 isOpen={isPeerReviewModalOpen}
                                 onClose={() => setIsPeerReviewModalOpen(false)}
@@ -1034,10 +1034,11 @@ export default function Chat (props)
                                 initialSelection={associatedKnowledgeCards}
                         />
                         {((!isMobile && sidebarOpen) || (isMobile && isMobileMenuOpen)) && <aside>
-                                <ul className='Chat_sidebar'>
+                                <ul className='Chat_sidebar' data-testid="chat-sidebar">
                                         <li
                                                 className={`Chat_sidebarOption ${selectedSection === -1 ? "selectedSection" : ""}`}
                                                 onClick={() => handleSidebarSectionClick(-1)}
+                                                data-testid="sidebar-option-proposal-prompt"
                                         >
                                                 Proposal Prompt
                                         </li>
@@ -1047,6 +1048,7 @@ export default function Chat (props)
                                                         key={i}
                                                         className={`Chat_sidebarOption ${selectedSection === i ? "selectedSection" : ""}`}
                                                         onClick={() => handleSidebarSectionClick(i)}
+                                                        data-testid={`sidebar-option-${toKebabCase(section.section_name)}`}
                                                 >
                                                         {section.section_name}
                                                 </li>
@@ -1055,6 +1057,7 @@ export default function Chat (props)
                                                         key={i}
                                                         className={`Chat_sidebarOption ${selectedSection === i ? "selectedSection" : ""}`}
                                                         onClick={() => handleSidebarSectionClick(i)}
+                                                        data-testid={`sidebar-option-${toKebabCase(section)}`}
                                                 >
                                                         {section}
                                                 </li>
@@ -1062,14 +1065,14 @@ export default function Chat (props)
                                 </ul>
                         </aside>}
 
-                        <main className="Chat_right" ref={topRef}>
-                                <button className="Chat_menuButton" onClick={() => setIsMobileMenuOpen(p => !p)}>
+                        <main className="Chat_right" ref={topRef} data-testid="chat-main">
+                                <button className="Chat_menuButton" onClick={() => setIsMobileMenuOpen(p => !p)} data-testid="mobile-menu-button">
                                         <i className="fa-solid fa-bars"></i>
                                 </button>
                                 {!isApproved ?
                                         <>
                                                 <div className='Dashboard_top'>
-                                                        <div className='Dashboard_label'>
+                                                        <div className='Dashboard_label' data-testid="chat-title">
                                                                 <img className='Dashboard_label_fileIcon' src={fileIcon} />
                                                                 {titleName}
                                                         </div>
@@ -1077,18 +1080,19 @@ export default function Chat (props)
 
                                                 <div className="Chat_inputArea">
                                                         {renderFormField("Project Draft Short name", proposalStatus !== 'draft')}
-                                                        <textarea id="main-prompt" name="main-prompt" value={userPrompt} onChange={e => setUserPrompt(e.target.value)} placeholder='Provide as much details as possible on your initial project idea!' className='Chat_inputArea_prompt' disabled={proposalStatus !== 'draft'} />
+                                                        <textarea id="main-prompt" name="main-prompt" value={userPrompt} onChange={e => setUserPrompt(e.target.value)} placeholder='Provide as much details as possible on your initial project idea!' className='Chat_inputArea_prompt' disabled={proposalStatus !== 'draft'} data-testid="main-prompt" />
 
                                                         <span
                                                             onClick={() => proposalStatus === 'draft' && setFormExpanded(p => !p)}
                                                             className={`Chat_inputArea_additionalDetails ${form_expanded && "expanded"} ${proposalStatus !== 'draft' ? 'disabled' : ''}`}
+                                                            data-testid="specify-parameters-expander"
                                                         >
                                                             Specify Parameters
                                                             <img src={arrow} alt="Arrow" />
                                                         </span>
 
                                                         {form_expanded ?
-                                                                <form className='Chat_form'>
+                                                                <form className='Chat_form' data-testid="chat-form">
                                                                         <div className='Chat_form_group'>
                                                                                 <div className="tooltip-container">
                                                                                         <h3 className='Chat_form_group_title'>Identify Potential Interventions</h3>
@@ -1120,9 +1124,9 @@ export default function Chat (props)
 
                                                         <div className="Chat_inputArea_buttonContainer">
                                                                 <div style={{ position: 'relative' }}>
-                                                                        <CommonButton onClick={() => setIsAssociateKnowledgeModalOpen(true)} label="Manage Knowledge" disabled={proposalStatus !== 'draft'} icon={knowIcon}/>
+                                                                        <CommonButton onClick={() => setIsAssociateKnowledgeModalOpen(true)} label="Manage Knowledge" disabled={proposalStatus !== 'draft'} icon={knowIcon} data-testid="manage-knowledge-button"/>
                                                                         {associatedKnowledgeCards.length > 0 && (
-                                                                                <div className="associated-knowledge-display">
+                                                                                <div className="associated-knowledge-display" data-testid="associated-knowledge-cards">
                                                                                         <h4>Associated Knowledge Cards:</h4>
                                                                                         <ul>
                                                                                                 {associatedKnowledgeCards.map(card => {
@@ -1146,7 +1150,7 @@ export default function Chat (props)
                                                                 </div>
                                                                 
                                                                 <div style={{ marginLeft: 'auto' }}>
-                                                                        <CommonButton onClick={handleGenerateClick} icon={generateIcon} label={generateLabel} loading={generateLoading} loadingLabel={generateLabel === "Generate" ? "Generating (~ 2 mins of patience...) " : "Regenerating (~ 2 mins of patience...)"} disabled={!buttonEnable || proposalStatus !== 'draft'}/>
+                                                                        <CommonButton onClick={handleGenerateClick} icon={generateIcon} label={generateLabel} loading={generateLoading} loadingLabel={generateLabel === "Generate" ? "Generating (~ 2 mins of patience...) " : "Regenerating (~ 2 mins of patience...)"} disabled={!buttonEnable || proposalStatus !== 'draft'} data-testid="generate-button"/>
                                                                 </div>
                                                         </div>
                                                 </div>
@@ -1163,11 +1167,11 @@ export default function Chat (props)
                                                 </div>
 
                                                 {Object.keys(proposal).length > 0 ? <div className='Chat_exportButtons'>
-                                                        <button type="button" onClick={() => handleExport("docx")}>
+                                                        <button type="button" onClick={() => handleExport("docx")} data-testid="export-word-button">
                                                                 <img src={word_icon} />
                                                                 Download Document
                                                         </button>
-                                                        <button type="button" onClick={() => handleExportTables()}>
+                                                        <button type="button" onClick={() => handleExportTables()} data-testid="export-excel-button">
                                                                 <img src={excel_icon} />
                                                                 Download Tables
                                                         </button>
@@ -1204,11 +1208,12 @@ export default function Chat (props)
                                                                                                     if (status === 'approved' && proposalStatus === 'submitted') handleApprove();
                                                                                             }}
                                                                                             disabled={!isClickable && !isActive}
+                                                                                            data-testid={`workflow-status-badge-${status}`}
                                                                                     >
                                                                                             {statusDetails[status].text}
                                                                                     </button>
                                                                                     {statusHistory.includes(status) && !isActive && (
-                                                                                        <button className="revert-btn" onClick={() => handleRevert(status)}>
+                                                                                        <button className="revert-btn" onClick={() => handleRevert(status)} data-testid={`revert-button-${status}`}>
                                                                                             Revert
                                                                                         </button>
                                                                                     )}
@@ -1219,47 +1224,48 @@ export default function Chat (props)
                                                             </div>
                                                              {proposalStatus === 'approved' && (
                                                                 <div className="upload-approved-container">
-                                                                    <label htmlFor="approved-doc-upload" className="upload-label">
+                                                                    <label htmlFor="approved-doc-upload" className="upload-label" data-testid="upload-approved-doc-label">
                                                                         Upload Approved Document
                                                                     </label>
-                                                                    <input id="approved-doc-upload" type="file" onChange={handleFileUpload} />
+                                                                    <input id="approved-doc-upload" type="file" onChange={handleFileUpload} data-testid="upload-approved-doc-input"/>
                                                                 </div>
                                                              )}
                                                         </div>
                                                 </div> : ""}
                                         </div>
 
-                                        <div ref={proposalRef} className="Chat_proposalContainer">
+                                        <div ref={proposalRef} className="Chat_proposalContainer" data-testid="proposal-container">
                                                 {(proposalTemplate ? proposalTemplate.sections.map(s => s.section_name) : Object.keys(proposal)).map((sectionName, i) => {
                                                         const sectionObj = proposal[sectionName];
                                                         const sectionReviews = reviews.filter(r => r.section_name === sectionName);
 
                                                         if (!sectionObj) return null;
+                                                        const kebabSectionName = toKebabCase(sectionName);
 
                                                         return (
-                                                                <div key={i} className="Chat_proposalSection">
-                                                                        <div className="Chat_sectionHeader">
-                                                                                 <div className="Chat_sectionTitle">{sectionName}</div>
+                                                                <div key={i} className="Chat_proposalSection" data-testid={`proposal-section-${kebabSectionName}`}>
+                                                                        <div className="Chat_sectionHeader" data-testid={`section-header-${kebabSectionName}`}>
+                                                                                 <div className="Chat_sectionTitle" data-testid={`section-title-${kebabSectionName}`}>{sectionName}</div>
 
-                                                                                {!generateLoading && sectionObj.content && sectionObj.open && !isApproved ? <div className="Chat_sectionOptions" data-testid={`section-options-${i}`}>
-                                                                                        {!isEdit || (selectedSection === i && isEdit) ? <button type="button" onClick={() => handleEditClick(i)} style={(selectedSection === i && isEdit && regenerateSectionLoading) ? {pointerEvents: "none"} : {}} aria-label={`edit-section-${i}`} disabled={proposalStatus === 'in_review'}>
+                                                                                {!generateLoading && sectionObj.content && sectionObj.open && !isApproved ? <div className="Chat_sectionOptions" data-testid={`section-options-${kebabSectionName}`}>
+                                                                                        {!isEdit || (selectedSection === i && isEdit) ? <button type="button" onClick={() => handleEditClick(i)} style={(selectedSection === i && isEdit && regenerateSectionLoading) ? {pointerEvents: "none"} : {}} aria-label={`edit-section-${i}`} disabled={proposalStatus === 'in_review'} data-testid={`edit-save-button-${kebabSectionName}`}>
                                                                                                 <img src={(selectedSection === i && isEdit) ? save : edit} />
                                                                                                 <span>{(selectedSection === i && isEdit) ? "Save" : "Edit"}</span>
                                                                                         </button> : "" }
 
-                                                                                        {selectedSection === i && isEdit ? <button type="button" onClick={() => setIsEdit(false)}>
+                                                                                        {selectedSection === i && isEdit ? <button type="button" onClick={() => setIsEdit(false)} data-testid={`cancel-edit-button-${kebabSectionName}`}>
                                                                                                 <img src={cancel} />
                                                                                                 <span>Cancel</span>
                                                                                         </button> : "" }
 
                                                                                         {!isEdit ?
                                                                                                 <>
-                                                                                                        <button type="button" onClick={() => handleCopyClick(i, sectionObj.content)}>
+                                                                                                        <button type="button" onClick={() => handleCopyClick(i, sectionObj.content)} data-testid={`copy-button-${kebabSectionName}`}>
                                                                                                                 <img src={(selectedSection === i && isCopied) ? tick : copy} />
                                                                                                                 <span>{(selectedSection === i && isCopied) ? "Copied" : "Copy"}</span>
                                                                                                         </button>
 
-                                                                                                        <button type="button" className='Chat_sectionOptions_regenerate' onClick={() => handleRegenerateIconClick(i)} disabled={proposalStatus !== 'draft'} >
+                                                                                                        <button type="button" className='Chat_sectionOptions_regenerate' onClick={() => handleRegenerateIconClick(i)} disabled={proposalStatus !== 'draft'} data-testid={`regenerate-button-${kebabSectionName}`} >
                                                                                                                 <img src={regenerate} />
                                                                                                                 <span>Regenerate</span>
                                                                                                         </button>
@@ -1267,15 +1273,15 @@ export default function Chat (props)
                                                                                         : "" }
                                                                                 </div> : ""}
 
-                                                                                {sectionObj.content && !(isEdit && selectedSection === i) ? <div className={`Chat_expanderArrow ${sectionObj.open ? "" : "closed"}`} onClick={() => handleExpanderToggle(i)}>
+                                                                                {sectionObj.content && !(isEdit && selectedSection === i) ? <div className={`Chat_expanderArrow ${sectionObj.open ? "" : "closed"}`} onClick={() => handleExpanderToggle(i)} data-testid={`section-expander-${kebabSectionName}`}>
                                                                                         <img src={arrow} />
                                                                                 </div> : ""}
                                                                         </div>
 
-                                                                        {(sectionObj.open || !sectionObj.content) ? <div className='Chat_sectionContent'>
+                                                                        {(sectionObj.open || !sectionObj.content) ? <div className='Chat_sectionContent' data-testid={`section-content-${kebabSectionName}`}>
                                                                                 {sectionObj.content ?
                                                                                         (selectedSection === i && isEdit) ?
-                                                                                                <textarea value={editorContent} onChange={e => setEditorContent(e.target.value)} aria-label={`editor for ${sectionName}`} />
+                                                                                                <textarea value={editorContent} onChange={e => setEditorContent(e.target.value)} aria-label={`editor for ${sectionName}`} data-testid={`section-editor-${kebabSectionName}`} />
                                                                                                 :
                                                                                                 <Markdown remarkPlugins={[remarkGfm]}>{sectionObj.content}</Markdown>
                                                                                         :
@@ -1287,7 +1293,7 @@ export default function Chat (props)
                                                                         </div> : ""}
 
                                                                          {proposalStatus === 'submission' && sectionReviews.length > 0 && (
-                                                                             <div className="reviews-container">
+                                                                             <div className="reviews-container" data-testid={`reviews-container-${kebabSectionName}`}>
                                                                                  <h4>Peer Reviews</h4>
                                                                                  {sectionReviews.map(review => (
                                                                                      <div key={review.id} className="review">
@@ -1297,6 +1303,7 @@ export default function Chat (props)
                                                                                                  placeholder="Respond to this review..."
                                                                                                  defaultValue={review.author_response || ''}
                                                                                                  onBlur={(e) => handleSaveResponse(review.id, e.target.value)}
+                                                                                                 data-testid={`review-response-textarea-${review.id}`}
                                                                                              />
                                                                                          </div>
                                                                                      </div>
@@ -1310,18 +1317,18 @@ export default function Chat (props)
                                 </> : ""}
                         </main>
 
-                        <dialog ref={dialogRef} className='Chat_regenerate'>
+                        <dialog ref={dialogRef} className='Chat_regenerate' data-testid="regenerate-dialog">
                                 <header className='Chat_regenerate_header'>
                                         Regenerate — {proposalTemplate ? proposalTemplate.sections[selectedSection]?.section_name : Object.keys(proposal)[selectedSection]}
-                                        <img src={regenerateClose} onClick={() => {setRegenerateSectionLoading(false); setRegenerateInput(""); dialogRef.current.close()}} />
+                                        <img src={regenerateClose} onClick={() => {setRegenerateSectionLoading(false); setRegenerateInput(""); dialogRef.current.close()}} data-testid="regenerate-dialog-close-button" />
                                 </header>
 
                                 <main className='Chat_right'>
                                         <section className='Chat_inputArea'>
-                                                <textarea id="regenerate-prompt" name="regenerate-prompt" value={regenerateInput} onChange={e => setRegenerateInput(e.target.value)} className='Chat_inputArea_prompt' />
+                                                <textarea id="regenerate-prompt" name="regenerate-prompt" value={regenerateInput} onChange={e => setRegenerateInput(e.target.value)} className='Chat_inputArea_prompt' data-testid="regenerate-dialog-prompt-input"/>
 
                                                 <div className="Chat_inputArea_buttonContainer" style={{marginTop: "20px"}}>
-                                                        <CommonButton icon={generateIcon} onClick={() => handleRegenerateButtonClick()} label="Regenerate" loading={regenerateSectionLoading} loadingLabel="Regenerating" disabled={!regenerateInput} />
+                                                        <CommonButton icon={generateIcon} onClick={() => handleRegenerateButtonClick()} label="Regenerate" loading={regenerateSectionLoading} loadingLabel="Regenerating" disabled={!regenerateInput} data-testid="regenerate-dialog-regenerate-button" />
                                                 </div>
                                         </section>
                                 </main>
