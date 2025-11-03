@@ -748,6 +748,76 @@ async def delete_knowledge_card_reference(card_id: uuid.UUID, reference_id: uuid
         raise HTTPException(status_code=500, detail="Failed to unlink reference.")
 
 
+@router.delete("/knowledge-cards/references/{reference_id}")
+async def delete_knowledge_card_reference_by_id(reference_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
+    """
+    Deletes a reference and its associations.
+    """
+    try:
+        with get_engine().begin() as connection:
+            # Validate the reference exists
+            ref_check = connection.execute(
+                text("SELECT id FROM knowledge_card_references WHERE id = :id"),
+                {"id": reference_id}
+            ).fetchone()
+
+            if not ref_check:
+                raise HTTPException(status_code=404, detail="Reference not found.")
+
+            # Delete associations
+            connection.execute(
+                text("DELETE FROM knowledge_card_to_references WHERE reference_id = :ref_id"),
+                {"ref_id": reference_id}
+            )
+
+            # Delete the reference
+            connection.execute(
+                text("DELETE FROM knowledge_card_references WHERE id = :id"),
+                {"id": reference_id}
+            )
+        return {"message": "Reference deleted successfully."}
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        logger.error(f"[DELETE KC REFERENCE ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to delete reference.")
+
+
+@router.delete("/knowledge-cards/references/{reference_id}")
+async def delete_knowledge_card_reference_by_id(reference_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
+    """
+    Deletes a reference and its associations.
+    """
+    try:
+        with get_engine().begin() as connection:
+            # Validate the reference exists
+            ref_check = connection.execute(
+                text("SELECT id FROM knowledge_card_references WHERE id = :id"),
+                {"id": reference_id}
+            ).fetchone()
+
+            if not ref_check:
+                raise HTTPException(status_code=404, detail="Reference not found.")
+
+            # Delete associations
+            connection.execute(
+                text("DELETE FROM knowledge_card_to_references WHERE reference_id = :ref_id"),
+                {"ref_id": reference_id}
+            )
+
+            # Delete the reference
+            connection.execute(
+                text("DELETE FROM knowledge_card_references WHERE id = :id"),
+                {"id": reference_id}
+            )
+        return {"message": "Reference deleted successfully."}
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        logger.error(f"[DELETE KC REFERENCE ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to delete reference.")
+
+
 async def ingest_reference_content(card_id: uuid.UUID, reference_id: uuid.UUID, force_scrape: bool = False, connection=None):
     """
     Ingests content from a reference URL, creates embeddings, and stores them.
@@ -1247,15 +1317,22 @@ async def identify_references(card_id: uuid.UUID, data: IdentifyReferencesIn, cu
                 {"kcid": card_id}
             )
             # Then, process the new references
+            processed_urls = set()
             for ref in references:
-                if not ref.get("url") or not ref.get("reference_type"):
+                url = ref.get("url")
+                if not url or not ref.get("reference_type"):
                     logger.warning(f"Skipping invalid reference: {ref}")
                     continue
+
+                if url in processed_urls:
+                    logger.warning(f"Skipping duplicate reference URL: {url}")
+                    continue
+                processed_urls.add(url)
 
                 # Check if reference already exists
                 existing_ref = connection.execute(
                     text("SELECT id FROM knowledge_card_references WHERE url = :url"),
-                    {"url": ref.get("url")}
+                    {"url": url}
                 ).fetchone()
 
                 if existing_ref:
@@ -1269,7 +1346,7 @@ async def identify_references(card_id: uuid.UUID, data: IdentifyReferencesIn, cu
                             RETURNING id
                         """),
                         {
-                            "url": ref.get("url"),
+                            "url": url,
                             "reference_type": ref.get("reference_type"),
                             "summary": ref.get("summary") or "",
                             "user_id": user_id
@@ -1453,3 +1530,38 @@ async def generate_and_download_document(
     except Exception as e:
         logger.error(f"An unexpected error occurred during document generation: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="An unexpected error occurred.")
+
+
+@router.delete("/knowledge-cards/references/{reference_id}")
+async def delete_knowledge_card_reference_by_id(reference_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
+    """
+    Deletes a reference and its associations.
+    """
+    try:
+        with get_engine().begin() as connection:
+            # Validate the reference exists
+            ref_check = connection.execute(
+                text("SELECT id FROM knowledge_card_references WHERE id = :id"),
+                {"id": reference_id}
+            ).fetchone()
+
+            if not ref_check:
+                raise HTTPException(status_code=404, detail="Reference not found.")
+
+            # Delete associations
+            connection.execute(
+                text("DELETE FROM knowledge_card_to_references WHERE reference_id = :ref_id"),
+                {"ref_id": reference_id}
+            )
+
+            # Delete the reference
+            connection.execute(
+                text("DELETE FROM knowledge_card_references WHERE id = :id"),
+                {"id": reference_id}
+            )
+        return {"message": "Reference deleted successfully."}
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        logger.error(f"[DELETE KC REFERENCE ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to delete reference.")
