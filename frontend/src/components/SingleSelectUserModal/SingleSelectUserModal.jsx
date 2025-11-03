@@ -33,7 +33,7 @@ export default function SingleSelectUserModal({ isOpen, onClose, options, title,
                   onChange={() => setSelectedUser(optionValue)}
                   data-testid={`user-select-radio-${optionValue}`}
                 />
-                <label htmlFor={optionValue}>{optionLabel}</label>
+                <label htmlFor={optionValue} data-testid={`user-select-label-${optionValue}`}>{optionLabel}</label>
               </div>
             );
           })}

@@ -43,7 +43,7 @@ export default function MultiSelectModal({ isOpen, onClose, options, selectedOpt
                   onChange={() => handleCheckboxChange(option)}
                   data-testid={`user-select-checkbox-${optionValue}`}
                 />
-                <label htmlFor={optionValue}>{optionLabel}</label>
+                <label htmlFor={optionValue} data-testid={`user-select-label-${optionValue}`}>{optionLabel}</label>
               </div>
             );
           })}

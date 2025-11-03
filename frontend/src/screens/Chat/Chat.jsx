@@ -705,6 +705,8 @@ export default function Chat (props)
                         if (response.ok) {
                                 const data = await response.json();
                                 setReviews(data.reviews);
+                        } else if (response.status === 403) {
+                                setReviews([]);
                         }
                 }
         }
