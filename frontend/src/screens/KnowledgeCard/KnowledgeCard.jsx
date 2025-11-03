@@ -540,6 +540,9 @@ export default function KnowledgeCard() {
     };
 
     const handleCancelEditReference = () => {
+        if (editingReferenceIndex !== null && references[editingReferenceIndex]?.isNew) {
+            setReferences(references.filter((_, index) => index !== editingReferenceIndex));
+        }
         setEditingReferenceIndex(null);
     };
 
