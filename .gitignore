@@ -24,3 +24,4 @@ prez/voices//*
 prez/venv/*
 frontend_dev.log
 file::memory:
+playwright/tests/__pycache__/*
