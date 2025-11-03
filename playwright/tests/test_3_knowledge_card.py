@@ -81,7 +81,7 @@ def test_knowledge_card():
 
         page.screenshot(path="playwright/test-results/10_knowledge_card_create.png")
 
-        # Card reference 
+        # Card reference   -------
         page.get_by_test_id("link-type-select").select_option("donor")
         page.locator(".css-19bb58m").click()
         page.get_by_role("option", name="State of Kuwait - Kuwait").click()
@@ -89,12 +89,16 @@ def test_knowledge_card():
         page.get_by_test_id("summary-textarea").fill("Test")
 
     
-        # Identify References 
+        # Identify References   -------
         page.once("dialog", lambda dialog: dialog.dismiss())
         page.get_by_test_id("identify-references-button").click()
         page.screenshot(path="playwright/test-results/knowledge_card_reference_identified.png")
 
-        # Manually Add Teference
+        # Remove Reference  -------
+        #page.once("dialog", lambda dialog: dialog.dismiss())
+        #page.get_by_test_id("remove-reference-button-9").click()
+
+        # Manually Add Reference  -------
         # page.get_by_test_id("add-reference-button").click()
         # page.locator("form div").filter(has_text="ReferencesUNHCR Operation").get_by_role("combobox").select_option("Donor Content")
         # page.get_by_role("textbox", name="Summary (optional)").click()
@@ -102,35 +106,35 @@ def test_knowledge_card():
         # page.get_by_role("button", name="Cancel").click()
         # page.once("dialog", lambda dialog: dialog.dismiss())
 
-        # Ingest References 
+        # Ingest References   -------
         page.once("dialog", lambda dialog: dialog.dismiss())
         expect(page.get_by_test_id("ingest-references-button")).to_be_visible(timeout=500000)
         page.get_by_test_id("ingest-references-button").click()
         page.screenshot(path="playwright/test-results/knowledge_card_reference_ingested.png")
 
-        # # Manage Reference Error
+        # Manage Reference Error   -------
         # page.get_by_text("error").nth(1).click()
         # page.get_by_text("Could not ingest the").click()
         # page.screenshot(path="playwright/test-results/knowledge_card_reference_error.png")
         # page.get_by_role("button", name="Cancel").click()
 
-        # Populate Card
+        # Populate Card   -------
         page.once("dialog", lambda dialog: dialog.dismiss())
         page.get_by_test_id("populate-card-button").click()
         page.screenshot(path="playwright/test-results/knowledge_card_populated.png")
 
-        # Edit Card
+        # Edit Card   -------
         page.get_by_test_id("edit-section-button-1. Donor Overview").click()
         page.get_by_text("The State of Kuwait is").click()
         page.screenshot(path="playwright/test-results/knowledge_card_edit.png")
         page.get_by_role("button", name="Cancel").click()
         
-        # Download new card
+        # Download new card   -------
         with page.expect_download() as download2_info:
             page.get_by_role("button", name="Download as Word Download as").click()
         download2 = download2_info.value
 
-        # Save Card
+        # Save Card   -------
         page.once("dialog", lambda dialog: dialog.dismiss())
         page.get_by_test_id("close-card-button").click()
         page.screenshot(path="playwright/test-results/knowledge_card_save.png")
