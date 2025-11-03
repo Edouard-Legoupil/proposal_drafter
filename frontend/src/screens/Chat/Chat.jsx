@@ -807,10 +807,19 @@ export default function Chat (props)
 
                 if(response.ok)
                 {
+                        const contentDisposition = response.headers.get('Content-Disposition');
+                        let filename = "proposal.docx"; // Default filename
+                        if (contentDisposition) {
+                            const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+                            if (filenameMatch && filenameMatch[1]) {
+                                filename = filenameMatch[1];
+                            }
+                        }
+
                         const blob = await response.blob();
                         const link = document.createElement('a');
                         link.href = URL.createObjectURL(blob);
-                link.download = formData["Project Draft Short name"].value ?? "proposal" + "." + format;
+                        link.download = filename;
                         document.body.appendChild(link);
                         link.click();
                         link.remove();
@@ -843,10 +852,19 @@ export default function Chat (props)
 
                 if(response.ok)
                 {
+                        const contentDisposition = response.headers.get('Content-Disposition');
+                        let filename = "proposal-tables.xlsx"; // Default filename
+                        if (contentDisposition) {
+                            const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+                            if (filenameMatch && filenameMatch[1]) {
+                                filename = filenameMatch[1];
+                            }
+                        }
+
                         const blob = await response.blob();
                         const link = document.createElement('a');
                         link.href = URL.createObjectURL(blob);
-                        link.download = formData["Project Draft Short name"].value ?? "proposal" + "_tables.xlsx";
+                        link.download = filename;
                         document.body.appendChild(link);
                         link.click();
                         link.remove();
