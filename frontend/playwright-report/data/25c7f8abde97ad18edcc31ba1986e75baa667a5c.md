@@ -1,0 +1,48 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - generic [ref=e5]:
+    - img "Proposal Gen logo" [ref=e7]
+    - generic [ref=e8]:
+      - heading "Login" [level=3] [ref=e9]
+      - generic [ref=e10]: Email
+      - textbox "Email" [ref=e11]:
+        - /placeholder: Enter your email here
+      - generic [ref=e12]: Password
+      - textbox "Password" [ref=e13]:
+        - /placeholder: Enter your password here
+      - link "Forgot Password?" [ref=e14] [cursor=pointer]:
+        - /url: /forgotpassword
+      - button "LOGIN" [disabled] [ref=e15]
+      - generic [ref=e16]:
+        - text: Don't have an account?
+        - link "Sign up" [ref=e17] [cursor=pointer]:
+          - /url: /register
+    - generic [ref=e18]:
+      - paragraph [ref=e20]: ⚠️ Beta Version for Testing Purpose ⚠️
+      - generic [ref=e21]:
+        - img [ref=e22]: 
+        - paragraph [ref=e24]: Draft Initial Project Proposal with AI
+      - generic [ref=e25]:
+        - img [ref=e26]: 
+        - paragraph [ref=e28]: Leverage Curated Knowledge on Donors, Field Context and Interventions
+      - generic [ref=e29]:
+        - img [ref=e30]: 
+        - paragraph [ref=e32]: Organize Peer Review for Continuous Learning
+    - paragraph [ref=e34]:
+      - text: You are now running
+      - link "v.0.3" [ref=e35] [cursor=pointer]:
+        - /url: https://github.com/Edouard-Legoupil/proposal_drafter/releases/tag/0.3
+  - paragraph [ref=e37]:
+    - text: This
+    - link "application" [ref=e38] [cursor=pointer]:
+      - /url: https://github.com/edouard-legoupil/proposal_drafter/
+    - text: complies with the
+    - link "UN Open Source Principles" [ref=e39] [cursor=pointer]:
+      - /url: https://unite.un.org/news/osi-first-endorse-united-nations-open-source-principles
+    - text: . With your help, we can make it even better! If you detect an issue or a bug of if you have ideas for improvement,
+    - link "report them here" [ref=e40] [cursor=pointer]:
+      - /url: https://github.com/edouard-legoupil/proposal_drafter/issues/new
+    - text: .
+```

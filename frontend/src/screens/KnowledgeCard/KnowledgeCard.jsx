@@ -53,6 +53,7 @@ export default function KnowledgeCard() {
     const [currentReference, setCurrentReference] = useState(null);
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
     const [existingCard, setExistingCard] = useState(null);
+    const [initialDataLoaded, setInitialDataLoaded] = useState(false);
 
     // Use refs to track current state without stale closures
     const summaryRef = useRef(summary);
@@ -188,6 +189,8 @@ export default function KnowledgeCard() {
             }
         } catch (error) {
             console.error("Error fetching data for KC form:", error);
+        } finally {
+            setInitialDataLoaded(true);
         }
     }, [id, navigate, authenticatedFetch]);
 
@@ -285,20 +288,22 @@ export default function KnowledgeCard() {
     }, [linkType, donors, outcomes, fieldContexts, newDonors, newOutcomes, newFieldContexts, id, selectedGeoCoverage]);
 
     useEffect(() => {
-        if (!id && linkedId && linkType) {
+        if (!id && linkedId && linkType && initialDataLoaded) {
+            console.log(`Checking for duplicates. ID: ${id}, Linked ID: ${linkedId}, Link Type: ${linkType}, Loaded: ${initialDataLoaded}`);
             const existing = allKnowledgeCards.find(card => {
                 if (linkType === 'donor') return card.donor_id === linkedId;
                 if (linkType === 'outcome') return card.outcome_id === linkedId;
                 if (linkType === 'field_context') return card.field_context_id === linkedId;
                 return false;
             });
+            console.log('Existing card found:', existing);
 
             if (existing) {
                 setExistingCard(existing);
                 setIsConfirmationModalOpen(true);
             }
         }
-    }, [id, linkedId, linkType, allKnowledgeCards]);
+    }, [id, linkedId, linkType, allKnowledgeCards, initialDataLoaded]);
 
     const proceedWithSave = useCallback(async (navigateOnSuccess = true) => {
         // This function contains the original logic of handleSave
