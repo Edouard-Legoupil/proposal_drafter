@@ -22,7 +22,7 @@ def test_proposal():
     # Use the sync_playwright context manager to launch and control the browser lifecycle
     with sync_playwright() as playwright:
         # Launch browser (use chromium, firefox, or webkit)
-        browser = playwright.chromium.launch(headless=False, slow_mo=500)
+        browser = playwright.chromium.launch(headless=False, slow_mo=1000)
         
         # 2. Create a new context and set the video recording directory
         # Video recording starts now.
@@ -90,51 +90,55 @@ def test_proposal():
         # Targeted Donor (creatable select)  -------
         page.locator(".targeted-donor__input-container").click()
         page.get_by_role("option", name="Sweden - Ministry for Foreign").click()
-        page.screenshot(path="playwright/test-results/proposal_generate.png")
+        page.screenshot(path="playwright/test-results/proposal_1generate.png")
         
         # Click the "Generate" button  -------
         page.get_by_role('button', name='Generate').click()
 
         # Wait for the sections to be generated. This can be slow.  -------
         # The wait is now conditioned on the visibility of the edit button for the first section.
-        expect(page.get_by_test_id("section-options-0").get_by_role("button", name="edit-section-")).to_be_visible(timeout=500000)
+        expect(page.get_by_test_id("edit-save-button-summary")).to_be_visible(timeout=500000)
         
+        # Browser Proposal -----
+        page.get_by_test_id("sidebar-option-evaluation").click()
+        page.screenshot(path="playwright/test-results/proposal_2generated.png")
+        page.get_by_test_id("sidebar-option-work-plan").click()
+        page.get_by_test_id("sidebar-option-summary").click()
 
-        # Editsection  -------
-        page.get_by_role("complementary").get_by_text("Monitoring").click()
-        page.get_by_test_id("section-options-4").get_by_role("button", name="edit-section-").click()
-        page.get_by_role("button", name="edit-section-").click()
-        page.screenshot(path="playwright/test-results/proposal_edit_section.png")
-        page.get_by_text("Proposal Prompt").click()
+        # Edit Section  -------
+        page.get_by_test_id("sidebar-option-monitoring").click()
+        page.get_by_test_id("edit-save-button-monitoring").click()
+        page.screenshot(path="playwright/test-results/proposal_3edit_section.png")
+        page.get_by_test_id("cancel-edit-button-monitoring").click()
         
         # Renerate section  -------
-        page.get_by_test_id("regenerate-dialog-close-button").click()
-        page.get_by_test_id("regenerate-button-rationale").click()
-        page.get_by_test_id("regenerate-dialog-close-button").click()
-
+        page.get_by_test_id("sidebar-option-summary").click()
         page.get_by_test_id("regenerate-button-summary").click()
+        page.get_by_test_id("regenerate-dialog-prompt-input").click()
         page.get_by_test_id("regenerate-dialog-prompt-input").fill("Revise this section to fit in 200 characters")
-        page.screenshot(path="playwright/test-results/proposal_regenerate_section.png")
+        page.screenshot(path="playwright/test-results/proposal_4regenerate_section.png")
         page.get_by_test_id("regenerate-dialog-regenerate-button").click()
+        expect(page.get_by_test_id("edit-save-button-summary")).to_be_visible(timeout=500000)
+        page.screenshot(path="playwright/test-results/proposal_5regenerated_section.png")
 
         # Download  -------
         with page.expect_download() as download1_info:
             page.get_by_test_id("export-word-button").click()
         download1 = download1_info.value
-        with page.expect_download() as download_info:
-            page.get_by_test_id("export-excel-button").click()
-        download = download_info.value
+        # with page.expect_download() as download_info:
+        #     page.get_by_test_id("export-excel-button").click()
+        # download = download_info.value
 
         page.get_by_test_id("logo").click()
         #page.get_by_role("article").filter(has_text="Refugee Children Education Initiative Establishing a comprehensive #primary").get_by_test_id("project-options-button").click()
 
         # Apply Filter on Proposals  -------
-        page.get_by_role("search").click()
-        page.get_by_test_id("filter-button").click()
-        page.get_by_test_id("status-filter").select_option("draft")
-        page.get_by_test_id("filter-modal-close-button").click()
-        page.get_by_test_id("filter-button").click()
-        page.get_by_test_id("status-filter").select_option("review")
+        # page.get_by_role("search").click()
+        # page.get_by_test_id("filter-button").click()
+        # page.get_by_test_id("status-filter").select_option("draft")
+        # page.get_by_test_id("filter-modal-close-button").click()
+        # page.get_by_test_id("filter-button").click()
+        # page.get_by_test_id("status-filter").select_option("review")
 
         # -------------------
         # End of Test Logic
