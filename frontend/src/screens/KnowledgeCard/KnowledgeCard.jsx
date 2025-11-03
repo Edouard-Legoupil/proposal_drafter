@@ -608,7 +608,7 @@ export default function KnowledgeCard() {
         setLoadingMessage("Deleting this reference as requested...");
 
         try {
-            const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/references/${refId}`, {
+            const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${id}/references/${refId}`, {
                 method: 'DELETE',
                 credentials: 'include'
             });
