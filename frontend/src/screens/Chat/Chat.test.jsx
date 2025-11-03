@@ -154,10 +154,8 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                         const kebabSectionName = sec.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
                         await waitFor(async () => {
                                 const sectionContent = await screen.findByTestId(`section-content-${kebabSectionName}`);
-                                expect(sectionContent).not.toHaveTextContent('Loading');
+                                expect(sectionContent).toHaveTextContent(new RegExp(`Mocked text for ${sec}`, 'i'));
                         });
-                        const sectionContent = await screen.findByTestId(`section-content-${kebabSectionName}`);
-                        expect(sectionContent).toHaveTextContent(new RegExp(`Mocked text for ${sec}`, 'i'));
                 }
         }, 20000)
 
@@ -233,10 +231,8 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                         const kebabSectionName = sec.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
                         await waitFor(async () => {
                                 const sectionContent = await screen.findByTestId(`section-content-${kebabSectionName}`);
-                                expect(sectionContent).not.toHaveTextContent('Loading');
+                                expect(sectionContent).toHaveTextContent(new RegExp(`Mocked text for ${sec}`, 'i'));
                         });
-                        const sectionContent = await screen.findByTestId(`section-content-${kebabSectionName}`);
-                        expect(sectionContent).toHaveTextContent(new RegExp(`Mocked text for ${sec}`, 'i'));
                 }
 
                 const editButton = screen.getByTestId('edit-save-button-summary')
