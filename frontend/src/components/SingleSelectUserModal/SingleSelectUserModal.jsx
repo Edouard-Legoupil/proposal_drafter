@@ -15,9 +15,9 @@ export default function SingleSelectUserModal({ isOpen, onClose, options, title,
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <h2>{title || 'Select a User'}</h2>
+    <div className="modal-overlay" data-testid="single-select-user-modal-overlay">
+      <div className="modal-content" data-testid="single-select-user-modal-content">
+        <h2 data-testid="single-select-user-modal-title">{title || 'Select a User'}</h2>
         <div className="modal-options">
           {options.map(option => {
             const optionValue = option.id || option;

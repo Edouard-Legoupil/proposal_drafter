@@ -90,15 +90,15 @@ export default function Review ()
         }
 
         return <Base>
-                <div className="Review">
+                <div className="Review" data-testid="review-container">
                         <div className="Review_header">
-                                <h1>Reviewing: {proposal.form_data['Project Draft Short name']}</h1>
+                                <h1 data-testid="review-header-title">Reviewing: {proposal.form_data['Project Draft Short name']}</h1>
                                 <CommonButton label="Review Completed" onClick={handleSubmitReview} data-testid="review-completed-button-header" />
                         </div>
-                        <div className="Review_proposal">
+                        <div className="Review_proposal" data-testid="review-proposal-content">
                                 {Object.entries(proposal.generated_sections).map(([section, content]) => (
-                                        <div key={section} className="Review_section">
-                                                <h2>{section}</h2>
+                                        <div key={section} className="Review_section" data-testid={`review-section-${section}`}>
+                                                <h2 data-testid={`review-section-title-${section}`}>{section}</h2>
                                                 <div className="Review_section_content">
                                                         <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
                                                 </div>

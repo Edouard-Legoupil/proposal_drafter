@@ -81,21 +81,22 @@ export default function AssociateKnowledgeModal({ isOpen, onClose, onConfirm, do
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
-        <h2>Associate Knowledge</h2>
+    <div className="modal-overlay" onClick={onClose} data-testid="associate-knowledge-modal-overlay">
+      <div className="modal-content" onClick={e => e.stopPropagation()} data-testid="associate-knowledge-modal-content">
+        <h2 data-testid="associate-knowledge-modal-title">Associate Knowledge</h2>
         <div className="modal-options">
           {isLoading ? (
-            <p>Loading...</p>
+            <p data-testid="loading-message">Loading...</p>
           ) : options.length > 0 ? (
             options.map(option => (
-              <div key={option.id} className="modal-option">
+              <div key={option.id} className="modal-option" data-testid={`knowledge-card-option-${option.id}`}>
                 <input
                   type="checkbox"
                   id={option.id}
                   value={option.id}
                   checked={selectedOptions.includes(option.id)}
                   onChange={() => handleCheckboxChange(option.id)}
+                  data-testid={`knowledge-card-checkbox-${option.id}`}
                 />
                 <div>
                   <label htmlFor={option.id}><strong>{option.title}</strong></label>
@@ -109,14 +110,14 @@ export default function AssociateKnowledgeModal({ isOpen, onClose, onConfirm, do
               </div>
             ))
           ) : (
-            <p>No knowledge cards found for the selected criteria.</p>
+            <p data-testid="no-knowledge-cards-message">No knowledge cards found for the selected criteria.</p>
           )}
         </div>
         <div className="modal-actions">
-          <button onClick={() => navigate('/knowledge-card/new')}>Create New Knowledge Card</button>  
+          <button onClick={() => navigate('/knowledge-card/new')} data-testid="create-new-knowledge-card-button">Create New Knowledge Card</button>
           <div>
-            <button onClick={onClose}>Cancel </button> 
-            {onConfirm && <button onClick={handleConfirm} disabled={!selectionHasChanged()}>Confirm</button>}
+            <button onClick={onClose} data-testid="cancel-button">Cancel</button>
+            {onConfirm && <button onClick={handleConfirm} disabled={!selectionHasChanged()} data-testid="confirm-button">Confirm</button>}
           </div>
         </div>
       </div>
