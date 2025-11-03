@@ -284,6 +284,21 @@ export default function KnowledgeCard() {
         if (!id) setLinkedId('');
     }, [linkType, donors, outcomes, fieldContexts, newDonors, newOutcomes, newFieldContexts, id, selectedGeoCoverage]);
 
+    useEffect(() => {
+        if (!id && linkedId && linkType) {
+            const existing = allKnowledgeCards.find(card => {
+                if (linkType === 'donor') return card.donor_id === linkedId;
+                if (linkType === 'outcome') return card.outcome_id === linkedId;
+                if (linkType === 'field_context') return card.field_context_id === linkedId;
+                return false;
+            });
+
+            if (existing) {
+                setExistingCard(existing);
+                setIsConfirmationModalOpen(true);
+            }
+        }
+    }, [id, linkedId, linkType, allKnowledgeCards]);
 
     const proceedWithSave = useCallback(async (navigateOnSuccess = true) => {
         // This function contains the original logic of handleSave
@@ -381,23 +396,8 @@ export default function KnowledgeCard() {
     }, [id, navigate, authenticatedFetch, newDonors, newOutcomes, newFieldContexts]);
 
     const handleSave = useCallback(async (navigateOnSuccess = true) => {
-        if (!id) { // Only check for duplicates on new cards
-            const linkTypeKey = `${linkType}s`;
-            const existing = allKnowledgeCards.find(card => {
-                if (linkType === 'donor') return card.donor_id === linkedId;
-                if (linkType === 'outcome') return card.outcome_id === linkedId;
-                if (linkType === 'field_context') return card.field_context_id === linkedId;
-                return false;
-            });
-
-            if (existing) {
-                setExistingCard(existing);
-                setIsConfirmationModalOpen(true);
-                return { ok: false }; // Prevent immediate save
-            }
-        }
         return proceedWithSave(navigateOnSuccess);
-    }, [id, linkType, linkedId, allKnowledgeCards, proceedWithSave]);
+    }, [proceedWithSave]);
 
     const handleIdentifyReferences = useCallback(async () => {
         //  Validate required fields before proceeding
@@ -919,9 +919,11 @@ export default function KnowledgeCard() {
                 link={existingCard ? `/knowledge-card/${existingCard.id}` : ''}
                 onConfirm={() => {
                     setIsConfirmationModalOpen(false);
-                    proceedWithSave();
                 }}
-                onCancel={() => setIsConfirmationModalOpen(false)}
+                onCancel={() => {
+                    setIsConfirmationModalOpen(false);
+                    setLinkedId('');
+                }}
             />
             <ProgressModal
                 isOpen={isProgressModalOpen}

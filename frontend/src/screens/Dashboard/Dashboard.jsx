@@ -217,28 +217,27 @@ export default function Dashboard ()
 
         useEffect(() => {
             const findDuplicates = () => {
-                const seen = new Map();
-                const duplicates = new Set();
-
+                const groups = {};
                 knowledgeCards.forEach(card => {
                     let key = null;
-                    if (card.donor_id) {
-                        key = `donor-${card.donor_id}`;
-                    } else if (card.outcome_id) {
-                        key = `outcome-${card.outcome_id}`;
-                    } else if (card.field_context_id) {
-                        key = `field_context-${card.field_context_id}`;
-                    }
+                    if (card.donor_id) key = `donor-${card.donor_id}`;
+                    else if (card.outcome_id) key = `outcome-${card.outcome_id}`;
+                    else if (card.field_context_id) key = `field_context-${card.field_context_id}`;
 
                     if (key) {
-                        if (seen.has(key)) {
-                            duplicates.add(card.id);
-                            duplicates.add(seen.get(key));
-                        } else {
-                            seen.set(key, card.id);
+                        if (!groups[key]) {
+                            groups[key] = [];
                         }
+                        groups[key].push(card.id);
                     }
                 });
+
+                const duplicates = new Set();
+                for (const key in groups) {
+                    if (groups[key].length > 1) {
+                        groups[key].forEach(id => duplicates.add(id));
+                    }
+                }
                 setDuplicateCardIds(duplicates);
             };
 
