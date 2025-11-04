@@ -19,6 +19,7 @@ import arrow from "../../assets/images/expanderArrow.svg"
 import generateIcon from "../../assets/images/generateIcon.svg"
 import knowIcon from "../../assets/images/knowIcon.svg"
 import resultsIcon from "../../assets/images/Chat_resultsIcon.svg"
+import Review from './components/Review/Review'
 import edit from "../../assets/images/Chat_edit.svg"
 import save from "../../assets/images/Chat_save.svg"
 import cancel from "../../assets/images/Chat_editCancel.svg"
@@ -1173,10 +1174,9 @@ export default function Chat (props)
                                                                                     submitted: { text: 'Submitted', className: 'status-submitted', message: "Non editable Record of Initial version as submitted to donor" }
                                                                             };
                                                                             const isActive = proposalStatus === status;
-                                                                            const isClickable = (proposalStatus === 'draft' && status === 'in_review') ||
-                                                                                                    (proposalStatus === 'in_review' && status === 'pre_submission') ||
-                                                                                                    (proposalStatus === 'in_review' && status === 'draft') ||
-                                                                                                    (proposalStatus === 'pre_submission' && status === 'submitted');
+                                                                                                    const isClickable = (proposalStatus === 'draft' && (status === 'in_review' || status === 'submitted')) ||
+                                                                                                        (proposalStatus === 'in_review' && (status === 'pre_submission' || status === 'draft')) ||
+                                                                                                        (proposalStatus === 'pre_submission' && status === 'submitted');
 
                                                                             return (
                                                                                 <div key={status} className="status-badge-container">
@@ -1187,7 +1187,7 @@ export default function Chat (props)
                                                                                             onClick={() => {
                                                                                                     if (status === 'in_review' && proposalStatus === 'draft') setIsPeerReviewModalOpen(true);
                                                                                                     if (status === 'draft' && proposalStatus === 'in_review') handleSetStatus('draft');
-                                                                                                    if (status === 'submitted' && proposalStatus === 'pre_submission') handleSubmit();
+                                                                                                    if (status === 'submitted' && (proposalStatus === 'pre_submission' || proposalStatus === 'draft')) handleSubmit();
                                                                                             }}
                                                                                             disabled={!isClickable && !isActive}
                                                                                             data-testid={`workflow-status-badge-${status}`}
@@ -1290,17 +1290,11 @@ export default function Chat (props)
                                                                             <div className="reviews-container"data-testid={`reviews-container-${kebabSectionName}`}>
                                                                                 <h4>Peer Reviews</h4>
                                                                                 {reviews.filter(r => r.section_name === sectionName).map(review => (
-                                                                                    <div key={review.id} className="review">
-                                                                                        <p><strong>{review.reviewer_name}:</strong> {review.review_text}</p>
-                                                                                        <div className="author-response">
-                                                                                            <textarea
-                                                                                                placeholder="Respond to this review..."
-                                                                                                defaultValue={review.author_response || ''}
-                                                                                                onBlur={(e) => handleSaveResponse(review.id, e.target.value)}
-                                                                                                                                                                data-testid={`review-response-textarea-${review.id}`}
-                                                                                            />
-                                                                                        </div>
-                                                                                    </div>
+                                                                                    <Review
+                                                                                        key={review.id}
+                                                                                        review={review}
+                                                                                        onSaveResponse={handleSaveResponse}
+                                                                                    />
                                                                                 ))}
                                                                             </div>
                                                                          )}

@@ -1700,8 +1700,7 @@ async def get_status_history(proposal_id: uuid.UUID, current_user: dict = Depend
             if not proposal_owner:
                 raise HTTPException(status_code=404, detail="Proposal not found.")
 
-            user_role = current_user.get("role")
-            if user_role not in ["focal_point", "admin"] and proposal_owner != user_id and not is_reviewer:
+            if proposal_owner != user_id and not is_reviewer:
                 raise HTTPException(status_code=403, detail="You do not have permission to view this proposal's history.")
 
             # Get distinct statuses from the history
@@ -1744,8 +1743,7 @@ async def get_peer_reviews(proposal_id: uuid.UUID, current_user: dict = Depends(
             if not proposal_owner:
                 raise HTTPException(status_code=404, detail="Proposal not found.")
 
-            user_role = current_user.get("role")
-            if user_role not in ["focal_point", "admin"] and proposal_owner != user_id and not is_reviewer:
+            if str(proposal_owner) != user_id and not is_reviewer:
                 raise HTTPException(status_code=403, detail="You do not have permission to view this proposal's reviews.")
 
             query = text("""
