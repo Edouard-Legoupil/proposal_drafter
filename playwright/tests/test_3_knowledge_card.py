@@ -38,6 +38,17 @@ def test_knowledge_card():
         # 3. Get a new page from the context
         page = context.new_page()
 
+        # --- 🔑 ISOLATION IMPLEMENTATION START ---
+        
+        # A. Disable HTTP Network Cache
+        context.route("**", lambda route: route.continue_())
+        
+        # B. Explicitly Clear Cookies (Can be done anytime, but here is fine)
+        context.clear_cookies()
+        
+        # --- 🔑 ISOLATION IMPLEMENTATION END ---
+
+
         # -------------------
         # Start of Test Logic
         # -------------------
@@ -85,24 +96,21 @@ def test_knowledge_card():
         # -------------------
         # Create new card for Donor 
         # -------------------  
-        #page.get_by_test_id("logo").click()
-        #page.get_by_test_id("knowledge-tab").click()
-        #page.get_by_test_id("new-knowledge-card-button").click()
-       # page.goto(f"{base_url}/knowledge-card/new")
-
-
         page.get_by_test_id("logo").click()
-        page.get_by_text("Project: Refugee Children Education InitiativeViewTransferDelete Afghanistan -").first.click()
-        page.get_by_test_id("manage-knowledge-button").click()
-        page.get_by_test_id("knowledge-card-checkbox-2305e4d0-2e3f-4223-96e7-ce9b3fc471e3").uncheck()
-        page.get_by_test_id("confirm-button").click()
-        page.get_by_test_id("manage-knowledge-button").click()
+        page.get_by_test_id("knowledge-tab").click()
+        page.get_by_test_id("new-knowledge-card-button").click()
+
+        # page.get_by_test_id("logo").click()
+        # page.get_by_text("Project: Refugee Children Education InitiativeViewTransferDelete Afghanistan -").first.click()
+        # page.get_by_test_id("manage-knowledge-button").click()
+        # page.get_by_test_id("knowledge-card-checkbox-2305e4d0-2e3f-4223-96e7-ce9b3fc471e3").uncheck()
+        # page.get_by_test_id("confirm-button").click()
+        # page.get_by_test_id("manage-knowledge-button").click()
         page.get_by_test_id("create-new-knowledge-card-button").click()
         page.screenshot(path="playwright/test-results/knowledge_card_5create.png")
 
 
         # Card reference   -------
-
         page.get_by_test_id("link-type-select").select_option("donor")
 
         page.locator(".kc-linked-item-select__input-container").click()    
@@ -133,7 +141,11 @@ def test_knowledge_card():
         # Ingest References   -------
         page.once("dialog", lambda dialog: dialog.dismiss())
         page.get_by_test_id("ingest-references-button").click() 
-        expect(page.get_by_test_id("ingest-references-button")).to_be_visible(timeout=500000)
+        # Wait for the loading modal to appear with the correct message, then disappear
+        loading_modal_locator = page.locator(".loading-modal")
+        expect(loading_modal_locator).to_be_visible()
+        expect(page.get_by_text("Reference ingestion started...")).to_be_visible()
+        expect(loading_modal_locator).to_be_hidden(timeout=60000)
         page.screenshot(path="playwright/test-results/knowledge_card_reference_7ingested.png")
 
         # Manage Reference Error   -------
@@ -145,7 +157,9 @@ def test_knowledge_card():
         # Populate Card   -------
         page.once("dialog", lambda dialog: dialog.dismiss())
         page.get_by_test_id("populate-card-button").click()
-        expect(test_id("populate-card-button")).to_be_visible(timeout=500000)
+        # Wait for the generated content container to be visible, indicating completion
+        generated_content_locator = page.get_by_test_id("generated-content-container")
+        expect(generated_content_locator).to_be_visible(timeout=180000)
         page.screenshot(path="playwright/test-results/knowledge_card_9populated.png")
 
         # Edit Card   -------
