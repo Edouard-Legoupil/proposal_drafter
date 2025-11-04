@@ -1,7 +1,6 @@
 import './KnowledgeCard.css'
 
 export default function KnowledgeCard({ card, date, onClick, isDuplicate, onDelete }) {
-    console.log('KnowledgeCard props:', { card, isDuplicate });
     let linked_to_element;
     let title = card.summary;
 
@@ -42,25 +41,27 @@ export default function KnowledgeCard({ card, date, onClick, isDuplicate, onDele
 
     return (
         <article className="card" onClick={onClick} data-testid="knowledge-card">
-            {isDuplicate && <span className="duplicate-badge">Duplicate</span>}
+            {isDuplicate && (
+                <div className="duplicate-container">
+                    <span className="duplicate-badge">Duplicate</span>
+                    <button
+                        className="delete-button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm('Are you sure you want to delete this duplicate card?')) {
+                                onDelete();
+                            }
+                        }}
+                    >
+                        Delete
+                    </button>
+                </div>
+            )}
             <h3 id={`kc-${card.id}`}>{linked_to_element}</h3>
             <p><small>{card.summary || 'No description.'}</small></p>
             <span className="ard-references_date">
                 Last Updated: <time dateTime={date}>{date}</time>
             </span>
-            {isDuplicate && (
-                <button
-                    className="delete-button"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        if (window.confirm('Are you sure you want to delete this duplicate card?')) {
-                            onDelete();
-                        }
-                    }}
-                >
-                    Delete
-                </button>
-            )}
         </article>
     );
 }
