@@ -101,10 +101,14 @@ body {
     font-weight: 600;
     color: #fff;
 }
+
+
 .status-draft { background: #757575; }          /* grey */
 .status-review { background: #FF9800; }         /* orange */
+.status-pre-submission {background: #0072BC;}   /* blue */
 .status-submission { background: #0072BC; }     /* blue */
-.status-submitted { background: #6A1B9A; }      /* purple */
+/*.status-submitted { background: #6A1B9A; }   */   /* purple */
+.status-submitted { background: #2E7D32; }      /* purple */
 .status-approved { background: #2E7D32; }       /* green */
 
 /* Filter button */

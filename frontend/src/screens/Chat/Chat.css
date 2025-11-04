@@ -712,6 +712,7 @@
         font-weight: bold;
     }
 
+
 .status-draft {
     background: #757575;
 }
@@ -724,9 +725,12 @@
     background: #0072BC;
 }
 
-.status-submitted {
-    background: #6A1B9A;
-}
+
+.status-pre-submission {background: #0072BC;}   /* blue */
+
+/*.status-submitted {background: #6A1B9A;}   */   /* purple */
+
+.status-submitted { background: #2E7D32; }      /* green */
 
 .status-approved {
     background: #2E7D32;
