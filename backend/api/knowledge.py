@@ -1048,7 +1048,7 @@ async def generate_content_background(card_id: uuid.UUID):
         with get_engine().begin() as connection:
             _update_progress(card_id, "Content generation complete.", 100)
             connection.execute(
-                text("UPDATE knowledge_cards SET generated_sections = :sections, status = 'approved', updated_at = CURRENT_TIMESTAMP WHERE id = :id"),
+                text("UPDATE knowledge_cards SET generated_sections = :sections, status = 'draft', is_accepted = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = :id"),
                 {"sections": json.dumps(generated_sections), "id": card_id}
             )
             
