@@ -370,10 +370,9 @@ export default function Dashboard ()
                                         <div className="card card--cta">
                                                 <button className="btn" type="button" aria-label="Start a new proposal" onClick={() => navigate("/chat")} data-testid="new-proposal-button">Start New Proposal</button>
                                         </div>
-                                        {displayProjects && displayProjects.map((project, i) =>
+                                        {displayProjects && displayProjects.map((project) =>
                                                 <Project
-                                                        key={i}
-                                                        projectIndex={i}
+                                                        key={project.proposal_id}
                                                         project={project}
                                                         date={cleanedDate(project.updated_at)}
                                                         onClick={(e) => handleProjectClick(e, project.proposal_id, false)}
@@ -389,9 +388,9 @@ export default function Dashboard ()
                                         <div className="card card--cta">
                                                 <button className="btn" type="button" aria-label="Start a new knowledge card" onClick={() => navigate("/knowledge-card/new")} data-testid="new-knowledge-card-button">Create New Knowledge Card</button>
                                         </div>
-                                        {displayKnowledgeCards && displayKnowledgeCards.map((card, i) =>
+                                        {displayKnowledgeCards && displayKnowledgeCards.map((card) =>
                                                 <KnowledgeCard
-                                                        key={i}
+                                                        key={card.id}
                                                         card={card}
                                                         date={cleanedDate(card.updated_at)}
                                                         onClick={() => navigate(`/knowledge-card/${card.id}`)}
@@ -404,9 +403,9 @@ export default function Dashboard ()
 
                         <section id="reviews-panel" role="tabpanel" aria-labelledby="reviews-tab" className={`tab-panel ${selectedTab === 'reviews' ? 'active' : ''}`} hidden={selectedTab !== 'reviews'}>
                                 <div className="Dashboard_projects" id="reviews-grid">
-                                {displayProjects && displayProjects.map((review, i) =>
+                                {displayProjects && displayProjects.map((review) =>
                                         <Project
-                                                key={i}
+                                                key={review.proposal_id}
                                                 project={review}
                                                 date={cleanedDate(review.updated_at)}
                                                 onClick={(e) => handleProjectClick(e, review.proposal_id, true)}

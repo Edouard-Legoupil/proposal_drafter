@@ -751,6 +751,39 @@ async def delete_knowledge_card_reference(card_id: uuid.UUID, reference_id: uuid
         raise HTTPException(status_code=500, detail="Failed to unlink reference.")
 
 
+@router.delete("/knowledge-cards/{card_id}")
+async def delete_knowledge_card(card_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
+    """
+    Deletes a knowledge card and its associations.
+    """
+    try:
+        with get_engine().begin() as connection:
+            # First, check if the card exists
+            card_check = connection.execute(
+                text("SELECT id FROM knowledge_cards WHERE id = :id"),
+                {"id": str(card_id)}
+            ).fetchone()
+            if not card_check:
+                raise HTTPException(status_code=404, detail="Knowledge card not found.")
+
+            # Delete associations in the join table
+            connection.execute(
+                text("DELETE FROM knowledge_card_to_references WHERE knowledge_card_id = :kcid"),
+                {"kcid": str(card_id)}
+            )
+
+            # Delete the knowledge card itself
+            connection.execute(
+                text("DELETE FROM knowledge_cards WHERE id = :id"),
+                {"id": str(card_id)}
+            )
+        return {"message": "Knowledge card deleted successfully."}
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        logger.error(f"[DELETE KNOWLEDGE CARD ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to delete knowledge card.")
+
 @router.delete("/knowledge-cards/references/{reference_id}")
 async def delete_knowledge_card_reference_by_id(reference_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
     """
