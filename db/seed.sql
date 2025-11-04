@@ -140,6 +140,10 @@ INSERT INTO outcomes (id, name) VALUES
 INSERT INTO users (id, email, password, name, team_id, created_by, updated_by) VALUES
 ('a4e89f89-8f47-4d74-9a2c-9d6f3e8a6a2c', 'test_user@unhcr.org', '$2b$12$DwbvI.0M9c.uAiurT9zL9eR3u8vjP.yU/b4L6f/Yt2xY.gC6wzBGS', 'Test User', (SELECT id FROM teams WHERE name = 'Test' LIMIT 1), 'a4e89f89-8f47-4d74-9a2c-9d6f3e8a6a2c', 'a4e89f89-8f47-4d74-9a2c-9d6f3e8a6a2c');
 
+-- Insert a proposal with pre_submission status for testing
+INSERT INTO proposals (id, user_id, created_by, updated_by, template_name, form_data, project_description, status) VALUES
+('a4e89f89-8f47-4d74-9a2c-9d6f3e8a6a2d', 'a4e89f89-8f47-4d74-9a2c-9d6f3e8a6a2c', 'a4e89f89-8f47-4d74-9a2c-9d6f3e8a6a2c', 'a4e89f89-8f47-4d74-9a2c-9d6f3e8a6a2c', 'unhcr_proposal_template.json', '{"Project Draft Short name": "Pre-submission Project", "Budget Range": "100k$"}', 'A project for testing the pre-submission stage.', 'pre_submission');
+
 
 
 -- -- Insert Donors with pre-defined UUIDs

@@ -20,6 +20,8 @@ export default function Project ({ project, date, onClick, isReview = false, pro
                                 return { text: 'Drafting', className: 'status-draft' };
                         case 'in_review':
                                 return { text: 'Pending Peer Review', className: 'status-review' };
+                        case 'pre_submission':
+                                return { text: 'Pre-Submission', className: 'status-pre-submission' };
                         case 'submission':
                                 return { text: 'Pending Submission', className: 'status-submission' };
                         case 'submitted':
