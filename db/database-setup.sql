@@ -63,10 +63,9 @@ CREATE TABLE IF NOT EXISTS field_contexts (
 -- Create Proposal Status Enum Type
 DO $$
 BEGIN
-    IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'proposal_status') THEN
-        DROP TYPE proposal_status;
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'proposal_status_new') THEN
+        CREATE TYPE proposal_status_new AS ENUM ('draft', 'in_review', 'pre_submission', 'submitted', 'deleted', 'generating_sections', 'failed');
     END IF;
-    CREATE TYPE proposal_status AS ENUM ('draft', 'in_review', 'pre_submission', 'submitted', 'deleted');
 END$$;
 
 -- Create Proposals table
@@ -79,7 +78,7 @@ CREATE TABLE IF NOT EXISTS proposals (
     generated_sections JSONB,
     reviews JSONB,
     is_accepted BOOLEAN DEFAULT FALSE,
-    status proposal_status DEFAULT 'draft', 
+    status proposal_status_new DEFAULT 'draft',
     contribution_id TEXT,
     created_by UUID NOT NULL REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
