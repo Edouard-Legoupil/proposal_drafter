@@ -18,7 +18,7 @@ export default function Dashboard ()
         const [projects, setProjects] = useState([])
         const [reviews, setReviews] = useState([])
         const [knowledgeCards, setKnowledgeCards] = useState([])
-        const [displayKnowledgeCards, setDisplayKnowledgeCards] = useState([])
+        const [displayKnowledgeCards, setDisplayKnowledgeCards] = useState(knowledgeCards)
         const [selectedTab, setSelectedTab] = useState('proposals')
         const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
         const [isTransferModalOpen, setIsTransferModalOpen] = useState(false)
@@ -240,6 +240,7 @@ export default function Dashboard ()
                     }
                 }
                 setDuplicateCardIds(duplicates);
+                console.log('Duplicate Card IDs:', duplicates);
             };
 
             findDuplicates();
