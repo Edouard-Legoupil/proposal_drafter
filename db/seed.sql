@@ -53,7 +53,14 @@ INSERT INTO donors (id, account_id, name, country, donor_group) VALUES
 (gen_random_uuid(), 'GOV-SA-10694', 'Kingdom of Saudi Arabia - King Salman Hum Aid & Relief Center', 'Saudi Arabia', 'DRRM Donor Group 3'),
 (gen_random_uuid(), 'GOV-QA-10687', 'Qatar - Qatar Fund For Development', 'Qatar', 'DRRM Donor Group 3');
 
--- -- Insert Field Contexts (Countries)
+
+INSERT INTO field_contexts (id, name, category, geographic_coverage) VALUES
+(gen_random_uuid(),  'Afghanistan', 'Country', 'One Country Operation'),
+(gen_random_uuid(),  'Algeria', 'Country', 'One Country Operation'),
+
+(gen_random_uuid(),  'Zimbabwe', 'Country', 'One Country Operation');
+
+-- Insert Field Contexts (Countries)
 INSERT INTO field_contexts (id, title, name, category, geographic_coverage) VALUES
 (gen_random_uuid(), 'Afghanistan Situation', 'Afghanistan', 'Country', 'One Country Operation'),
 (gen_random_uuid(), 'Algeria Situation', 'Algeria', 'Country', 'One Country Operation'),
@@ -117,23 +124,23 @@ INSERT INTO field_contexts (id, title, name, category, geographic_coverage) VALU
 (gen_random_uuid(), 'Zimbabwe Situation', 'Zimbabwe', 'Country', 'One Country Operation');
 
 -- -- Insert Outcomes with pre-defined UUIDs for consistency
-INSERT INTO outcomes (id, name) VALUES
-(gen_random_uuid(), 'OA1-Access/Documentation'),
-(gen_random_uuid(), 'OA2-Status'),
-(gen_random_uuid(), 'OA3-Protection Policy'),
-(gen_random_uuid(), 'OA4-GBV'),
-(gen_random_uuid(), 'OA5-Child protection'),
-(gen_random_uuid(), 'OA6-Justice'),
-(gen_random_uuid(), 'OA7-Community'),
-(gen_random_uuid(), 'OA8-Well-Being'),
-(gen_random_uuid(), 'OA9-Housing'),
-(gen_random_uuid(), 'OA10-Health'),
-(gen_random_uuid(), 'OA11-Education'),
-(gen_random_uuid(), 'OA12-WASH'),
-(gen_random_uuid(), 'OA13-Livelihoods'),
-(gen_random_uuid(), 'OA14-Return'),
-(gen_random_uuid(), 'OA15-Resettlement'),
-(gen_random_uuid(), 'OA16-Integrate');
+-- INSERT INTO outcomes (id, name) VALUES
+-- (gen_random_uuid(), 'OA1-Access/Documentation'),
+-- (gen_random_uuid(), 'OA2-Status'),
+-- (gen_random_uuid(), 'OA3-Protection Policy'),
+-- (gen_random_uuid(), 'OA4-GBV'),
+-- (gen_random_uuid(), 'OA5-Child protection'),
+-- (gen_random_uuid(), 'OA6-Justice'),
+-- (gen_random_uuid(), 'OA7-Community'),
+-- (gen_random_uuid(), 'OA8-Well-Being'),
+-- (gen_random_uuid(), 'OA9-Housing'),
+-- (gen_random_uuid(), 'OA10-Health'),
+-- (gen_random_uuid(), 'OA11-Education'),
+-- (gen_random_uuid(), 'OA12-WASH'),
+-- (gen_random_uuid(), 'OA13-Livelihoods'),
+-- (gen_random_uuid(), 'OA14-Return'),
+-- (gen_random_uuid(), 'OA15-Resettlement'),
+-- (gen_random_uuid(), 'OA16-Integrate');
 
 -- -- Insert Users with consistent UUIDs
 -- Insert Users with consistent UUIDs
