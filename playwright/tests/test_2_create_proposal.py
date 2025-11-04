@@ -1,16 +1,15 @@
 import re
-import pytest
 import os
-from playwright.sync_api import Playwright, sync_playwright, Page, expect
+from playwright.sync_api import Page, expect
 
-def test_proposal():
+def test_proposal(page: Page):
     """
-    Tests that a user can generate a new proposal and records the video.
+    Tests that a user can generate a new proposal.
     """
     # 1. Setup constants
     email = "test_user@unhcr.org"
     password = "password123"
-    base_url = "http://localhost:8502"
+    base_url = "http://localhost:8503"
     
     # Define where the video will be saved.
     VIDEO_DIR = "playwright/test-results/videos"
