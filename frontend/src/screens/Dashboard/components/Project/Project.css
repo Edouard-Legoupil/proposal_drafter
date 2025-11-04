@@ -165,3 +165,7 @@
         align-items: center;
         flex-shrink: 0;
 }
+
+.status-pre-submission {
+    background-color: #f0ad4e;
+}
