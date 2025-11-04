@@ -1,8 +1,9 @@
 import re
+import pytest
 import os
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Playwright, sync_playwright, Page, expect
 
-def test_knowledge_card(page: Page):
+def test_knowledge_card():
     """
     Tests that a user can create a new knowledge card.
     """

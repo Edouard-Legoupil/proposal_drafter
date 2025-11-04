@@ -1,15 +1,16 @@
 import re
+import pytest
 import os
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Playwright, sync_playwright, Page, expect
 
-def test_proposal(page: Page):
+def test_proposal():
     """
-    Tests that a user can generate a new proposal.
+    Tests that a user can generate a new proposal and records the video.
     """
     # 1. Setup constants
     email = "test_user@unhcr.org"
     password = "password123"
-    base_url = "http://localhost:8503"
+    base_url = "http://localhost:8502"
     
     # Define where the video will be saved.
     VIDEO_DIR = "playwright/test-results/videos"
@@ -132,12 +133,12 @@ def test_proposal(page: Page):
         #page.get_by_role("article").filter(has_text="Refugee Children Education Initiative Establishing a comprehensive #primary").get_by_test_id("project-options-button").click()
 
         # Apply Filter on Proposals  -------
-        # page.get_by_role("search").click()
-        # page.get_by_test_id("filter-button").click()
-        # page.get_by_test_id("status-filter").select_option("draft")
-        # page.get_by_test_id("filter-modal-close-button").click()
-        # page.get_by_test_id("filter-button").click()
-        # page.get_by_test_id("status-filter").select_option("review")
+        page.get_by_role("search").click()
+        page.get_by_test_id("filter-button").click()
+        page.get_by_test_id("status-filter").select_option("draft")
+        page.get_by_test_id("filter-modal-close-button").click()
+        page.get_by_test_id("filter-button").click()
+        page.get_by_test_id("status-filter").select_option("review")
 
         # -------------------
         # End of Test Logic
