@@ -1,6 +1,7 @@
 import './KnowledgeCard.css'
 
 export default function KnowledgeCard({ card, date, onClick, isDuplicate, onDelete }) {
+    console.log('KnowledgeCard props:', { card, isDuplicate });
     let linked_to_element;
     let title = card.summary;
 
