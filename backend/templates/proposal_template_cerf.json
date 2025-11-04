@@ -208,7 +208,7 @@
           {
             "name": "Categories",
             "format_type": "text",
-            "instructions": "Use one of the following values: ["Displacement related", "IDP", "Refugees", "Returnees","Host Communities", "Non-Displacement related", "Total Directly Targeted",  "Persons with Disabilities"] "
+            "instructions": "Use one of the following values: ['Displacement related', 'IDP', 'Refugees', 'Returnees', 'Host Communities', 'Non-Displacement related', 'Total Directly Targeted',  'Persons with Disabilities']"
           },
           {
             "name": "Women (>18)",
@@ -248,7 +248,7 @@
           {
             "name": "Categories",
             "format_type": "text",
-            "instructions": "Use one of the following values: ["Displacement related", "IDP", "Refugees", "Returnees","Host Communities", "Non-Displacement related", "Total Directly Targeted",  "Persons with Disabilities"] "
+            "instructions": "Use one of the following values: ['Displacement related', 'IDP', 'Refugees', 'Returnees', 'Host Communities', 'Non-Displacement related', 'Total Directly Targeted',  'Persons with Disabilities']"
           },
           {
             "name": "Women (>18)",
