@@ -126,3 +126,6 @@ class TransferOwnershipRequest(BaseModel):
 class AuthorResponseRequest(BaseModel):
     author_response: str
 
+
+class SaveContributionIdRequest(BaseModel):
+    contribution_id: str

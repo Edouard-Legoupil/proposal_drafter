@@ -63,22 +63,10 @@ CREATE TABLE IF NOT EXISTS field_contexts (
 -- Create Proposal Status Enum Type
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'proposal_status') THEN
-        CREATE TYPE proposal_status AS ENUM ('draft', 'in_review', 'submission', 'submitted', 'approved');
+    IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'proposal_status') THEN
+        DROP TYPE proposal_status;
     END IF;
-END$$;
--- Add 'deleted' to the proposal_status enum if it doesn't exist
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumtypid = 'proposal_status'::regtype AND enumlabel = 'deleted') THEN
-        ALTER TYPE proposal_status ADD VALUE 'deleted';
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumtypid = 'proposal_status'::regtype AND enumlabel = 'generating_sections') THEN
-        ALTER TYPE proposal_status ADD VALUE 'generating_sections';
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumtypid = 'proposal_status'::regtype AND enumlabel = 'failed') THEN
-        ALTER TYPE proposal_status ADD VALUE 'failed';
-    END IF;
+    CREATE TYPE proposal_status AS ENUM ('draft', 'in_review', 'pre_submission', 'submitted', 'deleted');
 END$$;
 
 -- Create Proposals table
@@ -92,6 +80,7 @@ CREATE TABLE IF NOT EXISTS proposals (
     reviews JSONB,
     is_accepted BOOLEAN DEFAULT FALSE,
     status proposal_status DEFAULT 'draft', 
+    contribution_id TEXT,
     created_by UUID NOT NULL REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_by UUID NOT NULL REFERENCES users(id),

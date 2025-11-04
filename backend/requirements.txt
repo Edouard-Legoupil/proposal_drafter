@@ -105,6 +105,7 @@ pgvector
 # PDF processing
 pypdf
 PyPDF2
+pdfplumber
 
 # Slugify for clean filenames
 python-slugify
@@ -117,3 +118,4 @@ gunicorn
 
 # NLP library for tasks like tokenization and sentence splitting
 nltk
+pg8000

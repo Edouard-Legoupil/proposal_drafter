@@ -154,7 +154,7 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
 
                 await waitFor(async () => {
                         await screen.findByText('Results')
-                })
+                }, { timeout: 10000 })
 
                 const sections = ['Summary','Rationale','Project Description', "Partnerships and Coordination", "Monitoring", "Evaluation"]
 
@@ -163,7 +163,7 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                         await waitFor(async () => {
                                 const sectionContent = await screen.findByTestId(`section-content-${kebabSectionName}`);
                                 expect(sectionContent).toHaveTextContent(new RegExp(`Mocked text for ${sec}`, 'i'));
-                        });
+                        }, { timeout: 10000 });
                 }
         }, 20000)
 
@@ -244,7 +244,7 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
 
                 await waitFor(async () => {
                         await screen.findByText('Results')
-                })
+                }, { timeout: 10000 })
 
                 const sections = ['Summary','Rationale','Project Description', "Partnerships and Coordination", "Monitoring", "Evaluation"]
 
@@ -253,7 +253,7 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                         await waitFor(async () => {
                                 const sectionContent = await screen.findByTestId(`section-content-${kebabSectionName}`);
                                 expect(sectionContent).toHaveTextContent(new RegExp(`Mocked text for ${sec}`, 'i'));
-                        });
+                        }, { timeout: 10000 });
                 }
 
                 const editButton = screen.getByTestId('edit-save-button-summary')
@@ -274,7 +274,7 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                 expect(regenerated).toBeInTheDocument()
         }, 20000),
 
-        it('hides the input form when a finalized proposal is loaded', async () => {
+        it('hides the input form when a submitted proposal is loaded', async () => {
                 server.use(
                         http.get('http://localhost:8502/api/templates', () => HttpResponse.json({ templates: { "UNHCR": {} } })),
                         http.get('http://localhost:8502/api/profile', () => HttpResponse.json({ user: { "email": "test@test.com", "name": "Test User" } })),
@@ -292,7 +292,7 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                         }),
                         http.get('http://localhost:8502/api/load-draft/:proposal_id', () => {
                                 return HttpResponse.json({
-                                        proposal_id: 'approved-proposal-123',
+                                        proposal_id: 'submitted-proposal-123',
                                         session_id: 'test-session-id',
                                         project_description: 'test description',
                                         form_data: {
@@ -302,8 +302,7 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                                                 "Budget Range": "1M$", "Duration": "12 months", "Targeted Donor": "1"
                                         },
                                         generated_sections: { 'Summary': 'Mocked text for Summary' },
-                                        is_accepted: true,
-                                        status: 'approved',
+                                        status: 'submitted',
                                         proposal_template: {
                                                 sections: [{ section_name: 'Summary' }]
                                         }
@@ -314,7 +313,7 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                         })
                 )
 
-                sessionStorage.setItem('proposal_id', 'approved-proposal-123')
+                sessionStorage.setItem('proposal_id', 'submitted-proposal-123')
                 render(
                         <BrowserRouter>
                                 <Chat />

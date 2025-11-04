@@ -9,6 +9,7 @@ import os
 from typing import Optional
 
 #  Third-Party Libraries
+import pdfplumber
 from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File, BackgroundTasks
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError 
@@ -34,7 +35,8 @@ from backend.models.schemas import (
     CreateFieldContextRequest,
     UpdateProposalStatusRequest,
     TransferOwnershipRequest,
-    AuthorResponseRequest
+    AuthorResponseRequest,
+    SaveContributionIdRequest
 )
 from backend.utils.proposal_logic import regenerate_section_logic
 from backend.utils.crew_proposal  import ProposalCrew
@@ -856,7 +858,7 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
                 draft = conn.execute(
                     text("""
                         SELECT template_name, form_data, generated_sections, project_description,
-                               is_accepted, created_at, updated_at, status
+                               is_accepted, created_at, updated_at, status, contribution_id
                         FROM proposals
                         WHERE id = :id AND user_id = :uid
                     """),
@@ -907,7 +909,8 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
                     "template_name": template_name,
                     "proposal_template": proposal_template,
                     "proposal_id": str(proposal_id),
-                    "associated_knowledge_cards": associated_knowledge_cards
+                    "associated_knowledge_cards": associated_knowledge_cards,
+                    "contribution_id": draft.contribution_id
                 }
         else:
             # Handle sample drafts, which are loaded from a JSON file.
@@ -946,34 +949,6 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
 
     return {"session_id": session_id, **data_to_load}
 
-@router.post("/proposals/{proposal_id}/request-submission")
-async def request_submission(proposal_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
-    """
-    Requests submission of a proposal.
-    """
-    user_id = current_user["user_id"]
-    try:
-        with get_engine().begin() as connection:
-            # Get the current sections to create a snapshot
-            sections = connection.execute(
-                text("SELECT generated_sections FROM proposals WHERE id = :id"),
-                {"id": proposal_id}
-            ).scalar() or {}
-
-            connection.execute(
-                text("UPDATE proposals SET status = 'submission', updated_at = CURRENT_TIMESTAMP WHERE id = :id AND user_id = :uid"),
-                {"id": proposal_id, "uid": user_id}
-            )
-            # Log the status change
-            connection.execute(
-                text("INSERT INTO proposal_status_history (proposal_id, status, generated_sections_snapshot) VALUES (:pid, 'submission', :snapshot)"),
-                {"pid": proposal_id, "snapshot": json.dumps(sections)}
-            )
-        return {"message": "Proposal submitted for submission."}
-    except Exception as e:
-        logger.error(f"[REQUEST SUBMISSION ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to request submission.")
-
 @router.post("/proposals/{proposal_id}/submit")
 async def submit_proposal(proposal_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
     """
@@ -1002,32 +977,132 @@ async def submit_proposal(proposal_id: uuid.UUID, current_user: dict = Depends(g
         logger.error(f"[SUBMIT PROPOSAL ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to submit proposal.")
 
-@router.post("/finalize-proposal")
-async def finalize_proposal(request: FinalizeProposalRequest, current_user: dict = Depends(get_current_user)):
+
+@router.post("/proposals/{proposal_id}/save-contribution-id")
+async def save_contribution_id(proposal_id: uuid.UUID, request: SaveContributionIdRequest, current_user: dict = Depends(get_current_user)):
     """
-    Marks a proposal as 'accepted', making it read-only.
+    Saves the contribution ID for a submitted proposal.
     """
+    user_id = current_user["user_id"]
     try:
         with get_engine().begin() as connection:
-            # Get the current sections to create a snapshot
-            sections = connection.execute(
-                text("SELECT generated_sections FROM proposals WHERE id = :id"),
-                {"id": request.proposal_id}
-            ).scalar() or {}
+            # Verify the user owns the proposal and it is in 'submitted' state
+            proposal_status = connection.execute(
+                text("SELECT status FROM proposals WHERE id = :id AND user_id = :uid"),
+                {"id": proposal_id, "uid": user_id}
+            ).scalar()
+
+            if not proposal_status:
+                raise HTTPException(status_code=404, detail="Proposal not found.")
+
+            if proposal_status != 'submitted':
+                raise HTTPException(status_code=403, detail="Contribution ID can only be added to submitted proposals.")
 
             connection.execute(
-                text("UPDATE proposals SET is_accepted = TRUE, status = 'approved', updated_at = CURRENT_TIMESTAMP WHERE id = :id AND user_id = :uid"),
-                {"id": request.proposal_id, "uid": current_user["user_id"]}
+                text("UPDATE proposals SET contribution_id = :contribution_id, updated_at = CURRENT_TIMESTAMP WHERE id = :id"),
+                {"contribution_id": request.contribution_id, "id": proposal_id}
             )
+        return {"message": "Contribution ID saved successfully."}
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        logger.error(f"[SAVE CONTRIBUTION ID ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to save contribution ID.")
+
+
+@router.post("/proposals/{proposal_id}/upload-submitted-pdf")
+async def upload_submitted_pdf(proposal_id: uuid.UUID, file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
+    """
+    Uploads a PDF for a submitted proposal, parses its content, and updates the proposal sections.
+    """
+    user_id = current_user["user_id"]
+
+    if not file.filename.endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Invalid file type. Only PDFs are allowed.")
+
+    try:
+        with get_engine().begin() as connection:
+            # Verify the user owns the proposal
+            owner_id = connection.execute(
+                text("SELECT user_id FROM proposals WHERE id = :id"),
+                {"id": proposal_id}
+            ).scalar()
+
+            if not owner_id or owner_id != user_id:
+                raise HTTPException(status_code=403, detail="You do not have permission to modify this proposal.")
+
+            # Get the proposal template to know which sections to look for
+            template_name = connection.execute(
+                text("SELECT template_name FROM proposals WHERE id = :id"),
+                {"id": proposal_id}
+            ).scalar() or "proposal_template_unhcr.json"
+
+            proposal_template = load_proposal_template(template_name)
+            section_titles = [section['section_name'] for section in proposal_template.get('sections', [])]
+
+            # Read the PDF content
+            pdf_content = await file.read()
+
+            # Use a temporary file to work with pdfplumber
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
+                temp_pdf.write(pdf_content)
+                temp_pdf_path = temp_pdf.name
+
+            # Process the PDF with pdfplumber
+            extracted_sections = {}
+            with pdfplumber.open(temp_pdf_path) as pdf:
+                full_text = ""
+                for page in pdf.pages:
+                    full_text += page.extract_text() + "\n"
+
+            # This is a simple parsing strategy: find a section title and capture text until the next title
+            for i, title in enumerate(section_titles):
+                start_index = full_text.find(title)
+                if start_index != -1:
+                    next_title_index = -1
+                    # Find the start of the next section
+                    if i + 1 < len(section_titles):
+                        next_title = section_titles[i+1]
+                        next_title_index = full_text.find(next_title, start_index)
+
+                    content_start = start_index + len(title)
+                    if next_title_index != -1:
+                        extracted_sections[title] = full_text[content_start:next_title_index].strip()
+                    else:
+                        extracted_sections[title] = full_text[content_start:].strip()
+
+            # Clean up the temporary file
+            os.unlink(temp_pdf_path)
+
+            if not extracted_sections:
+                raise HTTPException(status_code=400, detail="Could not extract any matching sections from the PDF.")
+
+            # Update the proposal in the database
+            connection.execute(
+                text("""
+                    UPDATE proposals
+                    SET generated_sections = :sections, status = 'submitted', updated_at = CURRENT_TIMESTAMP
+                    WHERE id = :id
+                """),
+                {"sections": json.dumps(extracted_sections), "id": proposal_id}
+            )
+
             # Log the status change
             connection.execute(
-                text("INSERT INTO proposal_status_history (proposal_id, status, generated_sections_snapshot) VALUES (:pid, 'approved', :snapshot)"),
-                {"pid": request.proposal_id, "snapshot": json.dumps(sections)}
+                text("INSERT INTO proposal_status_history (proposal_id, status, generated_sections_snapshot) VALUES (:pid, 'submitted', :snapshot)"),
+                {"pid": proposal_id, "snapshot": json.dumps(extracted_sections)}
             )
-        return {"message": "Proposal finalized.", "proposal_id": request.proposal_id, "is_accepted": True}
+
+        return {"message": "PDF processed and proposal updated successfully.", "extracted_sections": extracted_sections}
+
+    except HTTPException as http_exc:
+        raise http_exc
     except Exception as e:
-        print(f"[FINALIZE ERROR] {e}")
-        raise HTTPException(status_code=500, detail="Failed to finalize proposal.")
+        logger.error(f"[PDF UPLOAD ERROR] {e}", exc_info=True)
+        # Clean up temp file in case of error
+        if 'temp_pdf_path' in locals() and os.path.exists(temp_pdf_path):
+            os.unlink(temp_pdf_path)
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
 
 
 @router.post("/proposals/{proposal_id}/save-draft-review")
@@ -1140,7 +1215,7 @@ async def submit_review(proposal_id: uuid.UUID, request: SubmitReviewRequest, cu
 
             if pending_reviews == 0:
                 connection.execute(
-                    text("UPDATE proposals SET status = 'submission', updated_at = CURRENT_TIMESTAMP WHERE id = :id"),
+                    text("UPDATE proposals SET status = 'pre_submission', updated_at = CURRENT_TIMESTAMP WHERE id = :id"),
                     {"id": proposal_id}
                 )
 
@@ -1229,7 +1304,7 @@ async def update_proposal_status(proposal_id: uuid.UUID, request: UpdateProposal
     user_id = current_user["user_id"]
     new_status = request.status
     # Add validation for allowed statuses if needed
-    allowed_statuses = ['draft', 'in_review', 'submission', 'submitted', 'approved']
+    allowed_statuses = ['draft', 'in_review', 'pre_submission', 'submitted']
     if new_status not in allowed_statuses:
         raise HTTPException(status_code=400, detail="Invalid status value.")
 
@@ -1655,12 +1730,22 @@ async def get_peer_reviews(proposal_id: uuid.UUID, current_user: dict = Depends(
     user_id = current_user["user_id"]
     try:
         with get_engine().connect() as connection:
-            # Verify user has access
+            # Verify the user has access to the proposal (owner, reviewer, or admin)
             proposal_owner = connection.execute(
                 text("SELECT user_id FROM proposals WHERE id = :id"),
                 {"id": proposal_id}
             ).scalar()
-            if not proposal_owner or proposal_owner != user_id:
+
+            is_reviewer = connection.execute(
+                text("SELECT 1 FROM proposal_peer_reviews WHERE proposal_id = :pid AND reviewer_id = :rid"),
+                {"pid": proposal_id, "rid": user_id}
+            ).scalar()
+
+            if not proposal_owner:
+                raise HTTPException(status_code=404, detail="Proposal not found.")
+
+            user_role = current_user.get("role")
+            if user_role not in ["focal_point", "admin"] and proposal_owner != user_id and not is_reviewer:
                 raise HTTPException(status_code=403, detail="You do not have permission to view this proposal's reviews.")
 
             query = text("""
@@ -1733,39 +1818,3 @@ async def save_author_response(review_id: uuid.UUID, request: AuthorResponseRequ
     except Exception as e:
         logger.error(f"[SAVE AUTHOR RESPONSE ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to save author response.")
-
-
-@router.post("/proposals/{proposal_id}/upload-approved-document")
-async def upload_approved_document(proposal_id: uuid.UUID, file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
-    """
-    Uploads the final approved document for a proposal.
-    """
-    user_id = current_user["user_id"]
-    try:
-        with get_engine().connect() as connection:
-            # Verify that the user is the author of the proposal and it is approved
-            proposal = connection.execute(
-                text("SELECT user_id, status FROM proposals WHERE id = :id"),
-                {"id": proposal_id}
-            ).fetchone()
-
-            if not proposal:
-                raise HTTPException(status_code=404, detail="Proposal not found.")
-
-            if proposal.user_id != user_id:
-                raise HTTPException(status_code=403, detail="You do not have permission to upload documents for this proposal.")
-
-            if proposal.status != 'approved':
-                raise HTTPException(status_code=400, detail="Proposal is not approved yet.")
-
-            # In a real application, you would save the file to a secure location (e.g., S3)
-            # and store the path/URL in the database.
-            # For this example, we'll just return a success message.
-            # a new column would be needed in the proposals table to store the document path.
-
-        return {"message": f"File '{file.filename}' uploaded successfully for proposal '{proposal_id}'."}
-    except HTTPException as http_exc:
-        raise http_exc
-    except Exception as e:
-        logger.error(f"[UPLOAD DOCUMENT ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to upload document.")
