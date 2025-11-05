@@ -276,7 +276,7 @@ async def get_knowledge_cards(
                     d.name as donor_name,
                     o.name as outcome_name,
                     fc.name as field_context_name,
-                    (SELECT json_agg(json_build_object('id', kcr.id, 'url', kcr.url, 'reference_type', kcr.reference_type, 'summary', kcr.summary, 'scraped_at', kcr.scraped_at, 'scraping_error', kcr.scraping_error))
+                    (SELECT json_agg(json_build_object('id', kcr.id, 'url', kcr.url, 'reference_type', kcr.reference_type, 'summary', kcr.summary, 'scraped_at', kcr.scraped_at, 'scraping_error', kcr.scraping_error, 'ingested_at', kcr.scraped_at))
                      FROM knowledge_card_references kcr
                      JOIN knowledge_card_to_references kctr ON kcr.id = kctr.reference_id
                      WHERE kctr.knowledge_card_id = kc.id) as "references"
@@ -410,7 +410,7 @@ async def get_knowledge_card(card_id: uuid.UUID, current_user: dict = Depends(ge
                     d.name as donor_name,
                     o.name as outcome_name,
                     fc.name as field_context_name,
-                    (SELECT json_agg(json_build_object('id', kcr.id, 'url', kcr.url, 'reference_type', kcr.reference_type, 'summary', kcr.summary, 'scraped_at', kcr.scraped_at, 'scraping_error', kcr.scraping_error))
+                    (SELECT json_agg(json_build_object('id', kcr.id, 'url', kcr.url, 'reference_type', kcr.reference_type, 'summary', kcr.summary, 'scraped_at', kcr.scraped_at, 'scraping_error', kcr.scraping_error, 'ingested_at', kcr.scraped_at))
                      FROM knowledge_card_references kcr
                      JOIN knowledge_card_to_references kctr ON kcr.id = kctr.reference_id
                      WHERE kctr.knowledge_card_id = kc.id) as "references"
@@ -1074,47 +1074,50 @@ async def generate_content_background(card_id: uuid.UUID):
             )
 
 @router.post("/knowledge-cards/{card_id}/ingest-references")
-async def ingest_knowledge_card_references(card_id: uuid.UUID, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
+async def ingest_knowledge_card_references(
+    card_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
+    reference_ids: Optional[List[uuid.UUID]] = Body(None),
+    current_user: dict = Depends(get_current_user)
+):
     """
-    Starts the ingestion of references for a knowledge card in the background.
+    Starts the ingestion of selected or all references for a knowledge card in the background.
     """
-    #  Validate card exists and user has permission
     with get_engine().connect() as connection:
         card_check = connection.execute(
-            text("SELECT id FROM knowledge_cards WHERE id = :card_id"), 
+            text("SELECT id FROM knowledge_cards WHERE id = :card_id"),
             {"card_id": card_id}
         ).fetchone()
-        
         if not card_check:
             raise HTTPException(status_code=404, detail="Knowledge card not found.")
 
-    async def ingest_references_background(card_id: uuid.UUID):
+    async def ingest_references_background(card_id: uuid.UUID, ids: Optional[List[uuid.UUID]]):
         with get_engine().begin() as connection:
-            references = connection.execute(
-                text("""
-                    SELECT kcr.id FROM knowledge_card_references kcr
-                    JOIN knowledge_card_to_references kctr ON kcr.id = kctr.reference_id
-                    WHERE kctr.knowledge_card_id = :card_id
-                """),
-                {"card_id": card_id}
-            ).fetchall()
+            query = """
+                SELECT kcr.id FROM knowledge_card_references kcr
+                JOIN knowledge_card_to_references kctr ON kcr.id = kctr.reference_id
+                WHERE kctr.knowledge_card_id = :card_id
+            """
+            params = {"card_id": card_id}
+            if ids:
+                query += " AND kcr.id = ANY(:ids)"
+                params["ids"] = [str(id) for id in ids]
 
-            # Process references sequentially to avoid overload
+            references = connection.execute(text(query), params).fetchall()
             for ref in references:
                 try:
-                    await ingest_reference_content(card_id, ref.id, connection=connection)
+                    await ingest_reference_content(card_id, ref.id, force_scrape=False, connection=connection)
                 except Exception as e:
-                    logger.error(f"[BACKGROUND INGEST ERROR] Failed to ingest reference {ref.id}: {e}")
-                    continue  # Continue with next reference even if one fails
+                    logger.error(f"Failed to ingest reference {ref.id}: {e}", exc_info=True)
 
-    background_tasks.add_task(ingest_references_background, card_id)
+    background_tasks.add_task(ingest_references_background, card_id, reference_ids)
     return {"message": "Reference ingestion started in the background."}
 
 
 @router.post("/knowledge-cards/{card_id}/references/{reference_id}/reingest")
 async def reingest_knowledge_card_reference(card_id: uuid.UUID, reference_id: uuid.UUID, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
     """
-    Starts the ingestion of a single reference for a knowledge card in the background.
+    Starts the ingestion of a single reference for a knowledge card in the background, with force_scrape=True.
     """
     #  Validate card and reference exist
     with get_engine().connect() as connection:
@@ -1133,11 +1136,9 @@ async def reingest_knowledge_card_reference(card_id: uuid.UUID, reference_id: uu
     async def ingest_single_reference_background(card_id: uuid.UUID, reference_id: uuid.UUID):
         with get_engine().begin() as connection:
             try:
-                # Force scrape since we are manually re-ingesting
                 await ingest_reference_content(card_id, reference_id, force_scrape=True, connection=connection)
             except Exception as e:
-                logger.error(f"[BACKGROUND SINGLE INGEST ERROR] Failed to ingest reference {reference_id}: {e}")
-                _update_ingest_progress(card_id, reference_id, "error", f"Processing error: {str(e)}")
+                logger.error(f"Failed to re-ingest reference {reference_id}: {e}", exc_info=True)
 
     background_tasks.add_task(ingest_single_reference_background, card_id, reference_id)
     return {"message": "Single reference ingestion started in the background."}
