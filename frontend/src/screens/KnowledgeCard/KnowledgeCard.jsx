@@ -489,25 +489,32 @@ export default function KnowledgeCard() {
         }
     }, [id, linkType, linkedId, handleSave, navigate, linkOptions, selectedGeoCoverage, authenticatedFetch, fetchData]);
 
-    const handleIngestReferences = useCallback(async () => {
+    const handleIngestReferences = useCallback(async (referenceId = null) => {
         let cardId = id;
-    
+
         if (!cardId) {
             const saveResponse = await handleSave(false);
             if (!saveResponse.ok) return;
             const data = await saveResponse.json();
             cardId = data.knowledge_card_id;
-            
+
             navigate(`/knowledge-card/${cardId}`, { replace: true, state: { fromAction: 'ingest' } });
             return;
         }
-    
+
         setLoading(true);
-        setLoadingMessage("Ingesting all references... This may take a while.");
-    
+        setLoadingMessage("Ingesting references... This may take a while.");
+
+        const uningestedReferences = references.filter(ref => !ref.ingested_at).map(ref => ref.id);
+        const endpoint = referenceId ? `${API_BASE_URL}/knowledge-cards/${cardId}/references/${referenceId}/reingest` : `${API_BASE_URL}/knowledge-cards/${cardId}/ingest-references`;
+        const body = referenceId ? null : JSON.stringify({ reference_ids: uningestedReferences });
+        const headers = referenceId ? {} : { 'Content-Type': 'application/json' };
+
         try {
-            const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${cardId}/ingest-references`, {
+            const response = await authenticatedFetch(endpoint, {
                 method: 'POST',
+                headers: headers,
+                body: body,
                 credentials: 'include'
             });
     
@@ -1080,6 +1087,7 @@ export default function KnowledgeCard() {
                             getStatus={getStatus}
                             getStatusMessage={getStatusMessage}
                             onUploadClick={handleOpenUploadModal}
+                            onReingestClick={handleIngestReferences}
                         />
 
                         {/* Form Actions */}
