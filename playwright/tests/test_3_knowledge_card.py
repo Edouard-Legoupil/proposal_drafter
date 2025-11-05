@@ -141,12 +141,13 @@ def test_knowledge_card():
         # Ingest References   -------
         page.once("dialog", lambda dialog: dialog.dismiss())
         page.get_by_test_id("ingest-references-button").click() 
-        # Wait for the loading modal to appear with the correct message, then disappear
-        loading_modal_locator = page.locator(".loading-modal")
-        expect(loading_modal_locator).to_be_visible()
-        expect(page.get_by_text("Reference ingestion started...")).to_be_visible()
-        expect(loading_modal_locator).to_be_hidden(timeout=600000)
+        # Wait for the alert modal to appear and click OK
+        alert_modal_locator = page.locator('[data-testid="alert-modal-overlay"]')
+        expect(alert_modal_locator).to_be_visible()
+        expect(page.get_by_test_id("alert-ok-button")).to_be_visible(timeout=200000)
+        page.get_by_test_id("alert-ok-button").click()
         page.screenshot(path="playwright/test-results/knowledge_card_reference_7ingested.png")
+
 
         # Manage Reference Error   -------
         # page.get_by_text("error").nth(1).click()
@@ -158,8 +159,10 @@ def test_knowledge_card():
         page.once("dialog", lambda dialog: dialog.dismiss())
         page.get_by_test_id("populate-card-button").click()
         # Wait for the generated content container to be visible, indicating completion
-        generated_content_locator = page.get_by_test_id("generated-content-container")
-        expect(generated_content_locator).to_be_visible(timeout=200000)
+        loading_modal_locator = page.locator('[data-testid="loading-modal-overlay"]')
+        expect(loading_modal_locator).to_be_visible()
+        expect(page.get_by_test_id("alert-ok-button")).to_be_visible(timeout=200000)
+        page.get_by_test_id("alert-ok-button").click()
         page.screenshot(path="playwright/test-results/knowledge_card_9populated.png")
 
         # Edit Card   -------
@@ -176,6 +179,29 @@ def test_knowledge_card():
         page.once("dialog", lambda dialog: dialog.dismiss())
         page.get_by_test_id("close-card-button").click()
         page.screenshot(path="playwright/test-results/knowledge_card_11save.png")
+
+        # Test with a provided reference --- 
+
+        # page.get_by_test_id("logo").click()
+        # page.get_by_test_id("knowledge-tab").click()
+        # page.get_by_test_id("new-knowledge-card-button").click()
+        # page.get_by_role("combobox", name="Select Item*").fill("ko")
+        # page.get_by_role("option", name="Republic of Korea - Ministry").click()
+        # page.get_by_test_id("confirm-button").click()
+        # page.get_by_test_id("summary-textarea").click()
+        # page.get_by_test_id("summary-textarea").fill("test3")
+        # page.get_by_test_id("add-reference-button").click()
+        # page.get_by_test_id("reference-type-select-0").select_option("Donor Content")
+        # page.get_by_test_id("reference-url-input-0").click()
+        # page.get_by_test_id("reference-url-input-0").fill("https://donortracker.org/donor_profiles/south-korea")
+        # page.get_by_test_id("reference-summary-textarea-0").click()
+        # page.get_by_test_id("reference-summary-textarea-0").fill("Donor Tracker")
+        # page.get_by_test_id("save-reference-button-0").click()
+        # page.get_by_test_id("save-reference-button-0").click()
+        # page.once("dialog", lambda dialog: dialog.dismiss())
+        # page.get_by_test_id("ingest-references-button").click()
+        # page.get_by_test_id("populate-card-button").click()
+        # page.get_by_test_id("progress-modal-overlay").click()
 
 
         # -------------------

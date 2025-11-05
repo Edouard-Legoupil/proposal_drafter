@@ -6,6 +6,7 @@ import Base from '../../components/Base/Base';
 import CommonButton from '../../components/CommonButton/CommonButton';
 import LoadingModal from '../../components/LoadingModal/LoadingModal';
 import ConfirmationModal from '../../components/ConfirmationModal/ConfirmationModal';
+import AlertModal from '../../components/AlertModal/AlertModal';
 import ProgressModal from '../../components/ProgressModal/ProgressModal';
 import KnowledgeCardHistory from '../../components/KnowledgeCardHistory/KnowledgeCardHistory';
 import KnowledgeCardReferences from '../../components/KnowledgeCardReferences/KnowledgeCardReferences';
@@ -54,6 +55,8 @@ export default function KnowledgeCard() {
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
     const [existingCard, setExistingCard] = useState(null);
     const [initialDataLoaded, setInitialDataLoaded] = useState(false);
+    const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
+    const [alertModalMessage, setAlertModalMessage] = useState('');
 
     // Use refs to track current state without stale closures
     const summaryRef = useRef(summary);
@@ -216,7 +219,8 @@ export default function KnowledgeCard() {
                 if (fetchDataRef.current) {
                     fetchDataRef.current(); // Final fetch to get the latest data
                 }
-                alert("Reference ingestion completed successfully!");
+                setAlertModalMessage("Reference ingestion completed successfully!");
+                setIsAlertModalOpen(true);
             }
         } else if (pollingFor === 'populate') {
             const maxAttempts = 5; // Poll for 10 seconds to allow DB to update
@@ -227,7 +231,8 @@ export default function KnowledgeCard() {
                 setLoading(false);
                 setLoadingMessage('');
                 fetchData(); // Final fetch to get the latest data
-                alert("Content generation completed successfully!");
+                setAlertModalMessage("Content generation completed successfully!");
+                setIsAlertModalOpen(true);
             }
         }
     }, [references, getStatus, pollingFor, fetchData]);
@@ -918,6 +923,11 @@ export default function KnowledgeCard() {
     return (
         <Base>
             {/* Modals */}
+            <AlertModal
+                isOpen={isAlertModalOpen}
+                message={alertModalMessage}
+                onClose={() => setIsAlertModalOpen(false)}
+            />
             <ConfirmationModal
                 isOpen={isConfirmationModalOpen}
                 message="A knowledge card with this selection already exists. Ad-hoc knowledge cards with specific references and content can be added to offer flexibility. Do you want to create another one?"
