@@ -508,7 +508,7 @@ export default function KnowledgeCard() {
         const uningestedReferences = references.filter(ref => !ref.ingested_at).map(ref => ref.id);
         const isSingleReingest = typeof referenceId === 'string';
         const endpoint = isSingleReingest ? `${API_BASE_URL}/knowledge-cards/${cardId}/references/${referenceId}/reingest` : `${API_BASE_URL}/knowledge-cards/${cardId}/ingest-references`;
-        const body = isSingleReingest ? null : JSON.stringify({ reference_ids: uningestedReferences });
+        const body = isSingleReingest ? null : JSON.stringify(uningestedReferences);
         const headers = isSingleReingest ? {} : { 'Content-Type': 'application/json' };
 
         try {
