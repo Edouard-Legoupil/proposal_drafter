@@ -206,8 +206,6 @@ export default function KnowledgeCard() {
             return; // Not polling, do nothing
         }
 
-        pollingRef.current.attempts += 1;
-
         if (pollingFor === 'ingest') {
             const maxAttempts = 15; // Poll for 30 seconds
             if (pollingRef.current.attempts >= maxAttempts) {
@@ -223,19 +221,33 @@ export default function KnowledgeCard() {
                 setIsAlertModalOpen(true);
             }
         } else if (pollingFor === 'populate') {
-            const maxAttempts = 5; // Poll for 10 seconds to allow DB to update
-            if (pollingRef.current.attempts >= maxAttempts) {
-                console.log("Finished polling for content generation.");
+            const maxAttempts = 90; // Poll for 180 seconds (3 minutes)
+            const allSectionsGenerated = proposal_template && proposal_template.sections && generatedSections &&
+                proposal_template.sections.every(sectionInfo =>
+                    Object.keys(generatedSections).includes(sectionInfo.section_name)
+                );
+
+            if (allSectionsGenerated) {
+                console.log("Finished polling for content generation (success).");
                 clearInterval(pollingRef.current.intervalId);
                 pollingRef.current.intervalId = null;
                 setLoading(false);
                 setLoadingMessage('');
-                fetchData(); // Final fetch to get the latest data
+                fetchData();
                 setAlertModalMessage("Content generation completed successfully!");
+                setIsAlertModalOpen(true);
+            } else if (pollingRef.current.attempts >= maxAttempts) {
+                console.log("Finished polling for content generation (timeout).");
+                clearInterval(pollingRef.current.intervalId);
+                pollingRef.current.intervalId = null;
+                setLoading(false);
+                setLoadingMessage('');
+                fetchData();
+                setAlertModalMessage("Content generation timed out. Please check the content and try again.");
                 setIsAlertModalOpen(true);
             }
         }
-    }, [references, getStatus, pollingFor, fetchData]);
+    }, [references, getStatus, pollingFor, fetchData, generatedSections, proposal_template]);
 
     useEffect(() => {
         fetchData();
@@ -506,6 +518,7 @@ export default function KnowledgeCard() {
                 setPollingFor('ingest');
                 pollingRef.current.attempts = 0;
                 pollingRef.current.intervalId = setInterval(() => {
+                    pollingRef.current.attempts += 1;
                     console.log(`Polling for ingestion updates... Attempt: ${pollingRef.current.attempts + 1}`);
                     if (fetchDataRef.current) {
                         fetchDataRef.current();
@@ -722,6 +735,7 @@ export default function KnowledgeCard() {
                                     setPollingFor('populate');
                                     pollingRef.current.attempts = 0; // Reset attempts
                                     pollingRef.current.intervalId = setInterval(() => {
+                                        pollingRef.current.attempts += 1;
                                         console.log(`Polling for content updates... Attempt: ${pollingRef.current.attempts + 1}`);
                                         if (fetchDataRef.current) {
                                             fetchDataRef.current();
