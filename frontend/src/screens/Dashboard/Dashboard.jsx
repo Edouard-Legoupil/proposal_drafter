@@ -185,6 +185,10 @@ export default function Dashboard ()
                                 filteredProjects = filteredProjects.filter(project => project.status === statusFilter);
                         }
 
+                        if (selectedTab === 'reviews') {
+                                filteredProjects = filteredProjects.filter(project => project.status !== 'deleted');
+                        }
+
                         setDisplayProjects(filteredProjects);
                 } else {
                         setDisplayProjects([]);
