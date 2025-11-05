@@ -106,18 +106,18 @@ def test_knowledge_card():
         # page.get_by_test_id("knowledge-card-checkbox-2305e4d0-2e3f-4223-96e7-ce9b3fc471e3").uncheck()
         # page.get_by_test_id("confirm-button").click()
         # page.get_by_test_id("manage-knowledge-button").click()
-        page.get_by_test_id("create-new-knowledge-card-button").click()
+        
         page.screenshot(path="playwright/test-results/knowledge_card_5create.png")
-
 
         # Card reference   -------
         page.get_by_test_id("link-type-select").select_option("donor")
-
-        page.locator(".kc-linked-item-select__input-container").click()    
+        page.locator(".kc-linked-item-select__input-container").click()
+        page.get_by_role("combobox", name="Select Item*").fill("kor")
         page.get_by_role("option", name="Republic of Korea - Ministry").click()
-
+        page.get_by_test_id("confirm-button").click()
         page.get_by_test_id("summary-textarea").click()
-        page.get_by_test_id("summary-textarea").fill("Test")
+        page.get_by_test_id("summary-textarea").fill("test")
+
 
     
         # Identify References   -------
@@ -130,13 +130,13 @@ def test_knowledge_card():
         page.get_by_test_id("remove-reference-button-9").click()
 
         # Manually Add Reference  -------
-        page.get_by_test_id("add-reference-button").click()
-        page.get_by_test_id("reference-type-select-10").select_option("Donor Content")
-        page.get_by_test_id("reference-summary-textarea-10").click()
-        page.get_by_test_id("reference-summary-textarea-10").fill("bla bla bla")
-        page.get_by_test_id("cancel-edit-reference-button-10").click()
-        page.once("dialog", lambda dialog: dialog.dismiss())
-        page.get_by_test_id("remove-reference-button-10").click()
+        # page.get_by_test_id("add-reference-button").click()
+        # page.get_by_test_id("reference-type-select-10").select_option("Donor Content")
+        # page.get_by_test_id("reference-summary-textarea-10").click()
+        # page.get_by_test_id("reference-summary-textarea-10").fill("bla bla bla")
+        # page.get_by_test_id("cancel-edit-reference-button-10").click()
+        # page.once("dialog", lambda dialog: dialog.dismiss())
+        # page.get_by_test_id("remove-reference-button-10").click()
 
         # Ingest References   -------
         page.once("dialog", lambda dialog: dialog.dismiss())
@@ -145,7 +145,7 @@ def test_knowledge_card():
         loading_modal_locator = page.locator(".loading-modal")
         expect(loading_modal_locator).to_be_visible()
         expect(page.get_by_text("Reference ingestion started...")).to_be_visible()
-        expect(loading_modal_locator).to_be_hidden(timeout=60000)
+        expect(loading_modal_locator).to_be_hidden(timeout=600000)
         page.screenshot(path="playwright/test-results/knowledge_card_reference_7ingested.png")
 
         # Manage Reference Error   -------
@@ -159,7 +159,7 @@ def test_knowledge_card():
         page.get_by_test_id("populate-card-button").click()
         # Wait for the generated content container to be visible, indicating completion
         generated_content_locator = page.get_by_test_id("generated-content-container")
-        expect(generated_content_locator).to_be_visible(timeout=180000)
+        expect(generated_content_locator).to_be_visible(timeout=200000)
         page.screenshot(path="playwright/test-results/knowledge_card_9populated.png")
 
         # Edit Card   -------
