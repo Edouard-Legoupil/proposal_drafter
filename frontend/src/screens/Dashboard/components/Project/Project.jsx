@@ -55,9 +55,11 @@ export default function Project ({ project, date, onClick, isReview = false, pro
                         <article className="card" onClick={onClick} data-testid="review-card">
                                 <div className="Dashboard_project_title">
                                         <h3 id={`review-${project.proposal_id}`}>{project.project_title}</h3>
-                                        <button className="Dashboard_project_tripleDotsContainer" onClick={togglePopover} aria-haspopup="true" aria-expanded={popoverVisible} data-testid="project-options-button">
-                                                <img src={tripleDots} alt="Options" />
-                                        </button>
+                                        {!isReview &&
+                                                <button className="Dashboard_project_tripleDotsContainer" onClick={togglePopover} aria-haspopup="true" aria-expanded={popoverVisible} data-testid="project-options-button">
+                                                        <img src={tripleDots} alt="Options" />
+                                                </button>
+                                        }
                                         <div className={`Project_optionsPopover ${popoverVisible ? 'visible' : ''}`} id={`popover-${projectIndex+1}`} >
                                             <div className={`Project_optionsPopover_option`} onClick={(e) => { e.stopPropagation(); onClick(e); }} data-testid="project-view-button">
                                                     <img src={view} alt="View" />
