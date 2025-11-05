@@ -54,6 +54,9 @@ class IdentifyReferencesIn(BaseModel):
 class UpdateSectionIn(BaseModel):
     content: str
 
+class IngestReferencesIn(BaseModel):
+    reference_ids: Optional[List[uuid.UUID]] = None
+
 class KnowledgeCardIn(BaseModel):
     summary: str
     template_name: Optional[str] = None
@@ -1077,7 +1080,7 @@ async def generate_content_background(card_id: uuid.UUID):
 async def ingest_knowledge_card_references(
     card_id: uuid.UUID,
     background_tasks: BackgroundTasks,
-    reference_ids: Optional[List[uuid.UUID]] = Body(None),
+    data: IngestReferencesIn,
     current_user: dict = Depends(get_current_user)
 ):
     """
@@ -1110,7 +1113,7 @@ async def ingest_knowledge_card_references(
                 except Exception as e:
                     logger.error(f"Failed to ingest reference {ref.id}: {e}", exc_info=True)
 
-    background_tasks.add_task(ingest_references_background, card_id, reference_ids)
+    background_tasks.add_task(ingest_references_background, card_id, data.reference_ids)
     return {"message": "Reference ingestion started in the background."}
 
 
