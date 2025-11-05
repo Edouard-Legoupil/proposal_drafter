@@ -46,6 +46,11 @@
     color: #333;
 }
 
+.kc-reference-ingestion-date {
+    font-size: 0.6rem;
+    color: #333;
+}
+
 .kc-reference-actions {
     display: flex;
     gap: 0.5rem;

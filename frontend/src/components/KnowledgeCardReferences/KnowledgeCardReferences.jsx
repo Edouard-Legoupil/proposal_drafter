@@ -108,7 +108,7 @@ export default function KnowledgeCardReferences({
                                             )}
                                             {ref.ingested_at && (
                                                 <span className="kc-reference-ingestion-date" data-testid={`reference-ingestion-date-${index}`}>
-                                                    Ingested: {formatDate(ref.ingested_at)}
+                                                    {formatDate(ref.ingested_at)}
                                                 </span>
                                             )}
                                         </div>
