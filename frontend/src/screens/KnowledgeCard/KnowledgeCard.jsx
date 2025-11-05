@@ -506,9 +506,10 @@ export default function KnowledgeCard() {
         setLoadingMessage("Ingesting references... This may take a while.");
 
         const uningestedReferences = references.filter(ref => !ref.ingested_at).map(ref => ref.id);
-        const endpoint = referenceId ? `${API_BASE_URL}/knowledge-cards/${cardId}/references/${referenceId}/reingest` : `${API_BASE_URL}/knowledge-cards/${cardId}/ingest-references`;
-        const body = referenceId ? null : JSON.stringify({ reference_ids: uningestedReferences });
-        const headers = referenceId ? {} : { 'Content-Type': 'application/json' };
+        const isSingleReingest = typeof referenceId === 'string';
+        const endpoint = isSingleReingest ? `${API_BASE_URL}/knowledge-cards/${cardId}/references/${referenceId}/reingest` : `${API_BASE_URL}/knowledge-cards/${cardId}/ingest-references`;
+        const body = isSingleReingest ? null : JSON.stringify({ reference_ids: uningestedReferences });
+        const headers = isSingleReingest ? {} : { 'Content-Type': 'application/json' };
 
         try {
             const response = await authenticatedFetch(endpoint, {
@@ -1103,7 +1104,7 @@ export default function KnowledgeCard() {
                                 />
                                 <CommonButton
                                     type="button"
-                                    onClick={handleIngestReferences}
+                                    onClick={() => handleIngestReferences()}
                                     label="2. Ingest References"
                                     className="squared-btn"
                                     data-testid="ingest-references-button"
