@@ -333,7 +333,7 @@ export default function Login (props)
                                         </div>
                                 </div>
                                 <div style={{ marginTop: '20px', fontSize: '12px', color: 'grey', textAlign: 'center' }}>
-                                    <p>You are now running <a href="https://github.com/Edouard-Legoupil/proposal_drafter/releases/tag/0.3" target="_blank" rel="noopener noreferrer">v.0.3</a></p>
+                                    <p>You are now running <a href="https://github.com/Edouard-Legoupil/proposal_drafter/releases/tag/0.4" target="_blank" rel="noopener noreferrer">v.0.4</a></p>
                                 </div>
                         </div>
                 </div>
