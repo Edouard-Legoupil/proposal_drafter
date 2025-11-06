@@ -18,11 +18,15 @@ export default function Dashboard ()
         const [projects, setProjects] = useState([])
         const [reviews, setReviews] = useState([])
         const [knowledgeCards, setKnowledgeCards] = useState([])
+        const [displayKnowledgeCards, setDisplayKnowledgeCards] = useState(knowledgeCards)
         const [selectedTab, setSelectedTab] = useState('proposals')
         const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
         const [isTransferModalOpen, setIsTransferModalOpen] = useState(false)
         const [transferProposalId, setTransferProposalId] = useState(null)
         const [users, setUsers] = useState([])
+        const [knowledgeCardTypeFilter, setKnowledgeCardTypeFilter] = useState('')
+        const [statusFilter, setStatusFilter] = useState('')
+        const [duplicateCardIds, setDuplicateCardIds] = useState(new Set());
 
         const tabRefs = {
                 proposals: useRef(null),
@@ -167,19 +171,98 @@ export default function Dashboard ()
         useEffect(() => {
                 let source = [];
                 if (selectedTab === 'proposals') {
-                    source = projects;
+                        source = projects;
                 } else if (selectedTab === 'reviews') {
-                    source = reviews;
+                        source = reviews;
                 }
 
                 if (source && source.length > 0) {
-                    setDisplayProjects(source.filter(project =>
-                        project.project_title.toLowerCase().includes(searchTerm.toLowerCase())
-                    ));
+                        let filteredProjects = source.filter(project =>
+                                project.project_title.toLowerCase().includes(searchTerm.toLowerCase())
+                        );
+
+                        if (statusFilter) {
+                                filteredProjects = filteredProjects.filter(project => project.status === statusFilter);
+                        }
+
+                        if (selectedTab === 'reviews') {
+                                filteredProjects = filteredProjects.filter(project => project.status !== 'deleted');
+                        }
+
+                        setDisplayProjects(filteredProjects);
                 } else {
-                    setDisplayProjects([]); // Reset if source is empty or not applicable
+                        setDisplayProjects([]);
                 }
-            }, [projects, reviews, searchTerm, selectedTab]);
+        }, [projects, reviews, searchTerm, selectedTab, statusFilter]);
+
+        useEffect(() => {
+                let filteredCards = knowledgeCards;
+
+                if (knowledgeCardTypeFilter) {
+                    filteredCards = filteredCards.filter(card => {
+                        if (knowledgeCardTypeFilter === 'donor') return card.donor_name;
+                        if (knowledgeCardTypeFilter === 'outcome') return card.outcome_name;
+                        if (knowledgeCardTypeFilter === 'field_context') return card.field_context_name;
+                        return true;
+                    });
+                }
+
+                if (searchTerm) {
+                    filteredCards = filteredCards.filter(card =>
+                        (card.summary && card.summary.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                        (card.donor_name && card.donor_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                        (card.outcome_name && card.outcome_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                        (card.field_context_name && card.field_context_name.toLowerCase().includes(searchTerm.toLowerCase()))
+                    );
+                }
+
+                setDisplayKnowledgeCards(filteredCards);
+            }, [knowledgeCards, searchTerm, knowledgeCardTypeFilter]);
+
+        useEffect(() => {
+            const findDuplicates = () => {
+                if (knowledgeCards.length === 0) return;
+                const groups = {};
+                knowledgeCards.forEach(card => {
+                    let key = null;
+                    if (card.donor_id) key = `donor-${card.donor_id}`;
+                    else if (card.outcome_id) key = `outcome-${card.outcome_id}`;
+                    else if (card.field_context_id) key = `field_context-${card.field_context_id}`;
+
+                    if (key) {
+                        if (!groups[key]) {
+                            groups[key] = [];
+                        }
+                        groups[key].push(card.id);
+                    }
+                });
+
+                const duplicates = new Set();
+                for (const key in groups) {
+                    if (groups[key].length > 1) {
+                        groups[key].forEach(id => duplicates.add(id));
+                    }
+                }
+                setDuplicateCardIds(duplicates);
+                console.log('Duplicate Card IDs:', duplicates);
+            };
+
+            findDuplicates();
+        }, [knowledgeCards]);
+
+        async function handleDeleteKnowledgeCard(cardId) {
+            const response = await fetch(`${API_BASE_URL}/knowledge-cards/${cardId}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                getKnowledgeCards();
+            } else {
+                alert('Failed to delete knowledge card.');
+            }
+        }
 
         const activateTab = (tabId) => {
                 setSelectedTab(tabId);
@@ -292,10 +375,9 @@ export default function Dashboard ()
                                         <div className="card card--cta">
                                                 <button className="btn" type="button" aria-label="Start a new proposal" onClick={() => navigate("/chat")} data-testid="new-proposal-button">Start New Proposal</button>
                                         </div>
-                                        {displayProjects && displayProjects.map((project, i) =>
+                                        {displayProjects && displayProjects.map((project) =>
                                                 <Project
-                                                        key={i}
-                                                        projectIndex={i}
+                                                        key={project.proposal_id}
                                                         project={project}
                                                         date={cleanedDate(project.updated_at)}
                                                         onClick={(e) => handleProjectClick(e, project.proposal_id, false)}
@@ -311,12 +393,14 @@ export default function Dashboard ()
                                         <div className="card card--cta">
                                                 <button className="btn" type="button" aria-label="Start a new knowledge card" onClick={() => navigate("/knowledge-card/new")} data-testid="new-knowledge-card-button">Create New Knowledge Card</button>
                                         </div>
-                                        {knowledgeCards && knowledgeCards.map((card, i) =>
+                                        {displayKnowledgeCards && displayKnowledgeCards.map((card) =>
                                                 <KnowledgeCard
-                                                        key={i}
+                                                        key={card.id}
                                                         card={card}
                                                         date={cleanedDate(card.updated_at)}
                                                         onClick={() => navigate(`/knowledge-card/${card.id}`)}
+                                                        isDuplicate={duplicateCardIds.has(card.id)}
+                                                        onDelete={() => handleDeleteKnowledgeCard(card.id)}
                                                 />
                                         )}
                                 </div>
@@ -324,9 +408,9 @@ export default function Dashboard ()
 
                         <section id="reviews-panel" role="tabpanel" aria-labelledby="reviews-tab" className={`tab-panel ${selectedTab === 'reviews' ? 'active' : ''}`} hidden={selectedTab !== 'reviews'}>
                                 <div className="Dashboard_projects" id="reviews-grid">
-                                {displayProjects && displayProjects.map((review, i) =>
+                                {displayProjects && displayProjects.map((review) =>
                                         <Project
-                                                key={i}
+                                                key={review.proposal_id}
                                                 project={review}
                                                 date={cleanedDate(review.updated_at)}
                                                 onClick={(e) => handleProjectClick(e, review.proposal_id, true)}
@@ -350,7 +434,7 @@ export default function Dashboard ()
 
                                 <div className="filter-section" data-tab="proposals" hidden={selectedTab !== 'proposals'}>
                                         <label htmlFor="status-filter">Status</label>
-                                        <select id="status-filter" data-testid="status-filter">
+                                        <select id="status-filter" data-testid="status-filter" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
                                                 <option value="">All</option>
                                                 <option value="draft">Drafting</option>
                                                 <option value="review">Pending Review</option>
@@ -365,6 +449,16 @@ export default function Dashboard ()
                                 <div className="filter-section" data-tab="reviews" hidden={selectedTab !== 'reviews'}>
                                         <label htmlFor="deadline-filter">Deadline before</label>
                                         <input type="date" id="deadline-filter" data-testid="deadline-filter" />
+                                </div>
+
+                                <div className="filter-section" data-tab="knowledge" hidden={selectedTab !== 'knowledge'}>
+                                        <label htmlFor="knowledge-card-type-filter">Card Type</label>
+                                        <select id="knowledge-card-type-filter" data-testid="knowledge-card-type-filter" value={knowledgeCardTypeFilter} onChange={e => setKnowledgeCardTypeFilter(e.target.value)}>
+                                                <option value="">All</option>
+                                                <option value="donor">Donor</option>
+                                                <option value="outcome">Outcome</option>
+                                                <option value="field_context">Field Context</option>
+                                        </select>
                                 </div>
                         </div>
                 </div>

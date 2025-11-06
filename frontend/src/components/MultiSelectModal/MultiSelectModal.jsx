@@ -26,9 +26,9 @@ export default function MultiSelectModal({ isOpen, onClose, options, selectedOpt
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <h2>{title || 'Select Options'}</h2>
+    <div className="modal-overlay" data-testid="multi-select-modal-overlay">
+      <div className="modal-content" data-testid="multi-select-modal-content">
+        <h2 data-testid="multi-select-modal-title">{title || 'Select Options'}</h2>
         <div className="modal-options">
           {options.map(option => {
             const optionValue = option.id || option;
@@ -43,7 +43,7 @@ export default function MultiSelectModal({ isOpen, onClose, options, selectedOpt
                   onChange={() => handleCheckboxChange(option)}
                   data-testid={`user-select-checkbox-${optionValue}`}
                 />
-                <label htmlFor={optionValue}>{optionLabel}</label>
+                <label htmlFor={optionValue} data-testid={`user-select-label-${optionValue}`}>{optionLabel}</label>
               </div>
             );
           })}
@@ -56,6 +56,7 @@ export default function MultiSelectModal({ isOpen, onClose, options, selectedOpt
         )}
         <div className="modal-actions">
           {onConfirm && <button onClick={handleConfirm} disabled={selectedOptions.length === 0 || !deadline || new Date(deadline) <= new Date()} data-testid="confirm-button">Confirm</button>}
+          <button onClick={onClose} data-testid="close-button">Close</button>
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@
   "donors": [],
   "template_type": "Knowledge Card",
   "template_name": "Humanitarian Donor Knowledge Card",
-  "description": "A comprehensive template for creating detailed knowledge cards about humanitarian donors, integrating corporate structures, funding trends, thematic priorities, and engagement strategies.",
+  "description": "You are building a detailed knowledge cards about humanitarian donors focusing on: ",
   "sections": [
     {
       "section_name": "1. Donor Overview",
@@ -57,6 +57,12 @@
       "instructions": "Provide donor-specific proposal advice across four elements: (1) Keywords to Use - innovative solutions, transformative impact, scalable models, sustainable outcomes, measurable results, resilience building. (2) Keywords to Avoid - traditional charity, aid dependency, short-term projects, generic development language. (3) Budget Considerations - typical funding ranges, matching fund requirements, co-financing, multi-year vs. single-year commitments. (4) Scalability Requirements - emphasis on scalable, replicable models, knowledge sharing, and technology integration.",
       "word_limit": 600,
       "key_word": "donor proposal guidelines humanitarian"
+    },
+    {
+      "section_name": "10. Risk Appetite and Compliance",
+      "instructions": "Detail the donor's approach to risk management, including their tolerance for reputational, operational, and financial risks. Specify their due diligence requirements, anti-fraud and corruption policies, and any mandatory training for partners. Outline their reporting and audit standards, including frequency and required formats.",
+      "word_limit": 400,
+      "key_word": "donor risk management compliance due diligence audit requirements"
     }
   ]
 }

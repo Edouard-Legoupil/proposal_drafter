@@ -5,6 +5,8 @@ import CreatableSelect from 'react-select/creatable';
 import Base from '../../components/Base/Base';
 import CommonButton from '../../components/CommonButton/CommonButton';
 import LoadingModal from '../../components/LoadingModal/LoadingModal';
+import ConfirmationModal from '../../components/ConfirmationModal/ConfirmationModal';
+import AlertModal from '../../components/AlertModal/AlertModal';
 import ProgressModal from '../../components/ProgressModal/ProgressModal';
 import KnowledgeCardHistory from '../../components/KnowledgeCardHistory/KnowledgeCardHistory';
 import KnowledgeCardReferences from '../../components/KnowledgeCardReferences/KnowledgeCardReferences';
@@ -12,6 +14,7 @@ import UploadReferenceModal from '../../components/UploadReferenceModal/UploadRe
 import { setupSse } from '../../utils/sse';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import word_icon from '../../assets/images/word.svg';
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 
@@ -39,6 +42,7 @@ export default function KnowledgeCard() {
     const [outcomes, setOutcomes] = useState([]);
     const [fieldContexts, setFieldContexts] = useState([]);
     const [geographicCoverages, setGeographicCoverages] = useState([]);
+    const [allKnowledgeCards, setAllKnowledgeCards] = useState([]);
     const [selectedGeoCoverage, setSelectedGeoCoverage] = useState('');
     const [linkOptions, setLinkOptions] = useState([]);
     const [newDonors, setNewDonors] = useState([]);
@@ -48,6 +52,11 @@ export default function KnowledgeCard() {
     const [editingReferenceIndex, setEditingReferenceIndex] = useState(null);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [currentReference, setCurrentReference] = useState(null);
+    const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
+    const [existingCard, setExistingCard] = useState(null);
+    const [initialDataLoaded, setInitialDataLoaded] = useState(false);
+    const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
+    const [alertModalMessage, setAlertModalMessage] = useState('');
 
     // Use refs to track current state without stale closures
     const summaryRef = useRef(summary);
@@ -59,6 +68,8 @@ export default function KnowledgeCard() {
     const referencesRef = useRef(references);
     const eventSourceRef = useRef(eventSource);
     const pollingRef = useRef({ intervalId: null, attempts: 0 });
+    const [pollingFor, setPollingFor] = useState(null); // 'ingest' or 'populate'
+    const fetchDataRef = useRef(null);
 
     // Sync refs with state
     useEffect(() => {
@@ -98,35 +109,6 @@ export default function KnowledgeCard() {
             }
         };
     }, []);
-
-    useEffect(() => {
-        if (!pollingRef.current.intervalId) {
-            return; // Not polling, do nothing
-        }
-
-        pollingRef.current.attempts += 1;
-        const maxAttempts = 15; // Poll for a max of 30 seconds
-
-        // Check if all references have a final status according to the latest fetched data
-        const allReferencesSettled = references.every(ref =>
-            ['ingested', 'error', 'skipped'].includes(getStatus(ref))
-        );
-
-        if (allReferencesSettled) {
-            console.log("All references settled. Stopping polling.");
-            clearInterval(pollingRef.current.intervalId);
-            pollingRef.current.intervalId = null;
-            setLoading(false); // Hide any lingering loading indicators
-            setLoadingMessage('');
-        } else if (pollingRef.current.attempts >= maxAttempts) {
-            console.warn("Polling timeout reached. Stopping polling.");
-            clearInterval(pollingRef.current.intervalId);
-            pollingRef.current.intervalId = null;
-            setLoading(false);
-            setLoadingMessage('');
-        }
-
-    }, [references, getStatus]);
 
     const authenticatedFetch = useCallback(async (url, options) => {
         const response = await fetch(url, options);
@@ -194,13 +176,15 @@ export default function KnowledgeCard() {
                 }
             }
             
-            const [donorsRes, outcomesRes, allFieldContextsRes] = await Promise.all([
+            const [donorsRes, outcomesRes, allFieldContextsRes, allKnowledgeCardsRes] = await Promise.all([
                 authenticatedFetch(`${API_BASE_URL}/donors`, { credentials: 'include' }),
                 authenticatedFetch(`${API_BASE_URL}/outcomes`, { credentials: 'include' }),
-                authenticatedFetch(`${API_BASE_URL}/field-contexts`, { credentials: 'include' })
+                authenticatedFetch(`${API_BASE_URL}/field-contexts`, { credentials: 'include' }),
+                authenticatedFetch(`${API_BASE_URL}/knowledge-cards`, { credentials: 'include' })
             ]);
             if (donorsRes.ok) setDonors((await donorsRes.json()).donors);
             if (outcomesRes.ok) setOutcomes((await outcomesRes.json()).outcomes);
+            if (allKnowledgeCardsRes.ok) setAllKnowledgeCards((await allKnowledgeCardsRes.json()).knowledge_cards);
             if (allFieldContextsRes.ok) {
                 const allContexts = (await allFieldContextsRes.json()).field_contexts;
                 const uniqueGeos = [...new Set(allContexts.map(fc => fc.geographic_coverage))];
@@ -208,8 +192,62 @@ export default function KnowledgeCard() {
             }
         } catch (error) {
             console.error("Error fetching data for KC form:", error);
+        } finally {
+            setInitialDataLoaded(true);
         }
     }, [id, navigate, authenticatedFetch]);
+
+    useEffect(() => {
+        fetchDataRef.current = fetchData;
+    }, [fetchData]);
+
+    useEffect(() => {
+        if (!pollingRef.current.intervalId) {
+            return; // Not polling, do nothing
+        }
+
+        if (pollingFor === 'ingest') {
+            const maxAttempts = 15; // Poll for 30 seconds
+            if (pollingRef.current.attempts >= maxAttempts) {
+                console.log("Finished polling for reference ingestion.");
+                clearInterval(pollingRef.current.intervalId);
+                pollingRef.current.intervalId = null;
+                setLoading(false);
+                setLoadingMessage('');
+                if (fetchDataRef.current) {
+                    fetchDataRef.current(); // Final fetch to get the latest data
+                }
+                setAlertModalMessage("Reference ingestion completed successfully!");
+                setIsAlertModalOpen(true);
+            }
+        } else if (pollingFor === 'populate') {
+            const maxAttempts = 90; // Poll for 180 seconds (3 minutes)
+            const allSectionsGenerated = proposal_template && proposal_template.sections && generatedSections &&
+                proposal_template.sections.every(sectionInfo =>
+                    Object.keys(generatedSections).includes(sectionInfo.section_name)
+                );
+
+            if (allSectionsGenerated) {
+                console.log("Finished polling for content generation (success).");
+                clearInterval(pollingRef.current.intervalId);
+                pollingRef.current.intervalId = null;
+                setLoading(false);
+                setLoadingMessage('');
+                fetchData();
+                setAlertModalMessage("Content generation completed successfully!");
+                setIsAlertModalOpen(true);
+            } else if (pollingRef.current.attempts >= maxAttempts) {
+                console.log("Finished polling for content generation (timeout).");
+                clearInterval(pollingRef.current.intervalId);
+                pollingRef.current.intervalId = null;
+                setLoading(false);
+                setLoadingMessage('');
+                fetchData();
+                setAlertModalMessage("Content generation timed out. Please check the content and try again.");
+                setIsAlertModalOpen(true);
+            }
+        }
+    }, [references, getStatus, pollingFor, fetchData, generatedSections, proposal_template]);
 
     useEffect(() => {
         fetchData();
@@ -266,8 +304,26 @@ export default function KnowledgeCard() {
         if (!id) setLinkedId('');
     }, [linkType, donors, outcomes, fieldContexts, newDonors, newOutcomes, newFieldContexts, id, selectedGeoCoverage]);
 
-    const handleSave = useCallback(async (navigateOnSuccess = true) => {
-        // Validate required fields
+    useEffect(() => {
+        if (!id && linkedId && linkType && initialDataLoaded) {
+            console.log(`Checking for duplicates. ID: ${id}, Linked ID: ${linkedId}, Link Type: ${linkType}, Loaded: ${initialDataLoaded}`);
+            const existing = allKnowledgeCards.find(card => {
+                if (linkType === 'donor') return card.donor_id === linkedId;
+                if (linkType === 'outcome') return card.outcome_id === linkedId;
+                if (linkType === 'field_context') return card.field_context_id === linkedId;
+                return false;
+            });
+            console.log('Existing card found:', existing);
+
+            if (existing) {
+                setExistingCard(existing);
+                setIsConfirmationModalOpen(true);
+            }
+        }
+    }, [id, linkedId, linkType, allKnowledgeCards, initialDataLoaded]);
+
+    const proceedWithSave = useCallback(async (navigateOnSuccess = true) => {
+        // This function contains the original logic of handleSave
         if (!summaryRef.current.trim()) {
             alert("Description is required.");
             return { ok: false };
@@ -280,7 +336,7 @@ export default function KnowledgeCard() {
 
         setLoading(true);
         setLoadingMessage("Saving knowledge card...");
-        
+
         let finalLinkedId = linkedIdRef.current;
         if (finalLinkedId && finalLinkedId.startsWith('new_')) {
             const endpointMap = {
@@ -290,7 +346,7 @@ export default function KnowledgeCard() {
             };
             const endpoint = endpointMap[linkTypeRef.current];
             const value = finalLinkedId.substring(4);
-            
+
             if (!value.trim()) {
                 alert("Please enter a valid name for the new item.");
                 setLoading(false);
@@ -359,7 +415,11 @@ export default function KnowledgeCard() {
             setLoading(false);
             setLoadingMessage('');
         }
-    }, [id, navigate, authenticatedFetch]);
+    }, [id, navigate, authenticatedFetch, newDonors, newOutcomes, newFieldContexts]);
+
+    const handleSave = useCallback(async (navigateOnSuccess = true) => {
+        return proceedWithSave(navigateOnSuccess);
+    }, [proceedWithSave]);
 
     const handleIdentifyReferences = useCallback(async () => {
         //  Validate required fields before proceeding
@@ -429,63 +489,71 @@ export default function KnowledgeCard() {
         }
     }, [id, linkType, linkedId, handleSave, navigate, linkOptions, selectedGeoCoverage, authenticatedFetch, fetchData]);
 
-    const handleIngestReferences = useCallback(async () => {
+    const handleIngestReferences = useCallback(async (referenceId = null) => {
         let cardId = id;
-    
+
         if (!cardId) {
             const saveResponse = await handleSave(false);
             if (!saveResponse.ok) return;
             const data = await saveResponse.json();
             cardId = data.knowledge_card_id;
-            
+
             navigate(`/knowledge-card/${cardId}`, { replace: true, state: { fromAction: 'ingest' } });
             return;
         }
-    
+
         setLoading(true);
-        setLoadingMessage("Ingesting all references... This may take a while.");
-    
+        setLoadingMessage("Ingesting references... This may take a while.");
+
+        const uningestedReferences = references.filter(ref => !ref.ingested_at).map(ref => ref.id);
+        const isSingleReingest = typeof referenceId === 'string';
+        const endpoint = isSingleReingest ? `${API_BASE_URL}/knowledge-cards/${cardId}/references/${referenceId}/reingest` : `${API_BASE_URL}/knowledge-cards/${cardId}/ingest-references`;
+        const body = isSingleReingest ? null : JSON.stringify({ reference_ids: uningestedReferences });
+        const headers = isSingleReingest ? {} : { 'Content-Type': 'application/json' };
+
         try {
-            const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${cardId}/ingest-references`, {
+            const response = await authenticatedFetch(endpoint, {
                 method: 'POST',
+                headers: headers,
+                body: body,
                 credentials: 'include'
             });
     
             if (response.ok) {
-                setLoadingMessage("Reference ingestion started...");
+                setLoadingMessage("Reference ingestion started... This may take a while, the screen will refresh automatically when it is done.");
     
+                // Start polling immediately, like the 'populate' function does.
+                setPollingFor('ingest');
+                pollingRef.current.attempts = 0;
+                pollingRef.current.intervalId = setInterval(() => {
+                    pollingRef.current.attempts += 1;
+                    console.log(`Polling for ingestion updates... Attempt: ${pollingRef.current.attempts + 1}`);
+                    if (fetchDataRef.current) {
+                        fetchDataRef.current();
+                    }
+                }, 2000);
+    
+                // The SSE events will now only update the UI with statuses, but not control the polling.
                 const onMessage = (data) => {
-                    setReferences(prev => {
-                        const updated = prev.map(ref => ref.id === data.reference_id ? { ...ref, status: data.status, status_message: data.message } : ref);
-                        const allDone = updated.every(ref => ['ingested', 'error', 'skipped'].includes(getStatus(ref)));
-                        
-                        if (allDone) {
-                            // All SSE messages received, close the connection
-                            if (eventSourceRef.current) {
-                                eventSourceRef.current.close();
-                                eventSourceRef.current = null;
-                            }
-                            
-                            // Start polling to check for DB updates
-                            setLoadingMessage("Finalizing ingestion... This might take a moment.");
-                            pollingRef.current.attempts = 0; // Reset attempts
-                            pollingRef.current.intervalId = setInterval(() => {
-                                console.log(`Polling for updates... Attempt: ${pollingRef.current.attempts + 1}`);
-                                fetchData();
-                            }, 2000); // Poll every 2 seconds
-                        }
-                        return updated;
-                    });
+                    setReferences(prev => 
+                        prev.map(ref => ref.id === data.reference_id ? { ...ref, status: data.status, status_message: data.message } : ref)
+                    );
                 };
     
-                const onError = () => {
-                    setLoading(false);
-                    setLoadingMessage('');
+                const onError = (error) => {
+                    console.error("Ingestion SSE error:", error);
+                    if (eventSourceRef.current) {
+                        eventSourceRef.current.close();
+                        eventSourceRef.current = null;
+                    }
                 };
                 
                 const onTimeout = () => {
-                    setLoading(false);
-                    setLoadingMessage('');
+                    console.warn("Ingestion SSE timeout.");
+                    if (eventSourceRef.current) {
+                        eventSourceRef.current.close();
+                        eventSourceRef.current = null;
+                    }
                 };
     
                 const closeSse = setupSse(`${API_BASE_URL}/knowledge-cards/${cardId}/ingest-status`, onMessage, onError, onTimeout);
@@ -529,6 +597,9 @@ export default function KnowledgeCard() {
     };
 
     const handleCancelEditReference = () => {
+        if (editingReferenceIndex !== null && references[editingReferenceIndex]?.isNew) {
+            setReferences(references.filter((_, index) => index !== editingReferenceIndex));
+        }
         setEditingReferenceIndex(null);
     };
 
@@ -597,7 +668,7 @@ export default function KnowledgeCard() {
         setLoadingMessage("Deleting this reference as requested...");
 
         try {
-            const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/references/${refId}`, {
+            const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${id}/references/${refId}`, {
                 method: 'DELETE',
                 credentials: 'include'
             });
@@ -660,17 +731,27 @@ export default function KnowledgeCard() {
                             }
 
                             if (statusData.progress >= 100 || statusData.progress === -1) {
-                                if (statusData.progress >= 100) {
-                                    // Refresh complete data to ensure all sections are loaded
-                                    fetchData();
-                                    alert("Content generation completed successfully!");
-                                } else {
-                                    alert("Content generation failed. Please try again.");
-                                }
                                 es.close();
                                 setEventSource(null);
                                 eventSourceRef.current = null;
                                 setIsProgressModalOpen(false);
+
+                                if (statusData.progress >= 100) {
+                                    // Start polling to ensure DB is updated before showing success
+                                    setLoading(true);
+                                    setLoadingMessage("Finalizing content generation... This might take a moment.");
+                                    setPollingFor('populate');
+                                    pollingRef.current.attempts = 0; // Reset attempts
+                                    pollingRef.current.intervalId = setInterval(() => {
+                                        pollingRef.current.attempts += 1;
+                                        console.log(`Polling for content updates... Attempt: ${pollingRef.current.attempts + 1}`);
+                                        if (fetchDataRef.current) {
+                                            fetchDataRef.current();
+                                        }
+                                    }, 2000); // Poll every 2 seconds
+                                } else {
+                                    alert("Content generation failed. Please try again.");
+                                }
                             }
                         } catch (error) {
                             console.error("Error processing generation status:", error);
@@ -787,82 +868,100 @@ export default function KnowledgeCard() {
 
     const handleUploadReference = async (referenceId, file) => {
         setLoading(true);
-        setLoadingMessage('Uploading file...');
+        setLoadingMessage('Uploading and processing file...');
         const formData = new FormData();
         formData.append('file', file);
 
         try {
-            // Step 1: Upload the file
             const uploadResponse = await authenticatedFetch(
                 `${API_BASE_URL}/knowledge-cards/references/${referenceId}/upload`,
                 { method: 'POST', body: formData, credentials: 'include' }
             );
 
-            if (!uploadResponse.ok) {
+            if (uploadResponse.ok) {
+                setIsUploadModalOpen(false);
+                //  The backend now clears the error, so we just need to refresh.
+                await fetchData();
+            } else {
                 const error = await uploadResponse.json();
-                console.error(`Upload failed: ${error.detail}`);
-                setLoading(false);
-                setLoadingMessage('');
-                return;
+                alert(`Upload failed: ${error.detail}`);
             }
-
-            // Step 2: Close modal and trigger re-ingestion of the single reference
-            setIsUploadModalOpen(false);
-            setLoadingMessage('File uploaded. Re-ingesting reference...');
-
-            const reingestResponse = await authenticatedFetch(
-                `${API_BASE_URL}/knowledge-cards/${id}/references/${referenceId}/reingest`,
-                { method: 'POST', credentials: 'include' }
-            );
-
-            if (!reingestResponse.ok) {
-                const error = await reingestResponse.json();
-                console.error(`Failed to start re-ingestion: ${error.detail}`);
-                setLoading(false);
-                setLoadingMessage('');
-                return;
-            }
-
-            // Step 3: Listen for SSE updates for the single reference
-            const onMessage = (data) => {
-                if (data.reference_id === referenceId) {
-                    setReferences(prev => prev.map(ref =>
-                        ref.id === referenceId ? { ...ref, status: data.status, status_message: data.message } : ref
-                    ));
-
-                    if (['ingested', 'error', 'skipped'].includes(data.status)) {
-                        if (eventSourceRef.current) eventSourceRef.current.close();
-                        setLoading(false);
-                        setLoadingMessage('');
-                    }
-                }
-            };
-
-            const onError = (error) => {
-                console.error('Re-ingestion SSE error:', error);
-                setLoading(false);
-                setLoadingMessage('');
-            };
-
-            const onTimeout = () => {
-                console.warn('Re-ingestion timed out.');
-                setLoading(false);
-                setLoadingMessage('');
-            };
-
-            const closeSse = setupSse(`${API_BASE_URL}/knowledge-cards/${id}/ingest-status`, onMessage, onError, onTimeout);
-            eventSourceRef.current = { close: closeSse };
-
         } catch (error) {
-            console.error('An error occurred during the upload/re-ingest process:', error);
+            console.error('An error occurred during the upload process:', error);
+            alert('An unexpected error occurred during the file upload.');
+        } finally {
             setLoading(false);
             setLoadingMessage('');
         }
     };
 
+    async function handleExport (format)
+    {
+
+
+            const cardId = id;
+
+            if (!cardId || cardId === "undefined") {
+                    setErrorMessage("No draft available to export. Please create or load a draft first.");
+                    return;
+            }
+
+            const response = await fetch(`${API_BASE_URL}/knowledge-cards/${id}/generate-document/?format=${format}`, {
+                    method: "GET",
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: "include"
+            })
+
+            if(response.ok)
+            {
+                    const contentDisposition = response.headers.get('Content-Disposition');
+                    let filename = "knowledge-card.docx"; // Default filename
+                    if (contentDisposition) {
+                        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+                        if (filenameMatch && filenameMatch[1]) {
+                            filename = filenameMatch[1];
+                        }
+                    }
+
+                    const blob = await response.blob();
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = filename;
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+
+                    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+            }
+            else if(response.status === 401)
+            {
+                    sessionStorage.setItem("session_expired", "Session expired. Please login again.")
+                    navigate("/login")
+            }
+            else
+                    throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+    }
+
     return (
         <Base>
             {/* Modals */}
+            <AlertModal
+                isOpen={isAlertModalOpen}
+                message={alertModalMessage}
+                onClose={() => setIsAlertModalOpen(false)}
+            />
+            <ConfirmationModal
+                isOpen={isConfirmationModalOpen}
+                message="A knowledge card with this selection already exists. Ad-hoc knowledge cards with specific references and content can be added to offer flexibility. Do you want to create another one?"
+                link={existingCard ? `/knowledge-card/${existingCard.id}` : ''}
+                onConfirm={() => {
+                    setIsConfirmationModalOpen(false);
+                }}
+                onCancel={() => {
+                    setIsConfirmationModalOpen(false);
+                    setLinkedId('');
+                }}
+            />
             <ProgressModal
                 isOpen={isProgressModalOpen}
                 onClose={() => {
@@ -894,27 +993,28 @@ export default function KnowledgeCard() {
 
             <LoadingModal isOpen={loading} message={loadingMessage} />
 
-            <div className="kc-container">
+            <div className="kc-container" data-testid="knowledge-card-container">
                 <div className="kc-form-container">
-                    <form onSubmit={handlePopulate} className="kc-form">
+                    <form onSubmit={handlePopulate} className="kc-form" data-testid="knowledge-card-form">
                         {/* Header */}
                         <div className="kc-form-header">
-                            <h2>{id ? 'View/Edit Knowledge Card' : 'Create New Knowledge Card'}</h2>
+                            <h2 data-testid="kc-form-header-title">{id ? 'View/Edit Knowledge Card' : 'Create New Knowledge Card'}</h2>
                             {id && (
-                                <CommonButton 
-                                    type="button" 
-                                    onClick={fetchHistory} 
-                                    label="View Content History" 
+                                <CommonButton
+                                    type="button"
+                                    onClick={fetchHistory}
+                                    label="View Content History"
+                                    data-testid="view-history-button"
                                 />
                             )}
                         </div>
 
                         {/* Form Fields */}
                         <label htmlFor="kc-link-type">Link To</label>
-                        <select 
-                            id="kc-link-type" 
-                            value={linkType} 
-                            onChange={e => setLinkType(e.target.value)} 
+                        <select
+                            id="kc-link-type"
+                            value={linkType}
+                            onChange={e => setLinkType(e.target.value)}
                             data-testid="link-type-select"
                             required
                         >
@@ -927,10 +1027,10 @@ export default function KnowledgeCard() {
                         {linkType === 'field_context' && (
                             <>
                                 <label htmlFor="kc-geo-coverage">Geographic Coverage</label>
-                                <select 
-                                    id="kc-geo-coverage" 
-                                    value={selectedGeoCoverage} 
-                                    onChange={e => setSelectedGeoCoverage(e.target.value)} 
+                                <select
+                                    id="kc-geo-coverage"
+                                    value={selectedGeoCoverage}
+                                    onChange={e => setSelectedGeoCoverage(e.target.value)}
                                     data-testid="geo-coverage-select"
                                 >
                                     <option value="">All</option>
@@ -946,9 +1046,10 @@ export default function KnowledgeCard() {
                                 <label htmlFor="kc-linked-id">Select Item*</label>
                                 <CreatableSelect
                                     isClearable
-                                    id="kc-linked-id"
+                                    inputId="kc-linked-id"
+                                    classNamePrefix="kc-linked-item-select"
                                     name="kc-linked-id"
-                                    value={linkOptions.find(o => o.id === linkedId) ? 
+                                    value={linkOptions.find(o => o.id === linkedId) ?
                                         { value: linkedId, label: linkOptions.find(o => o.id === linkedId).name } : null}
                                     onChange={option => setLinkedId(option ? option.value : '')}
                                     onCreateOption={inputValue => {
@@ -966,12 +1067,12 @@ export default function KnowledgeCard() {
                         )}
 
                         <label htmlFor="kc-summary">Description*</label>
-                        <textarea 
-                            id="kc-summary" 
-                            value={summary} 
-                            onChange={e => setSummary(e.target.value)} 
-                            required 
-                            data-testid="summary-textarea" 
+                        <textarea
+                            id="kc-summary"
+                            value={summary}
+                            onChange={e => setSummary(e.target.value)}
+                            required
+                            data-testid="summary-textarea"
                             placeholder="Enter a description for this knowledge card..."
                         />
 
@@ -987,39 +1088,40 @@ export default function KnowledgeCard() {
                             getStatus={getStatus}
                             getStatusMessage={getStatusMessage}
                             onUploadClick={handleOpenUploadModal}
+                            onReingestClick={handleIngestReferences}
                         />
 
                         {/* Form Actions */}
                         <div className="kc-form-actions-box">
                             <div className="kc-form-actions">
-                                <CommonButton 
-                                    type="button" 
-                                    onClick={handleIdentifyReferences} 
-                                    label="1. Identify References" 
-                                    className="squared-btn" 
+                                <CommonButton
+                                    type="button"
+                                    onClick={handleIdentifyReferences}
+                                    label="1. Identify References"
+                                    className="squared-btn"
                                     data-testid="identify-references-button"
                                     disabled={!linkType || !linkedId}
                                 />
-                                <CommonButton 
-                                    type="button" 
-                                    onClick={handleIngestReferences} 
-                                    label="2. Ingest References" 
-                                    className="squared-btn" 
+                                <CommonButton
+                                    type="button"
+                                    onClick={() => handleIngestReferences()}
+                                    label="2. Ingest References"
+                                    className="squared-btn"
                                     data-testid="ingest-references-button"
                                     disabled={references.length === 0}
                                 />
-                                <CommonButton 
-                                    type="submit" 
-                                    label="3. Populate Card Content" 
-                                    className="squared-btn" 
+                                <CommonButton
+                                    type="submit"
+                                    label="3. Populate Card Content"
+                                    className="squared-btn"
                                     data-testid="populate-card-button"
                                     disabled={!linkType || !linkedId}
                                 />
-                                <CommonButton 
-                                    type="button" 
-                                    onClick={() => handleSave()} 
-                                    label="Save & Close" 
-                                    className="squared-btn" 
+                                <CommonButton
+                                    type="button"
+                                    onClick={() => handleSave()}
+                                    label="Save & Close"
+                                    className="squared-btn"
                                     data-testid="close-card-button"
                                 />
                             </div>
@@ -1029,16 +1131,22 @@ export default function KnowledgeCard() {
 
                 {/* Generated Content Section - Automatically shows when content exists */}
                 {generatedSections && proposal_template && proposal_template.sections && (
-                    <div className="kc-content-container">
-                        <h2>Generated Content</h2>
+                    <div className="kc-content-container" data-testid="generated-content-container">
+                        <div className="kc-content-header">
+                            <h2>Generated Content</h2>
+                            <button type="button" onClick={() => handleExport("docx")} className="download-word-btn" data-testid="export-word-button">
+                                <img src={word_icon} alt="Download as Word" />
+                                Download as Word
+                            </button>
+                        </div>
                         {proposal_template.sections.map(sectionInfo => {
                             const section = sectionInfo.section_name;
                             const content = generatedSections[section];
                             // Only show sections that have content
                             if (!content) return null;
-                            
+
                             return (
-                                <div key={section} className={`kc-section ${editingSection === section ? 'kc-section-editing' : ''}`}>
+                                <div key={section} className={`kc-section ${editingSection === section ? 'kc-section-editing' : ''}`} data-testid={`generated-section-${section}`}>
                                     <h3>{section}</h3>
                                     {editingSection === section ? (
                                         <textarea
@@ -1046,30 +1154,33 @@ export default function KnowledgeCard() {
                                             value={editedContent}
                                             onChange={(e) => setEditedContent(e.target.value)}
                                             rows={10}
+                                            data-testid={`edit-section-textarea-${section}`}
                                         />
                                     ) : (
-                                        <div className="kc-section-content">
+                                        <div className="kc-section-content" data-testid={`section-content-${section}`}>
                                             <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
                                         </div>
                                     )}
                                     <div className="kc-section-actions">
                                         {editingSection === section ? (
                                             <>
-                                                <button 
+                                                <button
                                                     type="button"
                                                     onClick={() => handleSaveClick(section)}
+                                                    data-testid={`save-section-button-${section}`}
                                                 >
                                                     Save
                                                 </button>
-                                                <button 
+                                                <button
                                                     type="button"
                                                     onClick={handleCancelClick}
+                                                    data-testid={`cancel-edit-button-${section}`}
                                                 >
                                                     Cancel
                                                 </button>
                                             </>
                                         ) : (
-                                            <button 
+                                            <button
                                                 type="button"
                                                 onClick={() => handleEditClick(section, content)}
                                                 data-testid={`edit-section-button-${section}`}

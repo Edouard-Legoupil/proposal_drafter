@@ -1,10 +1,15 @@
-import { render, screen, waitFor, vi } from '@testing-library/react'
+/// <reference types="vitest" />
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
 import { BrowserRouter } from 'react-router-dom'
 import Chat from './Chat'
+
+vi.mock('../../utils/downloadFile', () => ({
+        default: vi.fn(),
+}))
 
 describe('Proposal Drafter – Form validation', () => {
         it('disables the Generate button until all required inputs are filled', async () => {
@@ -108,14 +113,23 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                                 return new HttpResponse(null, { status: 200 });
                         }),
                         http.get('http://localhost:8502/api/proposals/:proposal_id/status', async ({request}) => {
-                                return HttpResponse.json({ status: 'done', generated_sections: {
-                                        'Summary': 'Mocked text for Summary',
-                                        'Rationale': 'Mocked text for Rationale',
-                                        'Project Description': 'Mocked text for Project Description',
-                                        'Partnerships and Coordination': 'Mocked text for Partnerships and Coordination',
-                                        'Monitoring': 'Mocked text for Monitoring',
-                                        'Evaluation': 'Mocked text for Evaluation',
-                                }})
+                                return HttpResponse.json({
+                                        status: 'done',
+                                        generated_sections: {
+                                                'Summary': 'Mocked text for Summary',
+                                                'Rationale': 'Mocked text for Rationale',
+                                                'Project Description': 'Mocked text for Project Description',
+                                                'Partnerships and Coordination': 'Mocked text for Partnerships and Coordination',
+                                                'Monitoring': 'Mocked text for Monitoring',
+                                                'Evaluation': 'Mocked text for Evaluation',
+                                        },
+                                        proposal_template: {
+                                                sections: [
+                                                        { section_name: 'Summary' }, { section_name: 'Rationale' }, { section_name: 'Project Description' },
+                                                        { section_name: 'Partnerships and Coordination' }, { section_name: 'Monitoring' }, { section_name: 'Evaluation' },
+                                                ]
+                                        }
+                                })
                         })
                 )
                 render(
@@ -138,11 +152,18 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
 
                 await userEvent.click(screen.getByRole('button', { name: /generate/i }))
 
+                await waitFor(async () => {
+                        await screen.findByText('Results')
+                }, { timeout: 10000 })
+
                 const sections = ['Summary','Rationale','Project Description', "Partnerships and Coordination", "Monitoring", "Evaluation"]
 
                 for (const sec of sections) {
-                        const card = await screen.findByText(new RegExp(`Mocked text for ${sec}`, 'i'), { timeout: 10000 });
-                        expect(card).toBeInTheDocument();
+                        const kebabSectionName = sec.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+                        await waitFor(async () => {
+                                const sectionContent = await screen.findByTestId(`section-content-${kebabSectionName}`);
+                                expect(sectionContent).toHaveTextContent(new RegExp(`Mocked text for ${sec}`, 'i'));
+                        }, { timeout: 10000 });
                 }
         }, 20000)
 
@@ -178,14 +199,23 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                                 return new HttpResponse(null, { status: 200 });
                         }),
                         http.get('http://localhost:8502/api/proposals/:proposal_id/status', async ({request}) => {
-                                return HttpResponse.json({ status: 'done', generated_sections: {
-                                        'Summary': 'Mocked text for Summary',
-                                        'Rationale': 'Mocked text for Rationale',
-                                        'Project Description': 'Mocked text for Project Description',
-                                        'Partnerships and Coordination': 'Mocked text for Partnerships and Coordination',
-                                        'Monitoring': 'Mocked text for Monitoring',
-                                        'Evaluation': 'Mocked text for Evaluation',
-                                }})
+                                return HttpResponse.json({
+                                        status: 'done',
+                                        generated_sections: {
+                                                'Summary': 'Mocked text for Summary',
+                                                'Rationale': 'Mocked text for Rationale',
+                                                'Project Description': 'Mocked text for Project Description',
+                                                'Partnerships and Coordination': 'Mocked text for Partnerships and Coordination',
+                                                'Monitoring': 'Mocked text for Monitoring',
+                                                'Evaluation': 'Mocked text for Evaluation',
+                                        },
+                                        proposal_template: {
+                                                sections: [
+                                                        { section_name: 'Summary' }, { section_name: 'Rationale' }, { section_name: 'Project Description' },
+                                                        { section_name: 'Partnerships and Coordination' }, { section_name: 'Monitoring' }, { section_name: 'Evaluation' },
+                                                ]
+                                        }
+                                })
                         }),
                         http.post('http://localhost:8502/api/update-section-content', async ({request}) => {
                                 const body = await request.json()
@@ -212,19 +242,26 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
 
                 await userEvent.click(screen.getByRole('button', { name: /generate/i }))
 
+                await waitFor(async () => {
+                        await screen.findByText('Results')
+                }, { timeout: 10000 })
+
                 const sections = ['Summary','Rationale','Project Description', "Partnerships and Coordination", "Monitoring", "Evaluation"]
 
                 for (const sec of sections) {
-                        const card = await screen.findByText(new RegExp(`Mocked text for ${sec}`, 'i'), { timeout: 10000 });
-                        expect(card).toBeInTheDocument();
+                        const kebabSectionName = sec.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+                        await waitFor(async () => {
+                                const sectionContent = await screen.findByTestId(`section-content-${kebabSectionName}`);
+                                expect(sectionContent).toHaveTextContent(new RegExp(`Mocked text for ${sec}`, 'i'));
+                        }, { timeout: 10000 });
                 }
 
-                const editButton = screen.getByLabelText('edit-section-0')
+                const editButton = screen.getByTestId('edit-save-button-summary')
                 expect(editButton).toBeInTheDocument()
 
                 await userEvent.click(editButton)
 
-                const editor = screen.getByRole('textbox', { name: /editor for Summary/i })
+                const editor = screen.getByTestId('section-editor-summary')
                 expect(editor).toBeInTheDocument()
                 expect(editor).toHaveValue('Mocked text for Summary')
 
@@ -237,7 +274,7 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                 expect(regenerated).toBeInTheDocument()
         }, 20000),
 
-        it('hides the input form when a finalized proposal is loaded', async () => {
+        it('hides the input form when a submitted proposal is loaded', async () => {
                 server.use(
                         http.get('http://localhost:8502/api/templates', () => HttpResponse.json({ templates: { "UNHCR": {} } })),
                         http.get('http://localhost:8502/api/profile', () => HttpResponse.json({ user: { "email": "test@test.com", "name": "Test User" } })),
@@ -255,7 +292,7 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                         }),
                         http.get('http://localhost:8502/api/load-draft/:proposal_id', () => {
                                 return HttpResponse.json({
-                                        proposal_id: 'approved-proposal-123',
+                                        proposal_id: 'submitted-proposal-123',
                                         session_id: 'test-session-id',
                                         project_description: 'test description',
                                         form_data: {
@@ -265,8 +302,10 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                                                 "Budget Range": "1M$", "Duration": "12 months", "Targeted Donor": "1"
                                         },
                                         generated_sections: { 'Summary': 'Mocked text for Summary' },
-                                        is_accepted: true,
-                                        status: 'approved'
+                                        status: 'submitted',
+                                        proposal_template: {
+                                                sections: [{ section_name: 'Summary' }]
+                                        }
                                 })
                         }),
                         http.get('http://localhost:8502/api/proposals/:proposal_id/status-history', () => {
@@ -274,14 +313,16 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                         })
                 )
 
-                sessionStorage.setItem('proposal_id', 'approved-proposal-123')
+                sessionStorage.setItem('proposal_id', 'submitted-proposal-123')
                 render(
                         <BrowserRouter>
                                 <Chat />
                         </BrowserRouter>
                 )
 
-                await screen.findByText('Results')
+                await waitFor(async () => {
+                        await screen.findByText('Results')
+                })
 
                 expect(screen.queryByPlaceholderText(/Provide as much details as possible on your initial project idea!/i)).not.toBeInTheDocument()
         })

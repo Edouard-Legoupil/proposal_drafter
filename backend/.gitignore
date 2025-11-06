@@ -12,3 +12,5 @@ proposal-documents/
 __pycache__/
 *.py[cod]
 
+file::memory:
+

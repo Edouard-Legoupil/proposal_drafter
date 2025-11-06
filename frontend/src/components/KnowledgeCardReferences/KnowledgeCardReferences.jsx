@@ -11,10 +11,17 @@ export default function KnowledgeCardReferences({
     handleAddReference,
     getStatus,
     getStatusMessage,
-    onUploadClick
+    onUploadClick,
+    onReingestClick
 }) {
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toLocaleString();
+    };
+
     return (
-        <div className="kc-references-section">
+        <div className="kc-references-section" data-testid="knowledge-card-references">
             <div className="kc-references-header">
                 <h3>References</h3>
                 <button
@@ -28,13 +35,14 @@ export default function KnowledgeCardReferences({
             </div>
             <div className="kc-references-grid">
                 {references.map((ref, index) => (
-                    <div key={ref.id || `new-${index}`} className="kc-reference-card">
+                    <div key={ref.id || `new-${index}`} className="kc-reference-card" data-testid={`reference-card-${index}`}>
                         {editingReferenceIndex === index ? (
-                            <div className="kc-reference-edit-form">
+                            <div className="kc-reference-edit-form" data-testid={`reference-edit-form-${index}`}>
                                 <select
                                     value={ref.reference_type}
                                     onChange={e => handleReferenceFieldChange(index, 'reference_type', e.target.value)}
                                     required
+                                    data-testid={`reference-type-select-${index}`}
                                 >
                                     <option value="">Select Type...</option>
                                     <option value="UNHCR Operation Page">UNHCR Operation Page</option>
@@ -52,21 +60,28 @@ export default function KnowledgeCardReferences({
                                     value={ref.url}
                                     onChange={e => handleReferenceFieldChange(index, 'url', e.target.value)}
                                     required
+                                    data-testid={`reference-url-input-${index}`}
                                 />
                                 <textarea
                                     placeholder="Summary (optional)"
                                     value={ref.summary}
                                     onChange={e => handleReferenceFieldChange(index, 'summary', e.target.value)}
+                                    data-testid={`reference-summary-textarea-${index}`}
                                 />
                                 <div className="kc-reference-edit-actions">
                                     <button
                                         type="button"
                                         onClick={() => handleSaveReference(index)}
                                         disabled={!ref.url || !ref.reference_type}
+                                        data-testid={`save-reference-button-${index}`}
                                     >
                                         Save
                                     </button>
-                                    <button type="button" onClick={handleCancelEditReference}>
+                                    <button
+                                        type="button"
+                                        onClick={handleCancelEditReference}
+                                        data-testid={`cancel-edit-reference-button-${index}`}
+                                    >
                                         Cancel
                                     </button>
                                 </div>
@@ -74,7 +89,7 @@ export default function KnowledgeCardReferences({
                         ) : (
                             <>
                                 <div className="kc-reference-card-header">
-                                    <span className="kc-reference-type">{ref.reference_type}</span>
+                                    <span className="kc-reference-type" data-testid={`reference-type-${index}`}>{ref.reference_type}</span>
 
                                     <div className='kc-reference-header-right'>
                                         <div className="kc-reference-status">
@@ -82,21 +97,39 @@ export default function KnowledgeCardReferences({
                                                 className={`kc-reference-status-badge kc-reference-status-${getStatus(ref)} ${getStatus(ref) === 'error' ? 'clickable' : ''}`}
                                                 title={getStatusMessage(ref)} // Add tooltip
                                                 onClick={() => getStatus(ref) === 'error' && onUploadClick(ref)}
+                                                data-testid={`reference-status-badge-${index}`}
                                             >
                                                 {getStatus(ref)}
                                             </span>
                                             {ref.status_message && (
-                                                <span className="kc-reference-status-message">
+                                                <span className="kc-reference-status-message" data-testid={`reference-status-message-${index}`}>
                                                     {ref.status_message}
+                                                </span>
+                                            )}
+                                            {ref.ingested_at && (
+                                                <span className="kc-reference-ingestion-date" data-testid={`reference-ingestion-date-${index}`}>
+                                                    {formatDate(ref.ingested_at)}
                                                 </span>
                                             )}
                                         </div>
                                         <div className="kc-reference-actions">
+                                            {ref.ingested_at && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onReingestClick(ref.id)}
+                                                    title="Re-ingest reference"
+                                                    disabled={getStatus(ref) === 'processing'}
+                                                    data-testid={`reingest-reference-button-${index}`}
+                                                >
+                                                    <i className="fa-solid fa-sync"></i>
+                                                </button>
+                                            )}
                                             <button
                                                 type="button"
                                                 onClick={() => handleEditReference(index)}
                                                 title="Edit reference"
-                                                disabled={getStatus(ref) === 'processing'} // Disable during processing
+                                                disabled={getStatus(ref) === 'processing'}
+                                                data-testid={`edit-reference-button-${index}`}
                                             >
                                                 <i className="fa-solid fa-pen"></i>
                                             </button>
@@ -104,7 +137,8 @@ export default function KnowledgeCardReferences({
                                                 type="button"
                                                 onClick={() => handleRemoveReference(ref.id)}
                                                 title="Delete reference"
-                                                disabled={getStatus(ref) === 'processing'} // Disable during processing
+                                                disabled={getStatus(ref) === 'processing'}
+                                                data-testid={`remove-reference-button-${index}`}
                                             >
                                                 <i className="fa-solid fa-trash"></i>
                                             </button>
@@ -112,10 +146,10 @@ export default function KnowledgeCardReferences({
                                     </div>
                                 </div>
                                 <div className="kc-reference-card-body">
-                                    <a href={ref.url} target="_blank" rel="noopener noreferrer">
+                                    <a href={ref.url} target="_blank" rel="noopener noreferrer" data-testid={`reference-url-link-${index}`}>
                                         {ref.url}
                                     </a>
-                                    <p>{ref.summary || 'No summary provided'}</p>
+                                    <p data-testid={`reference-summary-${index}`}>{ref.summary || 'No summary provided'}</p>
                                 </div>
                             </>
                         )}

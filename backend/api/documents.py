@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from docx import Document
 from sqlalchemy import text
+from slugify import slugify
 
 #  Internal Modules
 from backend.core.db import get_engine
@@ -97,13 +98,17 @@ async def generate_and_download_document(
 
         ordered_sections = {section: generated_sections.get(section, "") for section in template_sections}
 
+        # Standardized filename generation
+        project_title = form_data.get("Project Draft Short name") or form_data.get("Project title", "Untitled Proposal")
+        sanitized_filename = slugify(project_title)
+
         if format == "pdf":
             try:
                 pdf_buffer = create_pdf_from_sections(form_data, ordered_sections)
                 return StreamingResponse(
                     io.BytesIO(pdf_buffer),
                     media_type='application/pdf',
-                    headers={"Content-Disposition": f"attachment; filename=Proposal_{proposal_id}.pdf"}
+                    headers={"Content-Disposition": f"attachment; filename={sanitized_filename}.pdf"}
                 )
             except Exception as e:
                 logger.error(f"[PDF Generation Error] {e}", exc_info=True)
@@ -111,14 +116,14 @@ async def generate_and_download_document(
         else:
             # Return the DOCX file by default.
             try:
-                doc = create_word_from_sections(form_data, ordered_sections)
+                doc = create_word_from_sections(form_data, proposal_template, ordered_sections)
                 docx_buffer = io.BytesIO()
                 doc.save(docx_buffer)
                 docx_buffer.seek(0)
                 return StreamingResponse(
                     docx_buffer,
                     media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                    headers={"Content-Disposition": f"attachment; filename=Proposal_{proposal_id}.docx"}
+                    headers={"Content-Disposition": f"attachment; filename={sanitized_filename}.docx"}
                 )
             except Exception as e:
                 logger.error(f"[DOCX Generation Error] {e}", exc_info=True)
@@ -153,7 +158,7 @@ async def generate_and_download_tables(
         with get_engine().connect() as connection:
             result = connection.execute(
                 text("""
-                    SELECT generated_sections, template_name
+                    SELECT form_data, generated_sections, template_name
                     FROM proposals
                     WHERE id = :proposal_id AND user_id = :user_id
                 """),
@@ -164,7 +169,7 @@ async def generate_and_download_tables(
         if not draft:
             raise HTTPException(status_code=404, detail="Proposal not found for this user.")
 
-        generated_sections, template_name = draft
+        form_data, generated_sections, template_name = draft
         generated_sections = generated_sections if isinstance(generated_sections, dict) else {}
 
         if not template_name:
@@ -175,12 +180,17 @@ async def generate_and_download_tables(
         template_sections = [s.get("section_name") for s in proposal_template.get("sections", [])]
         ordered_sections = {section: generated_sections.get(section, "") for section in template_sections}
 
+        # Standardized filename generation from form_data
+        form_data = draft.form_data if isinstance(draft.form_data, dict) else {}
+        project_title = form_data.get("Project Draft Short name") or form_data.get("Project title", "Untitled Proposal")
+        sanitized_filename = slugify(f"{project_title}-tables")
+
         try:
             excel_buffer = create_excel_from_sections(ordered_sections)
             return StreamingResponse(
                 io.BytesIO(excel_buffer),
                 media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                headers={"Content-Disposition": f"attachment; filename=Proposal_Tables_{proposal_id}.xlsx"}
+                headers={"Content-Disposition": f"attachment; filename={sanitized_filename}.xlsx"}
             )
         except Exception as e:
             logger.error(f"[Excel Generation Error] {e}", exc_info=True)

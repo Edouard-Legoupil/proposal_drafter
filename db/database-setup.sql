@@ -52,7 +52,6 @@ CREATE TABLE IF NOT EXISTS outcomes (
 -- Create Field Contexts table  
 CREATE TABLE IF NOT EXISTS field_contexts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    title TEXT NOT NULL,
     name TEXT UNIQUE NOT NULL,
     category TEXT NOT NULL,
     geographic_coverage TEXT,
@@ -64,21 +63,8 @@ CREATE TABLE IF NOT EXISTS field_contexts (
 -- Create Proposal Status Enum Type
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'proposal_status') THEN
-        CREATE TYPE proposal_status AS ENUM ('draft', 'in_review', 'submission', 'submitted', 'approved');
-    END IF;
-END$$;
--- Add 'deleted' to the proposal_status enum if it doesn't exist
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumtypid = 'proposal_status'::regtype AND enumlabel = 'deleted') THEN
-        ALTER TYPE proposal_status ADD VALUE 'deleted';
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumtypid = 'proposal_status'::regtype AND enumlabel = 'generating_sections') THEN
-        ALTER TYPE proposal_status ADD VALUE 'generating_sections';
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumtypid = 'proposal_status'::regtype AND enumlabel = 'failed') THEN
-        ALTER TYPE proposal_status ADD VALUE 'failed';
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'proposal_status_new') THEN
+        CREATE TYPE proposal_status_new AS ENUM ('draft', 'in_review', 'pre_submission', 'submitted', 'deleted', 'generating_sections', 'failed');
     END IF;
 END$$;
 
@@ -92,7 +78,8 @@ CREATE TABLE IF NOT EXISTS proposals (
     generated_sections JSONB,
     reviews JSONB,
     is_accepted BOOLEAN DEFAULT FALSE,
-    status proposal_status DEFAULT 'draft', 
+    status proposal_status_new DEFAULT 'draft',
+    contribution_id TEXT,
     created_by UUID NOT NULL REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_by UUID NOT NULL REFERENCES users(id),
@@ -162,8 +149,7 @@ CREATE TABLE IF NOT EXISTS knowledge_card_history (
 -- Create Knowledge Card References table  
 CREATE TABLE IF NOT EXISTS knowledge_card_references (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    knowledge_card_id UUID NOT NULL REFERENCES knowledge_cards(id) ON DELETE CASCADE,
-    url TEXT NOT NULL,
+    url TEXT NOT NULL UNIQUE,
     reference_type TEXT NOT NULL,
     summary TEXT NOT NULL,    
     created_by UUID NOT NULL REFERENCES users(id),
@@ -171,8 +157,14 @@ CREATE TABLE IF NOT EXISTS knowledge_card_references (
     updated_by UUID NOT NULL REFERENCES users(id),
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     scraped_at TIMESTAMPTZ,
-    scraping_error BOOLEAN DEFAULT FALSE,
-    UNIQUE (knowledge_card_id, url)
+    scraping_error BOOLEAN DEFAULT FALSE
+);
+
+-- Create join table for many-to-many relationship between knowledge cards and references
+CREATE TABLE IF NOT EXISTS knowledge_card_to_references (
+    knowledge_card_id UUID NOT NULL REFERENCES knowledge_cards(id) ON DELETE CASCADE,
+    reference_id UUID NOT NULL REFERENCES knowledge_card_references(id) ON DELETE CASCADE,
+    PRIMARY KEY (knowledge_card_id, reference_id)
 );
 
 -- Create Knowledge Card Reference Vectors table
@@ -181,6 +173,16 @@ CREATE TABLE IF NOT EXISTS knowledge_card_reference_vectors (
     reference_id UUID NOT NULL REFERENCES knowledge_card_references(id) ON DELETE CASCADE,
     text_chunk TEXT NOT NULL,
     embedding vector(1536)
+);
+
+-- Create RAG Evaluation Logs table
+CREATE TABLE IF NOT EXISTS rag_evaluation_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    knowledge_card_id UUID NOT NULL REFERENCES knowledge_cards(id) ON DELETE CASCADE,
+    query TEXT NOT NULL,
+    retrieved_context TEXT NOT NULL,
+    generated_answer TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create join tables for many-to-many relationships  

@@ -62,14 +62,17 @@ From the root of the repository, run:
 
 2.  **Then Execute the tests:**
 
-There are __6 set of user journey__ to test:
+There are __5 set of user journeys__ to test:
 
- * test_1_register.py -- create a new user
- * test_2_auth.py  -- login with the newly created user
- * test_3_dashboard.py -- test that all dashbaord feature works
- * test_4_proposal.py  -- test the creation of new proposal
- * test_5_knowledge_card.py -- test the creation of a knowledge card
- * test_6_peer_review.py  -- test the proposal peer review process
+ * `test_1_register.py` -- create a new user - test_1_register2.py -- create a second user - test_1_register3.py -- create a third user
+
+ * `test_2_create_proposal.py`  -- test the creation of new proposal - including editing, regenerating section and downloading document 
+
+ * `test_3_knowledge_card.py` -- filter - knowledge card - open up knowledge card from project - changing association - test the creation of a knowledge card - finding reference - adding reference - generating content - editing content - showing history
+
+ * `test_4_peer_review.py` -- test the proposal peer review process - set up - login with another user - sending review - login back - seeing review and editing - and then transfer of proposal
+
+ * `test_5_dashboard.py` -- Dashboard metrics - showing how filter by teams
 
 
 To run all the tests, navigate to the root of the repository and use `pytest`:
@@ -92,6 +95,8 @@ To run a specific test file:
 ```bash
 pytest playwright/tests/test_1_register.py --headed
 pytest playwright/tests/test_2_create_proposal.py --headed
+pytest playwright/tests/test_3_knowledge_card.py --headed
+pytest playwright/tests/test_4_peer_review.py --headed
 ```
 
 ##  Recording user Journey with Codegen Tool

@@ -42,6 +42,7 @@ export default function Login (props)
         const [teams, setTeams] = useState([])
         const [securityQuestion, setSecurityQuestion] = useState("")
         const [securityAnswer, setSecurityAnswer] = useState("")
+        const [acknowledged, setAcknowledged] = useState(false)
 
         useEffect(() => {
                 async function fetchTeams() {
@@ -62,6 +63,22 @@ export default function Login (props)
 
         const [submitButtonText, setSubmitButtonText] = useState(props?.register ? "REGISTER" : "LOGIN")
         const [loading, setLoading] = useState(false)
+        const [ssoEnabled, setSsoEnabled] = useState(false)
+
+        useEffect(() => {
+                async function fetchSsoStatus() {
+                        try {
+                                const response = await fetch(`${API_BASE_URL}/sso-status`);
+                                if (response.ok) {
+                                        const data = await response.json();
+                                        setSsoEnabled(data.enabled);
+                                }
+                        } catch (error) {
+                                console.error("Failed to fetch SSO status:", error);
+                        }
+                }
+                fetchSsoStatus();
+        }, []);
 
         useEffect(() => {
                 if(errorPopover.current?.hidePopover && password) {
@@ -240,6 +257,22 @@ export default function Login (props)
                                                                         onChange={e => setSecurityAnswer(e.target.value)}
                                                                         data-testid="security-answer-input"
                                                                 />
+                                                                <div style={{ display: 'flex', alignItems: 'flex-start', marginTop: '15px', gap: '10px' }}>
+                                                                        <input
+                                                                                type="checkbox"
+                                                                                id="Login_acknowledgement"
+                                                                                checked={acknowledged}
+                                                                                onChange={e => setAcknowledged(e.target.checked)}
+                                                                                required
+                                                                                data-testid="acknowledgement-checkbox"
+                                                                                style={{ marginTop: '4px' }}
+                                                                        />
+                                                                        <label htmlFor="Login_acknowledgement" style={{ fontSize: '12px', color: 'grey', textAlign: 'left' }}>
+                                                                                <p>I acknowledge that this system is intended for UNHCR staff and members of UNHCR national societies.</p>
+                                                                                <p>I understand that AI-generated content may contain inaccuracies or "hallucinations," and I commit to carefully reviewing all generated materials before use.</p>
+                                                                                <p>I will use this tool responsibly, mindful of the financial and environmental resources it consumes.</p>
+                                                                        </label>
+                                                                </div>
                                                         </>
                                                         :
                                                         ""
@@ -247,7 +280,7 @@ export default function Login (props)
                                                 {!props?.register ? <a href='/forgotpassword' className='Login-forgotpw' data-testid="forgot-password-link">Forgot Password?</a> : ""}
                                                 <CommonButton
                                                         type="submit"
-                                                        disabled={(props?.register && !username) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length >= 255 || password.length < 8 || (props?.register && !securityAnswer)}
+                                                        disabled={(props?.register && !username) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length >= 255 || password.length < 8 || (props?.register && !securityAnswer) || (props?.register && !acknowledged)}
                                                         label={submitButtonText}
                                                         loading={loading}
                                                         style={{ marginTop: "20px" }}
@@ -261,6 +294,20 @@ export default function Login (props)
                                                                 </>
                                                                 :
                                                                 <>
+                                                                        {ssoEnabled && (
+                                                                                <>
+                                                                                        <CommonButton
+                                                                                                label="LOGIN WITH MICROSOFT"
+                                                                                                onClick={() => window.location.href = `${API_BASE_URL}/sso-login`}
+                                                                                                style={{ marginTop: "20px", backgroundColor: "#2F2F2F" }}
+                                                                                        />
+                                                                                        <div className='Login-divider'>
+                                                                                                <hr/>
+                                                                                                <span>OR</span>
+                                                                                                <hr/>
+                                                                                        </div>
+                                                                                </>
+                                                                        )}
                                                                         Don't have an account?
                                                                         <a href="/register" data-testid="register-link"> Sign up</a>
                                                                 </>
@@ -284,6 +331,9 @@ export default function Login (props)
                                                 <FontAwesomeIcon icon={faUsers} className='Login-motto-icon' />
                                                 <p className='Login-motto-text'>Organize Peer Review for Continuous Learning</p>
                                         </div>
+                                </div>
+                                <div style={{ marginTop: '20px', fontSize: '12px', color: 'grey', textAlign: 'center' }}>
+                                    <p>You are now running <a href="https://github.com/Edouard-Legoupil/proposal_drafter/releases/tag/0.4" target="_blank" rel="noopener noreferrer">v.0.4</a></p>
                                 </div>
                         </div>
                 </div>

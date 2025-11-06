@@ -1,3 +1,23 @@
+.Login_divider
+{
+        display: flex;
+        align-items: center;
+        text-align: center;
+        margin: 20px 0;
+}
+.Login_divider hr
+{
+        flex: 1;
+        border: none;
+        height: 1px;
+        background-color: #CCC;
+}
+.Login_divider span
+{
+        padding: 0 10px;
+        color: #888;
+}
+
 .Login_container {
         height: 100svh;
         display: flex;

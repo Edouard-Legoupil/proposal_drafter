@@ -28,7 +28,7 @@
     border: 1px solid #eee;
     border-radius: 8px;
     padding: 1rem;
-    display: flex;
+    display: block;
     flex-direction: column;
     justify-content: space-between;
 }
@@ -43,6 +43,11 @@
 .kc-reference-type {
     font-weight: bold;
     font-size: 0.9rem;
+    color: #333;
+}
+
+.kc-reference-ingestion-date {
+    font-size: 0.6rem;
     color: #333;
 }
 

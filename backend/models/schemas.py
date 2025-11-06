@@ -37,7 +37,6 @@ class RegenerateRequest(BaseModel):
     """
     section: str
     concise_input: str
-    proposal_id: uuid.UUID
     form_data: Dict[str, Any]
     project_description: str
 
@@ -127,3 +126,6 @@ class TransferOwnershipRequest(BaseModel):
 class AuthorResponseRequest(BaseModel):
     author_response: str
 
+
+class SaveContributionIdRequest(BaseModel):
+    contribution_id: str

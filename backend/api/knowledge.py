@@ -5,7 +5,7 @@ import uuid
 import logging
 import asyncio
 import concurrent.futures
-from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File, BackgroundTasks, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
@@ -30,9 +30,12 @@ from backend.core.llm import get_embedder_config
 from backend.utils.crew_reference import ReferenceIdentificationCrew
 from backend.utils.crew_knowledge import ContentGenerationCrew
 from backend.utils.scraper import scrape_url
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from backend.utils.embedding_utils import process_and_store_text
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 import litellm
 import numpy as np
+import io
+from backend.utils.doc_export import create_word_from_knowledge_card
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -50,6 +53,9 @@ class IdentifyReferencesIn(BaseModel):
 
 class UpdateSectionIn(BaseModel):
     content: str
+
+class IngestReferencesIn(BaseModel):
+    reference_ids: Optional[List[uuid.UUID]] = None
 
 class KnowledgeCardIn(BaseModel):
     summary: str
@@ -187,8 +193,8 @@ async def create_knowledge_card(card: KnowledgeCardIn, current_user: dict = Depe
         with get_engine().begin() as connection:
             connection.execute(
                 text("""
-                    INSERT INTO knowledge_cards (id, title, summary, template_name, status, donor_id, outcome_id, field_context_id, created_by, updated_by, created_at, updated_at)
-                    VALUES (:id, :summary, :summary, :template_name, 'draft', :donor_id, :outcome_id, :field_context_id, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    INSERT INTO knowledge_cards (id, summary, template_name, status, donor_id, outcome_id, field_context_id, created_by, updated_by, created_at, updated_at)
+                    VALUES (:id, :summary, :template_name, 'draft', :donor_id, :outcome_id, :field_context_id, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 """),
                 {
                     "id": card_id,
@@ -202,12 +208,38 @@ async def create_knowledge_card(card: KnowledgeCardIn, current_user: dict = Depe
             )
             if card.references:
                 for ref in card.references:
+                    # Check if reference already exists
+                    existing_ref = connection.execute(
+                        text("SELECT id FROM knowledge_card_references WHERE url = :url"),
+                        {"url": ref.url}
+                    ).fetchone()
+
+                    if existing_ref:
+                        reference_id = existing_ref.id
+                    else:
+                        # Insert new reference
+                        new_ref_id = connection.execute(
+                            text("""
+                                INSERT INTO knowledge_card_references (url, reference_type, summary, created_by, updated_by, created_at, updated_at)
+                                VALUES (:url, :reference_type, :summary, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                                RETURNING id
+                            """),
+                            {
+                                "url": ref.url,
+                                "reference_type": ref.reference_type,
+                                "summary": ref.summary or "", # Ensure summary is not null
+                                "user_id": user_id
+                            }
+                        ).scalar_one()
+                        reference_id = new_ref_id
+
+                    # Link reference to knowledge card
                     connection.execute(
                         text("""
-                            INSERT INTO knowledge_card_references (knowledge_card_id, url, reference_type, summary, created_by, updated_by, created_at, updated_at)
-                            VALUES (:kcid, :url, :reference_type, :summary, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                            INSERT INTO knowledge_card_to_references (knowledge_card_id, reference_id)
+                            VALUES (:kcid, :ref_id)
                         """),
-                        {"kcid": card_id, "url": ref.url, "reference_type": ref.reference_type, "summary": ref.summary, "user_id": user_id}
+                        {"kcid": card_id, "ref_id": reference_id}
                     )
         return {"message": "Knowledge card created successfully.", "knowledge_card_id": card_id}
     except Exception as e:
@@ -223,7 +255,7 @@ async def create_knowledge_card(card: KnowledgeCardIn, current_user: dict = Depe
 @router.get("/knowledge-cards")
 async def get_knowledge_cards(
     donor_id: Optional[uuid.UUID] = None,
-    outcome_id: Optional[uuid.UUID] = None,
+    outcome_id: Optional[List[uuid.UUID]] = Query(None),
     field_context_id: Optional[uuid.UUID] = None,
     current_user: dict = Depends(get_current_user)
 ):
@@ -241,12 +273,16 @@ async def get_knowledge_cards(
                     kc.created_at,
                     kc.updated_at,
                     kc.generated_sections,
+                    kc.donor_id,
+                    kc.outcome_id,
+                    kc.field_context_id,
                     d.name as donor_name,
                     o.name as outcome_name,
                     fc.name as field_context_name,
-                    (SELECT json_agg(json_build_object('id', kcr.id, 'url', kcr.url, 'reference_type', kcr.reference_type, 'summary', kcr.summary, 'scraped_at', kcr.scraped_at, 'scraping_error', kcr.scraping_error))
+                    (SELECT json_agg(json_build_object('id', kcr.id, 'url', kcr.url, 'reference_type', kcr.reference_type, 'summary', kcr.summary, 'scraped_at', kcr.scraped_at, 'scraping_error', kcr.scraping_error, 'ingested_at', kcr.scraped_at))
                      FROM knowledge_card_references kcr
-                     WHERE kcr.knowledge_card_id = kc.id) as "references"
+                     JOIN knowledge_card_to_references kctr ON kcr.id = kctr.reference_id
+                     WHERE kctr.knowledge_card_id = kc.id) as "references"
                 FROM
                     knowledge_cards kc
                 LEFT JOIN
@@ -263,7 +299,7 @@ async def get_knowledge_cards(
                 filters.append("kc.donor_id = :donor_id")
                 params["donor_id"] = donor_id
             if outcome_id:
-                filters.append("kc.outcome_id = :outcome_id")
+                filters.append("kc.outcome_id = ANY(:outcome_id)")
                 params["outcome_id"] = outcome_id
             if field_context_id:
                 filters.append("kc.field_context_id = :field_context_id")
@@ -377,9 +413,10 @@ async def get_knowledge_card(card_id: uuid.UUID, current_user: dict = Depends(ge
                     d.name as donor_name,
                     o.name as outcome_name,
                     fc.name as field_context_name,
-                    (SELECT json_agg(json_build_object('id', kcr.id, 'url', kcr.url, 'reference_type', kcr.reference_type, 'summary', kcr.summary, 'scraped_at', kcr.scraped_at, 'scraping_error', kcr.scraping_error))
+                    (SELECT json_agg(json_build_object('id', kcr.id, 'url', kcr.url, 'reference_type', kcr.reference_type, 'summary', kcr.summary, 'scraped_at', kcr.scraped_at, 'scraping_error', kcr.scraping_error, 'ingested_at', kcr.scraped_at))
                      FROM knowledge_card_references kcr
-                     WHERE kcr.knowledge_card_id = kc.id) as "references"
+                     JOIN knowledge_card_to_references kctr ON kcr.id = kctr.reference_id
+                     WHERE kctr.knowledge_card_id = kc.id) as "references"
                 FROM
                     knowledge_cards kc
                 LEFT JOIN
@@ -516,19 +553,45 @@ async def update_knowledge_card(card_id: uuid.UUID, card: KnowledgeCardIn, curre
                 }
             )
 
-            # Update references: delete old ones and insert new ones
+            # Update references: delete old associations and create new ones
             connection.execute(
-                text("DELETE FROM knowledge_card_references WHERE knowledge_card_id = :kcid"),
+                text("DELETE FROM knowledge_card_to_references WHERE knowledge_card_id = :kcid"),
                 {"kcid": card_id}
             )
             if card.references:
                 for ref in card.references:
+                    # Check if reference already exists
+                    existing_ref = connection.execute(
+                        text("SELECT id FROM knowledge_card_references WHERE url = :url"),
+                        {"url": ref.url}
+                    ).fetchone()
+
+                    if existing_ref:
+                        reference_id = existing_ref.id
+                    else:
+                        # Insert new reference
+                        new_ref_id = connection.execute(
+                            text("""
+                                INSERT INTO knowledge_card_references (url, reference_type, summary, created_by, updated_by, created_at, updated_at)
+                                VALUES (:url, :reference_type, :summary, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                                RETURNING id
+                            """),
+                            {
+                                "url": ref.url,
+                                "reference_type": ref.reference_type,
+                                "summary": ref.summary or "",
+                                "user_id": user_id
+                            }
+                        ).scalar_one()
+                        reference_id = new_ref_id
+
+                    # Link reference to knowledge card
                     connection.execute(
                         text("""
-                            INSERT INTO knowledge_card_references (knowledge_card_id, url, reference_type, summary, created_by, updated_by, created_at, updated_at)
-                            VALUES (:kcid, :url, :reference_type, :summary, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                            INSERT INTO knowledge_card_to_references (knowledge_card_id, reference_id)
+                            VALUES (:kcid, :ref_id)
                         """),
-                        {"kcid": card_id, "url": ref.url, "reference_type": ref.reference_type, "summary": ref.summary, "user_id": user_id}
+                        {"kcid": card_id, "ref_id": reference_id}
                     )
 
             # Fetch the generated_sections again to get the updated state
@@ -568,33 +631,64 @@ async def update_knowledge_card(card_id: uuid.UUID, card: KnowledgeCardIn, curre
 @router.post("/knowledge-cards/{card_id}/references")
 async def create_knowledge_card_reference(card_id: uuid.UUID, reference: KnowledgeCardReferenceIn, current_user: dict = Depends(get_current_user)):
     """
-    Creates a new reference for a knowledge card.
+    Creates a new reference or links an existing one to a knowledge card.
     """
     user_id = current_user['user_id']
     try:
         with get_engine().begin() as connection:
-            # Validate card exists and user has permission
+            # Validate card exists
             card_check = connection.execute(
-                text("SELECT id FROM knowledge_cards WHERE id = :id"), 
+                text("SELECT id FROM knowledge_cards WHERE id = :id"),
                 {"id": card_id}
             ).fetchone()
-            
             if not card_check:
                 raise HTTPException(status_code=404, detail="Knowledge card not found.")
-            
-            result = connection.execute(
+
+            # Check if reference already exists
+            existing_ref = connection.execute(
+                text("SELECT id FROM knowledge_card_references WHERE url = :url"),
+                {"url": reference.url}
+            ).fetchone()
+
+            if existing_ref:
+                reference_id = existing_ref.id
+            else:
+                # Insert new reference
+                new_ref_id = connection.execute(
+                    text("""
+                        INSERT INTO knowledge_card_references (url, reference_type, summary, created_by, updated_by, created_at, updated_at)
+                        VALUES (:url, :reference_type, :summary, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                        RETURNING id
+                    """),
+                    {
+                        "url": reference.url,
+                        "reference_type": reference.reference_type,
+                        "summary": reference.summary or "",
+                        "user_id": user_id
+                    }
+                ).scalar_one()
+                reference_id = new_ref_id
+
+            # Link reference to knowledge card
+            connection.execute(
                 text("""
-                    INSERT INTO knowledge_card_references (knowledge_card_id, url, reference_type, summary, created_by, updated_by, created_at, updated_at)
-                    VALUES (:kcid, :url, :reference_type, :summary, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                    RETURNING id, url, reference_type, summary
+                    INSERT INTO knowledge_card_to_references (knowledge_card_id, reference_id)
+                    VALUES (:kcid, :ref_id)
+                    ON CONFLICT (knowledge_card_id, reference_id) DO NOTHING
                 """),
-                {"kcid": card_id, "url": reference.url, "reference_type": reference.reference_type, "summary": reference.summary, "user_id": user_id}
+                {"kcid": card_id, "ref_id": reference_id}
             )
-            new_reference = result.fetchone()
-        return {"reference": dict(new_reference)}
+
+            # Return the created or found reference details
+            new_reference_details = connection.execute(
+                text("SELECT id, url, reference_type, summary FROM knowledge_card_references WHERE id = :id"),
+                {"id": reference_id}
+            ).fetchone()
+
+        return {"reference": dict(new_reference_details._mapping)}
     except Exception as e:
         logger.error(f"[CREATE KC REFERENCE ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to create reference.")
+        raise HTTPException(status_code=500, detail="Failed to create or link reference.")
 
 
 @router.put("/knowledge-cards/references/{reference_id}")
@@ -628,107 +722,140 @@ async def update_knowledge_card_reference(reference_id: uuid.UUID, reference: Kn
         raise HTTPException(status_code=500, detail="Failed to update reference.")
 
 
-@router.delete("/knowledge-cards/references/{reference_id}")
-async def delete_knowledge_card_reference(reference_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
+@router.delete("/knowledge-cards/{card_id}/references/{reference_id}")
+async def delete_knowledge_card_reference(card_id: uuid.UUID, reference_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
     """
-    Deletes an existing reference for a knowledge card.
+    Deletes the association between a knowledge card and a reference.
     """
     try:
         with get_engine().begin() as connection:
-            #  Validate reference exists
-            ref_check = connection.execute(
-                text("SELECT id FROM knowledge_card_references WHERE id = :id"), 
-                {"id": reference_id}
+            # Validate the association exists
+            association_check = connection.execute(
+                text("""
+                    SELECT knowledge_card_id FROM knowledge_card_to_references
+                    WHERE knowledge_card_id = :kcid AND reference_id = :ref_id
+                """),
+                {"kcid": card_id, "ref_id": reference_id}
             ).fetchone()
             
+            if not association_check:
+                raise HTTPException(status_code=404, detail="Reference association not found.")
+                
+            # Delete the association
+            connection.execute(
+                text("DELETE FROM knowledge_card_to_references WHERE knowledge_card_id = :kcid AND reference_id = :ref_id"),
+                {"kcid": card_id, "ref_id": reference_id}
+            )
+        return {"message": "Reference unlinked successfully."}
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        logger.error(f"[DELETE KC REFERENCE LINK ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to unlink reference.")
+
+
+@router.delete("/knowledge-cards/{card_id}")
+async def delete_knowledge_card(card_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
+    """
+    Deletes a knowledge card and its associations.
+    """
+    try:
+        with get_engine().begin() as connection:
+            # First, check if the card exists
+            card_check = connection.execute(
+                text("SELECT id FROM knowledge_cards WHERE id = :id"),
+                {"id": str(card_id)}
+            ).fetchone()
+            if not card_check:
+                raise HTTPException(status_code=404, detail="Knowledge card not found.")
+
+            # Delete associations in the join table
+            connection.execute(
+                text("DELETE FROM knowledge_card_to_references WHERE knowledge_card_id = :kcid"),
+                {"kcid": str(card_id)}
+            )
+
+            # Delete the knowledge card itself
+            connection.execute(
+                text("DELETE FROM knowledge_cards WHERE id = :id"),
+                {"id": str(card_id)}
+            )
+        return {"message": "Knowledge card deleted successfully."}
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        logger.error(f"[DELETE KNOWLEDGE CARD ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to delete knowledge card.")
+
+@router.delete("/knowledge-cards/references/{reference_id}")
+async def delete_knowledge_card_reference_by_id(reference_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
+    """
+    Deletes a reference and its associations.
+    """
+    try:
+        with get_engine().begin() as connection:
+            # Validate the reference exists
+            ref_check = connection.execute(
+                text("SELECT id FROM knowledge_card_references WHERE id = :id"),
+                {"id": reference_id}
+            ).fetchone()
+
             if not ref_check:
                 raise HTTPException(status_code=404, detail="Reference not found.")
-                
+
+            # Delete associations
+            connection.execute(
+                text("DELETE FROM knowledge_card_to_references WHERE reference_id = :ref_id"),
+                {"ref_id": reference_id}
+            )
+
+            # Delete the reference
             connection.execute(
                 text("DELETE FROM knowledge_card_references WHERE id = :id"),
                 {"id": reference_id}
             )
         return {"message": "Reference deleted successfully."}
+    except HTTPException as http_exc:
+        raise http_exc
     except Exception as e:
         logger.error(f"[DELETE KC REFERENCE ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to delete reference.")
 
 
-def get_embedding(chunk, model, embedder_config):
-    """Get embedding for a text chunk with error handling"""
-    try:
-        response = litellm.embedding(
-            model=model,
-            input=[chunk],
-            max_retries=3,
-            **embedder_config
-        )
-        return chunk, response.data[0]['embedding']
-    except Exception as e:
-        logger.error(f"[EMBEDDING ERROR] Failed to get embedding for chunk: {e}")
-        raise
-
-async def _process_and_store_text(reference_id: uuid.UUID, text_content: str, connection):
+@router.delete("/knowledge-cards/references/{reference_id}")
+async def delete_knowledge_card_reference_by_id(reference_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
     """
-    Chunks text, creates embeddings, and stores them for a given reference.
+    Deletes a reference and its associations.
     """
     try:
-        # For now, we will clear old vectors before adding new ones
-        connection.execute(
-            text("DELETE FROM knowledge_card_reference_vectors WHERE reference_id = :ref_id"),
-            {"ref_id": reference_id}
-        )
+        with get_engine().begin() as connection:
+            # Validate the reference exists
+            ref_check = connection.execute(
+                text("SELECT id FROM knowledge_card_references WHERE id = :id"),
+                {"id": reference_id}
+            ).fetchone()
 
-        # Chunk the text
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-        chunks = text_splitter.split_text(text_content.replace('\x00', ''))
-        logger.info(f"Content chunked into {len(chunks)} chunks.")
+            if not ref_check:
+                raise HTTPException(status_code=404, detail="Reference not found.")
 
-        if not chunks:
-            logger.warning("No chunks generated from text content")
-            return
+            # Delete associations
+            connection.execute(
+                text("DELETE FROM knowledge_card_to_references WHERE reference_id = :ref_id"),
+                {"ref_id": reference_id}
+            )
 
-        # Get the embedding configuration
-        embedder_config = get_embedder_config()["config"]
-        model = f"azure/{embedder_config.pop('deployment_id')}"
-        # The 'model' key in the config is just the deployment name, which is not needed anymore.
-        embedder_config.pop('model', None)
-
-        # Generate and store embeddings in parallel with error handling
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:  # Limit workers
-            futures = [executor.submit(get_embedding, chunk, model, embedder_config) for chunk in chunks]
-            completed = 0
-            for future in concurrent.futures.as_completed(futures):
-                try:
-                    chunk, embedding = future.result()
-                    completed += 1
-                    logger.info(f"Embedding for chunk {completed}/{len(chunks)} completed.")
-                    
-                    connection.execute(
-                        text("""
-                            INSERT INTO knowledge_card_reference_vectors (reference_id, text_chunk, embedding)
-                            VALUES (:ref_id, :chunk, :embedding)
-                        """),
-                        {"ref_id": reference_id, "chunk": chunk, "embedding": str(embedding)}
-                    )
-                except Exception as e:
-                    logger.error(f"[CHUNK PROCESSING ERROR] Failed to process chunk: {e}")
-                    continue  # Continue with other chunks even if one fails
-
-        # Update scraped_at timestamp
-        connection.execute(
-            text("UPDATE knowledge_card_references SET scraped_at = CURRENT_TIMESTAMP, scraping_error = FALSE WHERE id = :id"),
-            {"id": reference_id}
-        )
-        
+            # Delete the reference
+            connection.execute(
+                text("DELETE FROM knowledge_card_references WHERE id = :id"),
+                {"id": reference_id}
+            )
+        return {"message": "Reference deleted successfully."}
+    except HTTPException as http_exc:
+        raise http_exc
     except Exception as e:
-        logger.error(f"[PROCESS AND STORE TEXT ERROR] {e}", exc_info=True)
-        # Mark as error in database
-        connection.execute(
-            text("UPDATE knowledge_card_references SET scraping_error = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = :id"),
-            {"id": reference_id}
-        )
-        raise
+        logger.error(f"[DELETE KC REFERENCE ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to delete reference.")
+
 
 async def ingest_reference_content(card_id: uuid.UUID, reference_id: uuid.UUID, force_scrape: bool = False, connection=None):
     """
@@ -770,7 +897,7 @@ async def ingest_reference_content(card_id: uuid.UUID, reference_id: uuid.UUID, 
             return
 
         _update_ingest_progress(card_id, reference_id, "processing", f"Successfully scraped content from {reference.url}")
-        await _process_and_store_text(reference.id, content, connection)
+        await process_and_store_text(reference.id, content, connection)
         _update_ingest_progress(card_id, reference_id, "ingested", "Content ingested successfully.")
         
     except Exception as e:
@@ -804,7 +931,13 @@ async def upload_pdf_reference(
             raise HTTPException(status_code=400, detail="Could not extract text from PDF.")
 
         with engine.begin() as connection:
-            await _process_and_store_text(reference_id, text_content, connection)
+            await process_and_store_text(reference_id, text_content, connection)
+
+            # Clear any previous scraping errors
+            connection.execute(
+                text("UPDATE knowledge_card_references SET scraping_error = FALSE WHERE id = :id"),
+                {"id": str(reference_id)}
+            )
 
         return {"status": "success", "message": "PDF content ingested successfully."}
     except Exception as e:
@@ -856,7 +989,20 @@ async def generate_content_background(card_id: uuid.UUID):
 
         with get_engine().begin() as connection:
             card = connection.execute(
-                text("SELECT donor_id, outcome_id, field_context_id FROM knowledge_cards WHERE id = :id"),
+                text("""
+                    SELECT 
+                        kc.donor_id, 
+                        kc.outcome_id, 
+                        kc.field_context_id,
+                        d.name as donor_name,
+                        o.name as outcome_name,
+                        fc.name as field_context_name
+                    FROM knowledge_cards kc
+                    LEFT JOIN donors d ON kc.donor_id = d.id
+                    LEFT JOIN outcomes o ON kc.outcome_id = o.id
+                    LEFT JOIN field_contexts fc ON kc.field_context_id = fc.id
+                    WHERE kc.id = :id
+                """),
                 {"id": card_id}
             ).fetchone()
 
@@ -865,16 +1011,20 @@ async def generate_content_background(card_id: uuid.UUID):
 
         if card.donor_id:
             template_name = "knowledge_card_donor_template.json"
+            name = card.donor_name
         elif card.outcome_id:
             template_name = "knowledge_card_outcome_template.json"
+            name = card.outcome_name
         elif card.field_context_id:
             template_name = "knowledge_card_field_context_template.json"
+            name = card.field_context_name
         else:
             raise Exception("Knowledge card is not linked to any entity.")
 
         template = load_proposal_template(template_name)
+        pre_prompt = f"{template.get('description', '')} {name}."
         generated_sections = {}
-        crew = ContentGenerationCrew(knowledge_card_id=str(card_id))
+        crew = ContentGenerationCrew(knowledge_card_id=str(card_id), pre_prompt=pre_prompt)
 
         num_sections = len(template.get("sections", []))
         for i, section in enumerate(template.get("sections", [])):
@@ -901,7 +1051,7 @@ async def generate_content_background(card_id: uuid.UUID):
         with get_engine().begin() as connection:
             _update_progress(card_id, "Content generation complete.", 100)
             connection.execute(
-                text("UPDATE knowledge_cards SET generated_sections = :sections, status = 'approved', updated_at = CURRENT_TIMESTAMP WHERE id = :id"),
+                text("UPDATE knowledge_cards SET generated_sections = :sections, status = 'draft', is_accepted = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = :id"),
                 {"sections": json.dumps(generated_sections), "id": card_id}
             )
             
@@ -927,49 +1077,60 @@ async def generate_content_background(card_id: uuid.UUID):
             )
 
 @router.post("/knowledge-cards/{card_id}/ingest-references")
-async def ingest_knowledge_card_references(card_id: uuid.UUID, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
+async def ingest_knowledge_card_references(
+    card_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
+    data: IngestReferencesIn,
+    current_user: dict = Depends(get_current_user)
+):
     """
-    Starts the ingestion of references for a knowledge card in the background.
+    Starts the ingestion of selected or all references for a knowledge card in the background.
     """
-    #  Validate card exists and user has permission
     with get_engine().connect() as connection:
         card_check = connection.execute(
-            text("SELECT id FROM knowledge_cards WHERE id = :card_id"), 
+            text("SELECT id FROM knowledge_cards WHERE id = :card_id"),
             {"card_id": card_id}
         ).fetchone()
-        
         if not card_check:
             raise HTTPException(status_code=404, detail="Knowledge card not found.")
 
-    async def ingest_references_background(card_id: uuid.UUID):
+    async def ingest_references_background(card_id: uuid.UUID, ids: Optional[List[uuid.UUID]]):
         with get_engine().begin() as connection:
-            references = connection.execute(
-                text("SELECT id FROM knowledge_card_references WHERE knowledge_card_id = :card_id"),
-                {"card_id": card_id}
-            ).fetchall()
+            query = """
+                SELECT kcr.id FROM knowledge_card_references kcr
+                JOIN knowledge_card_to_references kctr ON kcr.id = kctr.reference_id
+                WHERE kctr.knowledge_card_id = :card_id
+            """
+            params = {"card_id": card_id}
+            if ids:
+                query += " AND kcr.id = ANY(:ids)"
+                params["ids"] = [str(id) for id in ids]
 
-            # Process references sequentially to avoid overload
+            references = connection.execute(text(query), params).fetchall()
             for ref in references:
                 try:
-                    await ingest_reference_content(card_id, ref.id, connection=connection)
+                    await ingest_reference_content(card_id, ref.id, force_scrape=False, connection=connection)
                 except Exception as e:
-                    logger.error(f"[BACKGROUND INGEST ERROR] Failed to ingest reference {ref.id}: {e}")
-                    continue  # Continue with next reference even if one fails
+                    logger.error(f"Failed to ingest reference {ref.id}: {e}", exc_info=True)
 
-    background_tasks.add_task(ingest_references_background, card_id)
+    background_tasks.add_task(ingest_references_background, card_id, data.reference_ids)
     return {"message": "Reference ingestion started in the background."}
 
 
 @router.post("/knowledge-cards/{card_id}/references/{reference_id}/reingest")
 async def reingest_knowledge_card_reference(card_id: uuid.UUID, reference_id: uuid.UUID, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
     """
-    Starts the ingestion of a single reference for a knowledge card in the background.
+    Starts the ingestion of a single reference for a knowledge card in the background, with force_scrape=True.
     """
     #  Validate card and reference exist
     with get_engine().connect() as connection:
         ref_check = connection.execute(
-            text("SELECT id FROM knowledge_card_references WHERE id = :ref_id AND knowledge_card_id = :card_id"),
-            {"ref_id": reference_id, "card_id": card_id}
+            text("""
+                SELECT kcr.id FROM knowledge_card_references kcr
+                JOIN knowledge_card_to_references kctr ON kcr.id = kctr.reference_id
+                WHERE kctr.knowledge_card_id = :card_id AND kcr.id = :ref_id
+            """),
+            {"card_id": card_id, "ref_id": reference_id}
         ).fetchone()
 
         if not ref_check:
@@ -978,11 +1139,9 @@ async def reingest_knowledge_card_reference(card_id: uuid.UUID, reference_id: uu
     async def ingest_single_reference_background(card_id: uuid.UUID, reference_id: uuid.UUID):
         with get_engine().begin() as connection:
             try:
-                # Force scrape since we are manually re-ingesting
                 await ingest_reference_content(card_id, reference_id, force_scrape=True, connection=connection)
             except Exception as e:
-                logger.error(f"[BACKGROUND SINGLE INGEST ERROR] Failed to ingest reference {reference_id}: {e}")
-                _update_ingest_progress(card_id, reference_id, "error", f"Processing error: {str(e)}")
+                logger.error(f"Failed to re-ingest reference {reference_id}: {e}", exc_info=True)
 
     background_tasks.add_task(ingest_single_reference_background, card_id, reference_id)
     return {"message": "Single reference ingestion started in the background."}
@@ -1198,30 +1357,57 @@ async def identify_references(card_id: uuid.UUID, data: IdentifyReferencesIn, cu
 
         user_id = current_user['user_id']
         with get_engine().begin() as connection:
-            # First, clear any existing references for this card
+            # First, clear any existing associations for this card
             connection.execute(
-                text("DELETE FROM knowledge_card_references WHERE knowledge_card_id = :kcid"),
+                text("DELETE FROM knowledge_card_to_references WHERE knowledge_card_id = :kcid"),
                 {"kcid": card_id}
             )
-            # Then, insert the new references
+            # Then, process the new references
+            processed_urls = set()
             for ref in references:
-                #  Validate reference data
-                if not ref.get("url") or not ref.get("reference_type"):
+                url = ref.get("url")
+                if not url or not ref.get("reference_type"):
                     logger.warning(f"Skipping invalid reference: {ref}")
                     continue
-                    
+
+                if url in processed_urls:
+                    logger.warning(f"Skipping duplicate reference URL: {url}")
+                    continue
+                processed_urls.add(url)
+
+                # Check if reference already exists
+                existing_ref = connection.execute(
+                    text("SELECT id FROM knowledge_card_references WHERE url = :url"),
+                    {"url": url}
+                ).fetchone()
+
+                if existing_ref:
+                    reference_id = existing_ref.id
+                else:
+                    # Insert new reference
+                    new_ref_id = connection.execute(
+                        text("""
+                            INSERT INTO knowledge_card_references (url, reference_type, summary, created_by, updated_by, created_at, updated_at)
+                            VALUES (:url, :reference_type, :summary, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                            RETURNING id
+                        """),
+                        {
+                            "url": url,
+                            "reference_type": ref.get("reference_type"),
+                            "summary": ref.get("summary") or "",
+                            "user_id": user_id
+                        }
+                    ).scalar_one()
+                    reference_id = new_ref_id
+
+                # Link reference to knowledge card
                 connection.execute(
                     text("""
-                        INSERT INTO knowledge_card_references (knowledge_card_id, url, reference_type, summary, created_by, updated_by, created_at, updated_at)
-                        VALUES (:kcid, :url, :reference_type, :summary, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                        INSERT INTO knowledge_card_to_references (knowledge_card_id, reference_id)
+                        VALUES (:kcid, :ref_id)
+                        ON CONFLICT (knowledge_card_id, reference_id) DO NOTHING
                     """),
-                    {
-                        "kcid": card_id,
-                        "url": ref.get("url"),
-                        "reference_type": ref.get("reference_type"),
-                        "summary": ref.get("summary"),
-                        "user_id": user_id
-                    }
+                    {"kcid": card_id, "ref_id": reference_id}
                 )
             
             # Handle both string and dict types for generated_sections
@@ -1251,3 +1437,177 @@ async def identify_references(card_id: uuid.UUID, data: IdentifyReferencesIn, cu
     except Exception as e:
         logger.error(f"[IDENTIFY REFERENCES ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to identify references.")
+
+
+@router.get("/knowledge-cards/{card_id}/generate-document/")
+async def generate_and_download_document(
+    card_id: uuid.UUID,
+    format: str = "docx",  # Query parameter to specify 'docx' or 'pdf'
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Generates a final proposal document in either .docx or .pdf format.
+    It fetches the completed proposal from the database, assembles the document,
+    and returns it as a file download.
+    """
+    try:
+        # Fetch the proposal data from the database.
+        with get_engine().connect() as connection:
+            result = connection.execute(
+                text("""
+                    SELECT
+                        kc.id,
+                        kc.summary,
+                        kc.template_name,
+                        kc.status,
+                        kc.created_at,
+                        kc.updated_at,
+                        kc.generated_sections,
+                        kc.donor_id,
+                        kc.outcome_id,
+                        kc.field_context_id,
+                        d.name as donor_name,
+                        o.name as outcome_name,
+                        fc.name as field_context_name,
+                        (SELECT json_agg(json_build_object('id', kcr.id, 'url', kcr.url, 'reference_type', kcr.reference_type, 'summary', kcr.summary, 'scraped_at', kcr.scraped_at, 'scraping_error', kcr.scraping_error))
+                        FROM knowledge_card_references kcr
+                        JOIN knowledge_card_to_references kctr ON kcr.id = kctr.reference_id
+                        WHERE kctr.knowledge_card_id = kc.id) as "references"
+                    FROM
+                        knowledge_cards kc
+                    LEFT JOIN
+                        donors d ON kc.donor_id = d.id
+                    LEFT JOIN
+                        outcomes o ON kc.outcome_id = o.id
+                    LEFT JOIN
+                        field_contexts fc ON kc.field_context_id = fc.id
+                    WHERE
+                        kc.id = :card_id
+                """),
+                {"card_id": card_id}
+            )
+            card = result.mappings().fetchone()
+
+        if not card:
+            raise HTTPException(status_code=404, detail="Knowledge card not found for this user.")
+
+        card_dict = dict(card)
+        if card_dict.get('references') is None:
+            card_dict['references'] = []
+        if card_dict.get('generated_sections'):
+            #  Handle both string and dict types
+            if isinstance(card_dict['generated_sections'], str):
+                try:
+                    card_dict['generated_sections'] = json.loads(card_dict['generated_sections'])
+                except json.JSONDecodeError:
+                    logger.warning(f"Failed to parse generated_sections for card {card_id}")
+                    card_dict['generated_sections'] = {}
+            elif isinstance(card_dict['generated_sections'], dict):
+                # Already a dict, no need to parse
+                pass
+            else:
+                card_dict['generated_sections'] = {}
+        else:
+            card_dict['generated_sections'] = {}
+
+        form_data = {
+            "Title": card_dict.get("donor_name") or card_dict.get("outcome_name") or card_dict.get("field_context_name"),
+            "Summary": card_dict.get("summary")
+        }
+
+        # Load the template to get the correct section order and list.
+        if not card_dict.get("template_name"):
+            # Fallback to a default if no template is stored with the proposal.
+            template_name = "proposal_template_unhcr.json"
+            logger.warning(f"Proposal {card_id} has no template_name, falling back to default.")
+        else:
+            template_name = card_dict.get("template_name")
+
+        proposal_template = load_proposal_template(template_name)
+        template_sections = [s.get("section_name") for s in proposal_template.get("sections", [])]
+
+
+        # # Ensure all required sections are present before generating.
+        # if len(generated_sections) < len(template_sections):
+        #     missing = [s for s in template_sections if s not in generated_sections]
+        #     raise HTTPException(status_code=400, detail=f"Cannot generate document. Missing sections: {', '.join(missing)}")
+
+        ordered_sections = {section: card_dict['generated_sections'].get(section, "") for section in template_sections}
+
+        if format == "pdf":
+            raise HTTPException(status_code=400, detail="PDF export is not supported for knowledge cards.")
+        else:
+            # Return the DOCX file by default.
+            try:
+
+                base_name = card_dict.get("donor_name") or card_dict.get("outcome_name") or card_dict.get("field_context_name")
+                summary_text = card_dict.get("summary")
+
+                # Combine the base name and summary for the filename
+                file_name_parts = []
+                if base_name:
+                    file_name_parts.append(base_name)
+                if summary_text:
+                    file_name_parts.append(summary_text)
+
+                combined_name = " ".join(file_name_parts)
+
+                # Fallback if both are missing
+                if not combined_name:
+                    combined_name = "untitled-knowledge-card"
+
+                # Use the base name for the document title, fallback to summary or generic title
+                doc_title = base_name or summary_text or "Knowledge Card"
+                doc = create_word_from_knowledge_card(doc_title, ordered_sections)
+
+                docx_buffer = io.BytesIO()
+                doc.save(docx_buffer)
+                docx_buffer.seek(0)
+                sanitized_filename = slugify(combined_name)
+                return StreamingResponse(
+                    docx_buffer,
+                    media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    headers={"Content-Disposition": f"attachment; filename=KnowledgeCard_{sanitized_filename}.docx"}
+                )
+            except Exception as e:
+                logger.error(f"[DOCX Generation Error] {e}", exc_info=True)
+                raise HTTPException(status_code=500, detail="Failed to generate DOCX document.")
+
+    except Exception as e:
+        logger.error(f"An unexpected error occurred during document generation: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
+
+
+@router.delete("/knowledge-cards/references/{reference_id}")
+async def delete_knowledge_card_reference_by_id(reference_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
+    """
+    Deletes a reference and its associations.
+    """
+    try:
+        with get_engine().begin() as connection:
+            # Validate the reference exists
+            ref_check = connection.execute(
+                text("SELECT id FROM knowledge_card_references WHERE id = :id"),
+                {"id": reference_id}
+            ).fetchone()
+
+            if not ref_check:
+                raise HTTPException(status_code=404, detail="Reference not found.")
+
+            # Delete associations
+            connection.execute(
+                text("DELETE FROM knowledge_card_to_references WHERE reference_id = :ref_id"),
+                {"ref_id": reference_id}
+            )
+
+            # Delete the reference
+            connection.execute(
+                text("DELETE FROM knowledge_card_references WHERE id = :id"),
+                {"id": reference_id}
+            )
+        return {"message": "Reference deleted successfully."}
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        logger.error(f"[DELETE KC REFERENCE ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to delete reference.")

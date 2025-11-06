@@ -1,266 +1,175 @@
 # Deploying 'proposal_drafter' on different Cloud
 
+# Azure Deployment Guide
 
+This document outlines the recommended architecture and deployment strategy for the Project Proposal Generator application on Microsoft Azure. The proposed solution prioritizes scalability, security, and cost-effectiveness by leveraging Azure's modern cloud-native services.
 
+## 1. Recommended Architecture
 
+The recommended architecture uses a single-container model where the FastAPI backend serves the static React frontend files. This simplifies the deployment and management of the application.
 
-# Azure Platform
-
-## Step 1: Log into Azure and create resources
-
-We create an Azure Container Registry (ACR) where the Docker images will be stored. We also need an Azure App Service (Linux, Multi-Container) where the app will be hosted. It will be configured it to pull images from ACR. Last, the App Service Plan defines the compute resources (CPU, memory), region, and pricing tier that host your apps. 
-
-Below is a script that automates the creation of these resources:
-
-```bash
-az login
-
-# ──────────────────────────────
-# ✅ CONFIGURE THESE VARIABLES
-# ──────────────────────────────
-RESOURCE_GROUP="proposalgen-rg"
-LOCATION="eastus"
-ACR_NAME="proposalgenacr"                    # Must be globally unique
-APP_SERVICE_PLAN="proposalgen-plan"
-WEBAPP_NAME="proposalgen-app"
-SERVICE_PRINCIPAL_NAME="gh-deploy-sp"
-DOCKER_COMPOSE_FILE="docker-compose.yml"
-SUBSCRIPTION_ID=$(az account show --query id -o tsv)
-
-# ──────────────────────────────
-# 1. Create Resource Group
-# ──────────────────────────────
-echo "Creating resource group..."
-az group create --name $RESOURCE_GROUP --location $LOCATION
-
-# ──────────────────────────────
-# 2. Create Azure Container Registry (ACR)
-# ──────────────────────────────
-echo "Creating Azure Container Registry..."
-az acr create --name $ACR_NAME --resource-group $RESOURCE_GROUP --sku Basic --admin-enabled true
-
-# ──────────────────────────────
-# 3. Create App Service Plan (Linux)
-# ──────────────────────────────
-echo "Creating App Service Plan..."
-az appservice plan create \
-  --name $APP_SERVICE_PLAN \
-  --resource-group $RESOURCE_GROUP \
-  --sku B1 \
-  --is-linux
-
-# ──────────────────────────────
-# 4. Create Web App (Linux, Multi-Container)
-# ──────────────────────────────
-echo "Creating Azure Web App..."
-az webapp create \
-  --resource-group $RESOURCE_GROUP \
-  --plan $APP_SERVICE_PLAN \
-  --name $WEBAPP_NAME \
-  --multicontainer-config-type compose \
-  --multicontainer-config-file $DOCKER_COMPOSE_FILE
-
-# ──────────────────────────────
-# 5. Enable Managed Identity for App Service
-# ──────────────────────────────
-echo "Enabling Managed Identity..."
-az webapp identity assign \
-  --name $WEBAPP_NAME \
-  --resource-group $RESOURCE_GROUP
-
-PRINCIPAL_ID=$(az webapp show \
-  --name $WEBAPP_NAME \
-  --resource-group $RESOURCE_GROUP \
-  --query identity.principalId \
-  --output tsv)
-
-# ──────────────────────────────
-# 6. Grant ACR Pull Permissions to App Service
-# ──────────────────────────────
-echo "Granting 'AcrPull' role to App Service identity..."
-ACR_ID=$(az acr show --name $ACR_NAME --query id --output tsv)
-
-az role assignment create \
-  --assignee $PRINCIPAL_ID \
-  --role "AcrPull" \
-  --scope $ACR_ID
-
-# ──────────────────────────────
-# 7. Create Service Principal for GitHub Actions
-# ──────────────────────────────
-echo "Creating Service Principal for GitHub Actions..."
-az ad sp create-for-rbac \
-  --name $SERVICE_PRINCIPAL_NAME \
-  --role contributor \
-  --scopes /subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP \
-  --sdk-auth > azure-credentials.json
-
-echo ""
-echo "🔑 Service Principal credentials written to azure-credentials.json"
-echo "👉 Add this file content to GitHub Secrets as AZURE_CREDENTIALS"
-echo ""
-```
+| Component | Technology | Azure Service | Rationale |
+| :--- | :--- | :--- | :--- |
+| **Application** | FastAPI & React | **Azure Container Apps** | A serverless container service ideal for hosting web and API applications with automatic scaling and integrated CI/CD. |
+| **Database** | PostgreSQL + `vector` | **Azure Database for PostgreSQL** | A fully managed PostgreSQL service that supports the `pgvector` extension, crucial for similarity search. |
+| **Cache** | Redis | **Azure Cache for Redis** | A secure, in-memory data store for session management, improving application performance. |
+| **AI Models**| GPT-4 & Embeddings | **Azure OpenAI Service** | Provides enterprise-grade access to powerful language models for inference and embedding tasks. |
+| **AI/Search** | Serper | **External API (Serper)** | Leverages a powerful external service for web search capabilities. |
 
+## 2. Deployment & CI/CD Strategy
 
+The deployment is managed through Infrastructure as Code (IaC) using Bicep and a CI/CD pipeline using GitHub Actions. This approach ensures that deployments are automated, repeatable, and version-controlled.
 
+- **Infrastructure as Code (IaC):** The Bicep templates in the `infrastructure/` directory define all the necessary Azure resources. The templates are parameterized to allow for the deployment of different environment sizes (e.g., "Testing," "Expanded").
+- **CI/CD Pipeline:** The GitHub Actions workflow in `.github/workflows/deploy.yml` automates the process of building the Docker image, pushing it to Azure Container Registry, and deploying the Bicep infrastructure.
 
+For detailed instructions on manual deployment and the structure of the Bicep files, please refer to the `infrastructure/README.md` file.
 
-## Step 2: Build & Push Docker Images
+## 3. Cost Estimation
 
-```bash
-# Backend
-docker build -t proposalgen2acr.azurecr.io/proposalgen-backend:latest ./backend
-docker push proposalgen2acr.azurecr.io/proposalgen-backend:latest
+All cost estimates are based on the **Northern Europe** region and are subject to change.
 
-# Frontend
-docker build -t proposalgen2acr.azurecr.io/proposalgen-frontend:latest --build-arg VITE_BACKEND_URL=/api ./frontend
-docker push proposalgen2acr.azurecr.io/proposalgen-frontend:latest
+### a. One-Time Setup Cost
 
-# Nginx
-docker build -t proposalgen2acr.azurecr.io/proposalgen-nginx:latest ./nginx-proxy
-docker push proposalgen2acr.azurecr.io/proposalgen-nginx:latest
-```
+This cost is incurred at the beginning of the project to populate the initial knowledge base.
 
-## Step 3: Deploy infrastructure using Bicep
+- **Initial Document Embedding (1000 documents):**
+  - **Total Tokens:** ~250,000,000
+  - **Cost (text-embedding-3-large @ $0.13/1M tokens):** **~$32.50**
+- **Initial Knowledge Card Creation (300 CrewAI runs):**
+  - **Serper API (300 runs * 10 queries/run):** 3,000 queries @ $0.001/query = **$3.00**
+  - **OpenAI API (300 runs * 75k tokens/run):** 22,500,000 tokens @ $10/1M tokens (GPT-4 Turbo) = **$225.00**
+- **Total Estimated Setup Cost:** **~$260.50**
 
-```bash
-az deployment group create \
-  --resource-group proposalgen-rg \
-  --template-file azure-resources.bicep \
-  --parameters \
-    baseName=proposalgen \
-    dockerRegistryServerUrl=proposalgen2acr.azurecr.io \
-    dockerRegistryServerUsername=proposalgen2acr \
-    dockerRegistryServerPassword=<ACR-PASSWORD> \
-    azureOpenAiEndpoint=<YOUR-OPENAI-ENDPOINT> \
-    azureOpenAiApiKey=<YOUR-OPENAI-KEY> \
-    openAiApiVersion=<YOUR-OPENAI-API-VERSION> \
-    azureDeploymentName=<YOUR-DEPLOYMENT-NAME> \
-    secretKey=<YOUR-SECRET-KEY> 
-```
+### b. Integrated Monthly Cost Scenarios (Based on Annual Proposal Volume)
 
-## Step 4: Set up Azure database
+The following scenarios provide an all-inclusive monthly cost estimate, combining Azure infrastructure and external API usage. The scenarios are defined by the number of proposals generated per year, with the costs presented as the monthly equivalent.
 
-```bash
-bash azure-db-setup.sh
-```
+#### Scenario 1: Testing (100 proposals/year -> ~8/month)
 
----
+- **Azure Infrastructure:**
+  - **Container Apps (2 vCPU, 4 GiB):** ~$60
+  - **PostgreSQL (Burstable, 2 vCores, 128 GiB):** ~$50
+  - **Redis (Basic C0, 256 MB):** ~$25
+- **API Usage:**
+  - **Serper API (8 * 10 queries):** 80 queries = **~$0.08**
+  - **OpenAI API (8 * 75k tokens):** 600,000 tokens = **$6.00**
+- **Total Estimated Monthly Cost:** **~$141.08**
+- **Estimated Cost Per Proposal:** **~$17.64**
 
-## GitHub CI/CD Workflow Automation
+#### Scenario 2: Exploratory (500 proposals/year -> ~42/month)
 
-This section sets up a CI/CD pipeline using GitHub Actions to automate deployments to Azure whenever you push changes to the repository.
+- **Azure Infrastructure:** (Same as Testing)
+  - **Container Apps (2 vCPU, 4 GiB):** ~$60
+  - **PostgreSQL (Burstable, 2 vCores, 128 GiB):** ~$50
+  - **Redis (Basic C0, 256 MB):** ~$25
+- **API Usage:**
+  - **Serper API (42 * 15 queries):** 630 queries = **~$0.63**
+  - **OpenAI API (42 * 100k tokens):** 4,200,000 tokens = **$42.00**
+- **Total Estimated Monthly Cost:** **~$177.63**
+- **Estimated Cost Per Proposal:** **~$4.23**
 
-### Step 1: Set up GitHub Secrets
+#### Scenario 3: Expanded (1500 proposals/year -> 125/month)
 
-In your GitHub repo, go to **Settings > Secrets and Variables > Actions**, and add the elemnts defining the target Azure Infrastructure::
+- **Azure Infrastructure:**
+  - **Container Apps (4 vCPU, 8 GiB):** ~$120
+  - **PostgreSQL (General Purpose, 2 vCores, 256 GiB):** ~$110
+  - **Redis (Standard C1, 1 GB):** ~$60
+- **API Usage:**
+  - **Serper API (125 * 20 queries):** 2,500 queries = **$2.50**
+  - **OpenAI API (125 * 125k tokens):** 15,625,000 tokens = **~$156.25**
+- **Total Estimated Monthly Cost:** **~$448.75**
+- **Estimated Cost Per Proposal:** **~$3.59**
 
-- `AZURE_CREDENTIALS` (from `az ad sp create-for-rbac`)
-- `REGISTRY_LOGIN_SERVER` -- # Must end with .azurecr.io
-- `REGISTRY_USERNAME` -- az acr credential show --name <your-acr-name> --query "{username: username, password: passwords[0].value}"
-- `REGISTRY_PASSWORD` -- same as above
-- `AZURE_WEBAPP_PUBLISH_PROFILE`  -- you can get this from the Azure Portal > App Service > Get Publish Profile
-- `AZURE_WEBAPP_NAME` -- the name of your Azure Web App
+#### Scenario 4: Organization-Wide (Targeting 1600 successful proposals/year)
 
+*This scenario assumes a 30% success rate, requiring a total of ~5333 proposals to be generated annually, or ~444 per month.*
 
+- **Azure Infrastructure:**
+  - **Container Apps (8 vCPU, 16 GiB):** ~$240
+  - **PostgreSQL (General Purpose, 4 vCores, 256 GiB):** ~$180
+  - **Redis (Standard C1, 1 GB):** ~$60
+- **API Usage:**
+  - **Serper API (444 * 25 queries):** ~11,100 queries @ ~$0.00075/query = **~$8.33**
+  - **OpenAI API (444 * 150k tokens):** ~66,600,000 tokens = **$666.00**
+- **Total Estimated Monthly Cost:** **~$1,154.33**
+- **Estimated Cost Per Generated Proposal:** **~$2.60**
 
-### Step 2: Application Settings (Environment Variables)
+## 4. Security & Compliance Recommendations
 
-In the Azure Portal > App Service > Configuration, add the same environment variables you have in your Docker Compose file:
-and the internal environment variables used in the app:
-
-- `AZURE_OPENAI_ENDPOINT`
-- `AZURE_OPENAI_API_KEY`
-- `OPENAI_API_VERSION`
-- `AZURE_DEPLOYMENT_NAME`
-- `SECRET_KEY`
-- `DB_USERNAME`
-- `DB_PASSWORD`
-- `DB_NAME`
-- `DB_HOST`
-- `DB_PORT`
-
-### Step 3: GitHub Actions workflow file
-
-The script `.github/workflows/deploy.yml` orchestrates the CI/CD pipeline.
-
-Note that you main need to verify that the `docker-compose.yml` file is correctly set up to use the environment variables defined in the Azure App Service and check that you container registry can be accessed by Github Actions.
-az acr update --name <your-acr-name> --public-network-enabled true  
-
-### Step 4: Push to GitHub
-
-```bash
-git remote add origin https://github.com/edouard-legoupil/proposal_drafter.git
-git push -u origin main
-```
-
-
-If the workflow is set up correctly, it will automatically build and deploy the application to Azure whenever you push changes to the `main` branch.
-
-If the target application in azure does not start correctly, you can check the logs in the Azure Portal > App Service > Log Stream.
-
-
-```bash
-## check the log of the app service using the Azure CLI:
-az webapp log tail --name <your-app-name> --resource-group <your-resource-group>
-## Check if it is actually deployed
-az webapp config container show \
-  --name <your-app-name> \
-  --resource-group <your-resource-group> \
-  --query "[name, image]"
-```
-
-## 🧪 Verification Checklist
-
-| Task | Expected Output |
-|------|------------------|
-| Frontend | http://localhost:8503 |
-| Backend health | http://localhost:8502/api/health_check |
-| PostgreSQL | Tables created |
-| Azure App | Live app URL after deployment |
-| CI/CD | Auto-deploys on `git push` |
-
----
-
-## 🛠 Troubleshooting
-
-### 🧱 SSL Error in Docker Build
-
-**Error**: `CERTIFICATE_VERIFY_FAILED`  
-**Fix**: Inside your Dockerfile, add:
-
-```Dockerfile
-RUN apt-get update && apt-get install -y ca-certificates && update-ca-certificates
-ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
-```
-
-### 🔥 Nginx Not Routing
-
-1. Run `docker logs <nginx-container-id>`
-2. Ensure backend URL is correct in `proxy_pass`
-3. Remove trailing slash from `proxy_pass` (important!)
-
-### 🧩 Database Connection
-
-Test connection manually:
-
-```bash
-psql postgresql://<username>:<password>@<host>:<port>/<dbname>
-```
-
----
-
-## 🔁 Updating the App
-
-```bash
-git pull
-docker-compose -f docker-compose-local.yml up -d --build
-```
-
-
-
+- **Authentication:** Integrate Azure Active Directory (AAD) for single sign-on (SSO).
+- **Data Encryption:** Enable Transparent Data Encryption (TDE) for PostgreSQL and enforce SSL connections.
+- **Networking:** Deploy services within a Virtual Network (VNet) for isolation.
+- **Monitoring:** Use Azure Monitor and Application Insights for performance tracking and alerting.
 
 # Google Cloud Run Platform
+
+This section provides a guide to deploying the application to Google Cloud Platform (GCP) and includes a detailed cost analysis for different usage scenarios.
+
+## 1. Recommended Architecture
+
+| Component | Technology | Google Cloud Service |
+| :--- | :--- | :--- |
+| **Application** | FastAPI & React | **Cloud Run** |
+| **Database** | PostgreSQL + `vector` | **Cloud SQL for PostgreSQL** |
+| **Cache** | Redis | **Memorystore for Redis** |
+| **AI Models**| GPT-4 & Embeddings | **Vertex AI** |
+| **AI/Search** | Serper | **External API (Serper)** |
+
+## 2. Cost Estimation (Google Cloud)
+
+The following estimates are based on the **europe-west1** region and are subject to change.
+
+### a. One-Time Setup Cost
+
+- **Initial Document Embedding & Knowledge Card Creation:**
+  - **Vertex AI & Serper API:** **~$260** (Similar to Azure, as API costs are dominant)
+
+### b. Integrated Monthly Cost Scenarios (Based on Annual Proposal Volume)
+
+#### Scenario 1: Testing (100 proposals/year -> ~8/month)
+
+- **GCP Infrastructure:**
+  - **Cloud Run (2 vCPU, 4 GiB):** ~$70
+  - **Cloud SQL (db-g1-small):** ~$60
+  - **Memorystore for Redis (Basic, 1 GB):** ~$30
+- **API Usage:**
+  - **Vertex AI & Serper API:** ~$6.08
+- **Total Estimated Monthly Cost:** **~$166.08**
+- **Estimated Cost Per Proposal:** **~$20.76**
+
+#### Scenario 2: Exploratory (500 proposals/year -> ~42/month)
+
+- **GCP Infrastructure:** (Same as Testing)
+  - **Cloud Run, Cloud SQL, Memorystore:** ~$160
+- **API Usage:**
+  - **Vertex AI & Serper API:** ~$42.63
+- **Total Estimated Monthly Cost:** **~$202.63**
+- **Estimated Cost Per Proposal:** **~$4.82**
+
+#### Scenario 3: Expanded (1500 proposals/year -> 125/month)
+
+- **GCP Infrastructure:**
+  - **Cloud Run (4 vCPU, 8 GiB):** ~$140
+  - **Cloud SQL (db-n1-standard-2):** ~$130
+  - **Memorystore for Redis (Standard, 1 GB):** ~$70
+- **API Usage:**
+  - **Vertex AI & Serper API:** ~$158.50
+- **Total Estimated Monthly Cost:** **~$500.00**
+- **Estimated Cost Per Proposal:** **~$4.00**
+
+#### Scenario 4: Organization-Wide (Targeting 1600 successful proposals/year)
+
+*This scenario assumes a 30% success rate, requiring a total of ~5333 proposals to be generated annually, or ~444 per month.*
+
+- **GCP Infrastructure:**
+  - **Cloud Run (8 vCPU, 16 GiB):** ~$280
+  - **Cloud SQL (db-n1-standard-4):** ~$200
+  - **Memorystore for Redis (Standard, 5 GB):** ~$150
+- **API Usage:**
+  - **Vertex AI & Serper API:** ~$674.33
+- **Total Estimated Monthly Cost:** **~$1,304.33**
+- **Estimated Cost Per Generated Proposal:** **~$2.94**
 
 This tutorial provides a step-by-step guide to deploying the proposal_drafter application, consisting of a PostgreSQL database, FastAPI backend, React frontend, and Nginx, to Google Cloud Platform (GCP):
 

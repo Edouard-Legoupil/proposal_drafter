@@ -9,6 +9,7 @@ import Base from '../../components/Base/Base'
 import CommonButton from '../../components/CommonButton/CommonButton'
 import MultiSelectModal from '../../components/MultiSelectModal/MultiSelectModal'
 import AssociateKnowledgeModal from '../../components/AssociateKnowledgeModal/AssociateKnowledgeModal'
+import PdfUploadModal from '../../components/PdfUploadModal/PdfUploadModal'
 import CreatableSelect from 'react-select/creatable';
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
@@ -18,6 +19,7 @@ import arrow from "../../assets/images/expanderArrow.svg"
 import generateIcon from "../../assets/images/generateIcon.svg"
 import knowIcon from "../../assets/images/knowIcon.svg"
 import resultsIcon from "../../assets/images/Chat_resultsIcon.svg"
+import Review from './components/Review/Review'
 import edit from "../../assets/images/Chat_edit.svg"
 import save from "../../assets/images/Chat_save.svg"
 import cancel from "../../assets/images/Chat_editCancel.svg"
@@ -54,6 +56,7 @@ export default function Chat (props)
         const [isModalOpen, setIsModalOpen] = useState(false)
         const [isPeerReviewModalOpen, setIsPeerReviewModalOpen] = useState(false)
         const [isAssociateKnowledgeModalOpen, setIsAssociateKnowledgeModalOpen] = useState(false)
+        const [isPdfUploadModalOpen, setIsPdfUploadModalOpen] = useState(false)
         const [users, setUsers] = useState([])
         const [selectedUsers, setSelectedUsers] = useState([])
         const [associatedKnowledgeCards, setAssociatedKnowledgeCards] = useState([]);
@@ -392,12 +395,64 @@ export default function Chat (props)
                 return () => clearInterval(intervalId);
         }, [generateLoading]);
 
+        async function fetchAndAssociateKnowledgeCards() {
+                const donorId = formData["Targeted Donor"].value;
+                const outcomeIds = formData["Main Outcome"].value;
+                const fieldContextId = formData["Country / Location(s)"].value;
+
+                const fetchPromises = [];
+
+                if (donorId && !donorId.startsWith("new_")) {
+                        fetchPromises.push(
+                                fetch(`${API_BASE_URL}/knowledge-cards?donor_id=${donorId}`, { credentials: 'include' })
+                                        .then(res => res.ok ? res.json() : Promise.resolve({ knowledge_cards: [] }))
+                                        .then(data => data.knowledge_cards.length > 0 ? data.knowledge_cards[0] : null)
+                        );
+                }
+
+                if (fieldContextId && !fieldContextId.startsWith("new_")) {
+                        fetchPromises.push(
+                                fetch(`${API_BASE_URL}/knowledge-cards?field_context_id=${fieldContextId}`, { credentials: 'include' })
+                                        .then(res => res.ok ? res.json() : Promise.resolve({ knowledge_cards: [] }))
+                                        .then(data => data.knowledge_cards.length > 0 ? data.knowledge_cards[0] : null)
+                        );
+                }
+
+                if (outcomeIds && outcomeIds.length > 0) {
+                        const validOutcomeIds = outcomeIds.filter(id => !id.startsWith("new_"));
+                        if (validOutcomeIds.length > 0) {
+                                const queryParams = new URLSearchParams();
+                                validOutcomeIds.forEach(id => queryParams.append('outcome_id', id));
+                                fetchPromises.push(
+                                        fetch(`${API_BASE_URL}/knowledge-cards?${queryParams.toString()}`, { credentials: 'include' })
+                                                .then(res => res.ok ? res.json() : Promise.resolve({ knowledge_cards: [] }))
+                                                .then(data => data.knowledge_cards) // This will be an array of cards
+                                );
+                        }
+                }
+
+                try {
+                        const results = await Promise.all(fetchPromises);
+                        const newAssociatedCards = results.flat().filter(Boolean);
+
+                        const combinedCards = [...associatedKnowledgeCards, ...newAssociatedCards];
+                        const uniqueAssociatedCards = Array.from(new Map(combinedCards.map(card => [card.id, card])).values());
+
+                        setAssociatedKnowledgeCards(uniqueAssociatedCards);
+                        return uniqueAssociatedCards;
+                } catch (error) {
+                        console.error("Error auto-associating knowledge cards:", error);
+                        return associatedKnowledgeCards;
+                }
+        }
+
         async function handleGenerateClick ()
         {
                 setGenerateLoading(true);
                 setFormExpanded(false);
 
                 try {
+                        const finalAssociatedCards = await fetchAndAssociateKnowledgeCards();
                         const updatedFormData = { ...Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])) };
 
                         const createNewOption = async (endpoint, value) => {
@@ -443,7 +498,7 @@ export default function Chat (props)
                                 body: JSON.stringify({
                                         project_description: userPrompt,
                                         form_data: updatedFormData,
-                                        associated_knowledge_cards: associatedKnowledgeCards
+                                        associated_knowledge_cards: finalAssociatedCards
                                 }),
                                 credentials: 'include'
                         });
@@ -457,6 +512,10 @@ export default function Chat (props)
                         // Store the new session and proposal IDs received from the backend.
                         sessionStorage.setItem("session_id", data.session_id);
                         sessionStorage.setItem("proposal_id", data.proposal_id);
+                        if (data.proposal_template) {
+                                setProposalTemplate(data.proposal_template);
+                                sessionStorage.setItem("proposal_template", JSON.stringify(data.proposal_template));
+                        }
 
                         // Initialize the proposal sections based on the template received from the backend.
                         const sectionState = {};
@@ -525,14 +584,15 @@ export default function Chat (props)
         async function handleRegenerateButtonClick (ip = regenerateInput)
         {
                 setRegenerateSectionLoading(true)
+                const sectionName = proposalTemplate ? proposalTemplate.sections[selectedSection].section_name : Object.keys(proposal)[selectedSection];
 
-                const response = await fetch(`${API_BASE_URL}/regenerate_section/${sessionStorage.getItem("session_id")}`, {
+                const response = await fetch(`${API_BASE_URL}/regenerate_section/${sessionStorage.getItem("proposal_id")}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                                section: Object.keys(proposal)[selectedSection],
+                                session_id: sessionStorage.getItem("session_id"),
+                                section: sectionName,
                                 concise_input: ip,
-                                proposal_id: sessionStorage.getItem("proposal_id"),
                                 form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])),
                                 project_description: userPrompt
                         }),
@@ -543,8 +603,8 @@ export default function Chat (props)
                         const data = await response.json()
                         setProposal(p => ({
                                 ...p,
-                                [Object.keys(proposal)[selectedSection]]: {
-                                        open: Object.values(p)[selectedSection].open,
+                                [sectionName]: {
+                                        open: p[sectionName].open,
                                         content: data.generated_text
                                 }
                         }))
@@ -569,12 +629,13 @@ export default function Chat (props)
 
         function handleExpanderToggle (section)
         {
+                const sectionName = proposalTemplate ? proposalTemplate.sections[section].section_name : Object.keys(proposal)[section];
                 setProposal(p => {
                         return ({
                                 ...p,
-                                [Object.keys(p)[section]]: {
-                                        content: Object.values(p)[section].content,
-                                        open: !Object.values(p)[section].open
+                                [sectionName]: {
+                                        content: p[sectionName].content,
+                                        open: !p[sectionName].open
                                 }
                         })
                 })
@@ -582,6 +643,7 @@ export default function Chat (props)
 
         const [isEdit, setIsEdit] = useState(false)
         const [editorContent, setEditorContent] = useState("")
+        const [proposalTemplate, setProposalTemplate] = useState(null)
         async function handleEditClick (section)
         {
                 if(!isEdit)
@@ -594,7 +656,7 @@ export default function Chat (props)
                 else
                 {
                         // Saving the edit
-                        const sectionKey = Object.keys(proposal)[selectedSection];
+                        const sectionName = proposalTemplate ? proposalTemplate.sections[selectedSection].section_name : Object.keys(proposal)[selectedSection];
                         
                         try {
                                 const response = await fetch(`${API_BASE_URL}/update-section-content`, {
@@ -602,7 +664,7 @@ export default function Chat (props)
                                         headers: { 'Content-Type': 'application/json' },
                                         body: JSON.stringify({
                                                 proposal_id: sessionStorage.getItem("proposal_id"),
-                                                section: sectionKey,
+                                                section: sectionName,
                                                 content: editorContent
                                         }),
                                         credentials: 'include'
@@ -615,8 +677,8 @@ export default function Chat (props)
                                 // On successful save, update the local state to reflect the change.
                                 setProposal(p => ({
                                         ...p,
-                                        [sectionKey]: {
-                                                ...Object.values(p)[selectedSection],
+                                        [sectionName]: {
+                                                ...p[sectionName],
                                                 content: editorContent
                                         }
                                 }));
@@ -631,10 +693,26 @@ export default function Chat (props)
                 }
         }
 
-        const [isApproved, setIsApproved] = useState(false)
         const [proposalStatus, setProposalStatus] = useState("draft")
+        const [contributionId, setContributionId] = useState("")
         const [statusHistory, setStatusHistory] = useState([])
         const [reviews, setReviews] = useState([])
+
+        async function handleSaveContributionId() {
+                const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/save-contribution-id`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contribution_id: contributionId }),
+                        credentials: 'include'
+                });
+
+                if (response.ok) {
+                        alert("Contribution ID saved!");
+                } else {
+                        console.error("Failed to save Contribution ID");
+                        alert("Failed to save Contribution ID.");
+                }
+        }
 
         async function getPeerReviews() {
                 if (sessionStorage.getItem("proposal_id")) {
@@ -646,6 +724,8 @@ export default function Chat (props)
                         if (response.ok) {
                                 const data = await response.json();
                                 setReviews(data.reviews);
+                        } else if (response.status === 403) {
+                                setReviews([]);
                         }
                 }
         }
@@ -702,12 +782,21 @@ export default function Chat (props)
                                 });
                                 setProposal(sectionState);
 
-                                setIsApproved(data.is_accepted)
+                                if (data.associated_knowledge_cards) {
+                                    setAssociatedKnowledgeCards(data.associated_knowledge_cards);
+                                }
+
                                 setProposalStatus(data.status)
+                                setContributionId(data.contribution_id || "")
                                 setSidebarOpen(true)
                                 getStatusHistory()
-                                if(data.status === 'submission') {
+                                if(data.status === 'pre_submission' || data.status === 'in_review') {
                                     getPeerReviews()
+                                }
+
+                                const storedTemplate = sessionStorage.getItem("proposal_template");
+                                if (storedTemplate) {
+                                        setProposalTemplate(JSON.parse(storedTemplate));
                                 }
                         }
                         else if(response.status === 401)
@@ -737,10 +826,19 @@ export default function Chat (props)
 
                 if(response.ok)
                 {
+                        const contentDisposition = response.headers.get('Content-Disposition');
+                        let filename = "proposal.docx"; // Default filename
+                        if (contentDisposition) {
+                            const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+                            if (filenameMatch && filenameMatch[1]) {
+                                filename = filenameMatch[1];
+                            }
+                        }
+
                         const blob = await response.blob();
                         const link = document.createElement('a');
                         link.href = URL.createObjectURL(blob);
-                link.download = formData["Project Draft Short name"].value ?? "proposal" + "." + format;
+                        link.download = filename;
                         document.body.appendChild(link);
                         link.click();
                         link.remove();
@@ -773,10 +871,19 @@ export default function Chat (props)
 
                 if(response.ok)
                 {
+                        const contentDisposition = response.headers.get('Content-Disposition');
+                        let filename = "proposal-tables.xlsx"; // Default filename
+                        if (contentDisposition) {
+                            const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+                            if (filenameMatch && filenameMatch[1]) {
+                                filename = filenameMatch[1];
+                            }
+                        }
+
                         const blob = await response.blob();
                         const link = document.createElement('a');
                         link.href = URL.createObjectURL(blob);
-                        link.download = formData["Project Draft Short name"].value ?? "proposal" + "_tables.xlsx";
+                        link.download = filename;
                         document.body.appendChild(link);
                         link.click();
                         link.remove();
@@ -790,25 +897,6 @@ export default function Chat (props)
                 }
                 else
                         throw new Error(`Download failed: ${response.status} ${response.statusText}`);
-        }
-
-        async function handleRequestSubmission ()
-        {
-                const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/request-submission`, {
-                        method: "POST",
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: "include"
-                })
-
-                if(response.ok)
-                {
-                        await getContent()
-                }
-                else if(response.status === 401)
-                {
-                        sessionStorage.setItem("session_expired", "Session expired. Please login again.")
-                        navigate("/login")
-                }
         }
 
         async function handleRevert (status)
@@ -841,28 +929,6 @@ export default function Chat (props)
             }
         }
 
-        async function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (!file) {
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('file', file);
-
-            const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/upload-approved-document`, {
-                method: 'POST',
-                body: formData,
-                credentials: 'include'
-            });
-
-            if (response.ok) {
-                alert('File uploaded successfully');
-            } else {
-                alert('File upload failed');
-            }
-        }
-
         async function handleSetStatus(status) {
                 const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/status`, {
                         method: "PUT",
@@ -880,41 +946,25 @@ export default function Chat (props)
 
         async function handleSubmit ()
         {
-                const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/submit`, {
-                        method: "POST",
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: "include"
-                })
-
-                if(response.ok)
-                {
-                        await getContent()
-                }
-                else if(response.status === 401)
-                {
-                        sessionStorage.setItem("session_expired", "Session expired. Please login again.")
-                        navigate("/login")
-                }
+                setIsPdfUploadModalOpen(true);
         }
 
-        async function handleApprove ()
-        {
-                const response = await fetch(`${API_BASE_URL}/finalize-proposal`, {
-                        method: "POST",
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ proposal_id: sessionStorage.getItem("proposal_id")}),
-                        credentials: "include"
-                })
+        async function handlePdfUpload(file) {
+                const formData = new FormData();
+                formData.append('file', file);
 
-                if(response.ok)
-                {
-                        await getContent()
+                const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/upload-submitted-pdf`, {
+                        method: 'POST',
+                        body: formData,
+                        credentials: 'include'
+                });
+
+                if (response.ok) {
+                        await getContent();
+                } else {
+                        console.error("Failed to upload PDF");
                 }
-                else if(response.status === 401)
-                {
-                        sessionStorage.setItem("session_expired", "Session expired. Please login again.")
-                        navigate("/login")
-                }
+                setIsPdfUploadModalOpen(false);
         }
 
         async function handleSubmitForPeerReview ({ selectedUsers, deadline })
@@ -945,7 +995,7 @@ export default function Chat (props)
         }
 
         return  <Base>
-                <div className={`Chat ${isMobile && isMobileMenuOpen ? 'mobile-menu-open' : ''}`}>
+                <div className={`Chat ${isMobile && isMobileMenuOpen ? 'mobile-menu-open' : ''}`} data-testid="chat-container">
                         <MultiSelectModal
                                 isOpen={isPeerReviewModalOpen}
                                 onClose={() => setIsPeerReviewModalOpen(false)}
@@ -965,20 +1015,36 @@ export default function Chat (props)
                                 fieldContextId={formData["Country / Location(s)"].value}
                                 initialSelection={associatedKnowledgeCards}
                         />
+                        <PdfUploadModal
+                                isOpen={isPdfUploadModalOpen}
+                                onClose={() => setIsPdfUploadModalOpen(false)}
+                                onConfirm={handlePdfUpload}
+                        />
                         {((!isMobile && sidebarOpen) || (isMobile && isMobileMenuOpen)) && <aside>
-                                <ul className='Chat_sidebar'>
+                                <ul className='Chat_sidebar' data-testid="chat-sidebar">
                                         <li
                                                 className={`Chat_sidebarOption ${selectedSection === -1 ? "selectedSection" : ""}`}
                                                 onClick={() => handleSidebarSectionClick(-1)}
+                                                data-testid="sidebar-option-proposal-prompt"
                                         >
                                                 Proposal Prompt
                                         </li>
 
-                                        {Object.keys(proposal).map((section, i) =>
+                                        {proposalTemplate ? proposalTemplate.sections.map((section, i) =>
                                                 <li
                                                         key={i}
                                                         className={`Chat_sidebarOption ${selectedSection === i ? "selectedSection" : ""}`}
                                                         onClick={() => handleSidebarSectionClick(i)}
+                                                        data-testid={`sidebar-option-${toKebabCase(section.section_name)}`}
+                                                >
+                                                        {section.section_name}
+                                                </li>
+                                        ) : Object.keys(proposal).map((section, i) =>
+                                                <li
+                                                        key={i}
+                                                        className={`Chat_sidebarOption ${selectedSection === i ? "selectedSection" : ""}`}
+                                                        onClick={() => handleSidebarSectionClick(i)}
+                                                        data-testid={`sidebar-option-${toKebabCase(section)}`}
                                                 >
                                                         {section}
                                                 </li>
@@ -986,14 +1052,14 @@ export default function Chat (props)
                                 </ul>
                         </aside>}
 
-                        <main className="Chat_right" ref={topRef}>
-                                <button className="Chat_menuButton" onClick={() => setIsMobileMenuOpen(p => !p)}>
+                        <main className="Chat_right" ref={topRef} data-testid="chat-main">
+                                <button className="Chat_menuButton" onClick={() => setIsMobileMenuOpen(p => !p)} data-testid="mobile-menu-button">
                                         <i className="fa-solid fa-bars"></i>
                                 </button>
-                                {!isApproved ?
+                                {proposalStatus !== 'submitted' ?
                                         <>
                                                 <div className='Dashboard_top'>
-                                                        <div className='Dashboard_label'>
+                                                        <div className='Dashboard_label' data-testid="chat-title">
                                                                 <img className='Dashboard_label_fileIcon' src={fileIcon} />
                                                                 {titleName}
                                                         </div>
@@ -1001,18 +1067,19 @@ export default function Chat (props)
 
                                                 <div className="Chat_inputArea">
                                                         {renderFormField("Project Draft Short name", proposalStatus !== 'draft')}
-                                                        <textarea id="main-prompt" name="main-prompt" value={userPrompt} onChange={e => setUserPrompt(e.target.value)} placeholder='Provide as much details as possible on your initial project idea!' className='Chat_inputArea_prompt' disabled={proposalStatus !== 'draft'} />
+                                                        <textarea id="main-prompt" name="main-prompt" value={userPrompt} onChange={e => setUserPrompt(e.target.value)} placeholder='Provide as much details as possible on your initial project idea!' className='Chat_inputArea_prompt' disabled={proposalStatus !== 'draft'} data-testid="main-prompt" />
 
                                                         <span
                                                             onClick={() => proposalStatus === 'draft' && setFormExpanded(p => !p)}
                                                             className={`Chat_inputArea_additionalDetails ${form_expanded && "expanded"} ${proposalStatus !== 'draft' ? 'disabled' : ''}`}
+                                                            data-testid="specify-parameters-expander"
                                                         >
                                                             Specify Parameters
                                                             <img src={arrow} alt="Arrow" />
                                                         </span>
 
                                                         {form_expanded ?
-                                                                <form className='Chat_form'>
+                                                                <form className='Chat_form' data-testid="chat-form">
                                                                         <div className='Chat_form_group'>
                                                                                 <div className="tooltip-container">
                                                                                         <h3 className='Chat_form_group_title'>Identify Potential Interventions</h3>
@@ -1044,9 +1111,9 @@ export default function Chat (props)
 
                                                         <div className="Chat_inputArea_buttonContainer">
                                                                 <div style={{ position: 'relative' }}>
-                                                                        <CommonButton onClick={() => setIsAssociateKnowledgeModalOpen(true)} label="Associate Knowledge" disabled={proposalStatus !== 'draft'} icon={knowIcon}/>
+                                                                        <CommonButton onClick={() => setIsAssociateKnowledgeModalOpen(true)} label="Manage Knowledge" disabled={proposalStatus !== 'draft'} icon={knowIcon} data-testid="manage-knowledge-button"/>
                                                                         {associatedKnowledgeCards.length > 0 && (
-                                                                                <div className="associated-knowledge-display">
+                                                                                <div className="associated-knowledge-display" data-testid="associated-knowledge-cards">
                                                                                         <h4>Associated Knowledge Cards:</h4>
                                                                                         <ul>
                                                                                                 {associatedKnowledgeCards.map(card => {
@@ -1056,7 +1123,13 @@ export default function Chat (props)
                                                                                                                 card.outcome_name,
                                                                                                                 card.field_context_name,
                                                                                                         ].filter(Boolean).join(' - ');
-                                                                                                        return (<li key={card.id}>{title}</li>);
+                                                                                                        return (
+                                                                                                                <li key={card.id}>
+                                                                                                                        <a href={`/knowledge-card/${card.id}`} target="_blank" rel="noopener noreferrer">
+                                                                                                                                {title}
+                                                                                                                        </a>
+                                                                                                                </li>
+                                                                                                        );
                                                                                                 })}
                                                                                         </ul>
                                                                                 </div>
@@ -1064,7 +1137,7 @@ export default function Chat (props)
                                                                 </div>
                                                                 
                                                                 <div style={{ marginLeft: 'auto' }}>
-                                                                        <CommonButton onClick={handleGenerateClick} icon={generateIcon} label={generateLabel} loading={generateLoading} loadingLabel={generateLabel === "Generate" ? "Generating" : "Regenerating"} disabled={!buttonEnable || proposalStatus !== 'draft'}/>
+                                                                        <CommonButton onClick={handleGenerateClick} icon={generateIcon} label={generateLabel} loading={generateLoading} loadingLabel={generateLabel === "Generate" ? "Generating (~ 2 mins of patience...) " : "Regenerating (~ 2 mins of patience...)"} disabled={!buttonEnable || proposalStatus !== 'draft'} data-testid="generate-button"/>
                                                                 </div>
                                                         </div>
                                                 </div>
@@ -1080,12 +1153,12 @@ export default function Chat (props)
                                                         Results
                                                 </div>
 
-                                                {Object.keys(proposal).length > 0 && Object.values(proposal).every(section => section.content) ? <div className='Chat_exportButtons'>
-                                                        <button type="button" onClick={() => handleExport("docx")}>
+                                                {Object.keys(proposal).length > 0 ? <div className='Chat_exportButtons'>
+                                                        <button type="button" onClick={() => handleExport("docx")} data-testid="export-word-button">
                                                                 <img src={word_icon} />
                                                                 Download Document
                                                         </button>
-                                                        <button type="button" onClick={() => handleExportTables()}>
+                                                        <button type="button" onClick={() => handleExportTables()} data-testid="export-excel-button">
                                                                 <img src={excel_icon} />
                                                                 Download Tables
                                                         </button>
@@ -1093,20 +1166,17 @@ export default function Chat (props)
                                                             <div className="workflow-stage-box">
                                                                 <span className="workflow-stage-label">Workflow Stage</span>
                                                                 <div className="workflow-badges">
-                                                                    {['draft', 'in_review', 'submission', 'submitted', 'approved'].map(status => {
+                                                                    {['draft', 'in_review', 'pre_submission', 'submitted'].map(status => {
                                                                             const statusDetails = {
                                                                                     draft: { text: 'Drafting', className: 'status-draft', message: "Initial drafting stage - Author + AI" },
                                                                                     in_review: { text: 'Peer Review', className: 'status-review', message: "Wait while proposal sent for quality review to other users" },
-                                                                                    submission: { text: 'Pre-Submission', className: 'status-submission', message: "Edit to address the comments from all your reviewers" },
-                                                                                    submitted: { text: 'Submitted', className: 'status-submitted', message: "Non editable Record of Initial version as submitted to donor" },
-                                                                                    approved: { text: 'Approved', className: 'status-approved', message: "Non editable uploaded record of the Final version as approved by donor" }
+                                                                                    pre_submission: { text: 'Pre-Submission', className: 'status-submission', message: "Edit to address the comments from all your reviewers" },
+                                                                                    submitted: { text: 'Submitted', className: 'status-submitted', message: "Non editable Record of Initial version as submitted to donor" }
                                                                             };
                                                                             const isActive = proposalStatus === status;
-                                                                            const isClickable = (proposalStatus === 'draft' && status === 'in_review') ||
-                                                                                                    (proposalStatus === 'in_review' && status === 'submission') ||
-                                                                                                    (proposalStatus === 'in_review' && status === 'draft') ||
-                                                                                                    (proposalStatus === 'submission' && status === 'submitted') ||
-                                                                                                    (proposalStatus === 'submitted' && status === 'approved');
+                                                                                                    const isClickable = (proposalStatus === 'draft' && (status === 'in_review' || status === 'submitted')) ||
+                                                                                                        (proposalStatus === 'in_review' && (status === 'pre_submission' || status === 'draft')) ||
+                                                                                                        (proposalStatus === 'pre_submission' && status === 'submitted');
 
                                                                             return (
                                                                                 <div key={status} className="status-badge-container">
@@ -1117,16 +1187,15 @@ export default function Chat (props)
                                                                                             onClick={() => {
                                                                                                     if (status === 'in_review' && proposalStatus === 'draft') setIsPeerReviewModalOpen(true);
                                                                                                     if (status === 'draft' && proposalStatus === 'in_review') handleSetStatus('draft');
-                                                                                                    if (status === 'submission' && proposalStatus === 'in_review') handleRequestSubmission();
-                                                                                                    if (status === 'submitted' && proposalStatus === 'submission') handleSubmit();
-                                                                                                    if (status === 'approved' && proposalStatus === 'submitted') handleApprove();
+                                                                                                    if (status === 'submitted' && (proposalStatus === 'pre_submission' || proposalStatus === 'draft')) handleSubmit();
                                                                                             }}
                                                                                             disabled={!isClickable && !isActive}
+                                                                                            data-testid={`workflow-status-badge-${status}`}
                                                                                     >
                                                                                             {statusDetails[status].text}
                                                                                     </button>
                                                                                     {statusHistory.includes(status) && !isActive && (
-                                                                                        <button className="revert-btn" onClick={() => handleRevert(status)}>
+                                                                                        <button className="revert-btn" onClick={() => handleRevert(status)} data-testid={`revert-button-${status}`}>
                                                                                             Revert
                                                                                         </button>
                                                                                     )}
@@ -1134,110 +1203,120 @@ export default function Chat (props)
                                                                             );
                                                                     })}
                                                                 </div>
+                                                                {proposalStatus === 'pre_submission' && (
+                                                                    <button className="revert-btn" onClick={() => handleRevert('draft')} data-testid="revert-to-draft-button">
+                                                                        Revert to Draft
+                                                                    </button>
+                                                                )}
                                                             </div>
-                                                             {proposalStatus === 'approved' && (
-                                                                <div className="upload-approved-container">
-                                                                    <label htmlFor="approved-doc-upload" className="upload-label">
-                                                                        Upload Approved Document
-                                                                    </label>
-                                                                    <input id="approved-doc-upload" type="file" onChange={handleFileUpload} />
-                                                                </div>
-                                                             )}
                                                         </div>
                                                 </div> : ""}
                                         </div>
 
-                                        <div ref={proposalRef} className="Chat_proposalContainer">
-                                                 {Object.entries(proposal).map((sectionObj, i) => {
-                                                     const sectionName = sectionObj[0];
-                                                     const sectionReviews = reviews.filter(r => r.section_name === sectionName);
+                                        {proposalStatus === 'submitted' && (
+                                                <div className="contribution-id-container">
+                                                        <label htmlFor="contribution-id">Contribution ID:</label>
+                                                        <p>Only submitted proposal with a confirmed ContributionID are counted as approved</p>
+                                                        <input
+                                                                type="text"
+                                                                id="contribution-id"
+                                                                value={contributionId}
+                                                                onChange={(e) => setContributionId(e.target.value)}
+                                                                data-testid="contribution-id-input"
+                                                        />
+                                                        <CommonButton onClick={handleSaveContributionId} label="Save ID" data-testid="save-contribution-id-button"/>
+                                                </div>
+                                        )}
 
-                                                     return (
-                                                        <div key={i} className="Chat_proposalSection">
-                                                                <div className="Chat_sectionHeader">
-                                                                         <div className="Chat_sectionTitle">{sectionName}</div>
+                                        <div ref={proposalRef} className="Chat_proposalContainer" data-testid="proposal-container">
+                                                {(proposalTemplate ? proposalTemplate.sections.map(s => s.section_name) : Object.keys(proposal)).map((sectionName, i) => {
+                                                        const sectionObj = proposal[sectionName];
+                                                        const sectionReviews = reviews.filter(r => r.section_name === sectionName);
 
-                                                                        {!generateLoading && sectionObj[1].content && sectionObj[1].open && !isApproved ? <div className="Chat_sectionOptions" data-testid={`section-options-${i}`}>
-                                                                                {!isEdit || (selectedSection === i && isEdit) ? <button type="button" onClick={() => handleEditClick(i)} style={(selectedSection === i && isEdit && regenerateSectionLoading) ? {pointerEvents: "none"} : {}} aria-label={`edit-section-${i}`} disabled={proposalStatus === 'in_review'}>
-                                                                                        <img src={(selectedSection === i && isEdit) ? save : edit} />
-                                                                                        <span>{(selectedSection === i && isEdit) ? "Save" : "Edit"}</span>
-                                                                                </button> : "" }
+                                                        if (!sectionObj) return null;
+                                                        const kebabSectionName = toKebabCase(sectionName);
 
-                                                                                {selectedSection === i && isEdit ? <button type="button" onClick={() => setIsEdit(false)}>
-                                                                                        <img src={cancel} />
-                                                                                        <span>Cancel</span>
-                                                                                </button> : "" }
+                                                        return (
+                                                                <div key={i} className="Chat_proposalSection" data-testid={`proposal-section-${kebabSectionName}`}>
+                                                                        <div className="Chat_sectionHeader" data-testid={`section-header-${kebabSectionName}`}>
+                                                                                 <div className="Chat_sectionTitle" data-testid={`section-title-${kebabSectionName}`}>{sectionName}</div>
 
-                                                                                {!isEdit ?
-                                                                                        <>
-                                                                                                <button type="button" onClick={() => handleCopyClick(i, sectionObj[1].content)}>
-                                                                                                        <img src={(selectedSection === i && isCopied) ? tick : copy} />
-                                                                                                        <span>{(selectedSection === i && isCopied) ? "Copied" : "Copy"}</span>
-                                                                                                </button>
+                                                                                 {!generateLoading && sectionObj.content && sectionObj.open && proposalStatus !== 'submitted' ? <div className="Chat_sectionOptions" data-testid={`section-options-${kebabSectionName}`}>
+                                                                                        {!isEdit || (selectedSection === i && isEdit) ? <button type="button" onClick={() => handleEditClick(i)} style={(selectedSection === i && isEdit && regenerateSectionLoading) ? {pointerEvents: "none"} : {}} aria-label={`edit-section-${i}`} disabled={proposalStatus === 'in_review'} data-testid={`edit-save-button-${kebabSectionName}`}>
+                                                                                                <img src={(selectedSection === i && isEdit) ? save : edit} />
+                                                                                                <span>{(selectedSection === i && isEdit) ? "Save" : "Edit"}</span>
+                                                                                        </button> : "" }
 
-                                                                                                <button type="button" className='Chat_sectionOptions_regenerate' onClick={() => handleRegenerateIconClick(i)} disabled={proposalStatus !== 'draft'} >
-                                                                                                        <img src={regenerate} />
-                                                                                                        <span>Regenerate</span>
-                                                                                                </button>
-                                                                                        </>
-                                                                                : "" }
-                                                                        </div> : ""}
+                                                                                        {selectedSection === i && isEdit ? <button type="button" onClick={() => setIsEdit(false)} data-testid={`cancel-edit-button-${kebabSectionName}`}>
+                                                                                                <img src={cancel} />
+                                                                                                <span>Cancel</span>
+                                                                                        </button> : "" }
 
-                                                                        {sectionObj[1].content && !(isEdit && selectedSection === i) ? <div className={`Chat_expanderArrow ${sectionObj[1].open ? "" : "closed"}`} onClick={() => handleExpanderToggle(i)}>
-                                                                                <img src={arrow} />
-                                                                        </div> : ""}
-                                                                </div>
+                                                                                        {!isEdit ?
+                                                                                                <>
+                                                                                                        <button type="button" onClick={() => handleCopyClick(i, sectionObj.content)} data-testid={`copy-button-${kebabSectionName}`}>
+                                                                                                                <img src={(selectedSection === i && isCopied) ? tick : copy} />
+                                                                                                                <span>{(selectedSection === i && isCopied) ? "Copied" : "Copy"}</span>
+                                                                                                        </button>
 
-                                                                {sectionObj[1].open || !sectionObj[1].content ? <div className='Chat_sectionContent'>
-                                                                        {sectionObj[1].content ?
-                                                                                (selectedSection === i && isEdit) ?
-                                                                                        <textarea value={editorContent} onChange={e => setEditorContent(e.target.value)} aria-label={`editor for ${sectionObj[0]}`} />
+                                                                                                        <button type="button" className='Chat_sectionOptions_regenerate' onClick={() => handleRegenerateIconClick(i)} disabled={proposalStatus !== 'draft'} data-testid={`regenerate-button-${kebabSectionName}`} >
+                                                                                                                <img src={regenerate} />
+                                                                                                                <span>Regenerate</span>
+                                                                                                        </button>
+                                                                                                </>
+                                                                                        : "" }
+                                                                                </div> : ""}
+
+                                                                                {sectionObj.content && !(isEdit && selectedSection === i) ? <div className={`Chat_expanderArrow ${sectionObj.open ? "" : "closed"}`} onClick={() => handleExpanderToggle(i)} data-testid={`section-expander-${kebabSectionName}`}>
+                                                                                        <img src={arrow} />
+                                                                                </div> : ""}
+                                                                        </div>
+
+                                                                        {(sectionObj.open || !sectionObj.content) ? <div className='Chat_sectionContent' data-testid={`section-content-${kebabSectionName}`}>
+                                                                                {sectionObj.content ?
+                                                                                        (selectedSection === i && isEdit) ?
+                                                                                                <textarea value={editorContent} onChange={e => setEditorContent(e.target.value)} aria-label={`editor for ${sectionName}`} data-testid={`section-editor-${kebabSectionName}`} />
+                                                                                                :
+                                                                                                <Markdown remarkPlugins={[remarkGfm]}>{sectionObj.content}</Markdown>
                                                                                         :
-                                                                                        <Markdown remarkPlugins={[remarkGfm]}>{sectionObj[1].content}</Markdown>
-                                                                                :
-                                                                                <div className='Chat_sectionContent_loading'>
-                                                                                        <span className='submitButtonSpinner' />
-                                                                                        <span className='Chat_sectionContent_loading'>Loading</span>
-                                                                                </div>
-                                                                        }
-                                                                </div> : ""}
+                                                                                        <div className='Chat_sectionContent_loading'>
+                                                                                                <span className='submitButtonSpinner' />
+                                                                                                <span className='Chat_sectionContent_loading'>Loading</span>
+                                                                                        </div>
+                                                                                }
+                                                                        </div> : ""}
 
-                                                                 {proposalStatus === 'submission' && sectionReviews.length > 0 && (
-                                                                     <div className="reviews-container">
-                                                                         <h4>Peer Reviews</h4>
-                                                                         {sectionReviews.map(review => (
-                                                                             <div key={review.id} className="review">
-                                                                                 <p><strong>{review.reviewer_name}:</strong> {review.review_text}</p>
-                                                                                 <div className="author-response">
-                                                                                     <textarea
-                                                                                         placeholder="Respond to this review..."
-                                                                                         defaultValue={review.author_response || ''}
-                                                                                         onBlur={(e) => handleSaveResponse(review.id, e.target.value)}
-                                                                                     />
-                                                                                 </div>
-                                                                             </div>
-                                                                         ))}
-                                                                     </div>
-                                                                 )}
-                                                        </div>
+                                                                         {(proposalStatus === 'pre_submission' || proposalStatus === 'submission') && reviews.length > 0 && (
+                                                                            <div className="reviews-container"data-testid={`reviews-container-${kebabSectionName}`}>
+                                                                                <h4>Peer Reviews</h4>
+                                                                                {reviews.filter(r => r.section_name === sectionName).map(review => (
+                                                                                    <Review
+                                                                                        key={review.id}
+                                                                                        review={review}
+                                                                                        onSaveResponse={handleSaveResponse}
+                                                                                    />
+                                                                                ))}
+                                                                            </div>
+                                                                         )}
+                                                                </div>
                                                      )
                                                  })}
                                         </div>
                                 </> : ""}
                         </main>
 
-                        <dialog ref={dialogRef} className='Chat_regenerate'>
+                        <dialog ref={dialogRef} className='Chat_regenerate' data-testid="regenerate-dialog">
                                 <header className='Chat_regenerate_header'>
-                                        Regenerate — {Object.keys(proposal)[selectedSection]}
-                                        <img src={regenerateClose} onClick={() => {setRegenerateSectionLoading(false); setRegenerateInput(""); dialogRef.current.close()}} />
+                                        Regenerate — {proposalTemplate ? proposalTemplate.sections[selectedSection]?.section_name : Object.keys(proposal)[selectedSection]}
+                                        <img src={regenerateClose} onClick={() => {setRegenerateSectionLoading(false); setRegenerateInput(""); dialogRef.current.close()}} data-testid="regenerate-dialog-close-button" />
                                 </header>
 
                                 <main className='Chat_right'>
                                         <section className='Chat_inputArea'>
-                                                <textarea id="regenerate-prompt" name="regenerate-prompt" value={regenerateInput} onChange={e => setRegenerateInput(e.target.value)} className='Chat_inputArea_prompt' />
+                                                <textarea id="regenerate-prompt" name="regenerate-prompt" value={regenerateInput} onChange={e => setRegenerateInput(e.target.value)} className='Chat_inputArea_prompt' data-testid="regenerate-dialog-prompt-input"/>
 
                                                 <div className="Chat_inputArea_buttonContainer" style={{marginTop: "20px"}}>
-                                                        <CommonButton icon={generateIcon} onClick={() => handleRegenerateButtonClick()} label="Regenerate" loading={regenerateSectionLoading} loadingLabel="Regenerating" disabled={!regenerateInput} />
+                                                        <CommonButton icon={generateIcon} onClick={() => handleRegenerateButtonClick()} label="Regenerate" loading={regenerateSectionLoading} loadingLabel="Regenerating" disabled={!regenerateInput} data-testid="regenerate-dialog-regenerate-button" />
                                                 </div>
                                         </section>
                                 </main>

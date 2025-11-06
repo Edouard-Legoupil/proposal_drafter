@@ -50,36 +50,106 @@
       {
           "section_name": "Summary",
           "word_limit": 2000,
+          "format_type": "text",
           "instructions": "Summarize the crisis/emergency context, including the main humanitarian needs of the target population. Detail the target population by specifying who they are, where they are located, and their number. Describe key activities, grouped by sector (e.g., protection, shelter/NFIs). Ensure this summary does not duplicate text from the allocation strategy. Explain how the project will be catalytic/transformational and how its results will be sustainable beyond the CERF allocation period."
       },
       {
-          "section_name": "Header Information",
+        "section_name": "Header Information",
+        "format_type": "table",
+        "instructions": "Complete the header table with precise information.",
+        "columns": [
+          {
+            "name": "Country",
+            "format_type": "text",
+            "instructions": "Country name"
+          },
+          {
+            "name": "Project Title",
+            "format_type": "text",
+            "instructions": "Clear, concise project title reflecting emergency nature"
+          },
+          {
+            "name": "Budget",
+            "format_type": "number",
+            "instructions": "Exact budget amount"
+          },
+          {
+            "name": "Primary Sector/Outcome",
+            "format_type": "text",
+            "instructions": "Primary sector or outcome"
+          },
+          {
+            "name": "Implementation Period",
+            "format_type": "text",
+            "instructions": "Realistic implementation period (typically 6-12 months)"
+          },
+          {
+            "name": "Beneficiaries",
+            "format_type": "number",
+            "instructions": "Evidence-based beneficiary count"
+          },
+          {
+            "name": "Japanese Policy Priorities",
+            "format_type": "text",
+            "instructions": "Specific Japanese policy priorities that align with the project"
+          }
+        ],
+        "rows": [
+          {
+            "row_title": "Project Details",
+            "instructions": "Provide the project details in the respective columns."
+          }
+        ],
+        "mandatory": true
+      },
+        {
+          "section_name": "1. Summary of the Project and Background",
           "format_type": "table",
-          "instructions": "Complete the header table with precise information: 1) Country name  2) Clear, concise project title reflecting emergency nature 3) Exact budget amount  4) Primary sector/outcome  5) Realistic implementation period (typically 6-12 months) 6) Evidence-based beneficiary count 7) Specific Japanese policy priorities from that align with project",
+          "instructions": "Provide compelling context: 1) Current humanitarian situation with specific data 2) Population needs analysis using {{needs}} variable 3) Clear project objectives 4) Specific activities planned 5) Quantifiable targets and indicators 6) Avoid multi-year planning language. Include the beneficiary table as provided without populating numbers.",
+          "columns": [
+            {
+              "name": "Population Type",
+              "format_type": "text",
+              "instructions": "The type of population."
+            },
+            {
+              "name": "Entire Operation",
+              "format_type": "number",
+              "instructions": "Number of people in the entire operation."
+            },
+            {
+              "name": "GOJ Funded Project",
+              "format_type": "number",
+              "instructions": "Number of people funded by the GOJ project."
+            }
+          ],
+          "rows": [
+            {
+              "row_title": "Refugees",
+              "instructions": "Number of refugees."
+            },
+            {
+              "row_title": "Stateless Persons",
+              "instructions": "Number of stateless persons."
+            },
+            {
+              "row_title": "Reintegration",
+              "instructions": "Number of people in reintegration."
+            },
+            {
+              "row_title": "Internally Displaced Persons",
+              "instructions": "Number of internally displaced persons."
+            },
+            {
+              "row_title": "TOTAL:",
+              "instructions": "Total number of people."
+            }
+          ],
           "mandatory": true
         },
         {
-          "section_name": "1. Summary of the Project and Background",
-          "format_type": "text",
-          "word_limit": 500,
-          "instructions": "Provide compelling context: 1) Current humanitarian situation with specific data 2) Population needs analysis using {{needs}} variable 3) Clear project objectives 4) Specific activities planned 5) Quantifiable targets and indicators 6) Avoid multi-year planning language. Include the beneficiary table as provided without populating numbers.",
-          "mandatory": true,
-          "additional_content": {
-          "table": {
-              "headers": ["Population Type", "Entire Operation", "GOJ Funded Project"],
-              "rows": [
-              ["Refugees", "", ""],
-              ["Stateless Persons", "", ""],
-              ["Reintegration", "", ""],
-              ["Internally Displaced Persons", "", ""],
-              ["TOTAL:", "", ""]
-              ]
-          }
-          }
-        },
-        {
           "section_name": "2. Impact and Expected Outcomes",
-          "format_type": "structured_text",
+          "format_type": "text",
           "instructions": "Develop results framework: 1) Overall impact statement capturing project essence 2) For each outcome, write one paragraph describing activities and results with beneficiary numbers 3) For each outcome, specify 1-2 outputs with clear deliverables 4) For each output, create SMART indicators (Specific, Measurable, Achievable, Relevant, Time-bound)",
           "mandatory": true,
           "subsections": [
@@ -167,44 +237,85 @@
         {
           "section_name": "8. Monitoring, Audit and Reporting",
           "format_type": "fixed_text",
-          "instructions": "Reproduce the standard text exactly as provided without modification: 1) Monitoring and Evaluation procedures 2) Audit framework 3) Reporting timeline and requirements:    **8.1. Monitoring and Evaluation**: UNHCR adheres to a comprehensive annual programme cycle within a multi-year strategy, where monitoring and evaluation are intrinsic parts of the Results-Based Programme Management cycle. Throughout the year, progress of activities is monitored based on the M&E plan, which includes field visits, missions, and regular consultations with community members, partners, service providers, and other stakeholders.  **8.2. Audit**: UNHCR is audited in accordance with the UN Financial Regulations and the UNHCR Financial Rules. All financial transactions and related activities covered by these regulations and rules are subject to audit by internal auditors and the United Nations Board of Auditors. UNHCR's annual financial statements are published on the Board of Auditors' website here.  **8.3. Reporting**: UNHCR will submit a final narrative report, including a financial component, three months after the completion of the project.",
+          "instructions": "Reproduce the standard text exactly as provided without modification",
           "mandatory": true,
-          "fixed_content": [
+          "fixed_content": ["UNHCR adheres to a comprehensive annual programme cycle within a multi-year strategy, where monitoring and evaluation are intrinsic parts of the Results-Based Programme Management cycle. Throughout the year, progress of activities is monitored based on the M&E plan, which includes field visits, missions, and regular consultations with community members, partners, service providers, and other stakeholders.  **8.2. Audit**: UNHCR is audited in accordance with the UN Financial Regulations and the UNHCR Financial Rules. All financial transactions and related activities covered by these regulations and rules are subject to audit by internal auditors and the United Nations Board of Auditors. UNHCR's annual financial statements are published on the Board of Auditors' website here.  **8.3. Reporting**: UNHCR will submit a final narrative report, including a financial component, three months after the completion of the project."
           ]
         },
         {
           "section_name": "9. UNHCR Office",
-          "format_type": "fields",
+          "format_type": "table",
           "instructions": "Provide complete office contact information: 1) Full name of responsible officer 2) Official title 3) Exact office name and location",
           "mandatory": true,
-          "fields": [
-          {"field": "Name", "instructions": "Full name of UNHCR representative"},
-          {"field": "Title", "instructions": "Official position title"},
-          {"field": "Office Name", "instructions": "Complete office designation and location"}
+          "columns": [
+            {
+              "name": "Name", 
+              "format_type": "text",
+              "instructions": "Full name of UNHCR representative"
+            },
+            {
+              "name": "Title",
+              "format_type": "text",
+              "instructions": "Official position title"
+            },
+            {
+              "name":  "Office Name", 
+              "format_type": "number",
+              "instructions": "Complete office designation and location"
+            }
+          ],
+          "rows": [
+            {
+              "row_title": "People",
+              "instructions": "List persons."
+            }
           ]
         },
         {
           "section_name": "10. Budget",
           "format_type": "table",
           "instructions": "Create detailed budget table: 1) Structure by outcome areas 2) List outputs under each outcome 3) Describe activities for each output 4) Assign budget amounts at output level 5) Include ISC  indirect support costs 6) Ensure total matches budget 7) Right-align all numbers 8) Add coordination levy note",
-          "mandatory": true,
-          "table_structure": {
-          "headers": ["Outcome Area", "Activities", "Budget (USD)", "Estimated Beneficiaries"],
-          "rows": [
-              ["**{{outcome}}**", "", "", ""],
-              ["- <Output 1>", "Description of activities for output 1", "", ""],
-              ["- <Output 2>", "Description of activities for output 2", "", ""],
-              ["- <Output …>", "Description of activities for output ...", "", ""],
-              ["**{{outcome}}**", "", "", ""],
-              ["- <Output 1>", "Description of activities for output 1", "", ""],
-              ["- <Output 2>", "Description of activities for output 2", "", ""],
-              ["- <Output …>", "Description of activities for output ...", "", ""],
-              ["**Total Direct Costs**", "", "", ""],
-              ["**Indirect Support Cost (6.5%)**", "", "ISC", ""],
-              ["**Grand Total**", "", "", ""]
+          "columns": [
+            {
+              "name": "Outcome Area",
+              "format_type": "text",
+              "instructions": "The outcome area."
+            },
+            {
+              "name": "Activities",
+              "format_type": "text",
+              "instructions": "Description of activities for the output."
+            },
+            {
+              "name": "Budget (USD)",
+              "format_type": "number",
+              "instructions": "The budget in USD."
+            },
+            {
+              "name": "Estimated Beneficiaries",
+              "format_type": "number",
+              "instructions": "The estimated number of beneficiaries."
+            }
           ],
-          "footer": "Include this note 'The 1% coordination levy is not applicable' at the end of the table."
-          }
+          "rows": [
+            {
+              "row_title": "{{outcome}}",
+              "instructions": "Activities for the first outcome."
+            },
+            {
+              "row_title": "Total Direct Costs",
+              "instructions": "Sum of all direct costs."
+            },
+            {
+              "row_title": "Indirect Support Cost (6.5%)",
+              "instructions": "Indirect support costs."
+            },
+            {
+              "row_title": "Grand Total",
+              "instructions": "The grand total of the budget."
+            }
+          ],
+          "mandatory": true
         }
     ],
     "special_requirements": {

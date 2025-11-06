@@ -53,7 +53,14 @@ INSERT INTO donors (id, account_id, name, country, donor_group) VALUES
 (gen_random_uuid(), 'GOV-SA-10694', 'Kingdom of Saudi Arabia - King Salman Hum Aid & Relief Center', 'Saudi Arabia', 'DRRM Donor Group 3'),
 (gen_random_uuid(), 'GOV-QA-10687', 'Qatar - Qatar Fund For Development', 'Qatar', 'DRRM Donor Group 3');
 
--- -- Insert Field Contexts (Countries)
+
+INSERT INTO field_contexts (id, name, category, geographic_coverage) VALUES
+(gen_random_uuid(),  'Afghanistan', 'Country', 'One Country Operation'),
+(gen_random_uuid(),  'Algeria', 'Country', 'One Country Operation'),
+
+(gen_random_uuid(),  'Zimbabwe', 'Country', 'One Country Operation');
+
+-- Insert Field Contexts (Countries)
 INSERT INTO field_contexts (id, title, name, category, geographic_coverage) VALUES
 (gen_random_uuid(), 'Afghanistan Situation', 'Afghanistan', 'Country', 'One Country Operation'),
 (gen_random_uuid(), 'Algeria Situation', 'Algeria', 'Country', 'One Country Operation'),
@@ -117,28 +124,32 @@ INSERT INTO field_contexts (id, title, name, category, geographic_coverage) VALU
 (gen_random_uuid(), 'Zimbabwe Situation', 'Zimbabwe', 'Country', 'One Country Operation');
 
 -- -- Insert Outcomes with pre-defined UUIDs for consistency
-INSERT INTO outcomes (id, name) VALUES
-(gen_random_uuid(), 'OA1-Access/Documentation'),
-(gen_random_uuid(), 'OA2-Status'),
-(gen_random_uuid(), 'OA3-Protection Policy'),
-(gen_random_uuid(), 'OA4-GBV'),
-(gen_random_uuid(), 'OA5-Child protection'),
-(gen_random_uuid(), 'OA6-Justice'),
-(gen_random_uuid(), 'OA7-Community'),
-(gen_random_uuid(), 'OA8-Well-Being'),
-(gen_random_uuid(), 'OA9-Housing'),
-(gen_random_uuid(), 'OA10-Health'),
-(gen_random_uuid(), 'OA11-Education'),
-(gen_random_uuid(), 'OA12-WASH'),
-(gen_random_uuid(), 'OA13-Livelihoods'),
-(gen_random_uuid(), 'OA14-Return'),
-(gen_random_uuid(), 'OA15-Resettlement'),
-(gen_random_uuid(), 'OA16-Integrate');
+-- INSERT INTO outcomes (id, name) VALUES
+-- (gen_random_uuid(), 'OA1-Access/Documentation'),
+-- (gen_random_uuid(), 'OA2-Status'),
+-- (gen_random_uuid(), 'OA3-Protection Policy'),
+-- (gen_random_uuid(), 'OA4-GBV'),
+-- (gen_random_uuid(), 'OA5-Child protection'),
+-- (gen_random_uuid(), 'OA6-Justice'),
+-- (gen_random_uuid(), 'OA7-Community'),
+-- (gen_random_uuid(), 'OA8-Well-Being'),
+-- (gen_random_uuid(), 'OA9-Housing'),
+-- (gen_random_uuid(), 'OA10-Health'),
+-- (gen_random_uuid(), 'OA11-Education'),
+-- (gen_random_uuid(), 'OA12-WASH'),
+-- (gen_random_uuid(), 'OA13-Livelihoods'),
+-- (gen_random_uuid(), 'OA14-Return'),
+-- (gen_random_uuid(), 'OA15-Resettlement'),
+-- (gen_random_uuid(), 'OA16-Integrate');
 
 -- -- Insert Users with consistent UUIDs
 -- Insert Users with consistent UUIDs
 INSERT INTO users (id, email, password, name, team_id, created_by, updated_by) VALUES
 ('a4e89f89-8f47-4d74-9a2c-9d6f3e8a6a2c', 'test_user@unhcr.org', '$2b$12$DwbvI.0M9c.uAiurT9zL9eR3u8vjP.yU/b4L6f/Yt2xY.gC6wzBGS', 'Test User', (SELECT id FROM teams WHERE name = 'Test' LIMIT 1), 'a4e89f89-8f47-4d74-9a2c-9d6f3e8a6a2c', 'a4e89f89-8f47-4d74-9a2c-9d6f3e8a6a2c');
+
+-- Insert a proposal with pre_submission status for testing
+INSERT INTO proposals (id, user_id, created_by, updated_by, template_name, form_data, project_description, status) VALUES
+('a4e89f89-8f47-4d74-9a2c-9d6f3e8a6a2d', 'a4e89f89-8f47-4d74-9a2c-9d6f3e8a6a2c', 'a4e89f89-8f47-4d74-9a2c-9d6f3e8a6a2c', 'a4e89f89-8f47-4d74-9a2c-9d6f3e8a6a2c', 'unhcr_proposal_template.json', '{"Project Draft Short name": "Pre-submission Project", "Budget Range": "100k$"}', 'A project for testing the pre-submission stage.', 'pre_submission');
 
 
 

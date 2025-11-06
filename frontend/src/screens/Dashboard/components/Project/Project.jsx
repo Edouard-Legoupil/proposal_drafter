@@ -20,6 +20,8 @@ export default function Project ({ project, date, onClick, isReview = false, pro
                                 return { text: 'Drafting', className: 'status-draft' };
                         case 'in_review':
                                 return { text: 'Pending Peer Review', className: 'status-review' };
+                        case 'pre_submission':
+                                return { text: 'Pre-Submission', className: 'status-pre-submission' };
                         case 'submission':
                                 return { text: 'Pending Submission', className: 'status-submission' };
                         case 'submitted':
@@ -53,9 +55,11 @@ export default function Project ({ project, date, onClick, isReview = false, pro
                         <article className="card" onClick={onClick} data-testid="review-card">
                                 <div className="Dashboard_project_title">
                                         <h3 id={`review-${project.proposal_id}`}>{project.project_title}</h3>
-                                        <button className="Dashboard_project_tripleDotsContainer" onClick={togglePopover} aria-haspopup="true" aria-expanded={popoverVisible} data-testid="project-options-button">
-                                                <img src={tripleDots} alt="Options" />
-                                        </button>
+                                        {!isReview &&
+                                                <button className="Dashboard_project_tripleDotsContainer" onClick={togglePopover} aria-haspopup="true" aria-expanded={popoverVisible} data-testid="project-options-button">
+                                                        <img src={tripleDots} alt="Options" />
+                                                </button>
+                                        }
                                         <div className={`Project_optionsPopover ${popoverVisible ? 'visible' : ''}`} id={`popover-${projectIndex+1}`} >
                                             <div className={`Project_optionsPopover_option`} onClick={(e) => { e.stopPropagation(); onClick(e); }} data-testid="project-view-button">
                                                     <img src={view} alt="View" />
@@ -72,8 +76,10 @@ export default function Project ({ project, date, onClick, isReview = false, pro
                                         </div>
                                 </div>
                                 <h2>Requester: {project.requester_name || 'N/A'}</h2>
-                                {project.review_status !== 'completed' && project.deadline && (
-                                    <p><strong>Deadline:</strong> <time dateTime={project.deadline}>{new Date(project.deadline).toLocaleDateString()}</time></p>
+                                {project.review_status === 'completed' ? (
+                                    <p><strong>Completed on:</strong> <time dateTime={project.review_completed_at}>{new Date(project.review_completed_at).toLocaleDateString()}</time></p>
+                                ) : (
+                                    project.deadline && <p><strong>Deadline:</strong> <time dateTime={project.deadline}>{new Date(project.deadline).toLocaleDateString()}</time></p>
                                 )}
                                 <p>
                                         <i className="fa-solid fa-earth-americas field-context" aria-hidden="true"></i> {project.country || 'N/A'} -

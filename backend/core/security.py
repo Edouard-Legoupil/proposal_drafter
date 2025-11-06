@@ -8,7 +8,12 @@ from sqlalchemy import text
 from werkzeug.security import generate_password_hash, check_password_hash
 
 #  Internal Modules
-from backend.core.config import SECRET_KEY
+from backend.core.config import (
+    SECRET_KEY,
+    ENTRA_TENANT_ID,
+    ENTRA_CLIENT_ID,
+    ENTRA_CLIENT_SECRET,
+)
 from backend.core.db import get_engine
 
 # This module centralizes security-related functions, such as authentication,
@@ -79,6 +84,7 @@ __all__ = [
     "get_current_user",
     "generate_password_hash",
     "check_password_hash",
-    "SECRET_KEY",
-    "jwt"
+    "ENTRA_TENANT_ID",
+    "ENTRA_CLIENT_ID",
+    "ENTRA_CLIENT_SECRET",
 ]

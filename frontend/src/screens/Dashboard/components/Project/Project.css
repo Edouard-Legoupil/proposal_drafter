@@ -108,7 +108,7 @@
 .Dashboard_project_description {
         font-family: "Noto";
         font-weight: 350;
-        font-size: 12px;
+        font-size: 16px;
         color: #5A656D;
         text-align: left;
 
@@ -165,3 +165,4 @@
         align-items: center;
         flex-shrink: 0;
 }
+

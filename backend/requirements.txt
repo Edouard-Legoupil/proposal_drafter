@@ -58,6 +58,7 @@ reportlab
 
 # Library for reading and writing Excel 2010 xlsx/xlsm files
 openpyxl
+xlsxwriter
 
 # Task scheduling library for running jobs at specified intervals
 apscheduler
@@ -104,6 +105,7 @@ pgvector
 # PDF processing
 pypdf
 PyPDF2
+pdfplumber
 
 # Slugify for clean filenames
 python-slugify
@@ -113,3 +115,7 @@ websockets>=12.0
  
 ## # WSGI HTTP Server for UNIX concurrent connection
 gunicorn
+
+# NLP library for tasks like tokenization and sentence splitting
+nltk
+pg8000

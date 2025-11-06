@@ -1,8 +1,6 @@
-
 # Project Proposal Generator
 
 __Empowering change-makers with AI-enhanced Proposal Drafting__
-
 
 ## Introduction
 
@@ -19,7 +17,6 @@ By streamlining proposal development, this tool accelerates funding opportunitie
 - __Adaptable & Open-Source__: Customizable for diverse sectors and editable by the community.
 
 - __Seamless Export__: Generate, refine, and export proposals in Word/Excel with validation tracking.
-
 
 ## 🚀 Overview
 
@@ -45,7 +42,6 @@ After you have filled out the necessary information, click "Generate". You will 
 
 ![Proposal Created](playwright/test-results/5_proposal_created.png)
 
-
 After a proposal is created, it can be sent for __peer review__. The peer review page allows you to view the proposal and provide feedback.
 
 ![Peer Review](playwright/test-results/6_peer_review.png)
@@ -58,20 +54,15 @@ You can create new knowledge cards from the "Create Knowledge Card" page.
 
 ![Create Knowledge Card](playwright/test-results/10_knowledge_card_create.png)
 
-
 ### 🌍 Key Features:
 
-This system leverages the agent-based framework of [CrewAI](https://docs.crewai.com/introduction) to orchestrate multiple collaborative AI agents—each specialized in a core aspect of proposal writing such as context analysis, objectives formulation, and budgeting.
+This system leverages the agent-based framework of [CrewAI](https://docs.crewai.com/introduction) to orchestrate multiple collaborative AI agents — each specialized in a core aspect of proposal writing such as context analysis and objectives formulation.
 
 - 🤖 **Agentic Workflow**: Modular agents simulate a real project development team.
 - 📝 **Proposal Structuring**: Outputs fully-structured, ready-to-submit project proposals.
 - 🌍 **Alignment**: Integrates thematic priorities, templates, and compliance requirements.
 - 🧩 **Contextual Adaptation**: Accepts input on target countries, population groups, and sectors of intervention.
 - 📂 **Validation & Export**: Projects can be edit and refined, then exported to word and pdf and marked as validated.
-
-
-
-
 
 ## 🧱 System Architecture
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Edouard-Legoupil/proposal_drafter)
@@ -81,8 +72,6 @@ Each agent is powered by an LLM and follows a role-specific prompt and toolset.
 The key configuration files are in `backend/config/agents.yaml` and `backend/config/tasks.yaml`, which define the agents' roles, prompts, and tasks.
  
 ![AI Agent Crew Description](https://raw.githubusercontent.com/edouard-legoupil/proposal_drafter/refs/heads/main/img/crew.png) 
-
-
 
 ## 🛠️ Installation
 

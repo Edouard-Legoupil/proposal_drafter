@@ -9,6 +9,7 @@ import os
 from typing import Optional
 
 #  Third-Party Libraries
+import pdfplumber
 from fastapi import APIRouter, Depends, HTTPException, Body, UploadFile, File, BackgroundTasks
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError 
@@ -19,6 +20,7 @@ from backend.core.db import get_engine
 from backend.core.redis import redis_client
 from backend.core.security import get_current_user
 from backend.core.config import get_available_templates, load_proposal_template
+from backend.utils.crew_actions import handle_text_format, handle_fixed_text_format, handle_number_format, handle_table_format
 from backend.models.schemas import (
     SectionRequest,
     RegenerateRequest,
@@ -33,7 +35,8 @@ from backend.models.schemas import (
     CreateFieldContextRequest,
     UpdateProposalStatusRequest,
     TransferOwnershipRequest,
-    AuthorResponseRequest
+    AuthorResponseRequest,
+    SaveContributionIdRequest
 )
 from backend.utils.proposal_logic import regenerate_section_logic
 from backend.utils.crew_proposal  import ProposalCrew
@@ -267,7 +270,7 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
                     knowledge_dir = os.path.join(os.path.dirname(__file__), "..", "knowledge")
                     filepath = os.path.join(knowledge_dir, filename)
                     
-                    logger.info(f"Associating knowledge file: {filename} for proposal {proposal_id}")
+                    logger.info(f"Associating knowledge file: {filename} / {filepath} for proposal {proposal_id}")
 
                     if not os.path.exists(filepath):
                         logger.warning(f"Knowledge file not found at path: {filepath}. Attempting to create it.")
@@ -288,44 +291,31 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
                             # Verify file was created
                             if os.path.exists(filepath):
                                 logger.info(f"Successfully created knowledge file: {filepath}")
-                                knowledge_file_paths.append(filepath)
+                                knowledge_file_paths.append(filename)
                             else:
                                 logger.error(f"Failed to create knowledge file: {filepath}")
                         else:
                             logger.warning(f"No content found for knowledge card {card_id} to create file.")
                     else:
-                        knowledge_file_paths.append(filepath)
-
+                        knowledge_file_paths.append(filename)
+                        
+        # The JSONKnowledgeSource expects relative paths from the `knowledge` directory
         crew_instance = ProposalCrew(knowledge_file_paths=knowledge_file_paths).generate_proposal_crew()
 
         for section_config in proposal_template["sections"]:
             section_name = section_config["section_name"]
-            logger.info(f"Generating section: {section_name} for proposal {proposal_id}")
+            format_type = section_config.get("format_type", "text")
+            logger.info(f"Generating section: {section_name} with format_type: {format_type} for proposal {proposal_id}")
 
-            result = crew_instance.kickoff(inputs={
-                "section": section_name,
-                "form_data": form_data,
-                "project_description": project_description,
-                "instructions": section_config.get("instructions", ""),
-                "word_limit": section_config.get("word_limit", 350)
-            })
-
-            try:
-                raw_output = result.raw if hasattr(result, 'raw') and result.raw else ""
-                clean_output = re.sub(r'[`\x00-\x1F\x7F]', '', raw_output)
-                parsed = json.loads(clean_output)
-            except (AttributeError, json.JSONDecodeError) as e:
-                logger.error(f"[CREWAI PARSE ERROR] for section {section_name}: {e}")
-                continue
-
-            generated_text = parsed.get("generated_content", "").strip()
-            evaluation_status = parsed.get("evaluation_status", "")
-            feedback = parsed.get("feedback", "")
-
-            if evaluation_status.lower() == "flagged" and feedback:
-                generated_text = regenerate_section_logic(
-                    session_id, section_name, feedback, proposal_id
-                )
+            generated_text = ""
+            if format_type == "text":
+                generated_text = handle_text_format(section_config, crew_instance, form_data, project_description, session_id, proposal_id)
+            elif format_type == "fixed_text":
+                generated_text = handle_fixed_text_format(section_config)
+            elif format_type == "number":
+                generated_text = handle_number_format(section_config, crew_instance, form_data, project_description)
+            elif format_type == "table":
+                generated_text = handle_table_format(section_config, crew_instance, form_data, project_description)
 
             all_sections[section_name] = generated_text
 
@@ -415,53 +405,20 @@ async def process_section(session_id: str, request: SectionRequest, current_user
 
     # Initialize and run the generation crew.
     crew_instance = ProposalCrew().generate_proposal_crew()
-    result = crew_instance.kickoff(inputs={
-        "section": request.section,
-        "form_data": form_data,
-        "project_description": project_description,
-        "instructions": section_config.get("instructions", ""),
-        "word_limit": section_config.get("word_limit", 350)
-    })
+    format_type = section_config.get("format_type", "text")
+    logger.info(f"Generating section: {request.section} with format_type: {format_type} for proposal {request.proposal_id}")
 
-    # Parse and handle crew output.
-    #raw_output = result.raw.replace("`", "")
-    #raw_output = re.sub(r'[\x00-\x1F\x7F]', '', raw_output)
-    #parsed = json.loads(raw_output)
-    try:
-        raw_output = result.raw if hasattr(result, 'raw') and result.raw else ""
-        logger.debug(
-            f"[CREWAI RAW OUTPUT] Proposal {request.proposal_id}, "
-            f"Session {session_id}, Section {request.section} :: {raw_output[:1000]}..."
-        )
-        clean_output = re.sub(r'[`\x00-\x1F\x7F]', '', raw_output)
-        logger.debug(
-            f"[CREWAI CLEANED OUTPUT] Proposal {request.proposal_id}, "
-            f"Session {session_id}, Section {request.section} :: {clean_output[:1000]}..."
-        )
-        parsed = json.loads(clean_output)
-    except (AttributeError, json.JSONDecodeError) as e:
-        print(f"[CREWAI PARSE ERROR] {e}")
-        raise HTTPException(status_code=500, detail="Failed to parse CrewAI output. It may not be valid JSON.")
+    generated_text = ""
+    if format_type == "text":
+        generated_text = handle_text_format(section_config, crew_instance, form_data, project_description, session_id, request.proposal_id)
+    elif format_type == "fixed_text":
+        generated_text = handle_fixed_text_format(section_config)
+    elif format_type == "number":
+        generated_text = handle_number_format(section_config, crew_instance, form_data, project_description)
+    elif format_type == "table":
+        generated_text = handle_table_format(section_config, crew_instance, form_data, project_description)
 
-
-    generated_text = parsed.get("generated_content", "").strip()
-    evaluation_status = parsed.get("evaluation_status", "")
-    feedback = parsed.get("feedback", "")
-
-    if not generated_text:
-        logger.warning(
-            f"[CREWAI MISSING CONTENT] No 'generated_content' for Proposal {request.proposal_id}, "
-            f"Session {session_id}, Section {request.section} :: Parsed Keys: {list(parsed.keys())}"
-        )
-    
-    if evaluation_status.lower() == "flagged" and feedback:
-        # If flagged, automatically regenerate with feedback.
-        generated_text = regenerate_section_logic(
-            session_id, request.section, feedback, request.proposal_id
-        )
-        message = f"Initial content flagged. Regenerated using evaluator feedback for {request.section}"
-    else:
-        message = f"Content generated for {request.section}"
+    message = f"Content generated for {request.section}"
 
     # Persist the generated text to the database.
     try:
@@ -501,8 +458,8 @@ async def process_section(session_id: str, request: SectionRequest, current_user
     return {"message": message, "generated_text": generated_text}
 
 
-@router.post("/regenerate_section/{session_id}")
-async def regenerate_section(session_id: str, request: RegenerateRequest, current_user: dict = Depends(get_current_user)):
+@router.post("/regenerate_section/{proposal_id}")
+async def regenerate_section(proposal_id: str, request: RegenerateRequest, current_user: dict = Depends(get_current_user)):
     """
     Manually regenerates a section using concise user input.
     """
@@ -510,23 +467,34 @@ async def regenerate_section(session_id: str, request: RegenerateRequest, curren
     with get_engine().connect() as connection:
         res = connection.execute(
             text("SELECT is_accepted FROM proposals WHERE id = :id AND user_id = :uid"),
-            {"id": request.proposal_id, "uid": current_user["user_id"]}
+            {"id": proposal_id, "uid": current_user["user_id"]}
         ).scalar()
         if res:
             raise HTTPException(status_code=403, detail="This proposal is finalized and cannot be modified.")
 
-    # Load session data and update it with fresh data from the request.
-    session_data_str = redis_client.get(session_id)
-    if not session_data_str:
-        raise HTTPException(status_code=400, detail="Session data not found for regeneration.")
+    # Create a temporary session for the regeneration process
+    session_id = str(uuid.uuid4())
 
-    session_data = json.loads(session_data_str)
-    session_data["form_data"] = request.form_data
-    session_data["project_description"] = request.project_description
+    with get_engine().connect() as connection:
+        # Get the template name from the proposal
+        template_name = connection.execute(
+            text("SELECT template_name FROM proposals WHERE id = :id"),
+            {"id": proposal_id}
+        ).scalar() or "proposal_template_unhcr.json"
+
+    proposal_template = load_proposal_template(template_name)
+
+    session_data = {
+        "user_id": current_user["user_id"],
+        "proposal_id": proposal_id,
+        "form_data": request.form_data,
+        "project_description": request.project_description,
+        "proposal_template": proposal_template,
+    }
     redis_client.setex(session_id, 3600, json.dumps(session_data, default=str))
 
     generated_text = regenerate_section_logic(
-        session_id, request.section, request.concise_input, request.proposal_id
+        session_id, request.section, request.concise_input, proposal_id
     )
     return {"message": f"Content regenerated for {request.section}", "generated_text": generated_text}
 
@@ -690,6 +658,8 @@ async def get_proposals_for_review(current_user: dict = Depends(get_current_user
                     u.name AS requester_name,
                     -- Determine the review status by checking for any 'completed' status for this reviewer and proposal
                     MAX(CASE WHEN pp.status = 'completed' THEN 1 ELSE 0 END) as is_completed,
+                    -- Determine if there is a draft review
+                    MAX(CASE WHEN pp.status = 'draft' THEN 1 ELSE 0 END) as is_draft,
                     -- Get the deadline from the 'pending' review row
                     MAX(CASE WHEN pp.status = 'pending' THEN pp.deadline ELSE NULL END) as deadline,
                     -- Get the completion date from the latest 'completed' review row
@@ -727,6 +697,12 @@ async def get_proposals_for_review(current_user: dict = Depends(get_current_user
             for row in rows:
                 form_data = json.loads(row['form_data']) if isinstance(row['form_data'], str) else row['form_data']
 
+                review_status = "pending"
+                if row['is_completed']:
+                    review_status = "completed"
+                elif row['is_draft']:
+                    review_status = "draft"
+
                 review_list.append({
                     "proposal_id": row['id'],
                     "project_title": form_data.get("Project Draft Short name") or form_data.get("Project title", "Untitled Proposal"),
@@ -742,7 +718,7 @@ async def get_proposals_for_review(current_user: dict = Depends(get_current_user
                     "country": row['country_name'],
                     "outcomes": row['outcome_names'].split(', ') if row['outcome_names'] else [],
                     "budget": form_data.get("Budget Range", "N/A"),
-                    "review_status": "completed" if row['is_completed'] else "pending",
+                    "review_status": review_status,
                     "review_completed_at": row['review_completed_at'].isoformat() if row['review_completed_at'] else None
                 })
         return {"message": "Proposals for review fetched successfully.", "reviews": review_list}
@@ -882,7 +858,7 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
                 draft = conn.execute(
                     text("""
                         SELECT template_name, form_data, generated_sections, project_description,
-                               is_accepted, created_at, updated_at, status
+                               is_accepted, created_at, updated_at, status, contribution_id
                         FROM proposals
                         WHERE id = :id AND user_id = :uid
                     """),
@@ -890,6 +866,28 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
                 ).fetchone()
                 if not draft:
                     raise HTTPException(status_code=404, detail="Draft not found.")
+
+                # This query finds all knowledge cards linked to the same donor, outcomes, or field context as the proposal.
+                associated_cards_result = conn.execute(
+                    text("""
+                        SELECT DISTINCT
+                            kc.id, kc.summary as title, kc.summary, kc.donor_id, kc.outcome_id, kc.field_context_id,
+                            d.name as donor_name,
+                            o.name as outcome_name,
+                            fc.name as field_context_name
+                        FROM knowledge_cards kc
+                        LEFT JOIN donors d ON kc.donor_id = d.id
+                        LEFT JOIN outcomes o ON kc.outcome_id = o.id
+                        LEFT JOIN field_contexts fc ON kc.field_context_id = fc.id
+                        WHERE
+                            kc.donor_id IN (SELECT donor_id FROM proposal_donors WHERE proposal_id = :pid) OR
+                            kc.outcome_id IN (SELECT outcome_id FROM proposal_outcomes WHERE proposal_id = :pid) OR
+                            kc.field_context_id IN (SELECT field_context_id FROM proposal_field_contexts WHERE proposal_id = :pid)
+                    """),
+                    {"pid": proposal_id}
+                ).mappings().fetchall()
+
+                associated_knowledge_cards = [dict(card) for card in associated_cards_result]
 
                 template_name = draft.template_name or "unhcr_proposal_template.json" # Default if null
                 proposal_template = load_proposal_template(template_name)
@@ -910,7 +908,9 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
                     "is_sample": False,
                     "template_name": template_name,
                     "proposal_template": proposal_template,
-                    "proposal_id": str(proposal_id)
+                    "proposal_id": str(proposal_id),
+                    "associated_knowledge_cards": associated_knowledge_cards,
+                    "contribution_id": draft.contribution_id
                 }
         else:
             # Handle sample drafts, which are loaded from a JSON file.
@@ -949,34 +949,6 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
 
     return {"session_id": session_id, **data_to_load}
 
-@router.post("/proposals/{proposal_id}/request-submission")
-async def request_submission(proposal_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
-    """
-    Requests submission of a proposal.
-    """
-    user_id = current_user["user_id"]
-    try:
-        with get_engine().begin() as connection:
-            # Get the current sections to create a snapshot
-            sections = connection.execute(
-                text("SELECT generated_sections FROM proposals WHERE id = :id"),
-                {"id": proposal_id}
-            ).scalar() or {}
-
-            connection.execute(
-                text("UPDATE proposals SET status = 'submission', updated_at = CURRENT_TIMESTAMP WHERE id = :id AND user_id = :uid"),
-                {"id": proposal_id, "uid": user_id}
-            )
-            # Log the status change
-            connection.execute(
-                text("INSERT INTO proposal_status_history (proposal_id, status, generated_sections_snapshot) VALUES (:pid, 'submission', :snapshot)"),
-                {"pid": proposal_id, "snapshot": json.dumps(sections)}
-            )
-        return {"message": "Proposal submitted for submission."}
-    except Exception as e:
-        logger.error(f"[REQUEST SUBMISSION ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to request submission.")
-
 @router.post("/proposals/{proposal_id}/submit")
 async def submit_proposal(proposal_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
     """
@@ -1005,45 +977,145 @@ async def submit_proposal(proposal_id: uuid.UUID, current_user: dict = Depends(g
         logger.error(f"[SUBMIT PROPOSAL ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to submit proposal.")
 
-@router.post("/finalize-proposal")
-async def finalize_proposal(request: FinalizeProposalRequest, current_user: dict = Depends(get_current_user)):
+
+@router.post("/proposals/{proposal_id}/save-contribution-id")
+async def save_contribution_id(proposal_id: uuid.UUID, request: SaveContributionIdRequest, current_user: dict = Depends(get_current_user)):
     """
-    Marks a proposal as 'accepted', making it read-only.
+    Saves the contribution ID for a submitted proposal.
     """
+    user_id = current_user["user_id"]
     try:
         with get_engine().begin() as connection:
-            # Get the current sections to create a snapshot
-            sections = connection.execute(
-                text("SELECT generated_sections FROM proposals WHERE id = :id"),
-                {"id": request.proposal_id}
-            ).scalar() or {}
+            # Verify the user owns the proposal and it is in 'submitted' state
+            proposal_status = connection.execute(
+                text("SELECT status FROM proposals WHERE id = :id AND user_id = :uid"),
+                {"id": proposal_id, "uid": user_id}
+            ).scalar()
+
+            if not proposal_status:
+                raise HTTPException(status_code=404, detail="Proposal not found.")
+
+            if proposal_status != 'submitted':
+                raise HTTPException(status_code=403, detail="Contribution ID can only be added to submitted proposals.")
 
             connection.execute(
-                text("UPDATE proposals SET is_accepted = TRUE, status = 'approved', updated_at = CURRENT_TIMESTAMP WHERE id = :id AND user_id = :uid"),
-                {"id": request.proposal_id, "uid": current_user["user_id"]}
+                text("UPDATE proposals SET contribution_id = :contribution_id, updated_at = CURRENT_TIMESTAMP WHERE id = :id"),
+                {"contribution_id": request.contribution_id, "id": proposal_id}
             )
+        return {"message": "Contribution ID saved successfully."}
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        logger.error(f"[SAVE CONTRIBUTION ID ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to save contribution ID.")
+
+
+@router.post("/proposals/{proposal_id}/upload-submitted-pdf")
+async def upload_submitted_pdf(proposal_id: uuid.UUID, file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
+    """
+    Uploads a PDF for a submitted proposal, parses its content, and updates the proposal sections.
+    """
+    user_id = current_user["user_id"]
+
+    if not file.filename.endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Invalid file type. Only PDFs are allowed.")
+
+    try:
+        with get_engine().begin() as connection:
+            # Verify the user owns the proposal
+            owner_id = connection.execute(
+                text("SELECT user_id FROM proposals WHERE id = :id"),
+                {"id": proposal_id}
+            ).scalar()
+
+            if not owner_id or owner_id != user_id:
+                raise HTTPException(status_code=403, detail="You do not have permission to modify this proposal.")
+
+            # Get the proposal template to know which sections to look for
+            template_name = connection.execute(
+                text("SELECT template_name FROM proposals WHERE id = :id"),
+                {"id": proposal_id}
+            ).scalar() or "proposal_template_unhcr.json"
+
+            proposal_template = load_proposal_template(template_name)
+            section_titles = [section['section_name'] for section in proposal_template.get('sections', [])]
+
+            # Read the PDF content
+            pdf_content = await file.read()
+
+            # Use a temporary file to work with pdfplumber
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
+                temp_pdf.write(pdf_content)
+                temp_pdf_path = temp_pdf.name
+
+            # Process the PDF with pdfplumber
+            extracted_sections = {}
+            with pdfplumber.open(temp_pdf_path) as pdf:
+                full_text = ""
+                for page in pdf.pages:
+                    full_text += page.extract_text() + "\n"
+
+            # This is a simple parsing strategy: find a section title and capture text until the next title
+            for i, title in enumerate(section_titles):
+                start_index = full_text.find(title)
+                if start_index != -1:
+                    next_title_index = -1
+                    # Find the start of the next section
+                    if i + 1 < len(section_titles):
+                        next_title = section_titles[i+1]
+                        next_title_index = full_text.find(next_title, start_index)
+
+                    content_start = start_index + len(title)
+                    if next_title_index != -1:
+                        extracted_sections[title] = full_text[content_start:next_title_index].strip()
+                    else:
+                        extracted_sections[title] = full_text[content_start:].strip()
+
+            # Clean up the temporary file
+            os.unlink(temp_pdf_path)
+
+            if not extracted_sections:
+                raise HTTPException(status_code=400, detail="Could not extract any matching sections from the PDF.")
+
+            # Update the proposal in the database
+            connection.execute(
+                text("""
+                    UPDATE proposals
+                    SET generated_sections = :sections, status = 'submitted', updated_at = CURRENT_TIMESTAMP
+                    WHERE id = :id
+                """),
+                {"sections": json.dumps(extracted_sections), "id": proposal_id}
+            )
+
             # Log the status change
             connection.execute(
-                text("INSERT INTO proposal_status_history (proposal_id, status, generated_sections_snapshot) VALUES (:pid, 'approved', :snapshot)"),
-                {"pid": request.proposal_id, "snapshot": json.dumps(sections)}
+                text("INSERT INTO proposal_status_history (proposal_id, status, generated_sections_snapshot) VALUES (:pid, 'submitted', :snapshot)"),
+                {"pid": proposal_id, "snapshot": json.dumps(extracted_sections)}
             )
-        return {"message": "Proposal finalized.", "proposal_id": request.proposal_id, "is_accepted": True}
+
+        return {"message": "PDF processed and proposal updated successfully.", "extracted_sections": extracted_sections}
+
+    except HTTPException as http_exc:
+        raise http_exc
     except Exception as e:
-        print(f"[FINALIZE ERROR] {e}")
-        raise HTTPException(status_code=500, detail="Failed to finalize proposal.")
+        logger.error(f"[PDF UPLOAD ERROR] {e}", exc_info=True)
+        # Clean up temp file in case of error
+        if 'temp_pdf_path' in locals() and os.path.exists(temp_pdf_path):
+            os.unlink(temp_pdf_path)
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
 
 
-@router.post("/proposals/{proposal_id}/review")
-async def submit_review(proposal_id: uuid.UUID, request: SubmitReviewRequest, current_user: dict = Depends(get_current_user)):
+@router.post("/proposals/{proposal_id}/save-draft-review")
+async def save_draft_review(proposal_id: uuid.UUID, request: SubmitReviewRequest, current_user: dict = Depends(get_current_user)):
     """
-    Submits a peer review for a proposal, with comments for each section.
+    Saves a draft of a peer review for a proposal.
     """
     user_id = current_user["user_id"]
     try:
         with get_engine().begin() as connection:
             # Check if the user is assigned to review this proposal
             reviewer_id_from_db = connection.execute(
-                text("SELECT reviewer_id FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND status = 'pending'"),
+                text("SELECT reviewer_id FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND (status = 'pending' OR status = 'draft')"),
                 {"proposal_id": proposal_id, "user_id": user_id}
             ).scalar()
 
@@ -1056,9 +1128,63 @@ async def submit_review(proposal_id: uuid.UUID, request: SubmitReviewRequest, cu
                 {"pid": proposal_id}
             ).scalar()
 
-            # Mark the original review request as completed by deleting it, since comments are now individual rows
+            # Delete existing draft comments for this user and proposal
             connection.execute(
-                text("DELETE FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND status = 'pending'"),
+                text("DELETE FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND status = 'draft'"),
+                {"proposal_id": proposal_id, "user_id": user_id}
+            )
+
+            # Insert each comment as a new row with 'draft' status
+            for comment in request.comments:
+                if comment.review_text: # Only save comments that have text
+                    connection.execute(
+                        text("""
+                            INSERT INTO proposal_peer_reviews (proposal_id, reviewer_id, proposal_status_history_id, section_name, review_text, type_of_comment, severity, status)
+                            VALUES (:pid, :rid, :hid, :section, :text, :type, :severity, 'draft')
+                        """),
+                        {
+                            "pid": proposal_id,
+                            "rid": user_id,
+                            "hid": history_id,
+                            "section": comment.section_name,
+                            "text": comment.review_text,
+                            "type": comment.type_of_comment,
+                            "severity": comment.severity
+                        }
+                    )
+
+        return {"message": "Draft review saved successfully."}
+    except Exception as e:
+        logger.error(f"[SAVE DRAFT REVIEW ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to save draft review.")
+
+
+@router.post("/proposals/{proposal_id}/review")
+async def submit_review(proposal_id: uuid.UUID, request: SubmitReviewRequest, current_user: dict = Depends(get_current_user)):
+    """
+    Submits a peer review for a proposal, with comments for each section.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().begin() as connection:
+            # Check if the user is assigned to review this proposal
+            reviewer_id_from_db = connection.execute(
+                text("SELECT reviewer_id FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND (status = 'pending' OR status = 'draft')"),
+                {"proposal_id": proposal_id, "user_id": user_id}
+            ).scalar()
+
+            if not reviewer_id_from_db:
+                raise HTTPException(status_code=403, detail="You are not assigned to review this proposal or the review is already completed.")
+
+            # Get the latest 'in_review' status history ID
+            history_id = connection.execute(
+                text("SELECT id FROM proposal_status_history WHERE proposal_id = :pid AND status = 'in_review' ORDER BY created_at DESC LIMIT 1"),
+                {"pid": proposal_id}
+            ).scalar()
+
+            # Delete existing draft/pending comments for this user and proposal
+            connection.execute(
+                text("DELETE FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND (status = 'pending' OR status = 'draft')"),
                 {"proposal_id": proposal_id, "user_id": user_id}
             )
 
@@ -1080,6 +1206,18 @@ async def submit_review(proposal_id: uuid.UUID, request: SubmitReviewRequest, cu
                             "severity": comment.severity
                         }
                     )
+
+            # Check if all reviews are completed
+            pending_reviews = connection.execute(
+                text("SELECT COUNT(*) FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND status = 'pending'"),
+                {"proposal_id": proposal_id}
+            ).scalar()
+
+            if pending_reviews == 0:
+                connection.execute(
+                    text("UPDATE proposals SET status = 'pre_submission', updated_at = CURRENT_TIMESTAMP WHERE id = :id"),
+                    {"id": proposal_id}
+                )
 
         return {"message": "Review submitted successfully."}
     except Exception as e:
@@ -1166,7 +1304,7 @@ async def update_proposal_status(proposal_id: uuid.UUID, request: UpdateProposal
     user_id = current_user["user_id"]
     new_status = request.status
     # Add validation for allowed statuses if needed
-    allowed_statuses = ['draft', 'in_review', 'submission', 'submitted', 'approved']
+    allowed_statuses = ['draft', 'in_review', 'pre_submission', 'submitted']
     if new_status not in allowed_statuses:
         raise HTTPException(status_code=400, detail="Invalid status value.")
 
@@ -1246,7 +1384,7 @@ async def get_proposal_for_review(proposal_id: uuid.UUID, current_user: dict = D
         with get_engine().connect() as connection:
             # Check if the user is assigned to review this proposal, regardless of status
             review_assignment = connection.execute(
-                text("SELECT status FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id LIMIT 1"),
+                text("SELECT status FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id ORDER BY created_at DESC LIMIT 1"),
                 {"proposal_id": proposal_id, "user_id": user_id}
             ).fetchone()
 
@@ -1269,6 +1407,19 @@ async def get_proposal_for_review(proposal_id: uuid.UUID, current_user: dict = D
             if not draft:
                 raise HTTPException(status_code=404, detail="Proposal not found.")
 
+            draft_comments = {}
+            if review_status == 'draft':
+                comments_result = connection.execute(
+                    text("SELECT section_name, review_text, type_of_comment, severity FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND status = 'draft'"),
+                    {"proposal_id": proposal_id, "user_id": user_id}
+                ).mappings().fetchall()
+                for comment in comments_result:
+                    draft_comments[comment['section_name']] = {
+                        "review_text": comment['review_text'],
+                        "type_of_comment": comment['type_of_comment'],
+                        "severity": comment['severity']
+                    }
+
             template_name = draft.template_name or "unhcr_proposal_template.json"
             proposal_template = load_proposal_template(template_name)
             section_names = [s.get("section_name") for s in proposal_template.get("sections", [])]
@@ -1284,7 +1435,8 @@ async def get_proposal_for_review(proposal_id: uuid.UUID, current_user: dict = D
                 "status": draft.status,
                 "created_at": draft.created_at.isoformat() if draft.created_at else None,
                 "updated_at": draft.updated_at.isoformat() if draft.updated_at else None,
-                "review_status": review_status
+                "review_status": review_status,
+                "draft_comments": draft_comments
             }
         return data_to_load
     except HTTPException as http_exc:
@@ -1548,8 +1700,7 @@ async def get_status_history(proposal_id: uuid.UUID, current_user: dict = Depend
             if not proposal_owner:
                 raise HTTPException(status_code=404, detail="Proposal not found.")
 
-            user_role = current_user.get("role")
-            if user_role not in ["focal_point", "admin"] and proposal_owner != user_id and not is_reviewer:
+            if proposal_owner != user_id and not is_reviewer:
                 raise HTTPException(status_code=403, detail="You do not have permission to view this proposal's history.")
 
             # Get distinct statuses from the history
@@ -1578,12 +1729,21 @@ async def get_peer_reviews(proposal_id: uuid.UUID, current_user: dict = Depends(
     user_id = current_user["user_id"]
     try:
         with get_engine().connect() as connection:
-            # Verify user has access
+            # Verify the user has access to the proposal (owner, reviewer, or admin)
             proposal_owner = connection.execute(
                 text("SELECT user_id FROM proposals WHERE id = :id"),
                 {"id": proposal_id}
             ).scalar()
-            if not proposal_owner or proposal_owner != user_id:
+
+            is_reviewer = connection.execute(
+                text("SELECT 1 FROM proposal_peer_reviews WHERE proposal_id = :pid AND reviewer_id = :rid"),
+                {"pid": proposal_id, "rid": user_id}
+            ).scalar()
+
+            if not proposal_owner:
+                raise HTTPException(status_code=404, detail="Proposal not found.")
+
+            if str(proposal_owner) != user_id and not is_reviewer:
                 raise HTTPException(status_code=403, detail="You do not have permission to view this proposal's reviews.")
 
             query = text("""
@@ -1656,39 +1816,3 @@ async def save_author_response(review_id: uuid.UUID, request: AuthorResponseRequ
     except Exception as e:
         logger.error(f"[SAVE AUTHOR RESPONSE ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to save author response.")
-
-
-@router.post("/proposals/{proposal_id}/upload-approved-document")
-async def upload_approved_document(proposal_id: uuid.UUID, file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
-    """
-    Uploads the final approved document for a proposal.
-    """
-    user_id = current_user["user_id"]
-    try:
-        with get_engine().connect() as connection:
-            # Verify that the user is the author of the proposal and it is approved
-            proposal = connection.execute(
-                text("SELECT user_id, status FROM proposals WHERE id = :id"),
-                {"id": proposal_id}
-            ).fetchone()
-
-            if not proposal:
-                raise HTTPException(status_code=404, detail="Proposal not found.")
-
-            if proposal.user_id != user_id:
-                raise HTTPException(status_code=403, detail="You do not have permission to upload documents for this proposal.")
-
-            if proposal.status != 'approved':
-                raise HTTPException(status_code=400, detail="Proposal is not approved yet.")
-
-            # In a real application, you would save the file to a secure location (e.g., S3)
-            # and store the path/URL in the database.
-            # For this example, we'll just return a success message.
-            # a new column would be needed in the proposals table to store the document path.
-
-        return {"message": f"File '{file.filename}' uploaded successfully for proposal '{proposal_id}'."}
-    except HTTPException as http_exc:
-        raise http_exc
-    except Exception as e:
-        logger.error(f"[UPLOAD DOCUMENT ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to upload document.")

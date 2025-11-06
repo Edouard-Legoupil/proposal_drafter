@@ -31,10 +31,11 @@ export default function Review ()
                         setProposal(data)
                         const initialComments = {}
                         Object.keys(data.generated_sections).forEach(section => {
-                            initialComments[section] = {
+                            initialComments[section] = data.draft_comments[section] || {
                                 review_text: "",
                                 type_of_comment: "General",
-                                severity: "Medium"
+                                severity: "Medium",
+                                author_response: ""
                             }
                         })
                         setReviewComments(initialComments)
@@ -58,6 +59,30 @@ export default function Review ()
                                 [field]: value
                         }
                 }))
+        }
+
+        async function handleSaveDraft() {
+                const comments = Object.entries(reviewComments).map(([section_name, comment_data]) => ({
+                        section_name,
+                        ...comment_data
+                }));
+
+                const response = await fetch(`${API_BASE_URL}/proposals/${proposal_id}/save-draft-review`, {
+                        method: "POST",
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ comments }),
+                        credentials: "include"
+                })
+
+                if(response.ok)
+                {
+                        alert("Draft saved successfully!")
+                }
+                else if(response.status === 401)
+                {
+                        sessionStorage.setItem("session_expired", "Session expired. Please login again.")
+                        navigate("/login")
+                }
         }
 
         async function handleSubmitReview() {
@@ -89,27 +114,34 @@ export default function Review ()
                 return <Base><div className="loading">Loading...</div></Base>
         }
 
+        const isReviewEditable = proposal.status === 'in_review';
+
         return <Base>
-                <div className="Review">
+                <div className="Review" data-testid="review-container">
                         <div className="Review_header">
                                 <h1>Reviewing: {proposal.form_data['Project Draft Short name']}</h1>
-                                <CommonButton label="Review Completed" onClick={handleSubmitReview} data-testid="review-completed-button-header" />
+                                {isReviewEditable && (
+                                    <div>
+                                        <CommonButton label="Save as draft review" onClick={handleSaveDraft} data-testid="save-draft-button-header" />
+                                        <CommonButton label="Peer review completed" onClick={handleSubmitReview} data-testid="review-completed-button-header" />
+                                    </div>
+                                )}
                         </div>
-                        <div className="Review_proposal">
+                        <div className="Review_proposal" data-testid="review-proposal-content">
                                 {Object.entries(proposal.generated_sections).map(([section, content]) => (
-                                        <div key={section} className="Review_section">
-                                                <h2>{section}</h2>
+                                        <div key={section} className="Review_section" data-testid={`review-section-${section}`}>
+                                                <h2 data-testid={`review-section-title-${section}`}>{section}</h2>
                                                 <div className="Review_section_content">
                                                         <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
                                                 </div>
                                                 <div className="Review_comment_controls">
-                                                    <select value={reviewComments[section]?.type_of_comment || 'General'} onChange={e => handleCommentChange(section, 'type_of_comment', e.target.value)} data-testid={`comment-type-select-${section}`}>
+                                                    <select value={reviewComments[section]?.type_of_comment || 'General'} onChange={e => handleCommentChange(section, 'type_of_comment', e.target.value)} data-testid={`comment-type-select-${section}`} disabled={!isReviewEditable}>
                                                         <option value="General">General</option>
                                                         <option value="Clarity">Clarity</option>
                                                         <option value="Compliance">Compliance</option>
                                                         <option value="Impact">Impact</option>
                                                     </select>
-                                                    <select value={reviewComments[section]?.severity || 'Medium'} onChange={e => handleCommentChange(section, 'severity', e.target.value)} data-testid={`severity-select-${section}`}>
+                                                    <select value={reviewComments[section]?.severity || 'Medium'} onChange={e => handleCommentChange(section, 'severity', e.target.value)} data-testid={`severity-select-${section}`} disabled={!isReviewEditable}>
                                                         <option value="Low">Low</option>
                                                         <option value="Medium">Medium</option>
                                                         <option value="High">High</option>
@@ -117,17 +149,27 @@ export default function Review ()
                                                 </div>
                                                 <textarea
                                                         className="Review_comment_textarea"
-                                                        placeholder={`Your comments for ${section}...`}
+                                                        placeholder={isReviewEditable ? `Your comments for ${section}...` : ""}
                                                         value={reviewComments[section]?.review_text || ""}
                                                         onChange={e => handleCommentChange(section, 'review_text', e.target.value)}
                                                         data-testid={`comment-textarea-${section}`}
+                                                        disabled={!isReviewEditable}
                                                 />
+                                                {reviewComments[section]?.author_response && (
+                                                    <div className="author-response-display" data-testid={`author-response-display-${section}`}>
+                                                        <strong>Author's Response:</strong>
+                                                        <p>{reviewComments[section].author_response}</p>
+                                                    </div>
+                                                )}
                                         </div>
                                 ))}
                         </div>
-                        <div className="Review_footer">
-                                <CommonButton label="Review Completed" onClick={handleSubmitReview} data-testid="review-completed-button-footer" />
-                        </div>
+                        {isReviewEditable && (
+                            <div className="Review_footer">
+                                    <CommonButton label="Save as draft review" onClick={handleSaveDraft} data-testid="save-draft-button-footer" />
+                                    <CommonButton label="Peer review completed" onClick={handleSubmitReview} data-testid="review-completed-button-footer" />
+                            </div>
+                        )}
                 </div>
         </Base>
 }

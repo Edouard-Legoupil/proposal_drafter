@@ -55,9 +55,16 @@ The backend code is organized into the following modules:
     -   `markdown.py`: Helper functions for handling Markdown conversions.
     -   `proposal_logic.py`: Core logic for regenerating proposal sections.
 
--   **`templates/`**: Contains the JSON proposal templates that define the structure and sections for different donors.
+-   **`templates/`**: Contains the JSON proposal templates that define the structure and sections for both knowledge card and different donors proposal standard templates.
 
 -   **`tests/`**: This directory contains the tests for the backend application.
+
+-   **`scripts/`**: This directory contains command-line scripts to prepopulate the knowledge cards. Key scripts include:
+    -   `1-populate_knowledge_cards.py`: Seeds the database with initial data from an Excel file (`db/seed_data.xlsx`), populating knowledge cards, references, donors, outcomes, and field contexts.
+    -   `2-update_embeddings.py`: Updates the text embeddings for all knowledge card references.
+    -   `3-generate_card_content.py`: Automatically generates content for knowledge cards that are missing it or require an update.
+
+    All scripts are equipped with a logging system that outputs to both the console and a corresponding log file in the `log/` directory, ensuring that all operations are recorded and can be easily debugged.
 
 ## API Endpoints
 
