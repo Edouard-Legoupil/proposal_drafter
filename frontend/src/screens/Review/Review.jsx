@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { FaThumbsUp, FaThumbsDown } from 'react-icons/fa'
 
 import Base from '../../components/Base/Base'
 import CommonButton from '../../components/CommonButton/CommonButton'
+import Modal from '../../components/Modal/Modal'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
 
@@ -17,6 +19,8 @@ export default function Review ()
 
         const [proposal, setProposal] = useState(null)
         const [reviewComments, setReviewComments] = useState({})
+        const [reviewStatus, setReviewStatus] = useState({})
+        const [isModalOpen, setIsModalOpen] = useState(false)
 
         async function getProposal() {
                 const response = await fetch(`${API_BASE_URL}/review-proposal/${proposal_id}`, {
@@ -30,6 +34,7 @@ export default function Review ()
                         const data = await response.json()
                         setProposal(data)
                         const initialComments = {}
+                        const initialStatus = {}
                         Object.keys(data.generated_sections).forEach(section => {
                             initialComments[section] = data.draft_comments[section] || {
                                 review_text: "",
@@ -37,8 +42,10 @@ export default function Review ()
                                 severity: "Medium",
                                 author_response: ""
                             }
+                            initialStatus[section] = null;
                         })
                         setReviewComments(initialComments)
+                        setReviewStatus(initialStatus)
                 }
                 else if(response.status === 401)
                 {
@@ -59,6 +66,18 @@ export default function Review ()
                                 [field]: value
                         }
                 }))
+        }
+
+        function handleStatusChange(section, status) {
+                setReviewStatus(prev => ({
+                        ...prev,
+                        [section]: status
+                }));
+
+                if (status === 'up') {
+                    // Reset comment when thumbing up
+                    handleCommentChange(section, 'review_text', '');
+                }
         }
 
         async function handleSaveDraft() {
@@ -116,24 +135,58 @@ export default function Review ()
 
         const isReviewEditable = proposal.status === 'in_review';
 
+        const isFinalizeEnabled = Object.keys(reviewStatus).every(section => {
+                const status = reviewStatus[section];
+                const comment = reviewComments[section];
+                return status === 'up' || (status === 'down' && comment.review_text && comment.type_of_comment && comment.severity);
+        });
+
+        function handleFinalizeClick() {
+                if (isFinalizeEnabled) {
+                        handleSubmitReview();
+                } else {
+                        setIsModalOpen(true);
+                }
+        }
+
         return <Base>
                 <div className="Review" data-testid="review-container">
                         <div className="Review_header">
                                 <h1>Reviewing: {proposal.form_data['Project Draft Short name']}</h1>
-                                {isReviewEditable && (
-                                    <div>
-                                        <CommonButton label="Save as draft review" onClick={handleSaveDraft} data-testid="save-draft-button-header" />
-                                        <CommonButton label="Peer review completed" onClick={handleSubmitReview} data-testid="review-completed-button-header" />
-                                    </div>
-                                )}
                         </div>
                         <div className="Review_proposal" data-testid="review-proposal-content">
                                 {Object.entries(proposal.generated_sections).map(([section, content]) => (
-                                        <div key={section} className="Review_section" data-testid={`review-section-${section}`}>
+                                    <div key={section} className={`Review_section ${reviewStatus[section] === 'up' ? 'thumb-up-section' : reviewStatus[section] === 'down' ? 'thumb-down-section' : ''}`} data-testid={`review-section-${section}`}>
+                                        <div className="Review_section_main">
+                                            <div className="Review_section_header">
                                                 <h2 data-testid={`review-section-title-${section}`}>{section}</h2>
-                                                <div className="Review_section_content">
-                                                        <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
+                                                <div className="Review_thumbs">
+                                                    <FaThumbsUp
+                                                        className={`thumb-up ${reviewStatus[section] === 'up' ? 'active' : ''}`}
+                                                        onClick={() => isReviewEditable && handleStatusChange(section, 'up')}
+                                                        data-testid={`thumb-up-${section}`}
+                                                    />
+                                                    <FaThumbsDown
+                                                        className={`thumb-down ${reviewStatus[section] === 'down' ? 'active' : ''}`}
+                                                        onClick={() => isReviewEditable && handleStatusChange(section, 'down')}
+                                                        data-testid={`thumb-down-${section}`}
+                                                    />
                                                 </div>
+                                            </div>
+                                            <div className="Review_section_content">
+                                                <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
+                                            </div>
+                                        </div>
+                                        {reviewStatus[section] === 'down' && (
+                                            <div className="Review_comment_section">
+                                                <textarea
+                                                    className="Review_comment_textarea"
+                                                    placeholder={isReviewEditable ? `Your comments for ${section}...` : ""}
+                                                    value={reviewComments[section]?.review_text || ""}
+                                                    onChange={e => handleCommentChange(section, 'review_text', e.target.value)}
+                                                    data-testid={`comment-textarea-${section}`}
+                                                    disabled={!isReviewEditable}
+                                                />
                                                 <div className="Review_comment_controls">
                                                     <select value={reviewComments[section]?.type_of_comment || 'General'} onChange={e => handleCommentChange(section, 'type_of_comment', e.target.value)} data-testid={`comment-type-select-${section}`} disabled={!isReviewEditable}>
                                                         <option value="General">General</option>
@@ -147,29 +200,27 @@ export default function Review ()
                                                         <option value="High">High</option>
                                                     </select>
                                                 </div>
-                                                <textarea
-                                                        className="Review_comment_textarea"
-                                                        placeholder={isReviewEditable ? `Your comments for ${section}...` : ""}
-                                                        value={reviewComments[section]?.review_text || ""}
-                                                        onChange={e => handleCommentChange(section, 'review_text', e.target.value)}
-                                                        data-testid={`comment-textarea-${section}`}
-                                                        disabled={!isReviewEditable}
-                                                />
                                                 {reviewComments[section]?.author_response && (
                                                     <div className="author-response-display" data-testid={`author-response-display-${section}`}>
                                                         <strong>Author's Response:</strong>
                                                         <p>{reviewComments[section].author_response}</p>
                                                     </div>
                                                 )}
-                                        </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 ))}
                         </div>
                         {isReviewEditable && (
                             <div className="Review_footer">
                                     <CommonButton label="Save as draft review" onClick={handleSaveDraft} data-testid="save-draft-button-footer" />
-                                    <CommonButton label="Peer review completed" onClick={handleSubmitReview} data-testid="review-completed-button-footer" />
+                                    <CommonButton label="Peer review completed" onClick={handleFinalizeClick} data-testid="review-completed-button-footer" />
                             </div>
                         )}
                 </div>
+                <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+                    <h2>Incomplete Review</h2>
+                    <p>Please provide a rating (thumbs-up or thumbs-down) for every section. If you give a thumbs-down, you must also provide a comment and classify it.</p>
+                </Modal>
         </Base>
 }
