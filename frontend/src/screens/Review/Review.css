@@ -20,9 +20,48 @@
 }
 
 .Review_section {
+    display: flex;
+    gap: 1.5rem;
     border: 1px solid #ccc;
     padding: 1rem;
     border-radius: 8px;
+}
+
+.Review_section_main {
+    flex: 3; /* Takes up 3/4 of the space */
+}
+
+.Review_comment_section {
+    flex: 1; /* Takes up 1/4 of the space */
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.Review_section_header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.Review_thumbs {
+    display: flex;
+    gap: 1rem;
+    font-size: 1.5rem;
+}
+
+.thumb-up, .thumb-down {
+    cursor: pointer;
+    color: #ccc;
+}
+
+.thumb-up.active {
+    color: green;
+}
+
+.thumb-down.active {
+    color: red;
 }
 
 .Review_section_content {
