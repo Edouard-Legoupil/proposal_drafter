@@ -12,6 +12,7 @@ from sqlalchemy import text
 #  Internal Modules
 from backend.core.config import origins
 from backend.core.db import engine
+from backend.core.exceptions import ProposalNotFound, PermissionDenied, InvalidStatus, ReviewNotFound
 
 # This module contains all custom middleware, exception handlers, and background tasks.
 
@@ -60,7 +61,12 @@ async def custom_http_exception_handler(request: Request, exc: HTTPException):
     not be able to read error messages from the API.
     """
     origin = request.headers.get("origin")
-    response = JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
+    if isinstance(exc, (ProposalNotFound, PermissionDenied, InvalidStatus, ReviewNotFound)):
+        response = JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+    else:
+        response = JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
     if origin in origins:
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Access-Control-Allow-Credentials"] = "true"

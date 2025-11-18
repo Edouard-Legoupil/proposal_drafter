@@ -1,7 +1,8 @@
-import pytest
 import uuid
 from unittest.mock import MagicMock
-from backend.main import app
+import pytest
+from backend.api import proposals
+from backend.repository.proposal_repository import ProposalRepository
 
 def test_process_section(authenticated_client, mocker):
     client = authenticated_client
@@ -15,13 +16,10 @@ def test_process_section(authenticated_client, mocker):
     mocker.patch('backend.api.proposals.redis_client.get', return_value='{"proposal_template": {"sections": [{"section_name": "Summary"}]}}')
     mocker.patch('backend.api.proposals.redis_client.setex')
 
-    # Mock the database check for is_accepted
-    mock_engine = MagicMock()
-    mock_connection = MagicMock()
-    # Let's mock the scalar result directly
-    mock_connection.execute.return_value.scalar.return_value = False # Not accepted
-    mock_engine.connect.return_value.__enter__.return_value = mock_connection
-    mocker.patch('backend.api.proposals.get_engine', return_value=mock_engine)
+    # Mock the repository methods
+    mocker.patch.object(proposals.proposal_repository, 'get_proposal_is_accepted', return_value=False)
+    mocker.patch.object(proposals.proposal_repository, 'get_proposal_generated_sections', return_value={})
+    mocker.patch.object(proposals.proposal_repository, 'update_proposal_section')
 
     # Prepare payload
     session_id = str(uuid.uuid4())
@@ -39,5 +37,5 @@ def test_process_section(authenticated_client, mocker):
 
     # Assertions
     assert response.status_code == 200
-    assert "generated_text" in response_data
+    assert response_data["message"] == "Content generated for Summary"
     assert response_data["generated_text"] == "Test content"

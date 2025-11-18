@@ -1,7 +1,7 @@
-import pytest
 import uuid
 from unittest.mock import MagicMock
-from backend.main import app
+import pytest
+from backend.api import proposals
 
 @pytest.mark.asyncio
 async def test_regenerate_section(authenticated_client, mocker):
@@ -16,12 +16,9 @@ async def test_regenerate_section(authenticated_client, mocker):
     # Mock Redis `setex` as a new session is created
     mocker.patch('backend.api.proposals.redis_client.setex')
 
-    # Mock the database check for is_accepted
-    mock_engine = MagicMock()
-    mock_connection = MagicMock()
-    mock_connection.execute.return_value.scalar.return_value = False # Not accepted
-    mock_engine.connect.return_value.__enter__.return_value = mock_connection
-    mocker.patch('backend.api.proposals.get_engine', return_value=mock_engine)
+    # Mock the repository method
+    mocker.patch.object(proposals.proposal_repository, 'get_proposal_is_accepted', return_value=False)
+    mocker.patch.object(proposals.proposal_repository, 'get_proposal_template_name', return_value="proposal_template_unhcr.json")
 
     # Prepare payload
     proposal_id = str(uuid.uuid4())
@@ -37,6 +34,5 @@ async def test_regenerate_section(authenticated_client, mocker):
 
     # Assert the response
     assert response.status_code == 200
-    response_json = response.json()
-    assert "Content regenerated for Introduction" in response_json["message"]
-    assert "Regenerated Content" in response_json["generated_text"]
+    assert response.json()["message"] == "Content regenerated for Introduction"
+    assert response.json()["generated_text"] == "Regenerated Content"
