@@ -77,6 +77,7 @@ The key configuration files are in `backend/config/agents.yaml` and `backend/con
 
 Refer to [doc_running_local.md](https://github.com/edouard-legoupilproposal_drafter/blob/main/doc_running_local.md)
 
+
 ## 🔒 Security
 
 This project prioritizes security to ensure the safe handling of sensitive information and the integrity of the proposal generation process. Our approach to security includes the following considerations:

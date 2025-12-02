@@ -61,11 +61,25 @@ param entraClientId string
 @description('The Entra Client Secret for SSO.')
 param entraClientSecret string
 
+@secure()
+@description('The Django secret key.')
+param secretKey string
+
+@description('Cloudflare Access Client ID.')
+param cfAccessClientId string
+
+@secure()
+@description('Cloudflare Access Client Secret.')
+param cfAccessClientSecret string
+
 var backendAppName = '${prefix}-app'
 
 resource backendApp 'Microsoft.App/containerApps@2022-03-01' = {
   name: backendAppName
   location: location
+  tags: {
+    Environment: 'Dev'
+  }
   properties: {
     managedEnvironmentId: environmentId
     configuration: {
@@ -117,6 +131,18 @@ resource backendApp 'Microsoft.App/containerApps@2022-03-01' = {
           name: 'entra-client-secret'
           value: entraClientSecret
         }
+        {
+          name: 'secret-key'
+          value: secretKey
+        }
+        {
+          name: 'cf-access-client-id'
+          value: cfAccessClientId
+        }
+        {
+          name: 'cf-access-client-secret'
+          value: cfAccessClientSecret
+        }
       ]
     }
     template: {
@@ -160,6 +186,18 @@ resource backendApp 'Microsoft.App/containerApps@2022-03-01' = {
             {
               name: 'ENTRA_CLIENT_SECRET'
               secretRef: 'entra-client-secret'
+            }
+            {
+              name: 'SECRET_KEY'
+              secretRef: 'secret-key'
+            }
+            {
+              name: 'CF_ACCESS_CLIENT_ID'
+              secretRef: 'cf-access-client-id'
+            }
+            {
+              name: 'CF_ACCESS_CLIENT_SECRET'
+              secretRef: 'cf-access-client-secret'
             }
           ]
         }

@@ -11,6 +11,9 @@ var containerAppEnvName = '${prefix}-env-${uniqueString(resourceGroup().id)}'
 resource containerAppEnv 'Microsoft.App/managedEnvironments@2022-03-01' = {
   name: containerAppEnvName
   location: location
+  tags: {
+    Environment: 'Dev'
+  }
   properties: {}
 }
 

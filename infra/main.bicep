@@ -4,7 +4,7 @@
 param location string = resourceGroup().location
 
 @description('A common prefix for all resource names.')
-param resourcePrefix string = 'ppg'
+param resourcePrefix string = 'proposalgen'
 
 @description('The Docker image for the backend app.')
 param backendImage string = 'backend:latest'
@@ -26,6 +26,14 @@ param entraTenantId string
 param entraClientId string
 @secure()
 param entraClientSecret string
+
+@secure()
+param secretKey string
+
+param cfAccessClientId string
+
+@secure()
+param cfAccessClientSecret string
 
 // Shared Resources
 module acr 'modules/acr.bicep' = {
@@ -94,6 +102,9 @@ module containerApps 'modules/container_apps.bicep' = {
     entraTenantId: entraTenantId
     entraClientId: entraClientId
     entraClientSecret: entraClientSecret
+    secretKey: secretKey
+    cfAccessClientId: cfAccessClientId
+    cfAccessClientSecret: cfAccessClientSecret
   }
 }
 

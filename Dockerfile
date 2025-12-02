@@ -8,23 +8,33 @@ COPY frontend/package*.json ./
 RUN npm install && echo "✅ NPM modules installed"
 
 COPY frontend/ .
-RUN npm run build && echo "✅ Frontend build complete" && ls -l dist/
+RUN npm run build && echo "✅ Frontend build complete"
 
 
 # ============================================
-# Stage 2: Final image with FastAPI only
+# Stage 2: Final Python application image
 # ============================================
 FROM python:3.11-slim AS final
 
-# Install OS dependencies including supervisor
-RUN apt-get update && \
-    apt-get install -y curl supervisor dnsutils gettext-base procps net-tools util-linux && \
-    apt-get clean
+# Install OS dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    supervisor \
+    dnsutils \
+    gettext-base \
+    procps \
+    net-tools \
+    util-linux \
+    build-essential \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Create a working directory
+# ------------------------------------------------
+# Create app directory
+# ------------------------------------------------
 WORKDIR /app
 
-# Create a virtual environment
+# Create Python venv
 RUN python -m venv /venv
 ENV PATH="/venv/bin:$PATH"
 
@@ -34,62 +44,55 @@ ENV PATH="/venv/bin:$PATH"
 # This allows Python to find the 'backend' module and prevents the warning.
 ENV PYTHONPATH=/app
 
-# Create the backend directory inside the container
-RUN mkdir backend
-
-# Copy the requirements file into the new backend directory
+# ------------------------------------------------
+# Copy backend first (for dependency install)
+# ------------------------------------------------
+RUN mkdir -p backend
 COPY backend/requirements.txt backend/
 
-# Install dependencies from the requirements file
+# Install backend Python dependencies
 RUN pip install --upgrade pip && \
-    pip install --no-cache-dir uvicorn fastapi gunicorn -r backend/requirements.txt && \
-    echo "✅ Python packages installed"
+    pip install --no-cache-dir uvicorn fastapi gunicorn && \
+    pip install --no-cache-dir -r backend/requirements.txt
 
-# Copy all backend source code EXCEPT the knowledge folder into the backend folder
+# ------------------------------------------------
+# Install NLTK data
+# ------------------------------------------------
+RUN python - <<EOF
+import nltk
+nltk.download("punkt")
+nltk.download("punkt_tab")
+EOF
+
+# ------------------------------------------------
+# Copy backend source code
+# ------------------------------------------------
 COPY backend/ backend/
 
-# confirm
-RUN which uvicorn && uvicorn --version
-
-# Copy frontend build into app/frontend (served by FastAPI)
+# ------------------------------------------------
+# Copy frontend static build files
+# ------------------------------------------------
 COPY --from=frontend-builder /app/dist /app/frontend/dist
 
-# Copy frontend build if using nginx
-# COPY --from=frontend-builder /app/dist /usr/share/nginx/html
-
-# Create a logs directory for the application and data
+# ------------------------------------------------
+# Create directories for logs & data
+# ------------------------------------------------
 RUN mkdir -p /app/log /app/proposal-documents /app/knowledge && \
     chmod -R 755 /app/log /app/proposal-documents /app/knowledge
 
 # Copy the knowledge files for crewai
 COPY ./backend/knowledge/combine_example.json /app/knowledge/
 
-# Let's confirm the file exists in the right place
-RUN echo "Checking knowledge dir after copy:" &&  \
-    ls -la /app/knowledge
-
-
-## ensure logs can be written
+# Ensure stdout/stderr logging works
 RUN chmod 777 /dev/stdout /dev/stderr
 
-# Expose Cloud Run default port
+# Cloud Run port
 EXPOSE 8080
 
-##
-# Copy custom nginx config
-#COPY nginx-proxy/nginx.conf /etc/nginx/conf.d/default.conf
-# Copy supervisor config
-# COPY supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-# CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
-
-# ============================================
-# Stage 3: Start FastAPI + Nginx in parallel 
-# ============================================
-
-## using a dedicated script..
-# Copy the startup script and make it executable
+# ------------------------------------------------
+# Add start script
+# ------------------------------------------------
 COPY supervisor/start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
 CMD ["/usr/local/bin/start.sh"]
-

@@ -15,6 +15,9 @@ resource openAiAccount 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
     name: 'S0'
   }
   kind: 'OpenAI'
+  tags: {
+    Environment: 'Dev'
+  }
   properties: {
     customSubDomainName: openAiAccountName
     publicNetworkAccess: 'Enabled'
@@ -24,6 +27,9 @@ resource openAiAccount 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
 resource gpt4Deployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = {
   parent: openAiAccount
   name: 'gpt-4'
+  tags: {
+    Environment: 'Dev'
+  }
   sku: {
     name: 'Standard'
     capacity: 20
@@ -32,7 +38,7 @@ resource gpt4Deployment 'Microsoft.CognitiveServices/accounts/deployments@2023-0
     model: {
       format: 'OpenAI'
       name: 'gpt-4'
-      version: '1106-preview' // Using a recent, valid model version as a proxy for 'gpt-4.1'
+      version: '2024-12-17' // Using a more recent preview version (from gpt-4o-realtime-preview) as a proxy for 'gpt4.1'. Exact 'gpt4.1' model name is not directly available.
     }
   }
 }
@@ -40,6 +46,9 @@ resource gpt4Deployment 'Microsoft.CognitiveServices/accounts/deployments@2023-0
 resource embeddingDeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = {
   parent: openAiAccount
   name: 'text-embedding-ada-002'
+  tags: {
+    Environment: 'Dev'
+  }
   sku: {
     name: 'Standard'
     capacity: 20

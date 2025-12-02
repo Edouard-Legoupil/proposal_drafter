@@ -1,65 +1,50 @@
-
-# .github/workflows/deploy.yml
-name: Build and Deploy
+name: Deploy Infrastructure
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
-env:
-  RESOURCE_GROUP: 'rg-ppg'
-  LOCATION: 'northeurope'
-  ACR_NAME: 'ppgacr' # Should be globally unique
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
-  build-and-push:
-    name: 'Build and Push Docker Image'
+  deploy:
     runs-on: ubuntu-latest
-
     steps:
-    - name: 'Checkout Code'
-      uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
 
-    - name: 'Login to Azure'
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-    - name: 'Build and Push Backend Image'
-      uses: azure/docker-login@v1
-      with:
-        login-server: ${{ env.ACR_NAME }}.azurecr.io
-        username: ${{ secrets.ACR_USERNAME }}
-        password: ${{ secrets.ACR_PASSWORD }}
-    - run: |
-        docker build -t ${{ env.ACR_NAME }}.azurecr.io/backend:${{ github.sha }} .
-        docker push ${{ env.ACR_NAME }}.azurecr.io/backend:${{ github.sha }}
+      - name: Deploy Bicep File
+        id: deploy
+        uses: azure/arm-deploy@v1
+        with:
+          subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          resourceGroupName: ${{ secrets.AZURE_RG }}
+          template: ./proposal_drafter/infra/main.bicep
+          parameters: >
+            resourcePrefix=${{ secrets.RESOURCE_PREFIX }}
+            backendImage=${{ secrets.BACKEND_IMAGE }}
+            serperApiKey=${{ secrets.SERPER_API_KEY }}
+            entraTenantId=${{ secrets.ENTRA_TENANT_ID }}
+            entraClientId=${{ secrets.ENTRA_CLIENT_ID }}
+            entraClientSecret=${{ secrets.ENTRA_CLIENT_SECRET }}
+            secretKey=${{ secrets.SECRET_KEY }}
+            cfAccessClientId=${{ secrets.CF_ACCESS_CLIENT_ID }}
+            cfAccessClientSecret=${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          failOnStdErr: false
 
-  deploy-infrastructure:
-    name: 'Deploy Bicep Infrastructure'
-    runs-on: ubuntu-latest
-    needs: build-and-push
-
-    steps:
-    - name: 'Checkout Code'
-      uses: actions/checkout@v3
-
-    - name: 'Login to Azure'
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-    - name: 'Deploy Bicep File'
-      uses: azure/arm-deploy@v1
-      with:
-        subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        resourceGroupName: ${{ env.RESOURCE_GROUP }}
-        template: ./infrastructure/main.bicep
-        parameters: >
-          backendImage=backend:${{ github.sha }}
-          serperApiKey=${{ secrets.SERPER_API_KEY }}
-          entraTenantId=${{ secrets.ENTRA_TENANT_ID }}
-          entraClientId=${{ secrets.ENTRA_CLIENT_ID }}
-          entraClientSecret=${{ secrets.ENTRA_CLIENT_SECRET }}
-        failOnStdErr: false
+      - name: Echo Outputs
+        run: |
+          echo "ACR Name: ${{ steps.deploy.outputs.acrName }}"
+          echo "Postgres Server Name: ${{ steps.deploy.outputs.postgresServerName }}"
+          echo "Container App URL: ${{ steps.deploy.outputs.containerAppUrl }}"

@@ -38,6 +38,9 @@ resource redisCache 'Microsoft.Cache/Redis@2022-06-01' = {
   name: redisCacheName
   location: location
   sku: skus[environmentSize]
+  tags: {
+    Environment: 'Dev'
+  }
   properties: {
     enableNonSslPort: false
     publicNetworkAccess: 'Enabled' // For simplicity in this example

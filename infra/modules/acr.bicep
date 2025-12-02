@@ -14,6 +14,9 @@ resource acr 'Microsoft.ContainerRegistry/registries@2022-02-01-preview' = {
   sku: {
     name: 'Standard'
   }
+  tags: {
+    Environment: 'Dev'
+  }
   properties: {
     adminUserEnabled: true
   }

@@ -13,7 +13,7 @@ param environmentSize string
 param adminPassword string = newGuid()
 
 var postgresServerName = '${prefix}-postgres-${uniqueString(resourceGroup().id)}'
-var postgresDatabaseName = 'ppg_db'
+var postgresDatabaseName = 'proposalgen_db'
 
 var skus = {
   Testing: {
@@ -38,6 +38,9 @@ resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2022-01-20-pr
   name: postgresServerName
   location: location
   sku: skus[environmentSize]
+  tags: {
+    Environment: 'Dev'
+  }
   properties: {
     administratorLogin: 'psqladmin'
     administratorLoginPassword: adminPassword
@@ -58,6 +61,9 @@ resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2022-01-20-pr
 resource postgresDatabase 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2022-01-20-preview' = {
   parent: postgresServer
   name: postgresDatabaseName
+  tags: {
+    Environment: 'Dev'
+  }
 }
 
 // Enable pgvector extension
