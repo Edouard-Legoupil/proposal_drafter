@@ -52,8 +52,8 @@ async def lifespan(app: FastAPI):
     Manages application startup and shutdown events.
     """
     logging.info("Application is starting up...")
-    setup_scheduler()
-    logging.info("Background scheduler has been started.")
+   # setup_scheduler()
+   # logging.info("Background scheduler has been started.")
     yield
     # Cleanup tasks can be added here if needed
     logging.info("Application is shutting down...")

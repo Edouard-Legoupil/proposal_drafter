@@ -7,6 +7,7 @@ GRANT USAGE ON SCHEMA public TO <DB_USERNAME>;
 
 -- Enable vector extension
 CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- Create Teams table
 CREATE TABLE IF NOT EXISTS teams (
@@ -63,8 +64,16 @@ CREATE TABLE IF NOT EXISTS field_contexts (
 -- Create Proposal Status Enum Type
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'proposal_status_new') THEN
-        CREATE TYPE proposal_status_new AS ENUM ('draft', 'in_review', 'pre_submission', 'submitted', 'deleted', 'generating_sections', 'failed');
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'proposal_status') THEN
+        CREATE TYPE proposal_status AS ENUM (
+            'draft',
+            'in_review',
+            'pre_submission',
+            'submitted',
+            'deleted',
+            'generating_sections',
+            'failed'
+        );
     END IF;
 END$$;
 
@@ -78,7 +87,7 @@ CREATE TABLE IF NOT EXISTS proposals (
     generated_sections JSONB,
     reviews JSONB,
     is_accepted BOOLEAN DEFAULT FALSE,
-    status proposal_status_new DEFAULT 'draft',
+    status proposal_status DEFAULT 'draft',
     contribution_id TEXT,
     created_by UUID NOT NULL REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -206,12 +215,15 @@ CREATE TABLE IF NOT EXISTS proposal_field_contexts (
 
 -- Create index for faster user lookup
 CREATE INDEX IF NOT EXISTS idx_proposals_user_id ON proposals(user_id);
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email); 
 CREATE INDEX IF NOT EXISTS idx_knowledge_cards_donor_id ON knowledge_cards(donor_id);
 CREATE INDEX IF NOT EXISTS idx_knowledge_cards_outcome_id ON knowledge_cards(outcome_id);
-CREATE INDEX IF NOT EXISTS idx_knowledge_cards_field_context_id ON knowledge_cards(field_context_id);
-CREATE INDEX IF NOT EXISTS idx_knowledge_card_references_knowledge_card_id ON knowledge_card_references(knowledge_card_id);
-CREATE INDEX IF NOT EXISTS idx_knowledge_card_history_knowledge_card_id ON knowledge_card_references(knowledge_card_id);
+CREATE INDEX IF NOT EXISTS idx_knowledge_cards_field_context_id ON knowledge_cards(field_context_id); 
+
+CREATE INDEX IF NOT EXISTS idx_knowledge_card_to_references_card_id ON knowledge_card_to_references(knowledge_card_id);
+CREATE INDEX IF NOT EXISTS idx_knowledge_card_to_references_reference_id ON knowledge_card_to_references(reference_id);
+
+CREATE INDEX IF NOT EXISTS idx_knowledge_card_history_knowledge_card_id ON knowledge_card_history(knowledge_card_id);
 CREATE INDEX IF NOT EXISTS idx_proposal_peer_reviews_proposal_id ON proposal_peer_reviews(proposal_id);
 CREATE INDEX IF NOT EXISTS idx_proposal_peer_reviews_reviewer_id ON proposal_peer_reviews(reviewer_id);
 CREATE INDEX IF NOT EXISTS idx_proposal_status_history_proposal_id ON proposal_status_history(proposal_id);

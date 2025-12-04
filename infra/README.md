@@ -41,10 +41,18 @@ While the recommended way to deploy the infrastructure is through the CI/CD pipe
 
 This option is for deploying the infrastructure without SSO capabilities (which requires the capacity to create a service principal account and an application ID).
 
+The main entry point for the deployment without SSO is in: `infra-no-sso/main.bicep`
 
+Building this file from scratch is not recommended, as it requires a lot of parameters and is not very user-friendly. Rather, it is exported from the Azure Portal following the manual set up of :
+
+ - Azure OpenAI - setting gpt-4.1 mini and adda
+ - Azure Database for PostgreSQL Flexible Server
+ - Azure Container Registry to push the docker image
+ - Azure Web App to run the docker image with the required environment variables and expose it to the internet
+
+Once done the bicep template for the full ressource group can be exported from the Azure Portal.
 
 **Deploy the Bicep Template**:
-The main entry point for the deployment without SSO is in: `infra-no-sso/main.bicep`
 
 Navigate to the `infra-no-sso` directory:
 ```bash
@@ -68,6 +76,40 @@ az deployment group create \
 
 - `backendImage`: The name and tag of your Docker image (e.g., `backend:latest`).
 - You will also need to provide the secure parameters for the Serper API, as well as the `secretKey`, `cfAccessClientId`, and `cfAccessClientSecret`.
+
+This will output key ressource config
+
+**Set DB**:
+
+The app use a vector store for the embeddings. The vector store is a PostgreSQL database with a vector extension. The vector extension is a PostgreSQL extension that allows you to store and query vector data. It is only available in the GeneralPurpose tier (about 100$/month).
+
+```bash
+az postgres flexible-server update \
+    --server-name <db-server-name> \
+    --resource-group <resource-group-name> \
+    --tier GeneralPurpose \
+    --sku-name standard_d2ds_v5
+
+# now enable the correct extensions
+az postgres flexible-server parameter set \
+  --server-name <db-server-name> \
+  --resource-group <resource-group-name> \
+  --name azure.extensions \
+  --value pgcrypto,vector
+
+
+```
+
+```bash
+az postgres flexible-server db create \
+    --server-name <db-server-name> \
+    --resource-group <resource-group-name> \
+    --database-name <db-name> \
+    --charset utf8 \
+    --collation en_US.utf8
+```
+
+Once this is done, you can connect to the database and create the tables. Then go to the `backend` directory and run the back office initialisation scripts `backend/scripts/README.md`.
 
 
 **Build and Push Docker Image**:

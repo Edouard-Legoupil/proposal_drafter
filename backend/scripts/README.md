@@ -12,6 +12,15 @@ This script populates the database with initial data from a multi-sheet Excel fi
 
 2.  **User ID**: You must provide the UUID of an existing user in the database. The created records will be associated with this user.
 
+3.  **Dependencies**: activate the app virtual environment 
+
+```bash
+cd backend
+source venv/bin/activate
+cd ./
+```
+
+
 ### How to Get a `user_id`
 
 You can get a `user_id` by connecting to the database with `psql` and running the following command:

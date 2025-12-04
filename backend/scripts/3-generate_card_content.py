@@ -138,8 +138,8 @@ def main():
         db_username = os.getenv("DB_USERNAME").strip('"')
         db_password = os.getenv("DB_PASSWORD")
         db_name = os.getenv("DB_NAME")
-        db_host = "localhost"
-        db_port = "5432"
+        db_host = os.getenv("DB_HOST")
+        db_port = os.getenv("DB_PORT")
 
         conn = psycopg2.connect(
             dbname=db_name,
