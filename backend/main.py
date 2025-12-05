@@ -99,6 +99,17 @@ app.include_router(knowledge.router, prefix="/api", tags=["Knowledge"])
 app.include_router(metrics.router, prefix="/api", tags=["Metrics"])
 app.include_router(health.router, tags=["Health & Debugging"])
 
+# --- Root Health Endpoint for Azure Probes ---
+# This MUST be defined before the SPA fallback to take priority
+@app.get("/")
+async def root_health_check():
+    """
+    Root endpoint for Azure health probes.
+    Returns a simple OK response to confirm the container is running.
+    This is defined directly on the app to ensure it takes precedence over the SPA fallback.
+    """
+    return {"status": "ok", "service": "proposal-drafter"}
+
 # --- Serve React Frontend ---
 frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))
 #frontend_path = os.path.join(os.path.dirname(__file__), "..", "/frontend/dist")
@@ -119,6 +130,7 @@ if os.path.isdir(frontend_path):
         """
         SPA fallback for React Router: always return index.html for non-API routes.
         This should be the last route defined.
+        Note: The root "/" path is handled by the dedicated health endpoint defined above.
         """
         # Skip API routes explicitly
         if full_path.startswith("api/"):
