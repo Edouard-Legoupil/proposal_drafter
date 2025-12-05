@@ -50,6 +50,18 @@ Building this file from scratch is not recommended, as it requires a lot of para
  - Azure Container Registry to push the docker image
  - Azure Web App to run the docker image with the required environment variables and expose it to the internet
 
+In Azure Web App, set all environment variables as per backend/.env plus 
+ * Portal → Configuration → WEBSITES_PORT=8080 (and restart). 
+ Portal → Configuration → WEBSITES_CONTAINER_START_TIME_LIMIT=1800. -- this to allow more time for the container to start. 
+
+```bash
+az webapp config appsettings set \
+  --resource-group <rg> \
+  --name <app-name> \
+  --settings WEBSITES_PORT=8080 WEBSITES_CONTAINER_START_TIME_LIMIT=1800
+```
+
+
 Once done the bicep template for the full ressource group can be exported from the Azure Portal.
 
 **Deploy the Bicep Template**:
@@ -118,7 +130,10 @@ From the root of the project, build the Docker image for the backend:
 
 ```bash
 cd ../
-docker build -t <acr-name>.azurecr.io/backend:latest .
+docker build --no-cache -t <acr-name>.azurecr.io/backend:latest .
+
+#Confirm it starts and responds.
+docker run --env-file ./backend/.env -p 8080:8080 <acr-name>.azurecr.io/backend:latest
 ```
 *Note: Replace `<acr-name>` with the name of the Azure Container Registry created by the Bicep template.*
 
@@ -131,6 +146,29 @@ Push the image to ACR:
 ```bash
 docker push <acr-name>.azurecr.io/backend:latest
 ```
+
+To check app deployment run
+```bash
+
+az webapp log config \
+  --name <app-name> \
+  --resource-group <rg> \
+  --application-logging filesystem \
+  --level information
+
+az webapp log tail \
+  --name <app-name> \
+  --resource-group <rg> \
+  | tee  logs/azure_deployment_logfile.txt
+
+# or get a zip of the logs
+az webapp log download \
+  --name <app-name> \
+  --resource-group <rg> \
+  --log-file logs/propalgen_logs_$(date +%Y%m%d_%H%M%S).zip
+```   
+ 
+or visit the debug console: https://<your-app>.scm.azurewebsites.net/DebugConsole 
 
  **Application is Ready**:
 
