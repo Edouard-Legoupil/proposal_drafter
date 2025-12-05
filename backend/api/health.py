@@ -24,6 +24,19 @@ def health():
         "memory_usage": psutil.Process().memory_info().rss / 1024 / 1024
         }
 
+@router.get("/")
+async def root():
+    return {
+        "message": "Proposal Generator API",
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+@router.get("/healthz")
+async def kubernetes_health():
+    """Health check for Kubernetes/Azure"""
+    return {"status": "ok"}       
+
 # --- Debugging Endpoints ---
 # These endpoints are intended for development and debugging purposes only.
 

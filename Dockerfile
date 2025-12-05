@@ -58,10 +58,15 @@ RUN pip install --upgrade pip && \
 # ------------------------------------------------
 # Install NLTK data
 # ------------------------------------------------
-RUN python - <<EOF
+# Set a NLTK data directory inside the container
+ENV NLTK_DATA=/app/nltk_data
+
+RUN mkdir -p $NLTK_DATA && \
+    python - <<EOF
 import nltk
-nltk.download("punkt")
-nltk.download("punkt_tab")
+nltk.data.path.append("$NLTK_DATA")
+nltk.download("punkt", download_dir="$NLTK_DATA")
+nltk.download("punkt_tab", download_dir="$NLTK_DATA")
 EOF
 
 # ------------------------------------------------
