@@ -138,6 +138,14 @@ Create a `.env` file in the `root` directory - see `.env.example` for reference:
 
 Then, run the following command, that use this env in the root directory of the project:
 
+with external db
+
+```bash
+docker-compose  --env-file .env -f docker-compose-local-nob.yml up --build
+```
+
+with DB managed in docker
+
 ```bash
 docker-compose  --env-file .env -f docker-compose-local.yml up --build
 ```

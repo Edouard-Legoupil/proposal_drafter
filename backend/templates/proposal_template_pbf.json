@@ -1,0 +1,281 @@
+{
+    "template_type": "Proposal",
+    "donors": [
+        "UN Peacebuilding Fund - Gender and Youth Promotion Initiative",
+        "UN Peacebuilding Fund - Immediate Response Facility",
+        "UN Peacebuilding Fund - Peacebuilding and Recovery Facility"
+    ],
+    "project_info": {
+        "fields": [
+            {
+                "name": "project_title",
+                "label": "Project Title",
+                "type": "text",
+                "required": true
+            },
+            {
+                "name": "country",
+                "label": "Country",
+                "type": "text",
+                "required": true
+            },
+            {
+                "name": "funding_window",
+                "label": "PBF Funding Window (IRF/PRF/YPI/GPI)",
+                "type": "text",
+                "required": true
+            },
+            {
+                "name": "duration_months",
+                "label": "Project Duration (months)",
+                "type": "number",
+                "required": true
+            },
+            {
+                "name": "total_budget_usd",
+                "label": "Total Budget (USD)",
+                "type": "number",
+                "required": true
+            },
+            {
+                "name": "tranche_1_amount_usd",
+                "label": "PBF 1st tranche (70%) – amount (USD)",
+                "type": "number",
+                "required": false
+            },
+            {
+                "name": "tranche_2_amount_usd",
+                "label": "PBF 2nd tranche (30%) – amount (USD)",
+                "type": "number",
+                "required": false
+            },
+            {
+                "name": "tranche_3_amount_usd",
+                "label": "PBF 3rd tranche (if applicable) – amount (USD)",
+                "type": "number",
+                "required": false
+            },
+            {
+                "name": "runos",
+                "label": "Recipient UN Organizations (RUNOs)",
+                "type": "text",
+                "required": true,
+                "help": "List agencies and budget shares (e.g., UNDP, UNHCR, IOM)."
+            },
+            {
+                "name": "coordinating_agency",
+                "label": "Convening/Coordinating Agency",
+                "type": "text",
+                "required": true
+            },
+            {
+                "name": "steering_committee_summary",
+                "label": "In-country consultations & PBF Steering Committee summary",
+                "type": "text",
+                "required": true
+            },
+            {
+                "name": "gender_marker_score",
+                "label": "PBF Gender Marker score (1/2/3)",
+                "type": "number",
+                "required": true
+            },
+            {
+                "name": "gender_budget_allocation_usd",
+                "label": "Budget allocated to GEWE (USD)",
+                "type": "number",
+                "required": false
+            },
+            {
+                "name": "gewe_percent",
+                "label": "% of total budget for GEWE",
+                "type": "number",
+                "required": false
+            }
+        ]
+    },
+    "sections": [
+        {
+            "section_name": "context_rationale",
+            "section_label": "I. Peacebuilding Context and Rationale for PBF support",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 1200,
+            "instructions": "Describe conflict risks, social cohesion challenges, inequalities, institutional capacity gaps; provide disaggregated data (women, youth, migrants), trends (hate speech), and justification for PBF catalytic support. Reference national/UN frameworks where relevant."
+        },
+        {
+            "section_name": "project_focus_approach",
+            "section_label": "II.a Project focus and approach",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 800,
+            "instructions": "Summarize the strategic approach (rights-based, gender & youth mainstreaming), actors involved (communities, institutions, CSOs), and how interventions strengthen social cohesion and governance."
+        },
+        {
+            "section_name": "theory_of_change",
+            "section_label": "Project-level Theory of Change",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 400,
+            "instructions": "Use the formulation: 'If we do X, then we expect Y, because Z' to link activities to peacebuilding outcomes; articulate assumptions and conflict-sensitivity, focusing on young women/men."
+        },
+        {
+            "section_name": "outcomes_outputs",
+            "section_label": "Key Outcomes, Outputs and Activities",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "List outcomes with political/social change; map outputs and core activities under each outcome.",
+            "columns": [
+                {
+                    "name": "Outcome",
+                    "format_type": "text",
+                    "instructions": "Peacebuilding change statement (e.g., reduced hate speech; improved coexistence via governance)."
+                },
+                {
+                    "name": "Output",
+                    "format_type": "text",
+                    "instructions": "Concrete deliverable enabling the outcome."
+                },
+                {
+                    "name": "Activities",
+                    "format_type": "text",
+                    "instructions": "Brief list of key activities (dialogues, training, protocols, community projects)."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Outcome 1",
+                    "instructions": "e.g., Reduce hate speech/xenophobia for peaceful coexistence."
+                },
+                {
+                    "row_title": "Outcome 2",
+                    "instructions": "e.g., Increase peaceful coexistence through better democratic governance."
+                }
+            ]
+        },
+        {
+            "section_name": "targeting",
+            "section_label": "Targeting (youth & other stakeholders)",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 600,
+            "instructions": "Define geographic scope, youth age ranges, criteria and selection mechanisms; include women and marginalized populations; outline engagement with institutions, media, CSOs. Ensure do-no-harm and incentives for participation."
+        },
+        {
+            "section_name": "risk_management",
+            "section_label": "Risk management (with Do No Harm)",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Identify project-specific risks, levels, mitigation strategies, including barriers to women/youth participation, health, politics, data protection, misinformation.",
+            "columns": [
+                {
+                    "name": "Risk description",
+                    "format_type": "text",
+                    "instructions": "Concise statement of the risk."
+                },
+                {
+                    "name": "Risk level",
+                    "format_type": "text",
+                    "instructions": "Low/Medium/High."
+                },
+                {
+                    "name": "Mitigation strategy",
+                    "format_type": "text",
+                    "instructions": "Actions incl. do-no-harm measures."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Risk 1",
+                    "instructions": "Political priorities shift / stakeholder support wanes."
+                },
+                {
+                    "row_title": "Risk 2",
+                    "instructions": "Rapid influx of persons in transit diverts resources."
+                },
+                {
+                    "row_title": "Risk 3",
+                    "instructions": "Barriers to women/youth participation persist."
+                },
+                {
+                    "row_title": "Risk 4",
+                    "instructions": "Data privacy concerns about early warning system."
+                }
+            ]
+        },
+        {
+            "section_name": "monitoring_evaluation",
+            "section_label": "Monitoring & Evaluation (RBM, learning, adaptive)",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 600,
+            "instructions": "Describe baseline, indicator tracking, frequency, roles; alignment with UNSDCF, SDGs; knowledge management; evaluation per PBF policy; budget share for M&E."
+        },
+        {
+            "section_name": "admin_arrangements",
+            "section_label": "Administrative arrangements (RUNOs & AA/MPTF)",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 500,
+            "instructions": "Outline Administrative Agent (MPTF Office) roles, RUNO accountability, reporting schedule (semi-annual, annual, final), closure, audit, terrorism financing provisions, and public disclosure."
+        },
+        {
+            "section_name": "budget_overview",
+            "section_label": "IV. Project budget overview",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 600,
+            "instructions": "Summarize staffing, consultancies, grants for community projects, materials/equipment share (<15%), vehicles if any (justification), and GEWE allocation (% and USD)."
+        },
+        {
+            "section_name": "nuno_eligibility",
+            "section_label": "Annex: NUNO eligibility (if CSOs receive PBF funds directly)",
+            "format_type": "table",
+            "mandatory": false,
+            "instructions": "Capture eligibility checklist for Non-UN Recipient Organizations (registration, audits, budget thresholds, experience, legal structure).",
+            "columns": [
+                {
+                    "name": "Criterion",
+                    "format_type": "text",
+                    "instructions": "Eligibility requirement."
+                },
+                {
+                    "name": "Evidence",
+                    "format_type": "text",
+                    "instructions": "Document/reference."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Registration (HQ & country)",
+                    "instructions": "Valid non-profit, tax-exempt registration."
+                },
+                {
+                    "row_title": "Audited financial statements (2 years)",
+                    "instructions": "Include auditor opinion letter."
+                },
+                {
+                    "row_title": "Annual budget threshold",
+                    "instructions": "≥ 2× annualized PBF budget in-country."
+                },
+                {
+                    "row_title": "Experience",
+                    "instructions": "≥ 3 years in country."
+                }
+            ]
+        },
+        {
+            "section_name": "annexes",
+            "section_label": "Annexes",
+            "format_type": "fixed_text",
+            "fixed_text": "Results Framework matrix; Workplan; Risk log; M&E plan; Steering & Technical Committee ToR; Letters of support; Maps of target areas; Budget details; Visibility & communications plan; Early warning system protocols."
+        }
+    ],
+    "headquarters_info": {
+        "organization": "UNHCR",
+        "address": "Geneva, Switzerland",
+        "email": "",
+        "phone": "",
+        "website": "https://www.unhcr.org"
+    }
+}

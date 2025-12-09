@@ -41,9 +41,8 @@ While the recommended way to deploy the infrastructure is through the CI/CD pipe
 
 This option is for deploying the infrastructure without SSO capabilities (which requires the capacity to create a service principal account and an application ID).
 
-The main entry point for the deployment without SSO is in: `infra-no-sso/main.bicep`
-
-Building this file from scratch is not recommended, as it requires a lot of parameters and is not very user-friendly. Rather, it is exported from the Azure Portal following the manual set up of :
+### Deploy manually the correct ressources
+Building a bicep infrastructure deployment script from scratch is not recommended, as it requires a lot of parameters and is not very user-friendly. Rather, it is exported from the Azure Portal following the manual set up of :
 
  - Azure OpenAI - setting gpt-4.1 mini and adda
  - Azure Database for PostgreSQL Flexible Server
@@ -56,42 +55,15 @@ In Azure Web App, set all environment variables as per backend/.env plus
 
 ```bash
 az webapp config appsettings set \
-  --resource-group <rg> \
+  --resource-group <resource-group-name> \
   --name <app-name> \
   --settings WEBSITES_PORT=8080 WEBSITES_CONTAINER_START_TIME_LIMIT=1800
 ```
 
-
 Once done the bicep template for the full ressource group can be exported from the Azure Portal.
 
-**Deploy the Bicep Template**:
 
-Navigate to the `infra-no-sso` directory:
-```bash
-cd infra-no-sso
-```
-
-Deploy the Bicep template using the following command. You will need to provide values for the parameters.
-
-```bash
-az deployment group create \
-   --resource-group <resource-group-name> \
-   --template-file main.bicep \
-   --parameters \
-      resourcePrefix=<your-prefix> \
-      backendImage=backend:latest \
-      serperApiKey=<your-serper-api-key> \
-      secretKey=<your-secret-key> \
-      cfAccessClientId=<your-cf-access-client-id> \
-      cfAccessClientSecret=<your-cf-access-client-secret>
-```
-
-- `backendImage`: The name and tag of your Docker image (e.g., `backend:latest`).
-- You will also need to provide the secure parameters for the Serper API, as well as the `secretKey`, `cfAccessClientId`, and `cfAccessClientSecret`.
-
-This will output key ressource config
-
-**Set DB**:
+### Set Database
 
 The app use a vector store for the embeddings. The vector store is a PostgreSQL database with a vector extension. The vector extension is a PostgreSQL extension that allows you to store and query vector data. It is only available in the GeneralPurpose tier (about 100$/month).
 
@@ -108,8 +80,6 @@ az postgres flexible-server parameter set \
   --resource-group <resource-group-name> \
   --name azure.extensions \
   --value pgcrypto,vector
-
-
 ```
 
 ```bash
@@ -121,10 +91,27 @@ az postgres flexible-server db create \
     --collation en_US.utf8
 ```
 
+**Configure PostgreSQL firewall.**
+
+You can do this in the Azure portal, or by using the Azure CLI:
+
+```bash
+az extension add --name ssh
+
+
+az ssh vm \
+  --name <db-server-name> \
+  --resource-group <RESOURCE_GROUP> \
+  --local-port 5432:<POSTGRES_PRIVATE_IP>:5432
+
+
+az postgres flexible-server firewall-rule create --resource-group <your-resource-group> --name <your-postgres-server-name> --rule-name AllowMyIP --start-ip-address <your-ip-address> --end-ip-address <your-ip-address>
+```
+
 Once this is done, you can connect to the database and create the tables. Then go to the `backend` directory and run the back office initialisation scripts `backend/scripts/README.md`.
 
 
-**Build and Push Docker Image**:
+### Build and Push Docker Image
 
 From the root of the project, build the Docker image for the backend:
 
@@ -145,34 +132,45 @@ az acr login --name <acr-name>
 Push the image to ACR:
 ```bash
 docker push <acr-name>.azurecr.io/backend:latest
+
+## Ensure that the web app can log in to the ACR
+ACR_USER=$(az acr credential show --name propalgen --query "username" -o tsv)
+ACR_PASS=$(az acr credential show --name propalgen --query "passwords[0].value" -o tsv)
+az webapp config container set \
+  --name <app-name> \
+  --resource-group <resource-group-name> \
+  --docker-custom-image-name propalgen.azurecr.io/backend:latest \
+  --docker-registry-server-url https://propalgen.azurecr.io \
+  --docker-registry-server-user $ACR_USER \
+  --docker-registry-server-password $ACR_PASS
 ```
 
 To check app deployment run
-```bash
 
+```bash
 az webapp log config \
   --name <app-name> \
-  --resource-group <rg> \
+  --resource-group <resource-group-name> \
   --application-logging filesystem \
   --level information
 
 az webapp log tail \
   --name <app-name> \
-  --resource-group <rg> \
+  --resource-group <resource-group-name> \
   | tee  logs/azure_deployment_logfile.txt
 
 # or get a zip of the logs
 az webapp log download \
   --name <app-name> \
-  --resource-group <rg> \
+  --resource-group <resource-group-name> \
   --log-file logs/propalgen_logs_$(date +%Y%m%d_%H%M%S).zip
 ```   
  
-or visit the debug console: https://<your-app>.scm.azurewebsites.net/DebugConsole 
+or visit the debug console: https://<app-name>.scm.azurewebsites.net/DebugConsole 
 
  **Application is Ready**:
 
-Once the deployment is complete and the image is pushed, the application will be available at the URL provided in the output of the Bicep deployment (`containerAppUrl`).
+Once the deployment is complete and the image is pushed, you may manually restart the app from the Azure Portal, the application will be then available at the URL provided in the portal.
 
 
 ---
@@ -254,65 +252,4 @@ The workflow is defined in `.github/workflows/deploy.yml` and will be **automati
 After either workflow has successfully run, you can find the outputs in the workflow run logs. The outputs will include the `acrName`, `postgresServerName`, and `containerAppUrl`.
 
 
----
-
-## Running Backend Administration Scripts
-
-
-
-To connect to the PostgreSQL database from your local machine, you will need the `psql` command-line tool.
-
-1.  **Allow your IP address in the PostgreSQL firewall.**
-
-You can do this in the Azure portal, or by using the Azure CLI:
-
-```bash
-az postgres flexible-server firewall-rule create --resource-group <your-resource-group> --name <your-postgres-server-name> --rule-name AllowMyIP --start-ip-address <your-ip-address> --end-ip-address <your-ip-address>
-```
-
-2.  **Connect to the database:**
-
-```bash
-psql "host=<postgres-server-name>.postgres.database.azure.com user=psqladmin password=<admin-password> dbname=ppg_db sslmode=require"
-```
-*Note: You can get the `<admin-password>` from the Bicep deployment output or from the Azure portal.*
-
-
-
-Once you are connected to the database, you can run the scripts in the `backend/scripts` directory. You will need to set the following environment variables, depending on your deployment type.
-
-*Note: You can get the values for these environment variables from the Bicep deployment outputs or the Azure portal.*
-
-### For SSO Deployments
-
-```bash
-export DATABASE_URL="postgresql://psqladmin:<admin-password>@<postgres-server-name>.postgres.database.azure.com/ppg_db"
-export AZURE_OPENAI_ENDPOINT="<openai-endpoint>"
-export AZURE_OPENAI_API_KEY="<openai-api-key>"
-export SERPER_API_KEY="<serper-api-key>"
-export ENTRA_TENANT_ID="<entra-tenant-id>"
-export ENTRA_CLIENT_ID="<entra-client-id>"
-export ENTRA_CLIENT_SECRET="<entra-client-secret>"
-export SECRET_KEY="<your-secret-key>"
-export CF_ACCESS_CLIENT_ID="<your-cf-access-client-id>"
-export CF_ACCESS_CLIENT_SECRET="<your-cf-access-client-secret>"
-```
-
-### For No-SSO Deployments
-
-```bash
-export DATABASE_URL="postgresql://psqladmin:<admin-password>@<postgres-server-name>.postgres.database.azure.com/ppg_db"
-export AZURE_OPENAI_ENDPOINT="<openai-endpoint>"
-export AZURE_OPENAI_API_KEY="<openai-api-key>"
-export SERPER_API_KEY="<serper-api-key>"
-export SECRET_KEY="<your-secret-key>"
-export CF_ACCESS_CLIENT_ID="<your-cf-access-client-id>"
-export CF_ACCESS_CLIENT_SECRET="<your-cf-access-client-secret>"
-```
-
-Then you can run the scripts as described in the `backend/scripts/README.md` file. For example:
-
-```bash
-python3 backend/scripts/1-populate_knowledge_cards.py --user-id <your_user_id>
-```
-
+ 

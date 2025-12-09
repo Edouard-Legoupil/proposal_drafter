@@ -1,0 +1,189 @@
+{
+    "template_type": "Proposal",
+    "donors": [
+        "Education Cannot Wait - Accelerated Facility Window",
+        "Education Cannot Wait - First Emergency Window",
+        "Education Cannot Wait - Multiyear Resilience Programme"
+    ],
+    "project_info": {
+        "fields": [
+            {
+                "name": "title",
+                "label": "FER Application Title",
+                "type": "text",
+                "required": true
+            },
+            {
+                "name": "country_context",
+                "label": "Country/Context",
+                "type": "text",
+                "required": true
+            },
+            {
+                "name": "criteria_application",
+                "label": "Criteria for application (check all that apply)",
+                "type": "text",
+                "required": true,
+                "help": "Escalation of existing crisis; New/sudden-onset emergency; New displacement; Anticipatory Action"
+            },
+            {
+                "name": "coordination_contacts",
+                "label": "Contacts of agencies coordinating grant application",
+                "type": "text",
+                "required": true,
+                "help": "Provide focal point names/emails, agency, and role (e.g., Cluster Co-Lead)."
+            },
+            {
+                "name": "resident_humanitarian_coordinator",
+                "label": "Resident/Humanitarian Coordinator (name, title, email)",
+                "type": "text",
+                "required": false
+            },
+            {
+                "name": "fer_funding_request_usd",
+                "label": "FER Funding Request (USD)",
+                "type": "number",
+                "required": true
+            },
+            {
+                "name": "duration_months",
+                "label": "Duration (# months)",
+                "type": "number",
+                "required": true
+            },
+            {
+                "name": "ecw_gap_percentage",
+                "label": "Percentage of current funding gap to be financed by ECW (%)",
+                "type": "number",
+                "required": true
+            }
+        ]
+    },
+    "sections": [
+        {
+            "section_name": "grantee_summary_table",
+            "section_label": "ECW FER Grantee Details",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Summarize per grantee: organization, girls & boys to be reached, intervention zones, funding allocation, planned cost per child (USD). Planned cost per child = Total Budget / Total Target.",
+            "columns": [
+                {
+                    "name": "Organization",
+                    "format_type": "text",
+                    "instructions": "Name of grantee."
+                },
+                {
+                    "name": "Girls and Boys to be reached",
+                    "format_type": "number",
+                    "instructions": "Total children targeted (headcount annex for breakdown)."
+                },
+                {
+                    "name": "Intervention zones",
+                    "format_type": "text",
+                    "instructions": "Geographies of intervention."
+                },
+                {
+                    "name": "Funding allocation (USD)",
+                    "format_type": "number",
+                    "instructions": "Allocation to grantee."
+                },
+                {
+                    "name": "Planned Cost per child (USD)",
+                    "format_type": "number",
+                    "instructions": "Computed value."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Grantee 1",
+                    "instructions": "Enter details for first grantee."
+                },
+                {
+                    "row_title": "Grantee 2",
+                    "instructions": "Enter details for second grantee (if applicable)."
+                }
+            ]
+        },
+        {
+            "section_name": "needs_overview",
+            "section_label": "1. Education Response: Needs Overview",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 500,
+            "instructions": "Provide needs overview for girls and boys, including adolescents, across pre-primary, primary, and secondary; include gender, disability inclusion, and MHPSS considerations. Highlight data sources/gaps, disaggregate by sex/age/disability, and reference EiE WG/hrp context."
+        },
+        {
+            "section_name": "intervention_strategy",
+            "section_label": "2. Intervention Strategy",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 750,
+            "instructions": "Describe programme results aligned with the Collective Results Framework: outcomes & outputs across pre-primary (target 10%), primary, secondary (target 20%) and teachers; gender-responsive approach (60% girls target), disability inclusion (10% of children with disabilities), MHPSS integration, INEE Minimum Standards (access, quality, capacity development), coordination & referrals (CP, GBV, gender, PSEA, disability), and AAP."
+        },
+        {
+            "section_name": "gender_disability_inequalities",
+            "section_label": "3. Gender, Disability Inclusion & Intersecting Inequalities Approach",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 500,
+            "instructions": "Summarize overall gender and disability inclusion approach, intersecting inequalities (IDPs, refugees, ethnic minorities, adolescent girls). Include GBV prevention/mitigation/response with at least one GBV risk mitigation indicator and budget line; note IASC GAM application and reference number; engagement of women-led and DPOs; address data gaps."
+        },
+        {
+            "section_name": "sector_coordination",
+            "section_label": "4. Education Sector Coordination Mechanisms",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 200,
+            "instructions": "Explain the education coordination mechanism, leads/co-leads, participation, LEG involvement, and coordination with other clusters/sectors (CP, GBV, Health, WASH)."
+        },
+        {
+            "section_name": "development_process",
+            "section_label": "5. Grant Application Development Process",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 300,
+            "instructions": "Describe proposal development process: notification dates, meetings, decisions, inclusion of government, LEG, donors; engagement of local groups (parents/caregivers, women-led orgs, disability orgs) and MHPSS stakeholders."
+        },
+        {
+            "section_name": "grantee_selection",
+            "section_label": "6. Grantee Selection Process",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 300,
+            "instructions": "Outline inclusive, transparent, conflict-of-interest-avoiding process: timeline, independent selection committee composition, criteria, solicitation, communication of decisions and adjudication of challenges. Attach minutes/emails as supporting documentation. Include link to grantee confirmation form (post-selection)."
+        },
+        {
+            "section_name": "joint_monitoring_reporting",
+            "section_label": "7. Joint Monitoring and Reporting",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 200,
+            "instructions": "Explain joint monitoring of outcomes/outputs: data collection, aggregation/analysis, storage; monitoring frequency; tools; responsible org per indicator; engagement of local/national orgs with expertise in gender, disability, MHPSS. Specify Lead Grantee."
+        },
+        {
+            "section_name": "annex_map",
+            "section_label": "Annex A: Map of ECW Grantee interventions",
+            "format_type": "text",
+            "mandatory": false,
+            "instructions": "Insert/Link a map identifying locations and grantee footprints."
+        },
+        {
+            "section_name": "annex_results_framework",
+            "section_label": "Annex B: Collective Results Framework and Headcount",
+            "format_type": "fixed_text",
+            "fixed_text": "Send as a separate Excel file."
+        },
+        {
+            "section_name": "annex_budgets",
+            "section_label": "Annex C: Budgets",
+            "format_type": "fixed_text",
+            "fixed_text": "Send as a separate Excel file."
+        },
+        {
+            "section_name": "annex_risk_csg_psea",
+            "section_label": "Annex D: Risk, Child Safeguarding and PSEA",
+            "format_type": "fixed_text",
+            "fixed_text": "Send the Excel version with two sheets: Risk Matrix; CSG & PSEA."
+        }
+    ]
+}

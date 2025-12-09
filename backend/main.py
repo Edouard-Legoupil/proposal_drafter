@@ -1,7 +1,7 @@
 #  Third-Party Libraries
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from fastapi.responses import FileResponse
@@ -99,16 +99,30 @@ app.include_router(knowledge.router, prefix="/api", tags=["Knowledge"])
 app.include_router(metrics.router, prefix="/api", tags=["Metrics"])
 app.include_router(health.router, tags=["Health & Debugging"])
 
-# --- Root Health Endpoint for Azure Probes ---
+# --- Root Endpoint: Health Check + SPA ---
 # This MUST be defined before the SPA fallback to take priority
 @app.get("/")
-async def root_health_check():
+async def root_endpoint(request: Request):
     """
-    Root endpoint for Azure health probes.
-    Returns a simple OK response to confirm the container is running.
-    This is defined directly on the app to ensure it takes precedence over the SPA fallback.
+    Smart root endpoint that serves dual purposes:
+    1. Health check for Azure probes (returns JSON when Accept: application/json)
+    2. React SPA for browser requests (returns index.html for text/html)
     """
-    return {"status": "ok", "service": "proposal-drafter"}
+    # Check Accept header to determine if this is a health probe or browser request
+    accept_header = request.headers.get("accept", "")
+    
+    # Health probes typically accept application/json or */*
+    # Browsers typically accept text/html as the primary type
+    if "text/html" in accept_header:
+        # Browser request - serve React app
+        frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))
+        index_file = os.path.join(frontend_path, "index.html")
+        if os.path.isfile(index_file):
+            return FileResponse(index_file)
+        return {"detail": "Frontend not built"}
+    else:
+        # Health probe or API request - return health status
+        return {"status": "ok", "service": "proposal-drafter"}
 
 # --- Serve React Frontend ---
 frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))

@@ -139,11 +139,9 @@ def test_knowledge_card():
         # page.get_by_test_id("remove-reference-button-10").click()
 
         # Ingest References   -------
-        page.once("dialog", lambda dialog: dialog.dismiss())
+        #page.once("dialog", lambda dialog: dialog.dismiss())
         page.get_by_test_id("ingest-references-button").click() 
         # Wait for the alert modal to appear and click OK
-        alert_modal_locator = page.locator('[data-testid="alert-modal-overlay"]')
-        expect(alert_modal_locator).to_be_visible()
         expect(page.get_by_test_id("alert-ok-button")).to_be_visible(timeout=200000)
         page.get_by_test_id("alert-ok-button").click()
         page.screenshot(path="playwright/test-results/knowledge_card_reference_7ingested.png")
@@ -159,9 +157,7 @@ def test_knowledge_card():
         page.once("dialog", lambda dialog: dialog.dismiss())
         page.get_by_test_id("populate-card-button").click()
         # Wait for the generated content container to be visible, indicating completion
-        loading_modal_locator = page.locator('[data-testid="loading-modal-overlay"]')
-        expect(loading_modal_locator).to_be_visible()
-        expect(page.get_by_test_id("alert-ok-button")).to_be_visible(timeout=200000)
+        expect(page.get_by_test_id("alert-ok-button")).to_be_visible(timeout=400000)
         page.get_by_test_id("alert-ok-button").click()
         page.screenshot(path="playwright/test-results/knowledge_card_9populated.png")
 

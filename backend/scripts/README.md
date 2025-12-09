@@ -15,9 +15,7 @@ This script populates the database with initial data from a multi-sheet Excel fi
 3.  **Dependencies**: activate the app virtual environment 
 
 ```bash
-cd backend
-source venv/bin/activate
-cd ./
+source backend/venv/bin/activate
 ```
 
 

@@ -9,7 +9,7 @@ from backend.utils.proposal_logic import regenerate_section_logic
 # Configure logging
 logger = logging.getLogger(__name__)
 
-def handle_text_format(section_config, crew_instance, form_data, project_description, session_id, proposal_id):
+def handle_text_format(section_config, crew_instance, form_data, project_description, session_id, proposal_id, special_requirements="None"):
     """Handles 'text' format_type."""
     section_name = section_config["section_name"]
     result = crew_instance.kickoff(inputs={
@@ -17,7 +17,8 @@ def handle_text_format(section_config, crew_instance, form_data, project_descrip
         "form_data": form_data,
         "project_description": project_description,
         "instructions": section_config.get("instructions", ""),
-        "word_limit": section_config.get("word_limit", 350)
+        "word_limit": section_config.get("word_limit", 350),
+        "special_requirements": special_requirements
     })
     try:
         raw_output = result.raw if hasattr(result, 'raw') and result.raw else ""
@@ -42,7 +43,7 @@ def handle_fixed_text_format(section_config):
     """Handles 'fixed_text' format_type."""
     return section_config.get("fixed_text", "")
 
-def handle_number_format(section_config, crew_instance, form_data, project_description):
+def handle_number_format(section_config, crew_instance, form_data, project_description, special_requirements="None"):
     """Handles 'number' format_type."""
     section_name = section_config["section_name"]
     result = crew_instance.kickoff(inputs={
@@ -50,7 +51,8 @@ def handle_number_format(section_config, crew_instance, form_data, project_descr
         "form_data": form_data,
         "project_description": project_description,
         "instructions": section_config.get("instructions", ""),
-        "word_limit": 10  # A small word limit for numbers
+        "word_limit": 10,  # A small word limit for numbers
+        "special_requirements": special_requirements
     })
     try:
         raw_output = result.raw if hasattr(result, 'raw') and result.raw else ""
@@ -65,7 +67,7 @@ def handle_number_format(section_config, crew_instance, form_data, project_descr
         return "0"
 
 
-def handle_table_format(section_config, crew_instance, form_data, project_description):
+def handle_table_format(section_config, crew_instance, form_data, project_description, special_requirements="None"):
     """Handles 'table' format_type by converting generated JSON to a Markdown table."""
     section_name = section_config["section_name"]
     instructions = section_config.get("instructions", "")
@@ -99,7 +101,8 @@ def handle_table_format(section_config, crew_instance, form_data, project_descri
         "form_data": form_data,
         "project_description": project_description,
         "instructions": prompt,
-        "word_limit": 2000  # Increased limit for JSON verbosity
+        "word_limit": 2000,  # Increased limit for JSON verbosity
+        "special_requirements": special_requirements
     })
     try:
         raw_output = result.raw if hasattr(result, 'raw') and result.raw else ""

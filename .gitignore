@@ -30,3 +30,4 @@ log/*
 backend/log/*
 backend/knowledge/*
 log/log_knowledge.txt
+backend/2.env
