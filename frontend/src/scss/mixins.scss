@@ -1,0 +1,202 @@
+@import "../../node_modules/bootstrap/scss/variables";
+@import "../../node_modules/bootstrap/scss/maps";
+@import "../../node_modules/bootstrap/scss/utilities";
+@import "../../node_modules/bootstrap/scss/functions";
+
+$all-colors: map-merge-multiple($blues, $indigos, $purples, $pinks, $reds, $oranges, $yellows, $greens, $teals, $cyans, $grays);
+$utilities: map-merge(
+  $utilities,
+    (
+      "background-color": map-merge(
+        map-get(
+          $utilities, "background-color"),
+        (
+        values: map-merge(map-get(map-get($utilities, "background-color"), "values"),
+          ($all-colors ),
+        ),
+      ),
+    ),
+  )
+);
+
+@mixin button-variant(
+  $background,
+  $border,
+  $color: color-contrast($background),
+  $hover-background: tint-color($background, $btn-hover-bg-tint-amount),
+  $hover-border: tint-color($border, $btn-hover-border-tint-amount),
+  $hover-color: color-contrast($hover-background),
+  $active-background: tint-color($background, $btn-active-bg-tint-amount),
+  $active-border: tint-color($border, $btn-active-border-tint-amount),
+  $active-color: color-contrast($active-background),
+  $disabled-background: $background,
+  $disabled-border: $border,
+  $disabled-color: color-contrast($disabled-background)
+) {
+  --#{$prefix}btn-color: #{$color};
+  --#{$prefix}btn-bg: #{$background};
+  --#{$prefix}btn-border-color: #{$border};
+  --#{$prefix}btn-hover-color: #{$color};
+  --#{$prefix}btn-hover-bg: #{$hover-background};
+  --#{$prefix}btn-hover-border-color: #{$hover-border};
+  --#{$prefix}btn-focus-shadow-rgb: #{to-rgb(mix($color, $border, 15%))};
+  --#{$prefix}btn-active-color: #{$color};
+  --#{$prefix}btn-active-bg: #{$active-background};
+  --#{$prefix}btn-active-border-color: #{$active-border};
+  --#{$prefix}btn-active-shadow: 0 0 0 #{$btn-focus-width} rgba(var(--#{$prefix}btn-focus-shadow-rgb), .5);
+  --#{$prefix}btn-disabled-color: #{$disabled-color};
+  --#{$prefix}btn-disabled-bg: #{$disabled-background};
+  --#{$prefix}btn-disabled-border-color: #{$disabled-border};
+  &:focus {
+    box-shadow: 0 0 0 #{$btn-focus-width} rgba(var(--#{$prefix}btn-focus-shadow-rgb), .5);
+  }
+}
+
+@mixin custom_button-variant(
+  $background,
+  $color,
+  $hover-background,
+  $hover-color,
+  $active-background,
+  $active-color,
+  $disabled-background,
+  $disabled-border,
+  $disabled-color,
+  $active-box-shadow-mix-color-one,
+  $active-box-shadow-mix-color-two,
+  ) {
+  --#{$prefix}btn-color: #{$color};
+  --#{$prefix}btn-bg: #{$background};
+  --#{$prefix}btn-hover-color: #{$color};
+  --#{$prefix}btn-hover-bg: #{$hover-background};
+  --#{$prefix}btn-focus-shadow-rgb: #{to-rgb(mix($active-box-shadow-mix-color-one, $active-box-shadow-mix-color-two, 15%))};
+  --#{$prefix}btn-active-color: #{$color};
+  --#{$prefix}btn-active-bg: #{$active-background};
+  --#{$prefix}btn-active-shadow: 0 0 0 #{$btn-focus-width} rgba(var(--#{$prefix}btn-focus-shadow-rgb), .5);
+  --#{$prefix}btn-disabled-color: #{$disabled-color};
+  --#{$prefix}btn-disabled-bg: #{$disabled-background};
+  --#{$prefix}btn-disabled-border-color: #{$disabled-border};
+  --#{$prefix}btn-hover-border-color: #{$hover-background};
+  --#{$prefix}btn-active-border-color: #{$hover-background};
+  &:focus {
+    box-shadow: 0 0 0 #{$btn-focus-width} rgba(var(--#{$prefix}btn-focus-shadow-rgb), .5);
+  }
+}
+
+@mixin button-outline-variant(
+  $color,
+  $color-hover: color-contrast($color),
+  $active-background: tint-color($color, $btn-outline-hover-bg-tint-amount),
+  $active-border: $color,
+  $active-color: color-contrast($active-background)
+) {
+  --#{$prefix}btn-color: #{$color};
+  --#{$prefix}btn-border-color: #{$color};
+  --#{$prefix}btn-hover-color: #{$color-hover};
+  --#{$prefix}btn-hover-bg: #{$active-background};
+  --#{$prefix}btn-hover-border-color: #{$active-border};
+  --#{$prefix}btn-focus-shadow-rgb: #{to-rgb($color)};
+  --#{$prefix}btn-active-color: #{$active-color};
+  --#{$prefix}btn-active-bg: #{$active-background};
+  --#{$prefix}btn-active-border-color: #{$active-border};
+  --#{$prefix}btn-active-shadow: 0 0 0 #{$btn-focus-width} rgba(var(--#{$prefix}btn-focus-shadow-rgb), .5);
+  --#{$prefix}btn-disabled-color: #{$color};
+  --#{$prefix}btn-disabled-bg: transparent;
+  --#{$prefix}btn-disabled-border-color: #{$color};
+  --#{$prefix}btn-border-width: 2px;
+  --#{$prefix}gradient: none;
+  &:focus {
+    box-shadow: 0 0 0 #{$btn-focus-width} rgba(var(--#{$prefix}btn-focus-shadow-rgb), .5);
+  }
+}
+
+@mixin custom_button-outline-variant(
+  $color,
+  $border-color,
+  $hover-color,
+  $hover-background,
+  $hover-border,
+  $disabled-border,
+  $disabled-color
+) {
+  --#{$prefix}btn-bg: transparent;
+  --#{$prefix}btn-color: #{$color};
+  --#{$prefix}btn-border-color: #{$border-color};
+  --#{$prefix}btn-hover-color: #{$hover-color};
+  --#{$prefix}btn-hover-bg: #{$hover-background};
+  --#{$prefix}btn-hover-border-color: #{$hover-border};
+  --#{$prefix}btn-focus-shadow-rgb: #{to-rgb($border-color)};
+  --#{$prefix}btn-active-color: #{$hover-color};
+  --#{$prefix}btn-active-bg: #{$hover-background};
+  --#{$prefix}btn-active-border-color: #{$hover-border};
+  --#{$prefix}btn-active-shadow: 0 0 0 #{$btn-focus-width} rgba(var(--#{$prefix}btn-focus-shadow-rgb), .5);
+  --#{$prefix}btn-disabled-color: #{$disabled-color};
+  --#{$prefix}btn-disabled-bg: transparent;
+  --#{$prefix}btn-disabled-border-color: #{$disabled-border};
+  --#{$prefix}btn-border-width: 2px;
+  --#{$prefix}gradient: none;
+  &:focus {
+    box-shadow: 0 0 0 #{$btn-focus-width} rgba(var(--#{$prefix}btn-focus-shadow-rgb), .5);
+  }
+}
+
+@mixin alert-variant($background, $border, $color, $btn-close-color) {
+  --#{$prefix}alert-color: #{$color};
+  --#{$prefix}alert-bg: #{$background};
+  --#{$prefix}alert-border-color: #{$border};
+  --#{$prefix}alert-link-color: #{shade-color($color, 20%)};
+  --#{$prefix}btn-close-color: #{$btn-close-color};
+  font-size: $font-size-md;
+  @if $enable-gradients {
+    background-image: var(--#{$prefix}gradient);
+  }
+
+  .alert-link {
+    color: var(--#{$prefix}alert-link-color);
+  }
+
+  .btn-close {
+    color: var(--#{$prefix}btn-close-color);
+    mask-image: var(--#{$prefix}btn-close-bg);
+    background-image: unset;
+    background-color: $btn-close-color;
+    mask-repeat: no-repeat;
+    mask-size: 25%;
+    mask-position: center;
+    opacity: 80%;
+  }
+}
+
+@mixin breadcrumb-theme($link-color, $hover-color, $separator-color) {
+  .breadcrumb-item {
+    a {
+      text-decoration: none;
+      color: $link-color;
+
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-image: linear-gradient(
+        to right,
+        $link-color,
+        $link-color 50%,
+        $hover-color 50%
+      );
+      background-size: 200% 100%;
+      background-position: 100%;
+      transition: all 0.3s cubic-bezier(0.000, 0.000, 0.230, 1);
+
+      &:hover {
+        background-position: 0%;
+      }
+    }
+
+    &::before {
+      color: $separator-color;
+    }
+
+    &.active {
+      color: $hover-color;
+    }
+  }
+}
