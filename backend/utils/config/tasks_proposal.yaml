@@ -3,6 +3,7 @@ content_generation_task:
     Generate content for "{section}" based on the following:
     - **Project Description:** {project_description}
     - **Form Data:** {form_data}
+    - **Special Requirements:** {special_requirements}
     - **Instructions:** {instructions}
     
     Ensure that the response is well-structured, coherent, and does NOT exceed {word_limit} words.
@@ -49,6 +50,7 @@ regeneration_task:
     - **Project Description:** {project_description}
     - **Form Data:** {form_data}
     - **User's Concise Input:** {concise_input}
+    - **Special Requirements:** {special_requirements}
     - **Instructions:** {instructions}
 
     Ensure that the response integrates the user’s input while remaining structured, coherent, and within {word_limit} words.

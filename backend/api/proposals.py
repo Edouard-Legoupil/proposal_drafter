@@ -302,6 +302,12 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
         # The JSONKnowledgeSource expects relative paths from the `knowledge` directory
         crew_instance = ProposalCrew(knowledge_file_paths=knowledge_file_paths).generate_proposal_crew()
 
+        # Extract special_requirements from the template
+        special_requirements_obj = proposal_template.get("special_requirements", {})
+        special_requirements_list = special_requirements_obj.get("instructions", [])
+        # Format as a string (bulleted list)
+        special_requirements_str = "\n".join([f"- {req}" for req in special_requirements_list]) if special_requirements_list else "None"
+
         for section_config in proposal_template["sections"]:
             section_name = section_config["section_name"]
             format_type = section_config.get("format_type", "text")
@@ -309,13 +315,13 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
 
             generated_text = ""
             if format_type == "text":
-                generated_text = handle_text_format(section_config, crew_instance, form_data, project_description, session_id, proposal_id)
+                generated_text = handle_text_format(section_config, crew_instance, form_data, project_description, session_id, proposal_id, special_requirements=special_requirements_str)
             elif format_type == "fixed_text":
                 generated_text = handle_fixed_text_format(section_config)
             elif format_type == "number":
-                generated_text = handle_number_format(section_config, crew_instance, form_data, project_description)
+                generated_text = handle_number_format(section_config, crew_instance, form_data, project_description, special_requirements=special_requirements_str)
             elif format_type == "table":
-                generated_text = handle_table_format(section_config, crew_instance, form_data, project_description)
+                generated_text = handle_table_format(section_config, crew_instance, form_data, project_description, special_requirements=special_requirements_str)
 
             all_sections[section_name] = generated_text
 
@@ -405,18 +411,24 @@ async def process_section(session_id: str, request: SectionRequest, current_user
 
     # Initialize and run the generation crew.
     crew_instance = ProposalCrew().generate_proposal_crew()
+
+    # Extract special_requirements from the template
+    special_requirements_obj = proposal_template.get("special_requirements", {})
+    special_requirements_list = special_requirements_obj.get("instructions", [])
+    special_requirements_str = "\n".join([f"- {req}" for req in special_requirements_list]) if special_requirements_list else "None"
+
     format_type = section_config.get("format_type", "text")
     logger.info(f"Generating section: {request.section} with format_type: {format_type} for proposal {request.proposal_id}")
 
     generated_text = ""
     if format_type == "text":
-        generated_text = handle_text_format(section_config, crew_instance, form_data, project_description, session_id, request.proposal_id)
+        generated_text = handle_text_format(section_config, crew_instance, form_data, project_description, session_id, request.proposal_id, special_requirements=special_requirements_str)
     elif format_type == "fixed_text":
         generated_text = handle_fixed_text_format(section_config)
     elif format_type == "number":
-        generated_text = handle_number_format(section_config, crew_instance, form_data, project_description)
+        generated_text = handle_number_format(section_config, crew_instance, form_data, project_description, special_requirements=special_requirements_str)
     elif format_type == "table":
-        generated_text = handle_table_format(section_config, crew_instance, form_data, project_description)
+        generated_text = handle_table_format(section_config, crew_instance, form_data, project_description, special_requirements=special_requirements_str)
 
     message = f"Content generated for {request.section}"
 
