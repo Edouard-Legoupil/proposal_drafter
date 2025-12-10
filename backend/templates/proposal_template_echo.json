@@ -1,117 +1,155 @@
 {
     "template_type": "Proposal",
-    "donors": ["EU ECHO"],
-    "project_info": {
-      "section_name": "Project Information",
-      "fields": [
-          {
-              "field": "Project title",
-              "instructions": "Enter a concise title (max 200 characters) that clearly reflects the purpose and scope of the project."
-          },
-          {
-              "field": "Project type",
-              "instructions": "Select the primary sector/cluster relevant to this project, aligned with CERF sector classifications."
-          },
-          {
-              "field": "Secondary project type",
-              "instructions": "Indicate any secondary sector/cluster addressed by the project, if applicable."
-          },
-          {
-              "field": "Geographical Coverage",
-              "instructions": "Specify country and subnational locations (regions, districts, cities) where activities will be implemented."
-          },
-          {
-              "field": "Executing agency",
-              "instructions": "Indicate UNHCR as the executing agency unless otherwise coordinated."
-          },
-          {
-              "field": "Beneficiaries",
-              "instructions": "Provide total number of direct beneficiaries disaggregated by sex (men, women), age (boys, girls), and persons with disabilities. Avoid household or percentage-based figures."
-          },
-          {
-              "field": "Partner(s)",
-              "instructions": "List implementing sub-partners (e.g. NGOs, national/local actors) and describe their role where relevant."
-          },
-          {
-              "field": "Management site",
-              "instructions": "Identify the UNHCR Field or Sub-Office responsible for implementation oversight."
-          },
-          {
-              "field": "Duration",
-              "instructions": "Specify project duration: either 6 months for Rapid Response (RR) or 12 months for Underfunded Emergencies (UFE)."
-          },
-          {
-              "field": "Budget",
-              "instructions": "Indicate total amount requested from CERF and breakdown by sector(s). Budget must match Excel template."
-          }
-      ]
-  },
-  "sections": [
-      {
-          "section_name": "Summary",
-          "word_limit": 2000,
-          "format_type": "text",
-          "instructions": "Summarize the crisis/emergency context, including the main humanitarian needs of the target population. Detail the target population by specifying who they are, where they are located, and their number. Describe key activities, grouped by sector (e.g., protection, shelter/NFIs). Ensure this summary does not duplicate text from the allocation strategy. Explain how the project will be catalytic/transformational and how its results will be sustainable beyond the CERF allocation period."
-      },
-      {
-          "section_name": "General Information",
-          "word_limit": 350,
-          "format_type": "text",
-          "instructions": "Provide all main elements of identification for the Action. This includes the name of the organization, the full title of the action, and the timeframe (specifying the start date and duration in months). The 'Executive summary of the action' should give a concise snapshot, explaining its main purpose, links with identified needs, the intervention logic, expected results, and objectives. At the final report stage, this summary must be revised to summarize the achievements of the Action."
-      },
-      {
-          "section_name": "Project Data Overview by Country",
-          "word_limit": 350,
-          "format_type": "text",
-          "instructions": "Present all numerical data for each country and sector of intervention. For each country, provide geographical information and specify if the places of intervention are urban, rural, or both. Regarding beneficiaries, provide the number of unique direct beneficiaries, a breakdown by sex and age (e.g., boys under 5, girls 5-17), and the number of unique beneficiaries with disabilities. Categorize unique beneficiaries by profile (e.g., local population, IDPs, returnees, refugees, asylum seekers, migrants, or other). If a special calculation method is used, explain it in the 'Possible comments' section. For each sector, provide the total budget amount, the number of unique beneficiaries, and specify the transfer modalities (cash, voucher, or in-kind)."
-      },
-      {
-          "section_name": "Humanitarian Organisations in the Area",
-          "word_limit": 350,
-          "format_type": "text",
-          "instructions": "Demonstrate the organization's knowledge of the country of intervention. Detail your organization's presence in the geographical area, including the number of years of presence, the type of intervention (e.g., emergency response, resilience), and the type of presence (e.g., established office, local partner). Explain any synergies with other projects and describe how the proposed Action fits into a bigger picture within the humanitarian landscape."
-      },
-      {
-          "section_name": "Needs Assessment and Risk Analysis",
-          "word_limit": 350,
-          "format_type": "text",
-          "instructions": "Detail the dates and methodology of the needs assessment used to formulate the proposal (e.g., joint/coordinated assessment, use of specific tools like MIRA or IPC). Describe the main problems, needs, and risks identified, establishing cause-and-effect relationships. Provide a comprehensive risk analysis that includes threats, hazards, vulnerabilities, and capacities, taking into account different age, sex, and disability groups. Include a brief gender and age analysis. Explain how the proposed response addresses the specific needs and risks of the affected persons and how it is appropriate to the context."
-      },
-      {
-          "section_name": "Beneficiaries",
-          "word_limit": 350,
-          "format_type": "text",
-          "instructions": "Briefly explain how direct beneficiaries were targeted, identified, and selected, broken down by sector. Explain how and by what means beneficiaries and affected populations have been and will be involved in the design, implementation, and monitoring of the Action. Pay particular attention to diverse groups such as gender, age, and persons with disabilities. If applicable, identify and explain why the action specifically targets certain groups of vulnerabilities."
-      },
-      {
-          "section_name": "Logic of Intervention",
-          "word_limit": 350,
-          "format_type": "text",
-          "instructions": "Define a single 'Principal Objective' that explains the longer-term change or impact of the Action. Define a single 'Specific objective' that addresses the core problems identified in the needs assessment, defining it in terms of direct benefits for the target groups (outcome). Describe the results to be achieved in relation to the specific objective, focusing on direct outputs and services delivered. For each result, provide 'Key Outcome Indicators' (maximum 10) to measure the main outcomes and 'Key Result Indicators' (maximum 10 per result) to measure the main outputs. Describe the activities to be undertaken to achieve the results, explaining how they will be delivered and what was done in preparation. Also, provide a brief description of any preconditions, assumptions, and risks that may impact the implementation of the action."
-      },
-      {
-          "section_name": "Implementation",
-          "word_limit": 350,
-          "format_type": "text",
-          "instructions": "Briefly explain how human resources (expatriate and local) will be mobilized to ensure effective and efficient implementation. Describe specific procurement arrangements and any foreseen implementation challenges in the supply chain, including how you plan to mitigate them. Note that a detailed work plan must also be attached to the proposal."
-      },
-      {
-          "section_name": "Field Coordination",
-          "word_limit": 350,
-          "format_type": "text",
-          "instructions": "Explain how the organization coordinates with other actors in the field (e.g., local authorities, UN agencies, NGOs) to ensure no overlaps and to identify complementarities. Discuss the transition and exit strategy, including how the action's results will be sustained after DG ECHO funding ends."
-      },
-      {
-          "section_name": "Visibility, Communication, and Information Activities",
-          "word_limit": 350,
-          "format_type": "text",
-          "instructions": "Explain the planned communication strategy, including the target audience, communication channels (e.g., press releases, social media, videos), and the content to be communicated. Acknowledge DG ECHO's contribution in all communication materials."
-      },
-      {
-          "section_name": "Conclusions and Lessons Learned",
-          "word_limit": 350,
-          "format_type": "text",
-          "instructions": "This is an optional section where the partner can share further information important for the appraisal of the proposal. At the interim report stage, additional comments relevant for understanding the state of the action can be included. At the final stage, the partner can add information to help better understand the action's achievements, explain difficulties encountered, and share lessons learned."
-      }
-  ]
+    "donors": [
+        "EU ECHO"
+    ],
+    "special_requirements": {
+        "instructions": [
+            "Show UNHCR's unique capacity and access",
+            "Strictly base all content on the provided inputs and knowledge base.",
+            "Do not invent or hallucinate facts, figures, or dates.",
+            "If information is missing, explicitly state that it is not available in the context.",
+            "Ensure tone, style, and formatting match a professional humanitarian proposal."
+        ]
+    },
+    "sections": [
+        {
+            "section_name": "project_information",
+            "section_label": "Project Information",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Fill the table strictly using the provided project information. Do not infer or invent data.",
+            "columns": [
+                {
+                    "name": "Field",
+                    "format_type": "fixed_text",
+                    "instructions": "Field Name"
+                },
+                {
+                    "name": "Value",
+                    "format_type": "text",
+                    "instructions": "Enter the value for this field."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Project title",
+                    "instructions": "Enter a concise title (max 200 characters) that clearly reflects the purpose and scope of the project."
+                },
+                {
+                    "row_title": "Project type",
+                    "instructions": "Select the primary sector/cluster relevant to this project, aligned with CERF sector classifications."
+                },
+                {
+                    "row_title": "Secondary project type",
+                    "instructions": "Indicate any secondary sector/cluster addressed by the project, if applicable."
+                },
+                {
+                    "row_title": "Geographical Coverage",
+                    "instructions": "Specify country and subnational locations (regions, districts, cities) where activities will be implemented."
+                },
+                {
+                    "row_title": "Executing agency",
+                    "instructions": "Indicate UNHCR as the executing agency unless otherwise coordinated."
+                },
+                {
+                    "row_title": "Beneficiaries",
+                    "instructions": "Provide total number of direct beneficiaries disaggregated by sex (men, women), age (boys, girls), and persons with disabilities. Avoid household or percentage-based figures."
+                },
+                {
+                    "row_title": "Partner(s)",
+                    "instructions": "List implementing sub-partners (e.g. NGOs, national/local actors) and describe their role where relevant."
+                },
+                {
+                    "row_title": "Management site",
+                    "instructions": "Identify the UNHCR Field or Sub-Office responsible for implementation oversight."
+                },
+                {
+                    "row_title": "Duration",
+                    "instructions": "Specify project duration: either 6 months for Rapid Response (RR) or 12 months for Underfunded Emergencies (UFE)."
+                },
+                {
+                    "row_title": "Budget",
+                    "instructions": "Indicate total amount requested from CERF and breakdown by sector(s). Budget must match Excel template."
+                }
+            ]
+        },
+        {
+            "section_name": "Summary",
+            "word_limit": 2000,
+            "format_type": "text",
+            "instructions": "Summarize the crisis/emergency context, including the main humanitarian needs of the target population. Detail the target population by specifying who they are, where they are located, and their number. Describe key activities, grouped by sector (e.g., protection, shelter/NFIs). Ensure this summary does not duplicate text from the allocation strategy. Explain how the project will be catalytic/transformational and how its results will be sustainable beyond the CERF allocation period using ONLY the provided inputs.",
+            "mandatory": true
+        },
+        {
+            "section_name": "General Information",
+            "word_limit": 350,
+            "format_type": "text",
+            "instructions": "Provide all main elements of identification for the Action based strictly on the plan. This includes the name of the organization, the full title of the action, and the timeframe (specifying the start date and duration in months). The 'Executive summary of the action' should give a concise snapshot, explaining its main purpose, links with identified needs, the intervention logic, expected results, and objectives. At the final report stage, this summary must be revised to summarize the achievements of the Action.",
+            "mandatory": true
+        },
+        {
+            "section_name": "Project Data Overview by Country",
+            "word_limit": 350,
+            "format_type": "text",
+            "instructions": "Present all numerical data for each country and sector of intervention based strictly on provided data. For each country, provide geographical information and specify if the places of intervention are urban, rural, or both. Regarding beneficiaries, provide the number of unique direct beneficiaries, a breakdown by sex and age (e.g., boys under 5, girls 5-17), and the number of unique beneficiaries with disabilities. Categorize unique beneficiaries by profile (e.g., local population, IDPs, returnees, refugees, asylum seekers, migrants, or other). If a special calculation method is used, explain it in the 'Possible comments' section. For each sector, provide the total budget amount, the number of unique beneficiaries, and specify the transfer modalities (cash, voucher, or in-kind).",
+            "mandatory": true
+        },
+        {
+            "section_name": "Humanitarian Organisations in the Area",
+            "word_limit": 350,
+            "format_type": "text",
+            "instructions": "Demonstrate the organization's knowledge of the country of intervention based on available context. Detail your organization's presence in the geographical area, including the number of years of presence, the type of intervention (e.g., emergency response, resilience), and the type of presence (e.g., established office, local partner). Explain any synergies with other projects and describe how the proposed Action fits into a bigger picture within the humanitarian landscape.",
+            "mandatory": true
+        },
+        {
+            "section_name": "Needs Assessment and Risk Analysis",
+            "word_limit": 350,
+            "format_type": "text",
+            "instructions": "Detail the dates and methodology of the needs assessment used to formulate the proposal (e.g., joint/coordinated assessment, use of specific tools like MIRA or IPC) based on the provided assessment data. Describe the main problems, needs, and risks identified, establishing cause-and-effect relationships. Provide a comprehensive risk analysis that includes threats, hazards, vulnerabilities, and capacities, taking into account different age, sex, and disability groups. Include a brief gender and age analysis. Explain how the proposed response addresses the specific needs and risks of the affected persons and how it is appropriate to the context.",
+            "mandatory": true
+        },
+        {
+            "section_name": "Beneficiaries",
+            "word_limit": 350,
+            "format_type": "text",
+            "instructions": "Briefly explain how direct beneficiaries were targeted, identified, and selected, broken down by sector, based on the plan. Explain how and by what means beneficiaries and affected populations have been and will be involved in the design, implementation, and monitoring of the Action. Pay particular attention to diverse groups such as gender, age, and persons with disabilities. If applicable, identify and explain why the action specifically targets certain groups of vulnerabilities.",
+            "mandatory": true
+        },
+        {
+            "section_name": "Logic of Intervention",
+            "word_limit": 350,
+            "format_type": "text",
+            "instructions": "Define a single 'Principal Objective' that explains the longer-term change or impact of the Action. Define a single 'Specific objective' that addresses the core problems identified in the needs assessment, defining it in terms of direct benefits for the target groups (outcome). Describe the results to be achieved in relation to the specific objective, focusing on direct outputs and services delivered. For each result, provide 'Key Outcome Indicators' (maximum 10) to measure the main outcomes and 'Key Result Indicators' (maximum 10 per result) to measure the main outputs. Describe the activities to be undertaken to achieve the results based strictly on the logframe, explaining how they will be delivered and what was done in preparation. Also, provide a brief description of any preconditions, assumptions, and risks that may impact the implementation of the action.",
+            "mandatory": true
+        },
+        {
+            "section_name": "Implementation",
+            "word_limit": 350,
+            "format_type": "text",
+            "instructions": "Briefly explain how human resources (expatriate and local) will be mobilized to ensure effective and efficient implementation based on the plan. Describe specific procurement arrangements and any foreseen implementation challenges in the supply chain, including how you plan to mitigate them. Note that a detailed work plan must also be attached to the proposal.",
+            "mandatory": true
+        },
+        {
+            "section_name": "Field Coordination",
+            "word_limit": 350,
+            "format_type": "text",
+            "instructions": "Explain how the organization coordinates with other actors in the field (e.g., local authorities, UN agencies, NGOs) to ensure no overlaps and to identify complementarities based on the plan. Discuss the transition and exit strategy, including how the action's results will be sustained after DG ECHO funding ends.",
+            "mandatory": true
+        },
+        {
+            "section_name": "Visibility, Communication, and Information Activities",
+            "word_limit": 350,
+            "format_type": "text",
+            "instructions": "Explain the planned communication strategy, including the target audience, communication channels (e.g., press releases, social media, videos), and the content to be communicated based on the plan. Acknowledge DG ECHO's contribution in all communication materials.",
+            "mandatory": true
+        },
+        {
+            "section_name": "Conclusions and Lessons Learned",
+            "word_limit": 350,
+            "format_type": "text",
+            "instructions": "This is an optional section where the partner can share further information important for the appraisal of the proposal. At the interim report stage, additional comments relevant for understanding the state of the action can be included. At the final stage, the partner can add information to help better understand the action's achievements, explain difficulties encountered, and share lessons learned.",
+            "mandatory": true
+        }
+    ]
 }

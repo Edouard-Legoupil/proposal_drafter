@@ -1,45 +1,44 @@
 {
   "donors": [],
-    "template_type": "Knowledge Card",
-    "template_name": "Humanitarian Field Context Knowledge Card",
-    "description": "You are building a comprehensive knowledge card that provides a structured overview of a humanitarian field context focusing on: ",
-    "sections": [
-      {
-        "section_name": "1. Protection & Legal Landscape",
-        "instructions": "Assess the **legal, institutional, and security environment** for displaced (refugees and IDPs) and stateless people. Summarize national **legal provisions** for asylum and statelessness. Identify key **national institutions** (ministries, courts, local authorities) and evaluate their effectiveness. Analyze prevailing **security conditions** (conflict, crime, border controls) and major **protection risks** (violence, exploitation, discrimination). Describe which **rights** (movement, work, education) are most constrained and evaluate the likely **evolution of asylum policies** and any political, security, or environmental developments that could alter displacement patterns.",
-        "word_limit": 800,
-        "key_word": "legal framework security protection risks institutional effectiveness asylum policy outlook"
-      },
-      {
-        "section_name": "2. Population Profile & Demographics",
-        "instructions": "Detail the **displaced and stateless population**. Provide an overview of **demographics** (age, gender distribution), **countries of origin**, and prevalent **ethnicities/cultural affiliations**. Describe their typical **education levels and professional skills**. Summarize recent **population movement trends** (influxes, returns, secondary movements) and **project** future inflows/outflows. Assess **conditions in countries of origin** that could enable voluntary return and any internal **demographic shifts** (birth rates, aging) impacting the displacement profile.",
-        "word_limit": 800,
-        "key_word": "refugee demographics country of origin movement trends education skills return conditions"
-      },
-      {
-        "section_name": "3. Socio-Economic & Basic Needs Status",
-        "instructions": "Analyze **socio-economic vulnerability and basic needs**. Summarize key national **economic indicators** (GDP, inflation, employment). **Compare income sources and socio-economic status** of displaced populations with host communities, and describe the **relationship and social cohesion** between the two groups. Analyze **labour-market regulations** and socio-economic policies affecting **access to work** and **social protection schemes**. Summarize barriers to essential **services** (health, education, legal aid) and describe the most critical **unmet basic needs** (shelter, WASH, food security).",
-        "word_limit": 800,
-        "key_word": "economic indicators socio-economic status labour market access social protection unmet needs service barriers"
-      },
-      {
-        "section_name": "4. Stakeholders & Partnership Landscape",
-        "instructions": "Map **stakeholders and partnership dynamics**. **Identify principal stakeholders** (government, IOs, NGOs, donors, private sector, community leaders) and **analyze their leverage** over protection and solutions. Analyze how shifts in **stakeholder roles, funding**, or partnerships could affect humanitarian strategy and comparative advantage.",
-        "word_limit": 400,
-        "key_word": "stakeholder mapping humanitarian funding partnership dynamics donor government NGOs"
-      },
-      {
-        "section_name": "5. Solutions & Strategic Outlook",
-        "instructions": "Define **pathways for durable solutions**. **Identify legal or policy gaps** hindering durable solutions (voluntary return, local integration, resettlement). Highlight **partnership opportunities**, **complementary pathways** (education, labor mobility, family reunification), and **project resettlement quotas** and prospects for long-term solutions.",
-        "word_limit": 300,
-        "key_word": "durable solutions policy gaps resettlement complementary pathways integration return"
-      },
-      {
-        "section_name": "6. Climate and Environmental Factors",
-        "instructions": "Analyze the impact of climate change and environmental degradation on the displacement situation. Describe any climate-related displacement drivers, environmental risks in displacement sites (e.g., flooding, drought), and opportunities for environmentally sustainable interventions.",
-        "word_limit": 400,
-        "key_word": "climate change environmental impact displacement sustainable interventions"
-      }
-
-    ]
-  }
+  "template_type": "Knowledge Card",
+  "template_name": "Humanitarian Field Context Knowledge Card",
+  "description": "You are building a comprehensive knowledge card that provides a structured overview of a humanitarian field context focusing on: ",
+  "sections": [
+    {
+      "section_name": "1. Protection & Legal Landscape",
+      "instructions": "Assess the **legal, institutional, and security environment** for displaced (refugees and IDPs) and stateless people. Summarize national **legal provisions** for asylum and statelessness. Identify key **national institutions** (ministries, courts, local authorities) and evaluate their effectiveness. Analyze prevailing **security conditions** (conflict, crime, border controls) and major **protection risks** (violence, exploitation, discrimination). For conflict settings, briefly analyze drivers of conflict, social cohesion dynamics, and political stability to support peacebuilding proposals. Describe which **rights** (movement, work, education) are most constrained and evaluate the likely **evolution of asylum policies** and any political, security, or environmental developments that could alter displacement patterns.",
+      "word_limit": 800,
+      "key_word": "legal framework security protection risks institutional effectiveness asylum policy outlook"
+    },
+    {
+      "section_name": "2. Population Profile & Demographics",
+      "instructions": "Detail the **displaced and stateless population**. Provide an overview of **demographics** (age, gender distribution), **countries of origin**, and prevalent **ethnicities/cultural affiliations**. Describe their typical **education levels and professional skills**. Summarize recent **population movement trends** (influxes, returns, secondary movements) and **project** future inflows/outflows. Assess **conditions in countries of origin** that could enable voluntary return and any internal **demographic shifts** (birth rates, aging) impacting the displacement profile.",
+      "word_limit": 800,
+      "key_word": "refugee demographics country of origin movement trends education skills return conditions"
+    },
+    {
+      "section_name": "3. Socio-Economic & Basic Needs Status",
+      "instructions": "Analyze **socio-economic vulnerability and basic needs**. Summarize key national **economic indicators** (GDP, inflation, employment). **Compare income sources and socio-economic status** of displaced populations with host communities, and describe the **relationship and social cohesion** between the two groups. Analyze **labour-market regulations** and socio-economic policies affecting **access to work** and **social protection schemes**. Summarize barriers to essential **services** (health, education, legal aid) and describe the most critical **unmet basic needs** (shelter, WASH, food security).",
+      "word_limit": 800,
+      "key_word": "economic indicators socio-economic status labour market access social protection unmet needs service barriers"
+    },
+    {
+      "section_name": "4. Stakeholders & Partnership Landscape",
+      "instructions": "Map **stakeholders and partnership dynamics**. **Identify principal stakeholders** (government, IOs, NGOs, donors, private sector, community leaders) and **analyze their leverage** over protection and solutions. Analyze how shifts in **stakeholder roles, funding**, or partnerships could affect humanitarian strategy and comparative advantage.",
+      "word_limit": 400,
+      "key_word": "stakeholder mapping humanitarian funding partnership dynamics donor government NGOs"
+    },
+    {
+      "section_name": "5. Solutions & Strategic Outlook",
+      "instructions": "Define **pathways for durable solutions**. **Identify legal or policy gaps** hindering durable solutions (voluntary return, local integration, resettlement). Highlight **partnership opportunities**, **complementary pathways** (education, labor mobility, family reunification), and **project resettlement quotas** and prospects for long-term solutions.",
+      "word_limit": 300,
+      "key_word": "durable solutions policy gaps resettlement complementary pathways integration return"
+    },
+    {
+      "section_name": "6. Climate and Environmental Factors",
+      "instructions": "Analyze the impact of climate change and environmental degradation on the displacement situation. Describe any climate-related displacement drivers, environmental risks in displacement sites (e.g., flooding, drought), and opportunities for environmentally sustainable interventions.",
+      "word_limit": 400,
+      "key_word": "climate change environmental impact displacement sustainable interventions"
+    }
+  ]
+}

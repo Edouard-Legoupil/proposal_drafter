@@ -3,94 +3,103 @@
     "donors": [
         "Private Sector (Proactive Outreach)"
     ],
-    "project_info": {
-        "fields": [
-            {
-                "name": "region",
-                "label": "Region",
-                "type": "text",
-                "required": true
-            },
-            {
-                "name": "country",
-                "label": "Country",
-                "type": "text",
-                "required": true
-            },
-            {
-                "name": "location",
-                "label": "Location (within country)",
-                "type": "text",
-                "required": false
-            },
-            {
-                "name": "implementation_period",
-                "label": "Implementation Period",
-                "type": "text",
-                "required": true,
-                "help": "If planned: include specific dates. If conditional on funding: expected duration incl. start-up. If multi-year or continuous: indicate and add timeline."
-            },
-            {
-                "name": "suggested_title",
-                "label": "Suggested Title",
-                "type": "text",
-                "required": false
-            },
-            {
-                "name": "outcome_areas",
-                "label": "Outcome Area(s)",
-                "type": "text",
-                "required": true,
-                "help": "List all outcome areas under which these activities are budgeted."
-            },
-            {
-                "name": "tags",
-                "label": "Tags",
-                "type": "text",
-                "required": false,
-                "help": "e.g., climate, youth, sports"
-            }
+    "special_requirements": {
+        "instructions": [
+            "Show UNHCR's unique capacity and access",
+            "Strictly base all content on the provided inputs and knowledge base.",
+            "Do not invent or hallucinate facts, figures, or dates.",
+            "If information is missing, explicitly state that it is not available in the context.",
+            "Ensure tone, style, and formatting match a professional humanitarian proposal."
         ]
     },
     "sections": [
         {
-            "section_name": "country_background",
+            "section_name": "Project Information",
+            "section_label": "Project Information",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Fill the table strictly using the provided project information. Do not infer or invent data.",
+            "columns": [
+                {
+                    "name": "Field",
+                    "format_type": "fixed_text",
+                    "instructions": "Field Name"
+                },
+                {
+                    "name": "Value",
+                    "format_type": "text",
+                    "instructions": "Enter the value for this field."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Region",
+                    "instructions": "Region"
+                },
+                {
+                    "row_title": "Country",
+                    "instructions": "Country"
+                },
+                {
+                    "row_title": "Location",
+                    "instructions": "Location (within country)"
+                },
+                {
+                    "row_title": "Implementation Period",
+                    "instructions": "Implementation Period"
+                },
+                {
+                    "row_title": "Suggested Title",
+                    "instructions": "Suggested Title"
+                },
+                {
+                    "row_title": "Outcome Area(s)",
+                    "instructions": "Outcome Area(s)"
+                },
+                {
+                    "row_title": "Tags",
+                    "instructions": "Tags"
+                }
+            ]
+        },
+        {
+            "section_name": "Country Background",
             "section_label": "Country Background",
             "format_type": "text",
             "mandatory": true,
             "word_limit": 250,
-            "instructions": "Provide a general background of the country (and relevant regional elements). Keep generic and easy to update."
+            "instructions": "Provide a general background of the country (and relevant regional elements) using only provided context. Keep generic and easy to update. Do not invent history or statistics."
         },
         {
-            "section_name": "sectoral_background",
+            "section_name": "Sectoral Background",
             "section_label": "Sectoral Background",
             "format_type": "text",
             "mandatory": true,
             "word_limit": 250,
-            "instructions": "Provide relevant background related to the sectors of the activities presented."
+            "instructions": "Provide relevant background related to the sectors of the activities presented based on the input data."
         },
         {
-            "section_name": "needs_description",
+            "section_name": "Needs Description Related to Activities",
             "section_label": "Needs description related to activities",
             "format_type": "text",
             "mandatory": true,
             "word_limit": 300,
-            "instructions": "Describe the needs identified by UNHCR that the proposed activities aim to address."
+            "instructions": "Describe the needs identified by UNHCR that the proposed activities aim to address, citing specific assessments from the inputs if available."
         },
         {
-            "section_name": "activities_planned",
+            "section_name": "Activities Planned",
             "section_label": "Activities Planned",
             "format_type": "text",
             "mandatory": true,
             "word_limit": 450,
-            "instructions": "Describe the activities seeking funding, in plain language for non-expert readers. Link each activity to the needs described."
+            "instructions": "Describe the activities seeking funding, in plain language for non-expert readers. Link each activity to the needs described. Strictly follow the proposed activity list."
         },
         {
-            "section_name": "kpis",
+            "section_name": "KPIs (including targets)",
             "section_label": "KPIs (including targets)",
             "format_type": "table",
             "mandatory": true,
-            "instructions": "List KPIs and targets for the activities. Prioritise RBM indicators; reformulate for clarity if needed.",
+            "instructions": "List KPIs and targets for the activities based on the logframe. Prioritise RBM indicators; reformulate for clarity if needed. Do not invent targets.",
             "columns": [
                 {
                     "name": "Indicator",
@@ -120,23 +129,23 @@
             ]
         },
         {
-            "section_name": "beneficiaries",
+            "section_name": "Beneficiaries",
             "section_label": "Number of beneficiaries and description",
             "format_type": "text",
             "mandatory": true,
             "word_limit": 250,
-            "instructions": "Provide total targeted beneficiaries with AGD breakdown if possible. Describe populations (refugees, IDPs, returnees, stateless, host communities, authorities) and any AGD emphasis."
+            "instructions": "Provide total targeted beneficiaries with AGD breakdown as provided. Describe populations (refugees, IDPs, returnees, stateless, host communities, authorities) and any AGD emphasis based on the data."
         },
         {
-            "section_name": "expected_impact",
+            "section_name": "Expected Impact on Beneficiaries",
             "section_label": "Expected impact on beneficiaries",
             "format_type": "text",
             "mandatory": true,
             "word_limit": 250,
-            "instructions": "Describe expected changes in beneficiaries' lives beyond immediate participation."
+            "instructions": "Describe expected changes in beneficiaries' lives beyond immediate participation based on the project's theory of change."
         },
         {
-            "section_name": "in_kind_needs",
+            "section_name": "In-Kind Needs",
             "section_label": "In-kind or non-financial needs",
             "format_type": "text",
             "mandatory": false,
@@ -144,38 +153,38 @@
             "instructions": "List in-kind or non-financial needs that complement activities and increase impact."
         },
         {
-            "section_name": "consequences_underfunding",
+            "section_name": "Consequences of Underfunding",
             "section_label": "Consequences of underfunding",
             "format_type": "text",
             "mandatory": false,
             "word_limit": 250,
-            "instructions": "Explain the situation if activities do not take place and potential impacts using data when possible."
+            "instructions": "Explain the situation if activities do not take place and potential impacts using provided data. Do not exaggerate beyond the evidence."
         },
         {
-            "section_name": "country_area_map",
+            "section_name": "Country/area map",
             "section_label": "Country/area map",
             "format_type": "text",
             "mandatory": false,
             "instructions": "Add a link or reference to a map image or annex."
         },
         {
-            "section_name": "why_unhcr",
+            "section_name": "Why UNHCR is Best Placed",
             "section_label": "Why UNHCR is best placed",
             "format_type": "text",
             "mandatory": false,
             "word_limit": 200,
-            "instructions": "Describe UNHCR's comparative advantage and why it is best placed to respond."
+            "instructions": "Describe UNHCR's comparative advantage and why it is best placed to respond, using standard UNHCR language and project specifics."
         },
         {
-            "section_name": "past_successes",
+            "section_name": "Past Implementation/Successes",
             "section_label": "Past implementation/successes",
             "format_type": "text",
             "mandatory": false,
             "word_limit": 250,
-            "instructions": "Summarize previous results and impact from similar activities or same activities in prior years."
+            "instructions": "Summarize previous results and impact from similar activities or same activities in prior years if data is available in the knowledge base."
         },
         {
-            "section_name": "monitoring_evaluation",
+            "section_name": "Monitoring and Evaluation",
             "section_label": "Monitoring and Evaluation",
             "format_type": "text",
             "mandatory": false,
@@ -183,7 +192,7 @@
             "instructions": "Provide M&E framework for the operation and/or elements specific to these activities."
         },
         {
-            "section_name": "sustainability_exit",
+            "section_name": "Sustainability and/or Exit Strategy",
             "section_label": "Sustainability and/or Exit Strategy",
             "format_type": "text",
             "mandatory": false,
@@ -191,7 +200,7 @@
             "instructions": "Explain sustainability plans or exit strategy where relevant."
         },
         {
-            "section_name": "environmental_impact",
+            "section_name": "Environmental Impact Improvement or Prevention",
             "section_label": "Environmental impact improvement or prevention",
             "format_type": "text",
             "mandatory": false,
@@ -199,7 +208,7 @@
             "instructions": "Explain how activities improve or mitigate environmental impact."
         },
         {
-            "section_name": "risk_assessment",
+            "section_name": "Risk Assessment",
             "section_label": "Risk assessment",
             "format_type": "text",
             "mandatory": false,
@@ -207,28 +216,14 @@
             "instructions": "Provide risk management framework and/or risks specific to these activities."
         },
         {
-            "section_name": "pictures_needs",
-            "section_label": "Pictures showing needs",
-            "format_type": "text",
-            "mandatory": true,
-            "instructions": "Provide links or embed images with credits demonstrating needs."
-        },
-        {
-            "section_name": "pictures_past",
-            "section_label": "Pictures of past implementation",
-            "format_type": "text",
-            "mandatory": false,
-            "instructions": "Provide links or images with credits from past implementation of the described activities."
-        },
-        {
-            "section_name": "human_interest_stories",
+            "section_name": "Human Interest Stories",
             "section_label": "Available human-interest stories",
             "format_type": "text",
             "mandatory": false,
-            "instructions": "Provide links or summaries of available stories with credits."
+            "instructions": "Provide ideas of potential human interest stories to support the proposal."
         },
         {
-            "section_name": "innovation",
+            "section_name": "Innovation",
             "section_label": "Innovation",
             "format_type": "text",
             "mandatory": false,
@@ -236,11 +231,11 @@
             "instructions": "Describe innovative elements in approach or activities."
         },
         {
-            "section_name": "budget_breakdown",
+            "section_name": "Budget Breakdown (RBM structure)",
             "section_label": "Budget breakdown (RBM structure)",
             "format_type": "table",
             "mandatory": true,
-            "instructions": "Provide budget by Impact and Outcome. Specify outcome name and OL/AOL amounts for each.",
+            "instructions": "Provide budget by Impact and Outcome based on the financial plan. Specify outcome name and OL/AOL amounts for each.",
             "columns": [
                 {
                     "name": "Level",
@@ -274,11 +269,11 @@
             ]
         },
         {
-            "section_name": "price_points",
+            "section_name": "Price Points",
             "section_label": "Price points",
             "format_type": "table",
             "mandatory": false,
-            "instructions": "Extract donor-friendly price points from activities and budget for inclusion in the global list.",
+            "instructions": "Extract donor-friendly price points from activities and budget. Ensure unit costs match the budget exactly.",
             "columns": [
                 {
                     "name": "Price Point",
@@ -308,28 +303,28 @@
             ]
         },
         {
-            "section_name": "reporting_plans",
+            "section_name": "Reporting Plans",
             "section_label": "Reporting on these activities already planned (Y/N)",
             "format_type": "text",
             "mandatory": true,
             "instructions": "Indicate if reporting is already planned (Y/N) and reference public resources if applicable."
         },
         {
-            "section_name": "reporting_release_date",
+            "section_name": "Reporting Release Date",
             "section_label": "If Yes, expected date of release",
             "format_type": "text",
             "mandatory": true,
             "instructions": "Provide the expected publication date if reporting is planned."
         },
         {
-            "section_name": "bespoke_capacity",
+            "section_name": "Bespoke Capacity",
             "section_label": "Capacity to produce bespoke report (Y/N)",
             "format_type": "text",
             "mandatory": true,
             "instructions": "Indicate capacity to produce bespoke reporting (Y/N)."
         },
         {
-            "section_name": "bespoke_info_ready_date",
+            "section_name": "Bespoke Information Ready Date",
             "section_label": "If yes, date when relevant information can be available",
             "format_type": "text",
             "mandatory": true,

@@ -3,105 +3,108 @@
     "donors": [
         "UN Peacebuilding Fund - Gender and Youth Promotion Initiative",
         "UN Peacebuilding Fund - Immediate Response Facility",
-        "UN Peacebuilding Fund - Peacebuilding and Recovery Facility"
+        "UN Peacebuilding Fund - Peacebuilding and Recovery Facility",
+        "UN Peacebuilding Fund - Chad",
+        "UN Peacebuilding Fund - DRC",
+        "UN Peacebuilding Fund - Mauritania",
+        "UN Peacebuilding Fund - Sudan",
+        "UN Peacebuilding Fund - Burkina Faso"
     ],
-    "project_info": {
-        "fields": [
-            {
-                "name": "project_title",
-                "label": "Project Title",
-                "type": "text",
-                "required": true
-            },
-            {
-                "name": "country",
-                "label": "Country",
-                "type": "text",
-                "required": true
-            },
-            {
-                "name": "funding_window",
-                "label": "PBF Funding Window (IRF/PRF/YPI/GPI)",
-                "type": "text",
-                "required": true
-            },
-            {
-                "name": "duration_months",
-                "label": "Project Duration (months)",
-                "type": "number",
-                "required": true
-            },
-            {
-                "name": "total_budget_usd",
-                "label": "Total Budget (USD)",
-                "type": "number",
-                "required": true
-            },
-            {
-                "name": "tranche_1_amount_usd",
-                "label": "PBF 1st tranche (70%) – amount (USD)",
-                "type": "number",
-                "required": false
-            },
-            {
-                "name": "tranche_2_amount_usd",
-                "label": "PBF 2nd tranche (30%) – amount (USD)",
-                "type": "number",
-                "required": false
-            },
-            {
-                "name": "tranche_3_amount_usd",
-                "label": "PBF 3rd tranche (if applicable) – amount (USD)",
-                "type": "number",
-                "required": false
-            },
-            {
-                "name": "runos",
-                "label": "Recipient UN Organizations (RUNOs)",
-                "type": "text",
-                "required": true,
-                "help": "List agencies and budget shares (e.g., UNDP, UNHCR, IOM)."
-            },
-            {
-                "name": "coordinating_agency",
-                "label": "Convening/Coordinating Agency",
-                "type": "text",
-                "required": true
-            },
-            {
-                "name": "steering_committee_summary",
-                "label": "In-country consultations & PBF Steering Committee summary",
-                "type": "text",
-                "required": true
-            },
-            {
-                "name": "gender_marker_score",
-                "label": "PBF Gender Marker score (1/2/3)",
-                "type": "number",
-                "required": true
-            },
-            {
-                "name": "gender_budget_allocation_usd",
-                "label": "Budget allocated to GEWE (USD)",
-                "type": "number",
-                "required": false
-            },
-            {
-                "name": "gewe_percent",
-                "label": "% of total budget for GEWE",
-                "type": "number",
-                "required": false
-            }
+    "special_requirements": {
+        "instructions": [
+            "Show UNHCR's unique capacity and access",
+            "Strictly base all content on the provided inputs and knowledge base.",
+            "Do not invent or hallucinate facts, figures, or dates.",
+            "If information is missing, explicitly state that it is not available in the context.",
+            "Ensure tone, style, and formatting match a professional humanitarian proposal.",
+            "For internal controls, audits, and procurement, strictly use standard UNHCR provisions. Do not invent new policies."
         ]
     },
     "sections": [
+        {
+            "section_name": "project_information",
+            "section_label": "Project Information",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Fill the table strictly using the provided project information. Do not infer or invent data.",
+            "columns": [
+                {
+                    "name": "Field",
+                    "format_type": "fixed_text",
+                    "instructions": "Field Name"
+                },
+                {
+                    "name": "Value",
+                    "format_type": "text",
+                    "instructions": "Enter the value for this field."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "project_title",
+                    "instructions": "Project Title"
+                },
+                {
+                    "row_title": "country",
+                    "instructions": "Country"
+                },
+                {
+                    "row_title": "funding_window",
+                    "instructions": "PBF Funding Window (IRF/PRF/YPI/GPI)"
+                },
+                {
+                    "row_title": "duration_months",
+                    "instructions": "Project Duration (months)"
+                },
+                {
+                    "row_title": "total_budget_usd",
+                    "instructions": "Total Budget (USD)"
+                },
+                {
+                    "row_title": "tranche_1_amount_usd",
+                    "instructions": "PBF 1st tranche (70%) \u2013 amount (USD)"
+                },
+                {
+                    "row_title": "tranche_2_amount_usd",
+                    "instructions": "PBF 2nd tranche (30%) \u2013 amount (USD)"
+                },
+                {
+                    "row_title": "tranche_3_amount_usd",
+                    "instructions": "PBF 3rd tranche (if applicable) \u2013 amount (USD)"
+                },
+                {
+                    "row_title": "runos",
+                    "instructions": "Recipient UN Organizations (RUNOs)"
+                },
+                {
+                    "row_title": "coordinating_agency",
+                    "instructions": "Convening/Coordinating Agency"
+                },
+                {
+                    "row_title": "steering_committee_summary",
+                    "instructions": "In-country consultations & PBF Steering Committee summary"
+                },
+                {
+                    "row_title": "gender_marker_score",
+                    "instructions": "PBF Gender Marker score (1/2/3)"
+                },
+                {
+                    "row_title": "gender_budget_allocation_usd",
+                    "instructions": "Budget allocated to GEWE (USD)"
+                },
+                {
+                    "row_title": "gewe_percent",
+                    "instructions": "% of total budget for GEWE"
+                }
+            ]
+        },
         {
             "section_name": "context_rationale",
             "section_label": "I. Peacebuilding Context and Rationale for PBF support",
             "format_type": "text",
             "mandatory": true,
             "word_limit": 1200,
-            "instructions": "Describe conflict risks, social cohesion challenges, inequalities, institutional capacity gaps; provide disaggregated data (women, youth, migrants), trends (hate speech), and justification for PBF catalytic support. Reference national/UN frameworks where relevant."
+            "instructions": "Describe conflict risks, social cohesion challenges, inequalities, institutional capacity gaps using ONLY provided context; provide disaggregated data (women, youth, migrants) if available. Justify PBF catalytic support based on the plan."
         },
         {
             "section_name": "project_focus_approach",
@@ -109,7 +112,7 @@
             "format_type": "text",
             "mandatory": true,
             "word_limit": 800,
-            "instructions": "Summarize the strategic approach (rights-based, gender & youth mainstreaming), actors involved (communities, institutions, CSOs), and how interventions strengthen social cohesion and governance."
+            "instructions": "Summarize the strategic approach, actors involved, and how interventions strengthen social cohesion and governance strictly as described in the project design."
         },
         {
             "section_name": "theory_of_change",
@@ -117,14 +120,14 @@
             "format_type": "text",
             "mandatory": true,
             "word_limit": 400,
-            "instructions": "Use the formulation: 'If we do X, then we expect Y, because Z' to link activities to peacebuilding outcomes; articulate assumptions and conflict-sensitivity, focusing on young women/men."
+            "instructions": "Use the formulation: 'If we do X, then we expect Y, because Z' to link activities to peacebuilding outcomes based on the provided Theory of Change. Do not invent links."
         },
         {
             "section_name": "outcomes_outputs",
             "section_label": "Key Outcomes, Outputs and Activities",
             "format_type": "table",
             "mandatory": true,
-            "instructions": "List outcomes with political/social change; map outputs and core activities under each outcome.",
+            "instructions": "List outcomes with political/social change; map outputs and core activities under each outcome from the logframe.",
             "columns": [
                 {
                     "name": "Outcome",
@@ -256,26 +259,343 @@
                 },
                 {
                     "row_title": "Annual budget threshold",
-                    "instructions": "≥ 2× annualized PBF budget in-country."
+                    "instructions": "\u2265 2\u00d7 annualized PBF budget in-country."
                 },
                 {
                     "row_title": "Experience",
-                    "instructions": "≥ 3 years in country."
+                    "instructions": "\u2265 3 years in country."
                 }
             ]
         },
         {
-            "section_name": "annexes",
-            "section_label": "Annexes",
-            "format_type": "fixed_text",
-            "fixed_text": "Results Framework matrix; Workplan; Risk log; M&E plan; Steering & Technical Committee ToR; Letters of support; Maps of target areas; Budget details; Visibility & communications plan; Early warning system protocols."
+            "section_name": "Results Framework Matrix",
+            "section_label": "Annex A: Programme Results Framework",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Define socio-political outcomes and linked outputs with SMART, conflict- and gender-sensitive indicators. Include perception indicators where relevant, and map each result to PBF priority areas.",
+            "columns": [
+                {
+                    "name": "Result Level",
+                    "format_type": "text",
+                    "instructions": "Outcome or Output."
+                },
+                {
+                    "name": "Statement",
+                    "format_type": "text",
+                    "instructions": "Exact outcome/output statement aligned to conflict analysis and theory of change."
+                },
+                {
+                    "name": "PBF Priority Area",
+                    "format_type": "text",
+                    "instructions": "1–4 as per PBF priority areas (e.g., Political dialogue; Social cohesion; Economic integration)."
+                },
+                {
+                    "name": "Indicator",
+                    "format_type": "text",
+                    "instructions": "SMART indicator capturing socio-political change; specify if perception-based."
+                },
+                {
+                    "name": "Baseline (value/date/source)",
+                    "format_type": "text",
+                    "instructions": "Starting value with source and date."
+                },
+                {
+                    "name": "Target (Female/Male; Age bands)",
+                    "format_type": "text",
+                    "instructions": "Numeric targets by sex and age (e.g., 15–17; 18–24; 25–29)."
+                },
+                {
+                    "name": "Disability & Vulnerability",
+                    "format_type": "text",
+                    "instructions": "Target and approach for marginalized youth (e.g., ex-combatants, displaced)."
+                },
+                {
+                    "name": "Means of Verification",
+                    "format_type": "text",
+                    "instructions": "Surveys, administrative data, partner reports; ensure do-no-harm."
+                },
+                {
+                    "name": "Frequency",
+                    "format_type": "text",
+                    "instructions": "Monthly/Quarterly/Biannual."
+                },
+                {
+                    "name": "Responsible",
+                    "format_type": "text",
+                    "instructions": "Lead agency/unit for data collection."
+                },
+                {
+                    "name": "Assumptions/Risks",
+                    "format_type": "text",
+                    "instructions": "Key assumptions underpinning the theory of change and linked risks."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Outcome 1",
+                    "instructions": "Articulate intended socio-political change (e.g., youth inclusion in local decision-making)."
+                },
+                {
+                    "row_title": "Output 1.1",
+                    "instructions": "Concrete deliverable leading to Outcome 1 (e.g., youth dialogue platforms established)."
+                }
+            ]
+        },
+        {
+            "section_name": "Workplan",
+            "section_label": "Annex B: Detailed Workplan",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Schedule and manage activities that lead to outputs and outcomes; ensure sequencing reflects conflict-sensitivity and meaningful youth participation.",
+            "columns": [
+                {
+                    "name": "Output / Activity",
+                    "format_type": "text",
+                    "instructions": "Reference result (e.g., Output 1.1 – Youth councils formed)."
+                },
+                {
+                    "name": "Start Date",
+                    "format_type": "text",
+                    "instructions": "YYYY-MM-DD."
+                },
+                {
+                    "name": "End Date",
+                    "format_type": "text",
+                    "instructions": "YYYY-MM-DD."
+                },
+                {
+                    "name": "Location",
+                    "format_type": "text",
+                    "instructions": "Admin level(s) and site."
+                },
+                {
+                    "name": "Dependencies / Pre-conditions",
+                    "format_type": "text",
+                    "instructions": "E.g., stakeholder consent, risk mitigation in place."
+                },
+                {
+                    "name": "Responsible Agency / Unit",
+                    "format_type": "text",
+                    "instructions": "Lead implementer."
+                },
+                {
+                    "name": "Milestones & Deliverables",
+                    "format_type": "text",
+                    "instructions": "Key milestone dates and tangible outputs."
+                },
+                {
+                    "name": "Budget Line Ref.",
+                    "format_type": "text",
+                    "instructions": "Link to Annex Budget details."
+                },
+                {
+                    "name": "Status",
+                    "format_type": "text",
+                    "instructions": "Planned / In progress / Completed."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Output 1.1 – Activity A",
+                    "instructions": "First scheduled activity."
+                },
+                {
+                    "row_title": "Output 1.1 – Activity B",
+                    "instructions": "Second scheduled activity."
+                }
+            ]
+        },
+        {
+            "section_name": "Risk Log",
+            "section_label": "Annex C: Programme Risk Log",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Identify, rate and mitigate contextual, operational, fiduciary, safeguarding and political risks with a do-no-harm lens.",
+            "columns": [
+                {
+                    "name": "Risk Category",
+                    "format_type": "text",
+                    "instructions": "Contextual, Operational, Fiduciary, Safeguarding, Political."
+                },
+                {
+                    "name": "Risk Description",
+                    "format_type": "text",
+                    "instructions": "Concise statement explaining the risk and linkage to conflict dynamics."
+                },
+                {
+                    "name": "Likelihood",
+                    "format_type": "text",
+                    "instructions": "Low / Medium / High."
+                },
+                {
+                    "name": "Impact",
+                    "format_type": "text",
+                    "instructions": "Low / Medium / High."
+                },
+                {
+                    "name": "Rating",
+                    "format_type": "text",
+                    "instructions": "Composite risk level."
+                },
+                {
+                    "name": "Triggers / Early Warning Signs",
+                    "format_type": "text",
+                    "instructions": "Observable indicators signaling escalation."
+                },
+                {
+                    "name": "Mitigation / Controls",
+                    "format_type": "text",
+                    "instructions": "Specific, time-bound measures (incl. safeguarding protections for young peacebuilders)."
+                },
+                {
+                    "name": "Owner",
+                    "format_type": "text",
+                    "instructions": "Responsible team/agency."
+                },
+                {
+                    "name": "Residual Risk",
+                    "format_type": "text",
+                    "instructions": "Expected risk after mitigation."
+                },
+                {
+                    "name": "Status / Review Date",
+                    "format_type": "text",
+                    "instructions": "Open / Closed; next review date."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Contextual Risk 1",
+                    "instructions": "E.g., electoral tensions affecting youth participation."
+                },
+                {
+                    "row_title": "Safeguarding Risk 1",
+                    "instructions": "E.g., intimidation of youth human-rights defenders."
+                }
+            ]
+        },
+        {
+            "section_name": "M&E Plan",
+            "section_label": "Annex D: Monitoring & Evaluation Plan",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Operationalize measurement for each indicator with sources, methods, disaggregation, ethical safeguards and youth participation in M&E.",
+            "columns": [
+                {
+                    "name": "Indicator",
+                    "format_type": "text",
+                    "instructions": "Copy from Results Framework."
+                },
+                {
+                    "name": "Definition & Calculation",
+                    "format_type": "text",
+                    "instructions": "Precise formula and boundaries."
+                },
+                {
+                    "name": "Data Source",
+                    "format_type": "text",
+                    "instructions": "Surveys, administrative records, perception instruments."
+                },
+                {
+                    "name": "Collection Method",
+                    "format_type": "text",
+                    "instructions": "FGDs, KIIs, perception surveys; note conflict-sensitivity."
+                },
+                {
+                    "name": "Disaggregation",
+                    "format_type": "text",
+                    "instructions": "Sex, age bands, vulnerability status."
+                },
+                {
+                    "name": "Frequency",
+                    "format_type": "text",
+                    "instructions": "Monthly/Quarterly/Biannual/Endline."
+                },
+                {
+                    "name": "Responsible",
+                    "format_type": "text",
+                    "instructions": "Agency/unit/partners."
+                },
+                {
+                    "name": "Quality Assurance",
+                    "format_type": "text",
+                    "instructions": "Validation checks; enumerator training."
+                },
+                {
+                    "name": "Ethical & Do-No-Harm Safeguards",
+                    "format_type": "text",
+                    "instructions": "Consent, confidentiality, safe referrals."
+                },
+                {
+                    "name": "Use of Findings",
+                    "format_type": "text",
+                    "instructions": "Learning loops, adaptive management, policy engagement."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Indicator 1",
+                    "instructions": "Details for first indicator."
+                },
+                {
+                    "row_title": "Indicator 2",
+                    "instructions": "Details for second indicator."
+                }
+            ]
+        },
+        {
+            "section_name": "Steering & Technical Committee ToR",
+            "section_label": "Annex E: Governance ToR",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Capture governance arrangements ensuring youth representation, inclusivity and decision-making protocols.",
+            "columns": [
+                {
+                    "name": "Committee",
+                    "format_type": "text",
+                    "instructions": "Steering Committee / Technical Committee."
+                },
+                {
+                    "name": "Mandate",
+                    "format_type": "text",
+                    "instructions": "Purpose and scope linked to peacebuilding outcomes."
+                },
+                {
+                    "name": "Membership & Representation",
+                    "format_type": "text",
+                    "instructions": "Organizations, roles; include youth-led CSO representation."
+                },
+                {
+                    "name": "Roles & Responsibilities",
+                    "format_type": "text",
+                    "instructions": "Key functions (oversight, technical guidance, safeguards)."
+                },
+                {
+                    "name": "Meeting Cadence & Quorum",
+                    "format_type": "text",
+                    "instructions": "Frequency, quorum rules."
+                },
+                {
+                    "name": "Decision-making & Escalation",
+                    "format_type": "text",
+                    "instructions": "Consensus/majority; conflict-sensitive escalation."
+                },
+                {
+                    "name": "Accountability & Safeguards",
+                    "format_type": "text",
+                    "instructions": "Do-no-harm, protection of youth participants."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Steering Committee",
+                    "instructions": "Complete governance elements."
+                },
+                {
+                    "row_title": "Technical Committee",
+                    "instructions": "Complete governance elements."
+                }
+            ]
         }
-    ],
-    "headquarters_info": {
-        "organization": "UNHCR",
-        "address": "Geneva, Switzerland",
-        "email": "",
-        "phone": "",
-        "website": "https://www.unhcr.org"
-    }
+    ]
 }
