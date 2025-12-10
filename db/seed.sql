@@ -10,6 +10,18 @@ INSERT INTO teams (id, name) VALUES
 (gen_random_uuid(), 'HQ Protection'),
 (gen_random_uuid(), 'Test');
 
+INSERT INTO donor_groups (id, name) VALUES
+(gen_random_uuid(), 'Brussels Donor Group'),
+(gen_random_uuid(), 'DRRM Donor Group 1'),
+(gen_random_uuid(), 'DRRM Donor Group 2'),
+(gen_random_uuid(), 'DRRM Donor Group 3'),
+(gen_random_uuid(), 'DRRM Donor Group 4'),
+(gen_random_uuid(), 'DRRM Donor Group 5'),
+(gen_random_uuid(), 'DRRM Donor Group 6'),
+(gen_random_uuid(), 'DRRM Donor Group 1'),
+(gen_random_uuid(), 'DRRM Donor Group 4'),
+(gen_random_uuid(), 'IRU - Income Recording');
+
 
 -- -- Insert Donors
 INSERT INTO donors (id, account_id, name, country, donor_group) VALUES

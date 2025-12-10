@@ -123,11 +123,17 @@ class ReferenceIdentificationCrew:
     @crew
     def identify_references_crew(self) -> Crew:
         """Creates the ReferenceIdentificationCrew"""
+        # Ensure log directory exists
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        log_dir = os.path.join(current_dir, '..', '..', 'log')
+        os.makedirs(log_dir, exist_ok=True)
+        log_file = os.path.join(log_dir, 'log_reference.txt')
+
         return Crew(
             agents=[self.researcher()],
             tasks=[self.research_task()],
             verbose=True,
-            output_log_file='log/log_reference.txt'
+            output_log_file=log_file
         )
 
     def kickoff(self, link_type: str, topic: str):
