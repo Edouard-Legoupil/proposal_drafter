@@ -130,9 +130,7 @@ def _save_knowledge_card_content_to_file(connection, card_id: uuid.UUID, generat
 
         # Construct a robust path to the 'backend/knowledge' directory.
         # This is relative to this file's location to avoid CWD issues.
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        # from backend/api/ go to backend/ and then knowledge/
-        knowledge_dir = os.path.join(current_dir, "..", "knowledge")
+        knowledge_dir = "knowledge"
         filepath = os.path.join(knowledge_dir, filename)
 
         # Ensure the knowledge directory exists
