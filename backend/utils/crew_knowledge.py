@@ -69,7 +69,8 @@ class VectorSearchTool(BaseTool):
         with get_engine().connect() as connection:
             # The 1 - (embedding <=> :query_embedding) is for cosine similarity
             # pgvector returns the cosine distance, so we subtract from 1 to get similarity
-            fts_query = " & ".join(search_query.split())
+            words = re.findall(r'\b\w+\b', search_query)
+            fts_query = " & ".join(words)
             query = text("""
                 SELECT
                     kcrv.text_chunk,
