@@ -26,6 +26,12 @@ def main():
     # Logging Configuration
     log_file = os.path.join(os.path.dirname(__file__), 'find_references.log')
     
+    # Force re-configuration to ensure we capture logs by clearing any existing handlers
+    root_logger = logging.getLogger()
+    if root_logger.handlers:
+        for handler in root_logger.handlers[:]:
+            root_logger.removeHandler(handler)
+
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s',
@@ -77,7 +83,15 @@ def main():
 
             for card_type in card_types_to_process:
                 table_name, column_name = table_map[card_type]
-                cur.execute(f"SELECT id, name FROM {table_name}")
+                # Select only items that have a knowledge card but NO attached references
+                query = f"""
+                    SELECT t.id, t.name 
+                    FROM {table_name} t
+                    JOIN knowledge_cards kc ON t.id = kc.{column_name}
+                    LEFT JOIN knowledge_card_to_references kcr ON kc.id = kcr.knowledge_card_id
+                    WHERE kcr.reference_id IS NULL
+                """
+                cur.execute(query)
                 items = cur.fetchall()
                 
                 logging.info(f"Processing {len(items)} items for type: {card_type}")

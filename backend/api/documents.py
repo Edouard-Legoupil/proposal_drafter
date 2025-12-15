@@ -73,7 +73,8 @@ async def generate_and_download_document(
             if form_data.get("Main Outcome"):
                 outcome_ids = form_data["Main Outcome"]
                 if outcome_ids:
-                    outcome_names = connection.execute(text("SELECT name FROM outcomes WHERE id = ANY(:ids)"), {"ids": outcome_ids}).scalars().all()
+                    outcome_uuids = [UUID(oid) for oid in outcome_ids]
+                    outcome_names = connection.execute(text("SELECT name FROM outcomes WHERE id = ANY(:ids)"), {"ids": outcome_uuids}).scalars().all()
                     form_data["Main Outcome"] = ", ".join(outcome_names) if outcome_names else form_data["Main Outcome"]
 
             if form_data.get("Country / Location(s)"):
