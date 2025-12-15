@@ -128,7 +128,8 @@ def _save_knowledge_card_content_to_file(connection, card_id: uuid.UUID, generat
             # Fallback for cards without a direct link
             filename = f"{slugify(card_summary)}.json"
 
-        # This is relative to this file's location to avoid CWD issues.
+        # This path is relative to this file's location, making it environment-agnostic.
+        # It navigates up two directories from `backend/api` to the project root, then into `knowledge`.
         knowledge_dir = os.path.join(os.path.dirname(__file__), "..", "..", "knowledge")
         filepath = os.path.join(knowledge_dir, filename)
 

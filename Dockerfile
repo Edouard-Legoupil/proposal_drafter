@@ -91,7 +91,7 @@ RUN mkdir -p /app/log /app/proposal-documents /app/knowledge \
     && chmod -R 755 /app/log /app/proposal-documents /app/knowledge
 
 # Copy the knowledge files (if any) for your app
-COPY ./backend/knowledge/combine_example.json /app/knowledge/
+COPY ./knowledge/combine_example.json /app/knowledge/
 
 # Ensure stdout/stderr logging works (azure collects container stdout/stderr automatically)
 # You generally don't need to chmod /dev/stdout|/dev/stderr; leave them as-is
