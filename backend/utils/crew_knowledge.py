@@ -163,17 +163,10 @@ class ContentGenerationCrew:
 
     @crew
     def create_crew(self) -> Crew:
-        # Ensure log directory exists
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        log_dir = os.path.join(current_dir, '..', '..', 'logs')
-        os.makedirs(log_dir, exist_ok=True)
-        log_file = os.path.join(log_dir, 'log_knowledge.txt')
-
         """Creates the ContentGenerationCrew"""
         return Crew(
             agents=[self.researcher(), self.writer()],
             tasks=[self.research_task(), self.write_task()],
             verbose=True,
-            process=Process.sequential,
-            output_log_file=log_file
+            process=Process.sequential
         )
