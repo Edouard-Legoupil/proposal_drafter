@@ -3,16 +3,22 @@ python-dotenv
 
 # ASGI web framework for building high-performance APIs with Python
 fastapi
+fastapi-sso
 
 # In-memory data structure store used as database, cache, and message broker
 redis
 
+
+
 # Framework for orchestrating role-playing AI agents to collaborate on tasks
 crewai>=0.48
 crewai[tools]
+crewai[azure]
+crewai[azure-ai-inference]
+pydantic[email]
 
 # Unified interface to call various LLM APIs (OpenAI, Anthropic, etc.) with consistent formatting
-litellm>=1.73.7
+litellm==1.75.0
 
 # Official Python library for OpenAI API (limited to versions below 1.99.9)
 openai<1.99.9

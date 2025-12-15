@@ -162,6 +162,21 @@ echo "Azure will probe: http://<container>:${BIND_PORT}/"
 echo "Ensure GET / returns HTTP 200"
 echo ""
 
+
+
+# -------------------------
+# Start SSH (for Azure tunnel) + App
+# -------------------------
+# Export current env vars to interactive shells (optional)
+eval "$(printenv | sed -n 's/^\([^=]\+\)=\(.*\)$/export \1=\2/p' \
+  | sed 's/\"/\\\"/g' | sed '/=/s//=\"/' | sed 's/$/\"/' >> /etc/profile)"
+
+echo "Starting sshd..."
+mkdir -p /var/run/sshd
+/usr/sbin/sshd -D &
+
+
+
 # -------------------------
 # START SERVER
 # -------------------------
@@ -187,6 +202,7 @@ echo ""
 
 # IMPORTANT: Remove the sleep and netstat checks that might cause delays
 # Azure has a startup timeout (default 230s), we need to start quickly
+
 
 # Launch Gunicorn with exec (replaces shell process)
 exec gunicorn backend.main:app \

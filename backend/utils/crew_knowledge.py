@@ -69,7 +69,8 @@ class VectorSearchTool(BaseTool):
         with get_engine().connect() as connection:
             # The 1 - (embedding <=> :query_embedding) is for cosine similarity
             # pgvector returns the cosine distance, so we subtract from 1 to get similarity
-            fts_query = " & ".join(search_query.split())
+            words = re.findall(r'\b\w+\b', search_query)
+            fts_query = " & ".join(words) 
             query = text("""
                 SELECT
                     kcrv.text_chunk,
@@ -164,16 +165,16 @@ class ContentGenerationCrew:
     @crew
     def create_crew(self) -> Crew:
         # Ensure log directory exists
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        log_dir = os.path.join(current_dir, '..', '..', 'logs')
-        os.makedirs(log_dir, exist_ok=True)
-        log_file = os.path.join(log_dir, 'log_knowledge.txt')
+        # current_dir = os.path.dirname(os.path.abspath(__file__))
+        # log_dir = os.path.join(current_dir, '..', '..', 'logs')
+        # os.makedirs(log_dir, exist_ok=True)
+        # log_file = os.path.join(log_dir, 'log_knowledge.txt')
 
         """Creates the ContentGenerationCrew"""
         return Crew(
             agents=[self.researcher(), self.writer()],
             tasks=[self.research_task(), self.write_task()],
             verbose=True,
-            process=Process.sequential,
-            output_log_file=log_file
+            process=Process.sequential #,
+            # output_log_file=log_file
         )

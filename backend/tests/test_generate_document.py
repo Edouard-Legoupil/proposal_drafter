@@ -45,7 +45,7 @@ async def test_generate_document(authenticated_client, db_session, mocker):
         """),
         {
             "id": proposal_id, "user_id": user_id,
-            "form_data": json.dumps({"Project Draft Short name": "Disaster Relief"}),
+            "form_data": json.dumps({"Project Draft Short name": "Disaster Relief", "Main Outcome": [str(uuid.uuid4())]}),
             "project_description": "Testing document generation.",
                 "generated_sections": json.dumps({
                     "Summary": "Content",

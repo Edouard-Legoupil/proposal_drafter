@@ -23,11 +23,12 @@ import sys
 log_dir = Path(__file__).parent / "log"
 log_dir.mkdir(exist_ok=True)
 log_file = log_dir / "app.log"
-
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 handler = logging.FileHandler(log_file)
 handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 logging.getLogger().addHandler(handler)
+
+
 
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))

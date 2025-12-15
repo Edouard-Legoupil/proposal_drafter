@@ -110,6 +110,30 @@ COPY supervisor/start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
 # ------------------------------------------------
+# Allow for SSH
+# ------------------------------------------------
+
+
+# Install OpenSSH server
+RUN apt-get update && apt-get install -y --no-install-recommends openssh-server \
+ && rm -rf /var/lib/apt/lists/*
+
+# Generate host keys and prepare runtime dir
+RUN ssh-keygen -A && mkdir -p /var/run/sshd
+
+# Azure tunnel expects this credential (used only via the localhost tunnel)
+RUN echo "root:Docker!" | chpasswd
+
+# Provide Azure-compatible SSH config (Port 2222, compatible ciphers/MACs)
+COPY sshd_config /etc/ssh/sshd_config
+
+
+#  expose 2222
+COPY sshd_config /etc/ssh/sshd_config
+EXPOSE 2222
+
+
+# ------------------------------------------------
 # Default command
 # ------------------------------------------------
 CMD ["/usr/local/bin/start.sh"]
