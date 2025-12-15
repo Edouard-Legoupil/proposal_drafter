@@ -297,7 +297,7 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
                         else:
                             logger.warning(f"No content found for knowledge card {card_id} to create file.")
                     else:
-                        knowledge_file_paths.append(filename)
+                        knowledge_file_paths.append(filepath)
                         
         # The JSONKnowledgeSource expects relative paths from the `knowledge` directory
         crew_instance = ProposalCrew(knowledge_file_paths=knowledge_file_paths).generate_proposal_crew()
