@@ -267,7 +267,7 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
                     filename = f"{link_type}-{slugify(link_label)}-{slugify(card_summary)}.json" if link_type and link_id else f"{slugify(card_summary)}.json"
                     
                     # Correctly construct the full path to the knowledge file
-                    knowledge_dir = "knowledge"
+                    knowledge_dir = os.path.join(os.path.dirname(__file__), "..", "..", "knowledge")
                     filepath = os.path.join(knowledge_dir, filename)
                     
                     logger.info(f"Associating knowledge file: {filename} / {filepath} for proposal {proposal_id}")
