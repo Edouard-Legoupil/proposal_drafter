@@ -9,7 +9,10 @@
             "Strictly base all content on the provided inputs and knowledge base.",
             "Do not invent or hallucinate facts, figures, or dates.",
             "If information is missing, explicitly state that it is not available in the context.",
-            "Ensure tone, style, and formatting match a professional humanitarian proposal."
+            "Ensure tone, style, and formatting match a professional humanitarian proposal.",
+            "when referencing donor, use donor name and never  donor_id",
+            "when referencing outcomes, use outcome name and never  outcome_id",
+            "when referencing, field context, use field_context name and never field context_id"
         ]
     },
     "sections": [
@@ -42,7 +45,7 @@
                 },
                 {
                     "row_title": "Location",
-                    "instructions": "Location (within country)"
+                    "instructions": "if provided Location (within country)"
                 },
                 {
                     "row_title": "Implementation Period",
@@ -55,10 +58,6 @@
                 {
                     "row_title": "Outcome Area(s)",
                     "instructions": "Outcome Area(s)"
-                },
-                {
-                    "row_title": "Tags",
-                    "instructions": "Tags"
                 }
             ]
         },

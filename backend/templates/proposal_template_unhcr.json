@@ -8,16 +8,19 @@
             "Strictly base all content on the provided inputs and knowledge base.",
             "Do not invent or hallucinate facts, figures, or dates.",
             "If information is missing, explicitly state that it is not available in the context.",
-            "Ensure tone, style, and formatting match a professional humanitarian proposal."
+            "Ensure tone, style, and formatting match a professional humanitarian proposal.",
+            "when referencing donor, use donor name and never  donor_id",
+            "when referencing outcomes, use outcome name and never  outcome_id",
+            "when referencing, field context, use field_context name and never field context_id"
         ]
     },
     "sections": [
         {
-            "section_name": "project_information",
+            "section_name": "Project Information",
             "section_label": "Project Information",
             "format_type": "table",
             "mandatory": true,
-            "instructions": "Fill the table strictly using the provided project information. Do not infer or invent data.",
+            "instructions": "Fill the table .",
             "columns": [
                 {
                     "name": "Field",
@@ -36,16 +39,12 @@
                     "instructions": "Enter a concise title (max 200 characters) that clearly reflects the purpose and scope of the project."
                 },
                 {
-                    "row_title": "Project type",
-                    "instructions": "Select the primary sector/cluster relevant to this project, aligned with CERF sector classifications."
-                },
-                {
-                    "row_title": "Secondary project type",
-                    "instructions": "Indicate any secondary sector/cluster addressed by the project, if applicable."
+                    "row_title": "Project Outccome",
+                    "instructions": "Select the outcomes relevant to this project, aligned with CERF sector classifications."
                 },
                 {
                     "row_title": "Geographical Coverage",
-                    "instructions": "Specify country and subnational locations (regions, districts, cities) where activities will be implemented."
+                    "instructions": "Specify country and subnational locations names (regions, districts, cities) where activities will be implemented."
                 },
                 {
                     "row_title": "Executing agency",
@@ -58,10 +57,6 @@
                 {
                     "row_title": "Partner(s)",
                     "instructions": "List implementing sub-partners (e.g. NGOs, national/local actors) and describe their role where relevant."
-                },
-                {
-                    "row_title": "Management site",
-                    "instructions": "Identify the UNHCR Field or Sub-Office responsible for implementation oversight."
                 },
                 {
                     "row_title": "Duration",

@@ -69,10 +69,10 @@ The app use a vector store for the embeddings. The vector store is a PostgreSQL 
 
 ```bash
 az postgres flexible-server update \
-    --server-name <db-server-name> \
-    --resource-group <resource-group-name> \
-    --tier GeneralPurpose \
-    --sku-name standard_d2ds_v5
+  --server-name <db-server-name> \
+  --resource-group <resource-group-name> \
+  --tier GeneralPurpose \
+  --sku-name standard_d2ds_v5
 
 # now enable the correct extensions
 az postgres flexible-server parameter set \
@@ -84,11 +84,11 @@ az postgres flexible-server parameter set \
 
 ```bash
 az postgres flexible-server db create \
-    --server-name <db-server-name> \
-    --resource-group <resource-group-name> \
-    --database-name <db-name> \
-    --charset utf8 \
-    --collation en_US.utf8
+  --server-name <db-server-name> \
+  --resource-group <resource-group-name> \
+  --database-name <db-name> \
+  --charset utf8 \
+  --collation en_US.utf8
 ```
 
 **Configure PostgreSQL firewall.**
@@ -139,10 +139,10 @@ ACR_PASS=$(az acr credential show --name propalgen --query "passwords[0].value" 
 az webapp config container set \
   --name <app-name> \
   --resource-group <resource-group-name> \
-  --docker-custom-image-name propalgen.azurecr.io/backend:latest \
-  --docker-registry-server-url https://propalgen.azurecr.io \
-  --docker-registry-server-user $ACR_USER \
-  --docker-registry-server-password $ACR_PASS
+  ---container-image-name propalgen.azurecr.io/backend:latest \
+  --container-registry-server-url https://propalgen.azurecr.io \
+  --container-registry-server-user $ACR_USER \
+  --container-registry-server-password $ACR_PASS
 ```
 
 To check app deployment run
@@ -171,6 +171,29 @@ or visit the debug console: https://<app-name>.scm.azurewebsites.net/DebugConsol
  **Application is Ready**:
 
 Once the deployment is complete and the image is pushed, you may manually restart the app from the Azure Portal, the application will be then available at the URL provided in the portal.
+
+To SSH in the app:
+
+```bash
+# Make sure remote debugging is OFF; it can block the tunnel
+az webapp config set \
+  --resource-group <resource-group-name> \
+  --name <app-name> \
+  --remote-debugging-enabled false
+
+az webapp ssh \
+  --name <app-name> \
+  --resource-group <resource-group-name>
+
+# Start the tunnel
+az webapp create-remote-connection \
+  --subscription <subscription-id> \
+  --resource-group <resource-group-name> \
+  --name propalgen
+
+# In another terminal, use the printed local port:
+ssh root@127.0.0.1 -p
+```
 
 
 ---

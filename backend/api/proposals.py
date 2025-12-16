@@ -219,6 +219,14 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
         associated_knowledge_cards = session_data.get("associated_knowledge_cards")
         all_sections = {}
 
+
+        # Get the absolute path to the knowledge directory
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        knowledge_dir = os.path.join(current_dir, "..",   "knowledge")
+        
+        # Ensure the knowledge directory exists
+        os.makedirs(knowledge_dir, exist_ok=True)
+
         if associated_knowledge_cards:
             with get_engine().connect() as connection:
                 for card in associated_knowledge_cards:
@@ -263,11 +271,10 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
                         link_type, link_id = "field_context", card_details.field_context_id
                         link_label = card_details.field_context_name
 
-
+                    # Create the filename
                     filename = f"{link_type}-{slugify(link_label)}-{slugify(card_summary)}.json" if link_type and link_id else f"{slugify(card_summary)}.json"
                     
-                    # Correctly construct the full path to the knowledge file
-                    knowledge_dir = os.path.join(os.path.dirname(__file__), "..", "knowledge")
+                    # Construct the full path to the knowledge file
                     filepath = os.path.join(knowledge_dir, filename)
                     
                     logger.info(f"Associating knowledge file: {filename} / {filepath} for proposal {proposal_id}")

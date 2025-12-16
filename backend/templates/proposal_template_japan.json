@@ -25,12 +25,15 @@
             "Strictly base all content on the provided inputs and knowledge base.",
             "Do not invent or hallucinate facts, figures, or dates.",
             "If information is missing, explicitly state that it is not available in the context.",
-            "Ensure tone, style, and formatting match a professional humanitarian proposal."
+            "Ensure tone, style, and formatting match a professional humanitarian proposal.",
+            "when referencing donor, use donor name and never  donor_id",
+            "when referencing outcomes, use outcome name and never  outcome_id",
+            "when referencing, field context, use field_context name and never field context_id"
         ]
     },
     "sections": [
         {
-            "section_name": "project_information",
+            "section_name": "Project Information",
             "section_label": "Project Information",
             "format_type": "table",
             "mandatory": true,
@@ -53,12 +56,8 @@
                     "instructions": "Enter a concise title (max 200 characters) that clearly reflects the purpose and scope of the project."
                 },
                 {
-                    "row_title": "Project type",
-                    "instructions": "Select the primary sector/cluster relevant to this project, aligned with CERF sector classifications."
-                },
-                {
-                    "row_title": "Secondary project type",
-                    "instructions": "Indicate any secondary sector/cluster addressed by the project, if applicable."
+                    "row_title": "Project Outcomes",
+                    "instructions": "Select the outcomes relevant to this project, aligned with CERF sector classifications."
                 },
                 {
                     "row_title": "Geographical Coverage",
@@ -82,11 +81,11 @@
                 },
                 {
                     "row_title": "Duration",
-                    "instructions": "Specify project duration: either 6 months for Rapid Response (RR) or 12 months for Underfunded Emergencies (UFE)."
+                    "instructions": "Specify project duration."
                 },
                 {
                     "row_title": "Budget",
-                    "instructions": "Indicate total amount requested from CERF and breakdown by sector(s). Budget must match Excel template."
+                    "instructions": "Indicate total amount requested and breakdown by sector(s)."
                 }
             ]
         },

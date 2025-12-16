@@ -17,12 +17,15 @@
             "Do not invent or hallucinate facts, figures, or dates.",
             "If information is missing, explicitly state that it is not available in the context.",
             "Ensure tone, style, and formatting match a professional humanitarian proposal.",
-            "For internal controls, audits, and procurement, strictly use standard UNHCR provisions. Do not invent new policies."
+            "For internal controls, audits, and procurement, strictly use standard UNHCR provisions. Do not invent new policies.",
+            "when referencing donor, use donor name and never  donor_id",
+            "when referencing outcomes, use outcome name and never  outcome_id",
+            "when referencing, field context, use field_context name and never field context_id"
         ]
     },
     "sections": [
         {
-            "section_name": "project_information",
+            "section_name": "Project Information",
             "section_label": "Project Information",
             "format_type": "table",
             "mandatory": true,
@@ -41,65 +44,61 @@
             ],
             "rows": [
                 {
-                    "row_title": "project_title",
+                    "row_title": "Project Title",
                     "instructions": "Project Title"
                 },
                 {
-                    "row_title": "country",
+                    "row_title": "Country",
                     "instructions": "Country"
                 },
                 {
-                    "row_title": "funding_window",
+                    "row_title": "Funding Window",
                     "instructions": "PBF Funding Window (IRF/PRF/YPI/GPI)"
                 },
                 {
-                    "row_title": "duration_months",
+                    "row_title": "Project Duration (months)",
                     "instructions": "Project Duration (months)"
                 },
                 {
-                    "row_title": "total_budget_usd",
+                    "row_title": "Total Budget (USD)",
                     "instructions": "Total Budget (USD)"
                 },
                 {
-                    "row_title": "tranche_1_amount_usd",
+                    "row_title": "1st tranche (70%) \u2013 amount (USD)",
                     "instructions": "PBF 1st tranche (70%) \u2013 amount (USD)"
                 },
                 {
-                    "row_title": "tranche_2_amount_usd",
+                    "row_title": "2nd tranche (30%) \u2013 amount (USD)",
                     "instructions": "PBF 2nd tranche (30%) \u2013 amount (USD)"
                 },
                 {
-                    "row_title": "tranche_3_amount_usd",
+                    "row_title": "3rd tranche (if applicable) \u2013 amount (USD)",
                     "instructions": "PBF 3rd tranche (if applicable) \u2013 amount (USD)"
                 },
                 {
-                    "row_title": "runos",
+                    "row_title": "Recipient UN Organizations (RUNOs)",
                     "instructions": "Recipient UN Organizations (RUNOs)"
                 },
                 {
-                    "row_title": "coordinating_agency",
+                    "row_title": "Convening/Coordinating Agency",
                     "instructions": "Convening/Coordinating Agency"
                 },
                 {
-                    "row_title": "steering_committee_summary",
-                    "instructions": "In-country consultations & PBF Steering Committee summary"
-                },
-                {
-                    "row_title": "gender_marker_score",
+                    "row_title": "Gender Marker score (1/2/3)",
                     "instructions": "PBF Gender Marker score (1/2/3)"
                 },
                 {
-                    "row_title": "gender_budget_allocation_usd",
+                    "row_title": "Budget allocated to GEWE (USD)",
                     "instructions": "Budget allocated to GEWE (USD)"
                 },
                 {
-                    "row_title": "gewe_percent",
+                    "row_title": "% of total budget for GEWE",
                     "instructions": "% of total budget for GEWE"
                 }
             ]
         },
         {
-            "section_name": "context_rationale",
+            "section_name": "Context Rationale",
             "section_label": "I. Peacebuilding Context and Rationale for PBF support",
             "format_type": "text",
             "mandatory": true,
@@ -107,7 +106,7 @@
             "instructions": "Describe conflict risks, social cohesion challenges, inequalities, institutional capacity gaps using ONLY provided context; provide disaggregated data (women, youth, migrants) if available. Justify PBF catalytic support based on the plan."
         },
         {
-            "section_name": "project_focus_approach",
+            "section_name": "Project Focus and Approach",
             "section_label": "II.a Project focus and approach",
             "format_type": "text",
             "mandatory": true,
@@ -115,7 +114,7 @@
             "instructions": "Summarize the strategic approach, actors involved, and how interventions strengthen social cohesion and governance strictly as described in the project design."
         },
         {
-            "section_name": "theory_of_change",
+            "section_name": "Theory of Change",
             "section_label": "Project-level Theory of Change",
             "format_type": "text",
             "mandatory": true,
@@ -123,7 +122,7 @@
             "instructions": "Use the formulation: 'If we do X, then we expect Y, because Z' to link activities to peacebuilding outcomes based on the provided Theory of Change. Do not invent links."
         },
         {
-            "section_name": "outcomes_outputs",
+            "section_name": "Key Outcomes, Outputs and Activities",
             "section_label": "Key Outcomes, Outputs and Activities",
             "format_type": "table",
             "mandatory": true,
@@ -157,7 +156,7 @@
             ]
         },
         {
-            "section_name": "targeting",
+            "section_name": "Targeting",
             "section_label": "Targeting (youth & other stakeholders)",
             "format_type": "text",
             "mandatory": true,
@@ -165,7 +164,7 @@
             "instructions": "Define geographic scope, youth age ranges, criteria and selection mechanisms; include women and marginalized populations; outline engagement with institutions, media, CSOs. Ensure do-no-harm and incentives for participation."
         },
         {
-            "section_name": "risk_management",
+            "section_name": "Risk Management",
             "section_label": "Risk management (with Do No Harm)",
             "format_type": "table",
             "mandatory": true,
@@ -207,7 +206,7 @@
             ]
         },
         {
-            "section_name": "monitoring_evaluation",
+            "section_name": "Monitoring Evaluation",
             "section_label": "Monitoring & Evaluation (RBM, learning, adaptive)",
             "format_type": "text",
             "mandatory": true,
@@ -215,7 +214,7 @@
             "instructions": "Describe baseline, indicator tracking, frequency, roles; alignment with UNSDCF, SDGs; knowledge management; evaluation per PBF policy; budget share for M&E."
         },
         {
-            "section_name": "admin_arrangements",
+            "section_name": "Administrative Arrangements",
             "section_label": "Administrative arrangements (RUNOs & AA/MPTF)",
             "format_type": "text",
             "mandatory": true,
@@ -223,7 +222,7 @@
             "instructions": "Outline Administrative Agent (MPTF Office) roles, RUNO accountability, reporting schedule (semi-annual, annual, final), closure, audit, terrorism financing provisions, and public disclosure."
         },
         {
-            "section_name": "budget_overview",
+            "section_name": "Budget Overview",
             "section_label": "IV. Project budget overview",
             "format_type": "text",
             "mandatory": true,
@@ -231,7 +230,7 @@
             "instructions": "Summarize staffing, consultancies, grants for community projects, materials/equipment share (<15%), vehicles if any (justification), and GEWE allocation (% and USD)."
         },
         {
-            "section_name": "nuno_eligibility",
+            "section_name": "Annex: NUNO Eligibility",
             "section_label": "Annex: NUNO eligibility (if CSOs receive PBF funds directly)",
             "format_type": "table",
             "mandatory": false,
