@@ -660,6 +660,9 @@ async def get_proposals_for_review(current_user: dict = Depends(get_current_user
     Lists all proposals assigned to the current user for review, both pending and completed.
     """
     user_id = current_user["user_id"]
+    if "project reviewer" not in current_user.get("roles", []):
+        return {"message": "User is not a project reviewer.", "reviews": []}
+
     try:
         with get_engine().connect() as connection:
             query = text("""
@@ -751,6 +754,9 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
     """
     Lists all drafts for the current user, including sample templates.
     """
+    if "proposal writer" not in current_user.get("roles", []):
+        return {"message": "User is not a proposal writer.", "drafts": []}
+
     logger.info(f"Attempting to list drafts for user: {current_user['user_id']}")
     user_id = current_user["user_id"]
     draft_list = []
@@ -1054,7 +1060,7 @@ async def upload_submitted_pdf(proposal_id: uuid.UUID, file: UploadFile = File(.
             template_name = connection.execute(
                 text("SELECT template_name FROM proposals WHERE id = :id"),
                 {"id": proposal_id}
-            ).scalar() or "proposal_template_unhcr.json"
+            ).scalar() or "unhcr_proposal_template.json"
 
             proposal_template = load_proposal_template(template_name)
             section_titles = [section['section_name'] for section in proposal_template.get('sections', [])]
