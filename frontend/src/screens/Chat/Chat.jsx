@@ -396,6 +396,9 @@ export default function Chat (props)
         }, [generateLoading]);
 
         async function fetchAndAssociateKnowledgeCards() {
+                if (associatedKnowledgeCards.length > 0) {
+                        return associatedKnowledgeCards;
+                }
                 const donorId = formData["Targeted Donor"].value;
                 const outcomeIds = formData["Main Outcome"].value;
                 const fieldContextId = formData["Country / Location(s)"].value;
@@ -452,7 +455,7 @@ export default function Chat (props)
                 setFormExpanded(false);
 
                 try {
-                        const finalAssociatedCards = await fetchAndAssociateKnowledgeCards();
+                        const finalAssociatedCards = (await fetchAndAssociateKnowledgeCards()).filter(card => card.generated_section != null);
                         const updatedFormData = { ...Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])) };
 
                         const createNewOption = async (endpoint, value) => {
