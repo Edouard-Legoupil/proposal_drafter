@@ -25,7 +25,7 @@ First you need to obtain Azure Command line tool
 
 2. **Create a Resource Group:**
    ```bash
-   az group create --name <resource-group-name> --location <location>  --tags Environment=Dev
+   az group create --name <RESOURCE_GROUP> --location <LOCATION>  --tags Environment=Dev
    az provider register --namespace Microsoft.CognitiveServices
    az provider register --namespace Microsoft.OpenAI
    ```
@@ -55,8 +55,8 @@ In Azure Web App, set all environment variables as per backend/.env plus
 
 ```bash
 az webapp config appsettings set \
-  --resource-group <resource-group-name> \
-  --name <app-name> \
+  --resource-group <RESOURCE_GROUP> \
+  --name <WEBAPP_NAME> \
   --settings WEBSITES_PORT=8080 WEBSITES_CONTAINER_START_TIME_LIMIT=1800
 ```
 
@@ -69,24 +69,24 @@ The app use a vector store for the embeddings. The vector store is a PostgreSQL 
 
 ```bash
 az postgres flexible-server update \
-  --server-name <db-server-name> \
-  --resource-group <resource-group-name> \
+  --server-name <DB_SERVER_NAME> \
+  --resource-group <RESOURCE_GROUP> \
   --tier GeneralPurpose \
   --sku-name standard_d2ds_v5
 
 # now enable the correct extensions
 az postgres flexible-server parameter set \
-  --server-name <db-server-name> \
-  --resource-group <resource-group-name> \
+  --server-name <DB_SERVER_NAME> \
+  --resource-group <RESOURCE_GROUP> \
   --name azure.extensions \
   --value pgcrypto,vector
 ```
 
 ```bash
 az postgres flexible-server db create \
-  --server-name <db-server-name> \
-  --resource-group <resource-group-name> \
-  --database-name <db-name> \
+  --server-name <DB_SERVER_NAME> \
+  --resource-group <RESOURCE_GROUP> \
+  --database-name <DB_NAME> \
   --charset utf8 \
   --collation en_US.utf8
 ```
@@ -95,31 +95,60 @@ az postgres flexible-server db create \
 A Virtual Network (VNet) in Azure is like a private network in the cloud. It allows resources (VMs, databases, Bastion) to communicate securely without exposing them to the public internet.
 Your PostgreSQL Flexible Server can be configured with private access, meaning it only accepts connections from resources inside the same VNet (or peered VNets).
 
+ * VNet = private network
+ * Private Endpoint = private door to the DB
+ * DNS = phonebook
+ * Jump VM = controlled entry point
+ * Bastion = secure remote access
+
+
 ```bash
-# Create VNET
+############################################
+# NETWORK FOUNDATION
+############################################
+
+# Create a Virtual Network (VNet), which is a private network in Azure
+# Think of this as your own isolated LAN in the cloud.
+# It uses the 10.0.0.0/16 address space and already includes:
+# - one subnet dedicated to the database private endpoint
 az network vnet create \
   --resource-group <RESOURCE_GROUP> \
   --name <VNET_NAME> \
-  --address-prefix 10.0.0.0/16 \
+  --address-prefixes 10.0.0.0/16 \
   --subnet-name dbSubnet \
-  --subnet-prefix 10.0.1.0/24
+  --subnet-prefixes 10.0.1.0/24
 
 
-# Add a subnet for Bastion with a different address prefix
+# Add a subnet that is *exclusively* reserved for Azure Bastion.
+# Azure Bastion requires:
+# - a dedicated subnet
+# - the subnet name MUST be exactly "AzureBastionSubnet"
+# Bastion will later be used to securely SSH into the VM without public IPs.
 az network vnet subnet create \
+  --resource-group <RESOURCE_GROUP> \
+  --vnet-name <VNET_NAME> \
   --name AzureBastionSubnet \
-  --resource-group <RESOURCE_GROUP> \
-  --vnet-name <VNET_NAME> \
-  --address-prefix 10.0.2.0/24
+  --address-prefixes 10.0.2.0/24
 
-# Add a subnet for the jump VM with a different address prefix
+
+# Add a subnet for the jump VM (also called a bastion host or jump box).
+# This VM will be the only machine allowed to talk to the database directly.
 az network vnet subnet create \
-  --name vmSubnet \
   --resource-group <RESOURCE_GROUP> \
   --vnet-name <VNET_NAME> \
-  --address-prefixes "10.0.3.0/24"
+  --name vmSubnet \
+  --address-prefixes 10.0.3.0/24
 
-# Create Private Endpoint in Your VNet to links the DB to your VNet:
+
+############################################
+# PRIVATE ACCESS TO POSTGRESQL
+############################################
+
+# Create a Private Endpoint for the PostgreSQL Flexible Server.
+# This does 3 important things:
+# 1. Gives the database a private IP inside the VNet
+# 2. Removes the need for any public database access
+# 3. Makes the database reachable ONLY from inside this VNet
 az network private-endpoint create \
   --name <PE_NAME> \
   --resource-group <RESOURCE_GROUP> \
@@ -128,15 +157,29 @@ az network private-endpoint create \
   --private-connection-resource-id $(az postgres flexible-server show \
       --resource-group <RESOURCE_GROUP> \
       --name <DB_NAME> \
-      --query "id" -o tsv) \
-  --group-id postgres
+      --query id -o tsv) \
+  --group-id postgres \
+  --connection-name postgres-pe-connection
 
-##  Configure Private DNS Zone linked to the VNet
 
+############################################
+# PRIVATE DNS (NAME RESOLUTION)
+############################################
+
+# Without this DNS setup, the database hostname would still resolve
+# to a public IP (which we do NOT want).
+# These steps ensure:
+# *.postgres.database.azure.com → private IP inside the VNet
+
+# Create a Private DNS Zone for PostgreSQL private endpoints
 az network private-dns zone create \
   --resource-group <RESOURCE_GROUP> \
   --name privatelink.postgres.database.azure.com
 
+
+# Link the Private DNS Zone to the VNet.
+# This allows any resource inside the VNet to resolve
+# PostgreSQL hostnames to their private IPs automatically.
 az network private-dns link vnet create \
   --resource-group <RESOURCE_GROUP> \
   --zone-name privatelink.postgres.database.azure.com \
@@ -144,6 +187,10 @@ az network private-dns link vnet create \
   --virtual-network <VNET_NAME> \
   --registration-enabled false
 
+
+# Associate the Private Endpoint with the DNS zone.
+# This step creates the actual DNS A-record pointing
+# the database hostname to the private IP.
 az network private-endpoint dns-zone-group create \
   --resource-group <RESOURCE_GROUP> \
   --endpoint-name <PE_NAME> \
@@ -151,31 +198,61 @@ az network private-endpoint dns-zone-group create \
   --private-dns-zone privatelink.postgres.database.azure.com \
   --zone-name privatelink.postgres.database.azure.com
 
-##  Create Jump VM
+
+############################################
+# JUMP VM (CONTROLLED ACCESS POINT)
+############################################
+
+# Create a small Linux VM that lives inside the VNet.
+# This VM:
+# - has NO public IP
+# - can access the private database
+# - is only reachable through Azure Bastion
 az vm create \
-  --resource-group <RG_NAME> \
-   --name jumpVM \
+  --resource-group <RESOURCE_GROUP> \
+  --name jumpVM \
   --image UbuntuLTS \
   --size Standard_B1s \
   --admin-username <vm_user> \
   --generate-ssh-keys \
   --vnet-name <VNET_NAME> \
-  --subnet vmSubnet \
+  --subnet vmSubnet
 
-## Create Bastion Public IP
+
+############################################
+# AZURE BASTION (SECURE REMOTE ACCESS)
+############################################
+
+# Create a public IP for Azure Bastion.
+# This is the ONLY public-facing component in the setup.
+# Bastion uses this IP to provide secure browser/CLI access to the VM.
 az network public-ip create \
-  --resource-group <RG_NAME> \
+  --resource-group <RESOURCE_GROUP> \
   --name BastionPublicIP \
-  --sku Standard
+  --sku Standard \
+  --location <LOCATION>
 
-##  Deploy Bastion
+
+# Deploy Azure Bastion into the VNet.
+# Bastion allows you to SSH into the jump VM:
+# - without exposing the VM to the internet
+# - without managing inbound firewall rules
 az network bastion create \
-  --name  --name <BASTION_NAME> \
-  --resource-group <RG_NAME> \
+  --resource-group <RESOURCE_GROUP> \
+  --name <BASTION_NAME> \
   --vnet-name <VNET_NAME> \
+  --public-ip-address BastionPublicIP \
+  --location <LOCATION>
 
 
-## Open Bastion Tunnel
+############################################
+# LOCAL ACCESS VIA SSH TUNNELS
+############################################
+
+# Open a Bastion tunnel from your local machine to the jump VM.
+# This forwards:
+#   localhost:2022 → jumpVM:22
+# allowing you to SSH as if the VM were local.
 az network bastion tunnel \
   --name <BASTION_NAME> \
   --resource-group <RESOURCE_GROUP> \
@@ -183,41 +260,15 @@ az network bastion tunnel \
   --resource-port 22 \
   --port 2022
 
-## SSH Tunnel to PostgreSQL
-az extension add --name ssh
 
-
-az ssh vm \
-  --name <db-server-name> \
-  --resource-group <RESOURCE_GROUP> \
-  --local-port 5432:<POSTGRES_PRIVATE_IP>:5432
-
-ssh -i ~/.ssh/id_rsa \
-    -p 2022 \
-    -L 5432:porposalgen.postgres.database.azure.com:5432 \
-    <vm_user>@localhost \
-    -N
+# Create a local SSH tunnel to PostgreSQL *through* the jump VM.
+# This forwards:
+#   localhost:5432 → PostgreSQL private endpoint
+# Result: local tools can connect to the database as if it were local.
+ssh -L 5432:<DB_NAME>.postgres.database.azure.com:5432 \
+    <vm_user>@127.0.0.1 -p 2022
 
 ```
-
-**Configure PostgreSQL firewall.**
-
-You can do this in the Azure portal, or by using the Azure CLI:
-
-```bash
-
-
-
-az postgres flexible-server firewall-rule create \
-  --resource-group <your-resource-group> \
-  --name <your-postgres-server-name> \
-  --rule-name AllowMyIP \
-  --start-ip-address <your-ip-address> \
-  --end-ip-address <your-ip-address>
-```
-
-
-
 
 Once this is done, you can connect to the database and create the tables. Then go to the `backend` directory and run the back office initialisation scripts `backend/scripts/README.md`.
 
@@ -228,56 +279,83 @@ From the root of the project, build the Docker image for the backend:
 
 ```bash
 cd ../
-docker build --no-cache -t <acr-name>.azurecr.io/backend:latest .
+docker build --no-cache -t <ACR_NAME>.azurecr.io/backend:latest .
 
 #Confirm it starts and responds.
-docker run --env-file ./backend/.env -p 8080:8080 <acr-name>.azurecr.io/backend:latest
+docker run --env-file ./backend/.env -p 8080:8080 <ACR_NAME>.azurecr.io/backend:latest
 ```
-*Note: Replace `<acr-name>` with the name of the Azure Container Registry created by the Bicep template.*
+*Note: Replace `<ACR_NAME>` with the name of the Azure Container Registry created by the Bicep template.*
 
 Login to ACR:
 ```bash
-az acr login --name <acr-name>
+az acr login --name <ACR_NAME>
 ```
 
 Push the image to ACR:
 ```bash
-docker push <acr-name>.azurecr.io/backend:latest
+docker push <ACR_NAME>.azurecr.io/backend:latest
 
 ## Ensure that the web app can log in to the ACR
 ACR_USER=$(az acr credential show --name propalgen --query "username" -o tsv)
 ACR_PASS=$(az acr credential show --name propalgen --query "passwords[0].value" -o tsv)
 az webapp config container set \
-  --name <app-name> \
-  --resource-group <resource-group-name> \
-  ---container-image-name propalgen.azurecr.io/backend:latest \
-  --container-registry-server-url https://propalgen.azurecr.io \
+  --name <WEBAPP_NAME> \
+  --resource-group <RESOURCE_GROUP> \
+  ---container-image-name <ACR_NAME>.azurecr.io/backend:latest \
+  --container-registry-server-url https://<ACR_NAME>.azurecr.io \
   --container-registry-server-user $ACR_USER \
   --container-registry-server-password $ACR_PASS
 ```
+
+  Secure the app throug the virtual network
+
+```bash
+############################################
+# ALLOW AZURE WEB APP TO REACH THE PRIVATE DB
+############################################
+
+# Integrate the Azure Web App with the VNet.
+# This allows the Web App to:
+# - send traffic INTO the VNet
+# - reach private resources (like the PostgreSQL private endpoint)
+# Without this, the Web App cannot see private IPs at all.
+#
+# NOTE:
+# - This does NOT expose the Web App publicly
+# - This does NOT require inbound rules
+# - It only enables outbound access to the VNet
+az webapp vnet-integration add \
+  --resource-group <RESOURCE_GROUP> \
+  --name <WEBAPP_NAME> \
+  --vnet <VNET_NAME> \
+  --subnet vmSubnet
+``` 
 
 To check app deployment run
 
 ```bash
 az webapp log config \
-  --name <app-name> \
-  --resource-group <resource-group-name> \
+  --name <WEBAPP_NAME> \
+  --resource-group <RESOURCE_GROUP> \
   --application-logging filesystem \
   --level information
 
 az webapp log tail \
-  --name <app-name> \
-  --resource-group <resource-group-name> \
+  --name <WEBAPP_NAME> \
+  --resource-group <RESOURCE_GROUP> \
   | tee  logs/azure_deployment_logfile.txt
 
 # or get a zip of the logs
 az webapp log download \
-  --name <app-name> \
-  --resource-group <resource-group-name> \
+  --name <WEBAPP_NAME> \
+  --resource-group <RESOURCE_GROUP> \
   --log-file logs/propalgen_logs_$(date +%Y%m%d_%H%M%S).zip
 ```   
+
+
+
  
-or visit the debug console: https://<app-name>.scm.azurewebsites.net/DebugConsole 
+or visit the debug console: https://<WEBAPP_NAME>.scm.azurewebsites.net/DebugConsole 
 
  **Application is Ready**:
 
@@ -289,11 +367,11 @@ To SSH in the app:
 # Make sure remote debugging is OFF; it can block the tunnel
 az webapp config set \
   --resource-group <resource-group-name> \
-  --name <app-name> \
+  --name <WEBAPP_NAME> \
   --remote-debugging-enabled false
 
 az webapp ssh \
-  --name <app-name> \
+  --name <WEBAPP_NAME> \
   --resource-group <resource-group-name>
 
 # Start the tunnel
