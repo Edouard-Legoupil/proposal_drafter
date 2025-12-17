@@ -91,11 +91,99 @@ az postgres flexible-server db create \
   --collation en_US.utf8
 ```
 
-**Configure PostgreSQL firewall.**
-
-You can do this in the Azure portal, or by using the Azure CLI:
+**Configure a Virtual Network (VNet)**
+A Virtual Network (VNet) in Azure is like a private network in the cloud. It allows resources (VMs, databases, Bastion) to communicate securely without exposing them to the public internet.
+Your PostgreSQL Flexible Server can be configured with private access, meaning it only accepts connections from resources inside the same VNet (or peered VNets).
 
 ```bash
+# Create VNET
+az network vnet create \
+  --resource-group <RESOURCE_GROUP> \
+  --name <VNET_NAME> \
+  --address-prefix 10.0.0.0/16 \
+  --subnet-name dbSubnet \
+  --subnet-prefix 10.0.1.0/24
+
+
+# Add a subnet for Bastion with a different address prefix
+az network vnet subnet create \
+  --name AzureBastionSubnet \
+  --resource-group <RESOURCE_GROUP> \
+  --vnet-name <VNET_NAME> \
+  --address-prefix 10.0.2.0/24
+
+# Add a subnet for the jump VM with a different address prefix
+az network vnet subnet create \
+  --name vmSubnet \
+  --resource-group <RESOURCE_GROUP> \
+  --vnet-name <VNET_NAME> \
+  --address-prefixes "10.0.3.0/24"
+
+# Create Private Endpoint in Your VNet to links the DB to your VNet:
+az network private-endpoint create \
+  --name <PE_NAME> \
+  --resource-group <RESOURCE_GROUP> \
+  --vnet-name <VNET_NAME> \
+  --subnet dbSubnet \
+  --private-connection-resource-id $(az postgres flexible-server show \
+      --resource-group <RESOURCE_GROUP> \
+      --name <DB_NAME> \
+      --query "id" -o tsv) \
+  --group-id postgres
+
+##  Configure Private DNS Zone linked to the VNet
+
+az network private-dns zone create \
+  --resource-group <RESOURCE_GROUP> \
+  --name privatelink.postgres.database.azure.com
+
+az network private-dns link vnet create \
+  --resource-group <RESOURCE_GROUP> \
+  --zone-name privatelink.postgres.database.azure.com \
+  --name MyDNSLink \
+  --virtual-network <VNET_NAME> \
+  --registration-enabled false
+
+az network private-endpoint dns-zone-group create \
+  --resource-group <RESOURCE_GROUP> \
+  --endpoint-name <PE_NAME> \
+  --name MyDNSZoneGroup \
+  --private-dns-zone privatelink.postgres.database.azure.com \
+  --zone-name privatelink.postgres.database.azure.com
+
+##  Create Jump VM
+az vm create \
+  --resource-group <RG_NAME> \
+   --name jumpVM \
+  --image UbuntuLTS \
+  --size Standard_B1s \
+  --admin-username <vm_user> \
+  --generate-ssh-keys \
+  --vnet-name <VNET_NAME> \
+  --subnet vmSubnet \
+
+## Create Bastion Public IP
+az network public-ip create \
+  --resource-group <RG_NAME> \
+  --name BastionPublicIP \
+  --sku Standard
+
+##  Deploy Bastion
+az network bastion create \
+  --name  --name <BASTION_NAME> \
+  --resource-group <RG_NAME> \
+  --vnet-name <VNET_NAME> \
+
+
+## Open Bastion Tunnel
+az network bastion tunnel \
+  --name <BASTION_NAME> \
+  --resource-group <RESOURCE_GROUP> \
+  --target-resource-id /subscriptions/<SUB_ID>/resourceGroups/<RESOURCE_GROUP>/providers/Microsoft.Compute/virtualMachines/jumpVM \
+  --resource-port 22 \
+  --port 2022
+
+## SSH Tunnel to PostgreSQL
 az extension add --name ssh
 
 
@@ -104,9 +192,32 @@ az ssh vm \
   --resource-group <RESOURCE_GROUP> \
   --local-port 5432:<POSTGRES_PRIVATE_IP>:5432
 
+ssh -i ~/.ssh/id_rsa \
+    -p 2022 \
+    -L 5432:porposalgen.postgres.database.azure.com:5432 \
+    <vm_user>@localhost \
+    -N
 
-az postgres flexible-server firewall-rule create --resource-group <your-resource-group> --name <your-postgres-server-name> --rule-name AllowMyIP --start-ip-address <your-ip-address> --end-ip-address <your-ip-address>
 ```
+
+**Configure PostgreSQL firewall.**
+
+You can do this in the Azure portal, or by using the Azure CLI:
+
+```bash
+
+
+
+az postgres flexible-server firewall-rule create \
+  --resource-group <your-resource-group> \
+  --name <your-postgres-server-name> \
+  --rule-name AllowMyIP \
+  --start-ip-address <your-ip-address> \
+  --end-ip-address <your-ip-address>
+```
+
+
+
 
 Once this is done, you can connect to the database and create the tables. Then go to the `backend` directory and run the back office initialisation scripts `backend/scripts/README.md`.
 
