@@ -27,6 +27,7 @@ from backend.core.security import (
     ENTRA_CLIENT_ID,
     ENTRA_CLIENT_SECRET,
 )
+from backend.models.schemas import UserSettings
 
 # This router handles all authentication-related endpoints, including user
 # registration, login, logout, profile management, and password recovery.
@@ -171,13 +172,16 @@ async def signup(request: Request):
     team_id = data.get('team_id')
     security_question = data.get('security_question')
     security_answer = data.get('security_answer')
+    settings_data = data.get('settings')
 
-    if not all([name, email, password, security_question, security_answer, team_id]):
+    if not all([name, email, password, security_question, security_answer, team_id, settings_data]):
         return JSONResponse(status_code=400, content={"error": "All fields are required."})
+
+    settings = UserSettings(**settings_data)
 
     hashed_password = generate_password_hash(password)
     hashed_questions = {security_question: generate_password_hash(security_answer.strip().lower())}
-
+    user_id = str(uuid.uuid4())
     try:
         with get_engine().begin() as connection:
             # Check if a user with the same email already exists.
@@ -188,18 +192,38 @@ async def signup(request: Request):
             # Insert the new user into the database.
             connection.execute(
                 text("""
-                    INSERT INTO users (id, email, name, team_id, password, security_questions)
-                    VALUES (:id, :email, :name, :team_id, :password, :security_questions)
+                    INSERT INTO users (id, email, name, team_id, password, security_questions, geographic_coverage_type, geographic_coverage_region, geographic_coverage_country)
+                    VALUES (:id, :email, :name, :team_id, :password, :security_questions, :geographic_coverage_type, :geographic_coverage_region, :geographic_coverage_country)
                 """),
                 {
-                    'id': str(uuid.uuid4()),
+                    'id': user_id,
                     'email': email,
                     'name': name,
                     'team_id': team_id,
                     'password': hashed_password,
-                    'security_questions': json.dumps(hashed_questions)
+                    'security_questions': json.dumps(hashed_questions),
+                    'geographic_coverage_type': settings.geographic_coverage_type,
+                    'geographic_coverage_region': settings.geographic_coverage_region,
+                    'geographic_coverage_country': settings.geographic_coverage_country,
                 }
             )
+
+            # Insert new roles
+            if settings.roles:
+                role_insert_query = text("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, :role_id)")
+                connection.execute(role_insert_query, [{"user_id": user_id, "role_id": role_id} for role_id in settings.roles])
+
+            # Insert new donor groups
+            if settings.donor_groups:
+                donor_group_insert_query = text("INSERT INTO user_donor_groups (user_id, donor_group) VALUES (:user_id, :donor_group)")
+                connection.execute(donor_group_insert_query, [{"user_id": user_id, "donor_group": dg} for dg in settings.donor_groups])
+
+            # Insert new outcomes
+            if settings.outcomes:
+                outcome_insert_query = text("INSERT INTO user_outcomes (user_id, outcome_id) VALUES (:user_id, :outcome_id)")
+                connection.execute(outcome_insert_query, [{"user_id": user_id, "outcome_id": outcome_id} for outcome_id in settings.outcomes])
+
+
         return JSONResponse(status_code=201, content={"message": "Signup successful! Please log in."})
     except Exception as e:
         logging.error(f"[SIGNUP ERROR] {e}")

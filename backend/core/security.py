@@ -62,11 +62,28 @@ def get_current_user(request: Request) -> dict:
         if not user:
             raise HTTPException(status_code=404, detail="User not found.")
 
+        user_id = str(user[0])
+
+        roles_query = text("SELECT r.name FROM roles r JOIN user_roles ur ON r.id = ur.role_id WHERE ur.user_id = :user_id")
+        roles_result = connection.execute(roles_query, {"user_id": user_id}).fetchall()
+        roles = [row[0] for row in roles_result]
+
+        donor_groups_query = text("SELECT donor_group FROM user_donor_groups WHERE user_id = :user_id")
+        donor_groups_result = connection.execute(donor_groups_query, {"user_id": user_id}).fetchall()
+        donor_groups = [row[0] for row in donor_groups_result]
+
+        outcomes_query = text("SELECT outcome_id FROM user_outcomes WHERE user_id = :user_id")
+        outcomes_result = connection.execute(outcomes_query, {"user_id": user_id}).fetchall()
+        outcomes = [str(row[0]) for row in outcomes_result]
+
         # Return user data as a dictionary.
         return {
-            "user_id": str(user[0]),
+            "user_id": user_id,
             "name": user[1],
-            "email": user[2]
+            "email": user[2],
+            "roles": roles,
+            "donor_groups": donor_groups,
+            "outcomes": outcomes,
         }
 
     except jwt.ExpiredSignatureError:

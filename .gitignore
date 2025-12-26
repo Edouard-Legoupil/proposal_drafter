@@ -31,3 +31,4 @@ backend/log/*
 backend/knowledge/*
 log/log_knowledge.txt
 backend/2.env
+nltk_data/

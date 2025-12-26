@@ -25,7 +25,37 @@ CREATE TABLE IF NOT EXISTS users (
     security_questions JSONB,
     session_active BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    geographic_coverage_type TEXT,
+    geographic_coverage_region TEXT,
+    geographic_coverage_country TEXT
+);
+
+-- Create Roles table
+CREATE TABLE IF NOT EXISTS roles (
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL
+);
+
+-- Create User Roles table for many-to-many relationship
+CREATE TABLE IF NOT EXISTS user_roles (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, role_id)
+);
+
+-- Create User Donor Groups table
+CREATE TABLE IF NOT EXISTS user_donor_groups (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    donor_group TEXT NOT NULL,
+    PRIMARY KEY (user_id, donor_group)
+);
+
+-- Create User Outcomes table
+CREATE TABLE IF NOT EXISTS user_outcomes (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    outcome_id UUID NOT NULL REFERENCES outcomes(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, outcome_id)
 );
 
 
