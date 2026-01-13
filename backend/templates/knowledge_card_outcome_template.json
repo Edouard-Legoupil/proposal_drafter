@@ -25,38 +25,68 @@
     {
       "section_name": "4. Key Performance Indicators (KPIs)",
       "instructions": "Identify a set of robust and measurable KPIs for both output and outcome from UNHCR Result Framework that can be used to track progress and measure the achievement of this outcome. Explain why each indicator is a good proxy for measuring success. Present this within a formatted table",
-      "word_limit": 450,
+      "word_limit": 1000,
       "key_word": "UNHCR humanitarian outcome KPIs result framework"
     },
     {
       "section_name": "5. Cross-Cutting Considerations",
       "instructions": "Describe important cross-cutting issues that impact this specific outcome, such as gender equality, disability inclusion, accountability to affected population, localisation, and environmental sustainability. Explain how these should be integrated into program design and implementation.",
-      "word_limit": 150,
+      "word_limit": 500,
       "key_word": "humanitarian cross-cutting issues gender disability environment"
     },
     {
       "section_name": "6. Challenges & Future Directions",
       "instructions": "Summarize the major challenges or knowledge gaps related to achieving this outcome. Suggest areas for further research, pilot programs, or policy development based on the lessons learned from previous interventions.",
-      "word_limit": 150,
+      "word_limit": 800,
       "key_word": "humanitarian challenges future research policy gaps"
     },
     {
       "section_name": "7. Cost-Effectiveness and Value for Money",
       "instructions": "Provide an analysis of the cost-effectiveness of the described interventions. Compare the relative costs of different approaches to achieving the same outcome. Include any available data or benchmarks on value for money.",
-      "word_limit": 300,
+      "word_limit": 500,
       "key_word": "humanitarian intervention cost-effectiveness value for money"
     },
     {
       "section_name": "8. Contextualized Unit Costs & Budgeting",
       "instructions": "Synthesize budget data, specifically Unit Costs, in relation to the described Interventions and Activities. Importantly, differentiate these costs based on different field contexts (e.g., emergency vs. protracted crisis, urban vs. rural, camp vs. out-of-camp) to provide a nuanced understanding of resource requirements. Provide range estimates where possible.",
-      "word_limit": 400,
+      "word_limit": 800,
       "key_word": "humanitarian unit costs budget estimates context-specific pricing"
     },
     {
       "section_name": "9. Sustainability and Exit Strategies",
       "instructions": "Discuss the long-term sustainability of the interventions. Outline potential exit strategies that ensure the continuation of positive outcomes after the program ends. Describe how local capacity can be built and strengthened to support a sustainable transition.",
-      "word_limit": 300,
+      "word_limit": 500,
       "key_word": "humanitarian program sustainability exit strategy capacity building"
+    },
+    {
+      "section_name": "10. Gender, Age, and Diversity (AGD) Integration",
+      "instructions": "Describe how UNHCR's Age, Gender, and Diversity approach should be integrated into interventions for this outcome. Address: (1) Gender and age analysis - how to conduct participatory assessments and collect sex- and age-disaggregated data; (2) Adapted assistance - how to tailor interventions for women, men, boys, girls, older persons, and persons with disabilities; (3) Prevention of negative effects - how AGD principles prevent protection risks (GBV, child protection, PSEA); (4) Meaningful participation - how to ensure inclusive participation in program design, implementation, and monitoring. Provide concrete examples of AGD-responsive programming for this outcome.",
+      "word_limit": 500,
+      "key_word": "UNHCR AGD gender age diversity inclusive programming participation"
+    },
+    {
+      "section_name": "11. Monitoring, Evaluation & Accountability",
+      "instructions": "Describe M&E approaches and accountability mechanisms for this outcome. Address: (1) Monitoring systems - data collection methods, frequency, responsible actors; (2) Accountability to Affected Populations (AAP) - feedback and complaint mechanisms (hotlines, suggestion boxes, community committees); (3) Evaluation approaches - when and how to conduct outcome evaluations; (4) Remote management - if applicable, how to monitor when direct access is limited. Reference UNHCR's AAP framework and standard M&E tools.",
+      "word_limit": 1000,
+      "key_word": "UNHCR monitoring evaluation AAP accountability feedback mechanisms"
+    },
+    {
+      "section_name": "12. Key Result Indicators (KRI) - Output Level",
+      "instructions": "Identify output-level indicators (KRI) distinct from outcome indicators (KOI in Section 4). KRIs measure direct outputs/services delivered (e.g., # of people trained, # of shelters constructed, # of legal consultations provided). For each intervention listed in Section 2, provide 2-3 relevant KRIs from UNHCR's Results Framework. Present in table format with indicator name, definition, and typical targets.",
+      "word_limit": 1000,
+      "key_word": "UNHCR KRI output indicators results framework"
+    },
+    {
+      "section_name": "13. Budget Structure & Financial Planning",
+      "instructions": "Provide typical budget structure for interventions achieving this outcome. Address: (1) Cost categories - breakdown by personnel (%), supplies/commodities (%), equipment (%), travel (%), contractual services (%), partner transfers (%), operating costs (%). Provide typical ranges for each category. (2) Unit cost benchmarks - reference Section 8 for context-specific unit costs. (3) Budget justification - common cost drivers, economies of scale, cost-efficiency measures. (4) Multi-year considerations - if applicable, phasing of costs across years, front-loading vs. steady-state budgets.",
+      "word_limit": 800,
+      "key_word": "budget structure cost categories unit costs financial planning overhead ISC"
+    },
+    {
+      "section_name": "14. Implementation Timelines & Phasing",
+      "instructions": "Describe typical implementation timelines and activity sequencing for interventions achieving this outcome. Address: (1) Duration - typical project length (6 months emergency, 12 months standard, 24+ months multi-year). (2) Startup phase - mobilization, procurement, partner agreements (typically months 1-2). (3) Implementation phase - core activity delivery, typical monthly/quarterly milestones. (4) Closeout phase - final distributions, reporting, evaluations (typically final month). (5) Critical path - key dependencies and sequencing (e.g., procurement before distribution, training before service delivery). (6) Seasonal factors - if relevant, optimal timing based on climate, agricultural cycles, school calendars. Provide Gantt-ready guidance with typical activity timelines.",
+      "word_limit": 500,
+      "key_word": "implementation timeline workplan phasing sequencing Gantt milestones critical path"
     }
   ]
 }

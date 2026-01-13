@@ -42,6 +42,7 @@ While the recommended way to deploy the infrastructure is through the CI/CD pipe
 This option is for deploying the infrastructure without SSO capabilities (which requires the capacity to create a service principal account and an application ID).
 
 ### Deploy manually the correct ressources
+
 Building a bicep infrastructure deployment script from scratch is not recommended, as it requires a lot of parameters and is not very user-friendly. Rather, it is exported from the Azure Portal following the manual set up of :
 
  - Azure OpenAI - setting gpt-4.1 mini and adda
@@ -91,9 +92,11 @@ az postgres flexible-server db create \
   --collation en_US.utf8
 ```
 
-**Configure a Virtual Network (VNet)**
-A Virtual Network (VNet) in Azure is like a private network in the cloud. It allows resources (VMs, databases, Bastion) to communicate securely without exposing them to the public internet.
-Your PostgreSQL Flexible Server can be configured with private access, meaning it only accepts connections from resources inside the same VNet (or peered VNets).
+### Set Security with a Virtual Network (VNet)
+
+A Virtual Network (VNet) in Azure is like a private network in the cloud. It allows resources (VMs, databases, Bastion, webapp) to communicate securely without exposing them to the public internet.
+
+The PostgreSQL Flexible Server can be configured with private access, meaning it only accepts connections from resources inside the same VNet (or peered VNets).
 
  * VNet = private network
  * Private Endpoint = private door to the DB
@@ -158,7 +161,7 @@ az network private-endpoint create \
       --resource-group <RESOURCE_GROUP> \
       --name <DB_NAME> \
       --query id -o tsv) \
-  --group-id postgres \
+  --group-id postgresqlServer \
   --connection-name postgres-pe-connection
 
 
@@ -211,9 +214,8 @@ az network private-endpoint dns-zone-group create \
 az vm create \
   --resource-group <RESOURCE_GROUP> \
   --name jumpVM \
-  --image UbuntuLTS \
+  --image Ubuntu2204 \
   --size Standard_B1s \
-  --admin-username <vm_user> \
   --generate-ssh-keys \
   --vnet-name <VNET_NAME> \
   --subnet vmSubnet
@@ -229,8 +231,7 @@ az vm create \
 az network public-ip create \
   --resource-group <RESOURCE_GROUP> \
   --name BastionPublicIP \
-  --sku Standard \
-  --location <LOCATION>
+  --sku Standard 
 
 
 # Deploy Azure Bastion into the VNet.
@@ -241,8 +242,10 @@ az network bastion create \
   --resource-group <RESOURCE_GROUP> \
   --name <BASTION_NAME> \
   --vnet-name <VNET_NAME> \
-  --public-ip-address BastionPublicIP \
-  --location <LOCATION>
+  --public-ip-address BastionPublicIP  \
+  --sku Standard \
+  --enable-tunneling true \
+  --enable-ip-connect true
 
 
 ############################################
@@ -260,13 +263,20 @@ az network bastion tunnel \
   --resource-port 22 \
   --port 2022
 
+```
 
+
+Then in a different terminal, open a tunnel to the database:
+
+```bash
 # Create a local SSH tunnel to PostgreSQL *through* the jump VM.
+## we can use a different port - 5433 -for the tunnel to avoid port conflicts
 # This forwards:
-#   localhost:5432 → PostgreSQL private endpoint
+#   localhost:5433 → PostgreSQL private endpoint
 # Result: local tools can connect to the database as if it were local.
-ssh -L 5432:<DB_NAME>.postgres.database.azure.com:5432 \
+ssh -L 5432:<DB_NAME>.postgres.database.azure.com:5433 \
     <vm_user>@127.0.0.1 -p 2022
+
 
 ```
 
@@ -324,11 +334,43 @@ az webapp config container set \
 # - This does NOT expose the Web App publicly
 # - This does NOT require inbound rules
 # - It only enables outbound access to the VNet
+
+
+# Create a new empty subnet for App Service integration
+az network vnet subnet create \
+  --resource-group <RESOURCE_GROUP> \
+  --vnet <VNET_NAME> \
+  --name webSubnet \
+  --address-prefixes 10.0.4.0/26 
+
+
 az webapp vnet-integration add \
   --resource-group <RESOURCE_GROUP> \
   --name <WEBAPP_NAME> \
   --vnet <VNET_NAME> \
-  --subnet vmSubnet
+  --subnet webSubnet
+
+# Make sure the Web App inherits the DNS from the VNet.
+az webapp show \
+  --resource-group <RESOURCE_GROUP> \
+  --name <WEBAPP_NAME> \
+  --query outboundVnet
+
+## Once the above works Then you can ensure that public access to the database is disabled.
+az postgres flexible-server update \
+  --resource-group <RESOURCE_GROUP> \
+  --name <DB_NAME> \
+  --public-network-access Disabled
+
+## and disable firewall rules
+az postgres flexible-server firewall-rule list \
+--resource-group <RESOURCE_GROUP> \
+--name <DB_NAME>
+az postgres flexible-server firewall-rule delete \
+--resource-group <RESOURCE_GROUP> \
+--name <DB_NAME> \
+--rule-name <RULE_NAME>
+
 ``` 
 
 To check app deployment run
@@ -352,9 +394,6 @@ az webapp log download \
   --log-file logs/propalgen_logs_$(date +%Y%m%d_%H%M%S).zip
 ```   
 
-
-
- 
 or visit the debug console: https://<WEBAPP_NAME>.scm.azurewebsites.net/DebugConsole 
 
  **Application is Ready**:
@@ -366,19 +405,22 @@ To SSH in the app:
 ```bash
 # Make sure remote debugging is OFF; it can block the tunnel
 az webapp config set \
-  --resource-group <resource-group-name> \
+  --resource-group <RESOURCE_GROUP> \
   --name <WEBAPP_NAME> \
   --remote-debugging-enabled false
 
-az webapp ssh \
-  --name <WEBAPP_NAME> \
-  --resource-group <resource-group-name>
-
-# Start the tunnel
+# create a remote connection
 az webapp create-remote-connection \
   --subscription <subscription-id> \
-  --resource-group <resource-group-name> \
-  --name propalgen
+  --resource-group <RESOURCE_GROUP> \
+  --name <WEBAPP_NAME>
+
+# ssh into the app
+az webapp ssh \
+  --name <WEBAPP_NAME> \
+  --resource-group <RESOURCE_GROUP>
+
+
 
 # In another terminal, use the printed local port:
 ssh root@127.0.0.1 -p

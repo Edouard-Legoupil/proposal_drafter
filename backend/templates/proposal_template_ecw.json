@@ -19,59 +19,7 @@
         ]
     },
     "sections": [
-        {
-            "section_name": "Project Information",
-            "section_label": "Project Information",
-            "format_type": "table",
-            "mandatory": true,
-            "instructions": "Fill the table strictly using the provided project information. Do not infer or invent data.",
-            "columns": [
-                {
-                    "name": "Field",
-                    "format_type": "fixed_text",
-                    "instructions": "Field Name"
-                },
-                {
-                    "name": "Value",
-                    "format_type": "text",
-                    "instructions": "Enter the value for this field."
-                }
-            ],
-            "rows": [
-                {
-                    "row_title": "FER Application Title",
-                    "instructions": "FER Application Title"
-                },
-                {
-                    "row_title": "Country/Context",
-                    "instructions": "Country/Context"
-                },
-                {
-                    "row_title": "Criteria for application (check all that apply)",
-                    "instructions": "Criteria for application (check all that apply)"
-                },
-                {
-                    "row_title": "Coordination Contacts",
-                    "instructions": "Contacts of agencies coordinating grant application"
-                },
-                {
-                    "row_title": "Resident/Humanitarian Coordinator",
-                    "instructions": "Resident/Humanitarian Coordinator (name, title, email)"
-                },
-                {
-                    "row_title": "FER Funding Request (USD)",
-                    "instructions": "FER Funding Request (USD)"
-                },
-                {
-                    "row_title": "Duration (Months)",
-                    "instructions": "Duration (# months)"
-                },
-                {
-                    "row_title": "Percentage of current funding gap to be financed by ECW (%)",
-                    "instructions": "Percentage of current funding gap to be financed by ECW (%)"
-                }
-            ]
-        },
+
         {
             "section_name": "Grantee Details",
             "section_label": "ECW FER Grantee Details",
@@ -489,6 +437,59 @@
                 {
                     "row_title": "Safeguarding/PSEA Risk 1",
                     "instructions": "Example: complaints mechanism coverage."
+                }
+            ]
+        },
+        {
+            "section_name": "Project Information",
+            "section_label": "Project Information",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Fill the table strictly using the provided project information. Do not infer or invent data.",
+            "columns": [
+                {
+                    "name": "Field",
+                    "format_type": "fixed_text",
+                    "instructions": "Field Name"
+                },
+                {
+                    "name": "Value",
+                    "format_type": "text",
+                    "instructions": "Enter the value for this field."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "FER Application Title",
+                    "instructions": "FER Application Title"
+                },
+                {
+                    "row_title": "Country/Context",
+                    "instructions": "Country/Context"
+                },
+                {
+                    "row_title": "Criteria for application (check all that apply)",
+                    "instructions": "Criteria for application (check all that apply)"
+                },
+                {
+                    "row_title": "Coordination Contacts",
+                    "instructions": "Contacts of agencies coordinating grant application"
+                },
+                {
+                    "row_title": "Resident/Humanitarian Coordinator",
+                    "instructions": "Resident/Humanitarian Coordinator (name, title, email)"
+                },
+                {
+                    "row_title": "FER Funding Request (USD)",
+                    "instructions": "FER Funding Request (USD)"
+                },
+                {
+                    "row_title": "Duration (Months)",
+                    "instructions": "Duration (# months)"
+                },
+                {
+                    "row_title": "Percentage of current funding gap to be financed by ECW (%)",
+                    "instructions": "Percentage of current funding gap to be financed by ECW (%)"
                 }
             ]
         }

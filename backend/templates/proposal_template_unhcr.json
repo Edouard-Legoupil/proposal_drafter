@@ -16,59 +16,6 @@
     },
     "sections": [
         {
-            "section_name": "Project Information",
-            "section_label": "Project Information",
-            "format_type": "table",
-            "mandatory": true,
-            "instructions": "Fill the table .",
-            "columns": [
-                {
-                    "name": "Field",
-                    "format_type": "fixed_text",
-                    "instructions": "Field Name"
-                },
-                {
-                    "name": "Value",
-                    "format_type": "text",
-                    "instructions": "Enter the value for this field."
-                }
-            ],
-            "rows": [
-                {
-                    "row_title": "Project title",
-                    "instructions": "Enter a concise title (max 200 characters) that clearly reflects the purpose and scope of the project."
-                },
-                {
-                    "row_title": "Project Outccome",
-                    "instructions": "Select the outcomes relevant to this project, aligned with CERF sector classifications."
-                },
-                {
-                    "row_title": "Geographical Coverage",
-                    "instructions": "Specify country and subnational locations names (regions, districts, cities) where activities will be implemented."
-                },
-                {
-                    "row_title": "Executing agency",
-                    "instructions": "Indicate UNHCR as the executing agency unless otherwise coordinated."
-                },
-                {
-                    "row_title": "Beneficiaries",
-                    "instructions": "Provide total number of direct beneficiaries disaggregated by sex (men, women), age (boys, girls), and persons with disabilities. Avoid household or percentage-based figures."
-                },
-                {
-                    "row_title": "Partner(s)",
-                    "instructions": "List implementing sub-partners (e.g. NGOs, national/local actors) and describe their role where relevant."
-                },
-                {
-                    "row_title": "Duration",
-                    "instructions": "Specify project duration: either 6 months for Rapid Response (RR) or 12 months for Underfunded Emergencies (UFE)."
-                },
-                {
-                    "row_title": "Budget",
-                    "instructions": "Indicate total amount requested from CERF and breakdown by sector(s). Budget must match Excel template."
-                }
-            ]
-        },
-        {
             "section_name": "Summary",
             "word_limit": 4000,
             "format_type": "text",
@@ -308,6 +255,59 @@
                 }
             ],
             "mandatory": true
+        },
+        {
+            "section_name": "Project Information",
+            "section_label": "Project Information",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Fill the table .",
+            "columns": [
+                {
+                    "name": "Field",
+                    "format_type": "fixed_text",
+                    "instructions": "Field Name"
+                },
+                {
+                    "name": "Value",
+                    "format_type": "text",
+                    "instructions": "Enter the value for this field."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Project title",
+                    "instructions": "Enter a concise title (max 200 characters) that clearly reflects the purpose and scope of the project."
+                },
+                {
+                    "row_title": "Project Outccome",
+                    "instructions": "Select the outcomes relevant to this project, aligned with CERF sector classifications."
+                },
+                {
+                    "row_title": "Geographical Coverage",
+                    "instructions": "Specify country and subnational locations names (regions, districts, cities) where activities will be implemented."
+                },
+                {
+                    "row_title": "Executing agency",
+                    "instructions": "Indicate UNHCR as the executing agency unless otherwise coordinated."
+                },
+                {
+                    "row_title": "Beneficiaries",
+                    "instructions": "Provide total number of direct beneficiaries disaggregated by sex (men, women), age (boys, girls), and persons with disabilities. Avoid household or percentage-based figures."
+                },
+                {
+                    "row_title": "Partner(s)",
+                    "instructions": "List implementing sub-partners (e.g. NGOs, national/local actors) and describe their role where relevant."
+                },
+                {
+                    "row_title": "Duration",
+                    "instructions": "Specify project duration: either 6 months for Rapid Response (RR) or 12 months for Underfunded Emergencies (UFE)."
+                },
+                {
+                    "row_title": "Budget",
+                    "instructions": "Indicate total amount requested from CERF and breakdown by sector(s). Budget must match Excel template."
+                }
+            ]
         }
     ]
 }

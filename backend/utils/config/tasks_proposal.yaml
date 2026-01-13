@@ -6,8 +6,7 @@ content_generation_task:
     - **Special Requirements:** {special_requirements}
     - **Instructions:** {instructions}
     
-    Ensure that the response is well-structured, coherent, and does NOT exceed {word_limit} words.
-    If the output exceeds the limit, rephrase or summarize to fit within the given limit.
+IMPORTANT: The response must not exceed {limit_value} {limit_term}s. If the output exceeds the limit, you MUST truncate or summarize so the final output fits the limit. Failure to comply will require regeneration.
     Respond with a raw JSON object, no Markdown formatting, no triple backticks.
 
   expected_output: >
@@ -18,7 +17,7 @@ content_generation_task:
       "feedback": ""
     }
 
-    "generated_content" should contain a well-written section of the project proposal that strictly follows the given instructions and does not exceed {word_limit} words.
+    "generated_content" should contain a well-written section of the project proposal that strictly follows the given instructions and does not exceed {limit_value} {limit_term}s.
     Leave "evaluation_status" and "feedback" as empty strings for now.
 
   agent: content_generator
@@ -26,7 +25,7 @@ content_generation_task:
 evaluation_task:
   description: >
     Review the generated content for the "{section}" and verify it against the JSON instructions: {instructions}.
-    Ensure that the content does NOT exceed {word_limit} words.
+    Ensure that the content does NOT exceed {limit_value} {limit_term}s.
     
     If the content meets the requirements, approve it.
     If the content is too long, provide feedback asking for a shorter version within the limit.
@@ -40,7 +39,7 @@ evaluation_task:
       "feedback": "<Only if revision is required, provide constructive feedback>"
     }
 
-    Approve only if the content aligns with the instructions and does not exceed the {word_limit} word.
+    Approve only if the content aligns with the instructions and does not exceed the {limit_value} {limit_term}s.
 
   agent: evaluator
 
@@ -53,7 +52,7 @@ regeneration_task:
     - **Special Requirements:** {special_requirements}
     - **Instructions:** {instructions}
 
-    Ensure that the response integrates the user’s input while remaining structured, coherent, and within {word_limit} words.
+    Ensure that the response integrates the user’s input while remaining structured, coherent, and within {limit_value} {limit_term}s.
     If the output exceeds the limit, rephrase or summarize to fit within the given limit.
     Respond with a raw JSON object, no Markdown formatting, no triple backticks.
 

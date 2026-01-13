@@ -29,6 +29,7 @@ Each object within the `sections` array defines a single section of the proposal
 | `instructions`     | String        | **Required** (for AI formats). Provides guidance to the AI on how to generate the content for the section.                                                                                      |
 | `mandatory`        | Boolean       | **Required.** Indicates whether the section is mandatory. Default should be considered `true`.                                                                                                     |
 | `word_limit`       | Number        | *Optional.* A suggested word limit for the generated text (applicable primarily to `text` format).                                                                           |
+| `char_limit`       | Number        | *Optional.* A suggested character limit for the generated text (applicable primarily to `text` format).                                                                           |
 | `...`              | `any`         | Additional properties may be required depending on the chosen `format_type`.                                                                                                 |
 
 

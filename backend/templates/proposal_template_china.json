@@ -17,127 +17,7 @@
         ]
     },
     "sections": [
-        {
-            "section_name": "Project Information",
-            "section_label": "Project Information",
-            "format_type": "table",
-            "mandatory": true,
-            "instructions": "Fill the table strictly using the provided project information. Do not infer or invent data.",
-            "columns": [
-                {
-                    "name": "Field",
-                    "format_type": "fixed_text",
-                    "instructions": "Field Name"
-                },
-                {
-                    "name": "Value",
-                    "format_type": "text",
-                    "instructions": "Enter the value for this field."
-                }
-            ],
-            "rows": [
-                {
-                    "row_title": "Proposal ID",
-                    "instructions": "Proposal ID (Filled by GDF)"
-                },
-                {
-                    "row_title": "Project Name Full",
-                    "instructions": "Project Name \u2013 Full"
-                },
-                {
-                    "row_title": "Project Name Short",
-                    "instructions": "Project Name \u2013 Short (\u226415 words)"
-                },
-                {
-                    "row_title": "Concept Note ID",
-                    "instructions": "Concept Note ID"
-                },
-                {
-                    "row_title": "Applicant Name",
-                    "instructions": "Applicant"
-                },
-                {
-                    "row_title": "Applicant Contact",
-                    "instructions": "Applicant Contact (Representative)"
-                },
-                {
-                    "row_title": "Applicant Address",
-                    "instructions": "Applicant Address"
-                },
-                {
-                    "row_title": "Applicant Title",
-                    "instructions": "Applicant Title"
-                },
-                {
-                    "row_title": "Applicant Telephone",
-                    "instructions": "Applicant Telephone"
-                },
-                {
-                    "row_title": "Applicant Email",
-                    "instructions": "Applicant Email"
-                },
-                {
-                    "row_title": "Partners",
-                    "instructions": "Implementing Partners (list)"
-                },
-                {
-                    "row_title": "Country/Region of Project Implementation",
-                    "instructions": "Country/Region of Project Implementation"
-                },
-                {
-                    "row_title": "Area of Assistance",
-                    "instructions": "Area of Assistance"
-                },
-                {
-                    "row_title": "Brief Introduction",
-                    "instructions": "Brief Introduction (\u2264300 words)"
-                },
-                {
-                    "row_title": "SDGs Major",
-                    "instructions": "Major relevant SDGs (1\u20132 goals; \u22643 sub-goals each)"
-                },
-                {
-                    "row_title": "SDGs Other",
-                    "instructions": "Other relevant SDGs (\u22643)"
-                },
-                {
-                    "row_title": "Implementation Duration Months",
-                    "instructions": "Implementation Duration (Months)"
-                },
-                {
-                    "row_title": "Total Budget USD",
-                    "instructions": "Total Budget (USD)"
-                },
-                {
-                    "row_title": "GDF Applied Amount USD",
-                    "instructions": "Amount of Applied Fund from GDF (USD)"
-                },
-                {
-                    "row_title": "Other Funding USD",
-                    "instructions": "Other Funding (USD)"
-                },
-                {
-                    "row_title": "Beneficiaries Total",
-                    "instructions": "Total number of beneficiaries"
-                },
-                {
-                    "row_title": "Beneficiaries Direct",
-                    "instructions": "Number of direct beneficiaries"
-                },
-                {
-                    "row_title": "Beneficiaries Women",
-                    "instructions": "Women (if any)"
-                },
-                {
-                    "row_title": "Beneficiaries Children",
-                    "instructions": "Children (if any)"
-                },
-                {
-                    "row_title": "Beneficiaries Indirect",
-                    "instructions": "Number of indirect beneficiaries (if any)"
-                }
-            ]
-        },
+
         {
             "section_name": "Project Background",
             "section_label": "1. Project Background",
@@ -796,6 +676,127 @@
             "mandatory": true,
             "word_limit": 200,
             "instructions": "Insert declaration text and fields for name, seal, and date as per template; note system automation of partner acknowledgement."
-        }
+        },
+        {
+            "section_name": "Project Information",
+            "section_label": "Project Information",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Fill the table strictly using the provided project information. Do not infer or invent data.",
+            "columns": [
+                {
+                    "name": "Field",
+                    "format_type": "fixed_text",
+                    "instructions": "Field Name"
+                },
+                {
+                    "name": "Value",
+                    "format_type": "text",
+                    "instructions": "Enter the value for this field."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Proposal ID",
+                    "instructions": "Proposal ID (Filled by GDF)"
+                },
+                {
+                    "row_title": "Project Name Full",
+                    "instructions": "Project Name \u2013 Full"
+                },
+                {
+                    "row_title": "Project Name Short",
+                    "instructions": "Project Name \u2013 Short (\u226415 words)"
+                },
+                {
+                    "row_title": "Concept Note ID",
+                    "instructions": "Concept Note ID"
+                },
+                {
+                    "row_title": "Applicant Name",
+                    "instructions": "Applicant"
+                },
+                {
+                    "row_title": "Applicant Contact",
+                    "instructions": "Applicant Contact (Representative)"
+                },
+                {
+                    "row_title": "Applicant Address",
+                    "instructions": "Applicant Address"
+                },
+                {
+                    "row_title": "Applicant Title",
+                    "instructions": "Applicant Title"
+                },
+                {
+                    "row_title": "Applicant Telephone",
+                    "instructions": "Applicant Telephone"
+                },
+                {
+                    "row_title": "Applicant Email",
+                    "instructions": "Applicant Email"
+                },
+                {
+                    "row_title": "Partners",
+                    "instructions": "Implementing Partners (list)"
+                },
+                {
+                    "row_title": "Country/Region of Project Implementation",
+                    "instructions": "Country/Region of Project Implementation"
+                },
+                {
+                    "row_title": "Area of Assistance",
+                    "instructions": "Area of Assistance"
+                },
+                {
+                    "row_title": "Brief Introduction",
+                    "instructions": "Brief Introduction (\u2264300 words)"
+                },
+                {
+                    "row_title": "SDGs Major",
+                    "instructions": "Major relevant SDGs (1\u20132 goals; \u22643 sub-goals each)"
+                },
+                {
+                    "row_title": "SDGs Other",
+                    "instructions": "Other relevant SDGs (\u22643)"
+                },
+                {
+                    "row_title": "Implementation Duration Months",
+                    "instructions": "Implementation Duration (Months)"
+                },
+                {
+                    "row_title": "Total Budget USD",
+                    "instructions": "Total Budget (USD)"
+                },
+                {
+                    "row_title": "GDF Applied Amount USD",
+                    "instructions": "Amount of Applied Fund from GDF (USD)"
+                },
+                {
+                    "row_title": "Other Funding USD",
+                    "instructions": "Other Funding (USD)"
+                },
+                {
+                    "row_title": "Beneficiaries Total",
+                    "instructions": "Total number of beneficiaries"
+                },
+                {
+                    "row_title": "Beneficiaries Direct",
+                    "instructions": "Number of direct beneficiaries"
+                },
+                {
+                    "row_title": "Beneficiaries Women",
+                    "instructions": "Women (if any)"
+                },
+                {
+                    "row_title": "Beneficiaries Children",
+                    "instructions": "Children (if any)"
+                },
+                {
+                    "row_title": "Beneficiaries Indirect",
+                    "instructions": "Number of indirect beneficiaries (if any)"
+                }
+            ]
+        }        
     ]
 }
