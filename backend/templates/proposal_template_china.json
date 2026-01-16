@@ -17,7 +17,6 @@
         ]
     },
     "sections": [
-
         {
             "section_name": "Project Background",
             "section_label": "1. Project Background",
@@ -686,7 +685,7 @@
             "columns": [
                 {
                     "name": "Field",
-                    "format_type": "fixed_text",
+                    "format_type": "text",
                     "instructions": "Field Name"
                 },
                 {
@@ -797,6 +796,6 @@
                     "instructions": "Number of indirect beneficiaries (if any)"
                 }
             ]
-        }        
+        }
     ]
 }

@@ -20,7 +20,7 @@
             "section_parent": "1. General information",
             "format_type": "fixed_text",
             "mandatory": true,
-            "instructions": "UNHCR-CH"
+            "fixed_text": "UNHCR-CH"
         },
         {
             "section_name": "Title of the Action",
@@ -69,7 +69,7 @@
             "section_name": "Information on beneficiaries",
             "section_label": "2.3. Information on beneficiaries",
             "section_parent": "2. Project data overview by country",
-            "format_type": "none",
+            "format_type": "text",
             "mandatory": true,
             "instructions": "This section provides a comprehensive breakdown of all direct beneficiaries. Ensure all subsections (2.3.1 through 2.3.5) are completed with accurate, disaggregated data. All figures must be based on needs assessments and avoid double-counting. Beneficiary numbers should be realistic, verifiable, and consistent across all sections of the proposal."
         },
@@ -239,7 +239,7 @@
             "format_type": "fixed_text",
             "char_limit": 1750,
             "mandatory": "true",
-            "instructions": "- Gender and age analysis, Sex- and Age disaggregated data: UNHCR applies an Age, Gender, and Diversity (AGD) approach to ensure inclusive programming and participation of women, children, older persons, and persons with disabilities emphasising inclusive programming and meaningful participation of displaced populations and ensuring targeted and effective responses to protection challenges. Participatory assessments and registration provide sex- and age-disaggregated data, informing project design and targeted responses to protection challenges.\n - Adapted assistance: UNHCR and partners profile women, men, boys, and girls to tailor assistance. Monthly dashboards such 5Ws, protection dashboard, etc. track civil documentation, support for vulnerable individuals, and border monitoring. UNHCR and partners strengthen GBV and child protection through awareness campaigns, PSEA measures, and referral pathways for legal, medical, and psychosocial services in BAY states. \n - Prevention and mitigation of negative effects: AGD principles guide all sectors to prevent protection risks for vulnerable groups. UNHCR works with partners to assess capacity, implement PSEA, and ensure accountability and transparency, embedding inclusive approaches for women, children, older persons, and persons with disabilities in program design and delivery. \n - Adequate participation: Meaningful participation is central to AGD. UNHCR engages men, women, boys, girls, persons with disabilities, and minority groups in GBV prevention, child protection, and decision-making. Efforts target underrepresented groups to promote inclusion and ensure community voices shape responses across all sectors."
+            "fixed_text": "- Sex and Age disaggregated data: UNHCR applies an Age, Gender, and Diversity (AGD) approach to ensure inclusive programming and participation of women, children, older persons, and persons with disabilities emphasising inclusive programming and meaningful participation of displaced populations and ensuring targeted and effective responses to protection challenges. Participatory assessments and registration provide sex- and age-disaggregated data, informing project design and targeted responses to protection challenges.\n - Adapted assistance: UNHCR and partners profile women, men, boys, and girls to tailor assistance. Monthly dashboards such 5Ws, protection dashboard, etc. track civil documentation, support for vulnerable individuals, and border monitoring. UNHCR and partners strengthen GBV and child protection through awareness campaigns, PSEA measures, and referral pathways for legal, medical, and psychosocial services in BAY states. \n - Prevention and mitigation of negative effects: AGD principles guide all sectors to prevent protection risks for vulnerable groups. UNHCR works with partners to assess capacity, implement PSEA, and ensure accountability and transparency, embedding inclusive approaches for women, children, older persons, and persons with disabilities in program design and delivery. \n - Adequate participation: Meaningful participation is central to AGD. UNHCR engages men, women, boys, girls, persons with disabilities, and minority groups in GBV prevention, child protection, and decision-making. Efforts target underrepresented groups to promote inclusion and ensure community voices shape responses across all sectors."
         },
         {
             "section_name": "Principal objective",
@@ -728,39 +728,6 @@
                     "name": "Status",
                     "format_type": "text",
                     "instructions": "Attached / Expected / Not applicable"
-                }
-            ]
-        },
-        {
-            "section_name": "Project Information",
-            "section_label": "Project Information",
-            "format_type": "table",
-            "mandatory": true,
-            "instructions": "Fill the table strictly using the provided project information. Do not infer or invent data.",
-            "columns": [
-                {
-                    "name": "Field",
-                    "format_type": "text",
-                    "instructions": "Field Name"
-                },
-                {
-                    "name": "Value",
-                    "format_type": "text",
-                    "instructions": "Enter the value for this field."
-                }
-            ],
-            "rows": [
-                {
-                    "row_title": "Project title",
-                    "instructions": "Enter a concise title that clearly reflects the purpose and scope of the project."
-                },
-                {
-                    "row_title": "Project type",
-                    "instructions": "Select the primary sector/cluster relevant to this project."
-                },
-                {
-                    "row_title": "Budget",
-                    "instructions": "Indicate total amount requested from CERF and breakdown by sector(s). Budget must match Excel template."
                 }
             ]
         }

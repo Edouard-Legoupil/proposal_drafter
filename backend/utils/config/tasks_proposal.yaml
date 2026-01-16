@@ -1,28 +1,29 @@
 content_generation_task:
+  char_limit: 1000
+  word_limit: 200
   description: >
     Generate content for "{section}" based on the following:
     - **Project Description:** {project_description}
     - **Form Data:** {form_data}
     - **Special Requirements:** {special_requirements}
     - **Instructions:** {instructions}
-    
-IMPORTANT: The response must not exceed {limit_value} {limit_term}s. If the output exceeds the limit, you MUST truncate or summarize so the final output fits the limit. Failure to comply will require regeneration.
+    IMPORTANT: The response must not exceed {limit_value} {limit_term}s. If the output exceeds the limit, you MUST truncate or summarize so the final output fits the limit. Failure to comply will require regeneration.
     Respond with a raw JSON object, no Markdown formatting, no triple backticks.
-
-  expected_output: >
+  expected_output: |
     Return a JSON with the following format:
-    {
-      "generated_content": "<Generated proposal section>",
-      "evaluation_status": "",
-      "feedback": ""
-    }
+      {
+        "generated_content": "<Generated proposal section>",
+        "evaluation_status": "",
+        "feedback": ""
+      }
 
     "generated_content" should contain a well-written section of the project proposal that strictly follows the given instructions and does not exceed {limit_value} {limit_term}s.
     Leave "evaluation_status" and "feedback" as empty strings for now.
-
   agent: content_generator
 
 evaluation_task:
+  char_limit: 1000
+  word_limit: 200
   description: >
     Review the generated content for the "{section}" and verify it against the JSON instructions: {instructions}.
     Ensure that the content does NOT exceed {limit_value} {limit_term}s.
@@ -44,6 +45,8 @@ evaluation_task:
   agent: evaluator
 
 regeneration_task:
+  char_limit: 1000
+  word_limit: 200
   description: >
     Regenerate content for "{section}" based on the following:
     - **Project Description:** {project_description}

@@ -19,7 +19,6 @@
         ]
     },
     "sections": [
-
         {
             "section_name": "Grantee Details",
             "section_label": "ECW FER Grantee Details",
@@ -449,7 +448,7 @@
             "columns": [
                 {
                     "name": "Field",
-                    "format_type": "fixed_text",
+                    "format_type": "text",
                     "instructions": "Field Name"
                 },
                 {
