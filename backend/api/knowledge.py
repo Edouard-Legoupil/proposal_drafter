@@ -72,6 +72,22 @@ class KnowledgeCardIn(BaseModel):
                 raise ValueError('Only one of donor_id, outcome_id, or field_context_id can be set.')
         return v
 
+def authorize_knowledge_manager(current_user: dict = Depends(get_current_user)):
+    """
+    Authorization dependency to ensure the user has a knowledge manager role.
+    """
+    knowledge_manager_roles = [
+        "knowledge manager donors",
+        "knowledge manager outcome",
+        "knowledge manager field context",
+    ]
+    user_roles = current_user.get("roles", [])
+    if not any(role in knowledge_manager_roles for role in user_roles):
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have permission to perform this action. This action is restricted to users with a 'Knowledge Manager' role."
+        )
+
 def _save_knowledge_card_content_to_file(connection, card_id: uuid.UUID, generated_sections: dict):
     """
     Saves the generated content of a knowledge card to a file in the 'backend/knowledge' directory.
@@ -163,7 +179,7 @@ def create_knowledge_card_history_entry(connection, card_id: uuid.UUID, generate
         }
     )
 
-@router.post("/knowledge-cards")
+@router.post("/knowledge-cards", dependencies=[Depends(authorize_knowledge_manager)])
 async def create_knowledge_card(card: KnowledgeCardIn, current_user: dict = Depends(get_current_user)):
     """
     Creates a new knowledge card.
@@ -457,7 +473,7 @@ async def get_knowledge_card(card_id: uuid.UUID, current_user: dict = Depends(ge
         raise HTTPException(status_code=500, detail="Failed to fetch knowledge card.")
 
 
-@router.put("/knowledge-cards/{card_id}/sections/{section_name}")
+@router.put("/knowledge-cards/{card_id}/sections/{section_name}", dependencies=[Depends(authorize_knowledge_manager)])
 async def update_knowledge_card_section(card_id: uuid.UUID, section_name: str, section: UpdateSectionIn, current_user: dict = Depends(get_current_user), engine: Engine = Depends(get_engine)):
     """
     Updates a specific section of a knowledge card.
@@ -512,7 +528,7 @@ async def update_knowledge_card_section(card_id: uuid.UUID, section_name: str, s
         raise HTTPException(status_code=500, detail="Failed to update knowledge card section.")
 
 
-@router.put("/knowledge-cards/{card_id}")
+@router.put("/knowledge-cards/{card_id}", dependencies=[Depends(authorize_knowledge_manager)])
 async def update_knowledge_card(card_id: uuid.UUID, card: KnowledgeCardIn, current_user: dict = Depends(get_current_user)):
     """
     Updates an existing knowledge card.
@@ -625,7 +641,7 @@ async def update_knowledge_card(card_id: uuid.UUID, card: KnowledgeCardIn, curre
         raise HTTPException(status_code=500, detail="Failed to update knowledge card.")
 
 
-@router.post("/knowledge-cards/{card_id}/references")
+@router.post("/knowledge-cards/{card_id}/references", dependencies=[Depends(authorize_knowledge_manager)])
 async def create_knowledge_card_reference(card_id: uuid.UUID, reference: KnowledgeCardReferenceIn, current_user: dict = Depends(get_current_user)):
     """
     Creates a new reference or links an existing one to a knowledge card.
@@ -688,7 +704,7 @@ async def create_knowledge_card_reference(card_id: uuid.UUID, reference: Knowled
         raise HTTPException(status_code=500, detail="Failed to create or link reference.")
 
 
-@router.put("/knowledge-cards/references/{reference_id}")
+@router.put("/knowledge-cards/references/{reference_id}", dependencies=[Depends(authorize_knowledge_manager)])
 async def update_knowledge_card_reference(reference_id: uuid.UUID, reference: KnowledgeCardReferenceIn, current_user: dict = Depends(get_current_user)):
     """
     Updates an existing reference for a knowledge card.
@@ -719,7 +735,7 @@ async def update_knowledge_card_reference(reference_id: uuid.UUID, reference: Kn
         raise HTTPException(status_code=500, detail="Failed to update reference.")
 
 
-@router.delete("/knowledge-cards/{card_id}/references/{reference_id}")
+@router.delete("/knowledge-cards/{card_id}/references/{reference_id}", dependencies=[Depends(authorize_knowledge_manager)])
 async def delete_knowledge_card_reference(card_id: uuid.UUID, reference_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
     """
     Deletes the association between a knowledge card and a reference.
@@ -751,7 +767,7 @@ async def delete_knowledge_card_reference(card_id: uuid.UUID, reference_id: uuid
         raise HTTPException(status_code=500, detail="Failed to unlink reference.")
 
 
-@router.delete("/knowledge-cards/{card_id}")
+@router.delete("/knowledge-cards/{card_id}", dependencies=[Depends(authorize_knowledge_manager)])
 async def delete_knowledge_card(card_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
     """
     Deletes a knowledge card and its associations.
@@ -784,7 +800,7 @@ async def delete_knowledge_card(card_id: uuid.UUID, current_user: dict = Depends
         logger.error(f"[DELETE KNOWLEDGE CARD ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to delete knowledge card.")
 
-@router.delete("/knowledge-cards/references/{reference_id}")
+@router.delete("/knowledge-cards/references/{reference_id}", dependencies=[Depends(authorize_knowledge_manager)])
 async def delete_knowledge_card_reference_by_id(reference_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
     """
     Deletes a reference and its associations.
@@ -819,7 +835,7 @@ async def delete_knowledge_card_reference_by_id(reference_id: uuid.UUID, current
         raise HTTPException(status_code=500, detail="Failed to delete reference.")
 
 
-@router.delete("/knowledge-cards/references/{reference_id}")
+@router.delete("/knowledge-cards/references/{reference_id}", dependencies=[Depends(authorize_knowledge_manager)])
 async def delete_knowledge_card_reference_by_id(reference_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
     """
     Deletes a reference and its associations.
@@ -905,7 +921,7 @@ async def ingest_reference_content(card_id: uuid.UUID, reference_id: uuid.UUID, 
             connection.close()
 
 
-@router.post("/knowledge-cards/references/{reference_id}/upload")
+@router.post("/knowledge-cards/references/{reference_id}/upload", dependencies=[Depends(authorize_knowledge_manager)])
 async def upload_pdf_reference(
     reference_id: uuid.UUID,
     file: UploadFile = File(...),
@@ -1085,7 +1101,7 @@ async def generate_content_background(card_id: uuid.UUID):
                 {"id": card_id}
             )
 
-@router.post("/knowledge-cards/{card_id}/ingest-references")
+@router.post("/knowledge-cards/{card_id}/ingest-references", dependencies=[Depends(authorize_knowledge_manager)])
 async def ingest_knowledge_card_references(
     card_id: uuid.UUID,
     background_tasks: BackgroundTasks,
@@ -1126,7 +1142,7 @@ async def ingest_knowledge_card_references(
     return {"message": "Reference ingestion started in the background."}
 
 
-@router.post("/knowledge-cards/{card_id}/references/{reference_id}/reingest")
+@router.post("/knowledge-cards/{card_id}/references/{reference_id}/reingest", dependencies=[Depends(authorize_knowledge_manager)])
 async def reingest_knowledge_card_reference(card_id: uuid.UUID, reference_id: uuid.UUID, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
     """
     Starts the ingestion of a single reference for a knowledge card in the background, with force_scrape=True.
@@ -1156,7 +1172,7 @@ async def reingest_knowledge_card_reference(card_id: uuid.UUID, reference_id: uu
     return {"message": "Single reference ingestion started in the background."}
 
 
-@router.post("/knowledge-cards/{card_id}/generate")
+@router.post("/knowledge-cards/{card_id}/generate", dependencies=[Depends(authorize_knowledge_manager)])
 async def generate_knowledge_card_content(card_id: uuid.UUID, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
     """
     Starts the generation of content for a knowledge card in the background.
@@ -1320,7 +1336,7 @@ async def get_knowledge_card_ingest_status(card_id: uuid.UUID, current_user: dic
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
-@router.post("/knowledge-cards/{card_id}/identify-references")
+@router.post("/knowledge-cards/{card_id}/identify-references", dependencies=[Depends(authorize_knowledge_manager)])
 async def identify_references(card_id: uuid.UUID, data: IdentifyReferencesIn, current_user: dict = Depends(get_current_user)):
     """
     Identifies references for a knowledge card based on its title, summary, and linked element,
@@ -1587,7 +1603,7 @@ async def generate_and_download_document(
         raise HTTPException(status_code=500, detail="An unexpected error occurred.")
 
 
-@router.delete("/knowledge-cards/references/{reference_id}")
+@router.delete("/knowledge-cards/references/{reference_id}", dependencies=[Depends(authorize_knowledge_manager)])
 async def delete_knowledge_card_reference_by_id(reference_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
     """
     Deletes a reference and its associations.

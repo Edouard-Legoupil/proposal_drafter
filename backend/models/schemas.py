@@ -9,6 +9,43 @@ from pydantic import BaseModel
 # data validation. Pydantic ensures that the data received by the API conforms
 # to the expected structure and types.
 
+class Role(BaseModel):
+    id: int
+    name: str
+
+class UserRole(BaseModel):
+    user_id: uuid.UUID
+    role_id: int
+
+class UserDonorGroup(BaseModel):
+    user_id: uuid.UUID
+    donor_group: str
+
+class UserOutcome(BaseModel):
+    user_id: uuid.UUID
+    outcome_id: uuid.UUID
+
+class UserSettings(BaseModel):
+    geographic_coverage_type: Optional[str] = None
+    geographic_coverage_region: Optional[str] = None
+    geographic_coverage_country: Optional[str] = None
+    roles: List[int]
+    donor_groups: Optional[List[str]] = None
+    outcomes: Optional[List[uuid.UUID]] = None
+
+class User(BaseModel):
+    id: uuid.UUID
+    email: str
+    name: Optional[str] = None
+    team_id: Optional[uuid.UUID] = None
+    geographic_coverage_type: Optional[str] = None
+    geographic_coverage_region: Optional[str] = None
+    geographic_coverage_country: Optional[str] = None
+    roles: List[Role] = []
+    donor_groups: List[str] = []
+    outcomes: List[uuid.UUID] = []
+
+
 class BaseDataRequest(BaseModel):
     """
     Schema for the initial data required to start a proposal.
