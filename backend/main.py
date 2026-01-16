@@ -130,7 +130,9 @@ frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "f
 #frontend_path = os.path.join(os.path.dirname(__file__), "..", "/frontend/dist")
 if os.path.isdir(frontend_path):
     # Serve static assets first
-    app.mount("/assets", StaticFiles(directory=os.path.join(frontend_path, "assets")), name="assets")
+    assets_path = os.path.join(frontend_path, "assets")
+    if os.path.isdir(assets_path):
+        app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
     
     # Serve other static files that might exist in the build
     static_dirs = ['static', 'public']  # common React build directories
