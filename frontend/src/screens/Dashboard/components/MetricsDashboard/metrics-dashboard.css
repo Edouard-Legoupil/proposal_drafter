@@ -1,0 +1,45 @@
+/* Add styles for compressed card layout and chart explanations */
+.metrics-dashboard .metric-desc {
+  font-size: 0.98rem;
+  color: #333;
+  margin: 0 0 8px 0;
+  padding: 0;
+}
+
+.metrics-dashboard .metric-card {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  min-height: 135px;
+  margin-bottom: 0;
+  padding: 16px 14px 12px 14px;
+  box-sizing: border-box;
+  border-radius: 7px;
+  position: relative;
+  background: #f9fafd;
+  box-shadow: 0 2px 6px rgba(0, 25, 75, 0.08);
+}
+
+.metrics-dashboard .expand-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.metrics-dashboard .expand-btn:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.metrics-dashboard .chart-container {
+  min-height: 160px;
+  max-height: 185px;
+  height: 185px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #fff;
+}
