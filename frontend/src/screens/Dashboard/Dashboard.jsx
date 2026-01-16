@@ -11,8 +11,7 @@ import SingleSelectUserModal from '../../components/SingleSelectUserModal/Single
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
 
-export default function Dashboard ()
-{
+export default function Dashboard() {
         const navigate = useNavigate()
 
         const [projects, setProjects] = useState([])
@@ -35,71 +34,63 @@ export default function Dashboard ()
                 metrics: useRef(null)
         };
 
-        async function getProjects ()
-        {
+        async function getProjects() {
                 const response = await fetch(`${API_BASE_URL}/list-drafts`, {
                         method: 'GET',
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include'
                 })
 
-                if(response.ok)
-                {
+                if (response.ok) {
                         const data = await response.json()
                         setProjects(data.drafts)
                 }
         }
 
-        async function getReviews ()
-        {
+        async function getReviews() {
                 const response = await fetch(`${API_BASE_URL}/proposals/reviews`, {
                         method: 'GET',
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include'
                 })
 
-                if(response.ok)
-                {
+                if (response.ok) {
                         const data = await response.json()
                         setReviews(data.reviews)
                 }
         }
 
-        async function getKnowledgeCards ()
-        {
+        async function getKnowledgeCards() {
                 const response = await fetch(`${API_BASE_URL}/knowledge-cards`, {
                         method: 'GET',
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include'
                 })
 
-                if(response.ok)
-                {
+                if (response.ok) {
                         const data = await response.json()
                         setKnowledgeCards(data.knowledge_cards)
                 }
         }
 
-        async function getUsers ()
-        {
+        async function getUsers() {
                 const response = await fetch(`${API_BASE_URL}/users`, {
                         method: 'GET',
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include'
                 })
 
-                if(response.ok)
-                {
+                if (response.ok) {
                         const data = await response.json()
-                        setUsers(data.users.map(user => ({id: user.id, name: user.name})))
+                        setUsers(data.users.map(user => ({ id: user.id, name: user.name })))
                 }
         }
 
         useEffect(() => {
                 const savedTab = sessionStorage.getItem('selectedDashboardTab');
                 if (savedTab) {
-                    setSelectedTab(savedTab);
-                    sessionStorage.removeItem('selectedDashboardTab');
+                        setSelectedTab(savedTab);
+                        sessionStorage.removeItem('selectedDashboardTab');
                 }
                 sessionStorage.removeItem("proposal_id")
                 getProjects()
@@ -108,8 +99,7 @@ export default function Dashboard ()
                 getUsers()
         }, [])
 
-        async function handleProjectClick(e, proposal_id, isReview = false)
-        {
+        async function handleProjectClick(e, proposal_id, isReview = false) {
                 // This logic might need to be adapted depending on the final card structure in Project.jsx
                 sessionStorage.setItem("proposal_id", proposal_id)
                 if (isReview) {
@@ -119,29 +109,25 @@ export default function Dashboard ()
                 }
         }
 
-        async function handleDeleteProject (proposal_id)
-        {
+        async function handleDeleteProject(proposal_id) {
                 const response = await fetch(`${API_BASE_URL}/proposals/${proposal_id}/delete`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include'
                 })
 
-                if(response.ok)
-                {
+                if (response.ok) {
                         getProjects()
                         getReviews()
                 }
         }
 
-        function handleTransferOwnership (proposal_id)
-        {
+        function handleTransferOwnership(proposal_id) {
                 setTransferProposalId(proposal_id)
                 setIsTransferModalOpen(true)
         }
 
-        async function confirmTransfer (new_owner_id)
-        {
+        async function confirmTransfer(new_owner_id) {
                 const response = await fetch(`${API_BASE_URL}/proposals/${transferProposalId}/transfer`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
@@ -149,8 +135,7 @@ export default function Dashboard ()
                         credentials: 'include'
                 })
 
-                if(response.ok)
-                {
+                if (response.ok) {
                         getProjects()
                         getReviews()
                         setIsTransferModalOpen(false)
@@ -158,8 +143,7 @@ export default function Dashboard ()
                 }
         }
 
-        function cleanedDate (date)
-        {
+        function cleanedDate(date) {
                 const cleaned = date.replace(/\.\d+/, "");
                 const data = new Date(cleaned);
                 const readable = data.toISOString().split('T')[0];
@@ -199,69 +183,69 @@ export default function Dashboard ()
                 let filteredCards = knowledgeCards;
 
                 if (knowledgeCardTypeFilter) {
-                    filteredCards = filteredCards.filter(card => {
-                        if (knowledgeCardTypeFilter === 'donor') return card.donor_name;
-                        if (knowledgeCardTypeFilter === 'outcome') return card.outcome_name;
-                        if (knowledgeCardTypeFilter === 'field_context') return card.field_context_name;
-                        return true;
-                    });
+                        filteredCards = filteredCards.filter(card => {
+                                if (knowledgeCardTypeFilter === 'donor') return card.donor_name;
+                                if (knowledgeCardTypeFilter === 'outcome') return card.outcome_name;
+                                if (knowledgeCardTypeFilter === 'field_context') return card.field_context_name;
+                                return true;
+                        });
                 }
 
                 if (searchTerm) {
-                    filteredCards = filteredCards.filter(card =>
-                        (card.summary && card.summary.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                        (card.donor_name && card.donor_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                        (card.outcome_name && card.outcome_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                        (card.field_context_name && card.field_context_name.toLowerCase().includes(searchTerm.toLowerCase()))
-                    );
+                        filteredCards = filteredCards.filter(card =>
+                                (card.summary && card.summary.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                                (card.donor_name && card.donor_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                                (card.outcome_name && card.outcome_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                                (card.field_context_name && card.field_context_name.toLowerCase().includes(searchTerm.toLowerCase()))
+                        );
                 }
 
                 setDisplayKnowledgeCards(filteredCards);
-            }, [knowledgeCards, searchTerm, knowledgeCardTypeFilter]);
+        }, [knowledgeCards, searchTerm, knowledgeCardTypeFilter]);
 
         useEffect(() => {
-            const findDuplicates = () => {
-                if (knowledgeCards.length === 0) return;
-                const groups = {};
-                knowledgeCards.forEach(card => {
-                    let key = null;
-                    if (card.donor_id) key = `donor-${card.donor_id}`;
-                    else if (card.outcome_id) key = `outcome-${card.outcome_id}`;
-                    else if (card.field_context_id) key = `field_context-${card.field_context_id}`;
+                const findDuplicates = () => {
+                        if (knowledgeCards.length === 0) return;
+                        const groups = {};
+                        knowledgeCards.forEach(card => {
+                                let key = null;
+                                if (card.donor_id) key = `donor-${card.donor_id}`;
+                                else if (card.outcome_id) key = `outcome-${card.outcome_id}`;
+                                else if (card.field_context_id) key = `field_context-${card.field_context_id}`;
 
-                    if (key) {
-                        if (!groups[key]) {
-                            groups[key] = [];
+                                if (key) {
+                                        if (!groups[key]) {
+                                                groups[key] = [];
+                                        }
+                                        groups[key].push(card.id);
+                                }
+                        });
+
+                        const duplicates = new Set();
+                        for (const key in groups) {
+                                if (groups[key].length > 1) {
+                                        groups[key].forEach(id => duplicates.add(id));
+                                }
                         }
-                        groups[key].push(card.id);
-                    }
-                });
+                        setDuplicateCardIds(duplicates);
+                        console.log('Duplicate Card IDs:', duplicates);
+                };
 
-                const duplicates = new Set();
-                for (const key in groups) {
-                    if (groups[key].length > 1) {
-                        groups[key].forEach(id => duplicates.add(id));
-                    }
-                }
-                setDuplicateCardIds(duplicates);
-                console.log('Duplicate Card IDs:', duplicates);
-            };
-
-            findDuplicates();
+                findDuplicates();
         }, [knowledgeCards]);
 
         async function handleDeleteKnowledgeCard(cardId) {
-            const response = await fetch(`${API_BASE_URL}/knowledge-cards/${cardId}`, {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include'
-            });
+                const response = await fetch(`${API_BASE_URL}/knowledge-cards/${cardId}`, {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include'
+                });
 
-            if (response.ok) {
-                getKnowledgeCards();
-            } else {
-                alert('Failed to delete knowledge card.');
-            }
+                if (response.ok) {
+                        getKnowledgeCards();
+                } else {
+                        alert('Failed to delete knowledge card.');
+                }
         }
 
         const activateTab = (tabId) => {
@@ -284,14 +268,25 @@ export default function Dashboard ()
                 }
         }
 
-        return  <Base>
+        return <Base>
                 <div className="Dashboard">
-                        <header className="Dashboard_top">
+                        <header className="Dashboard_top" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
                                 <div className='Dashboard_label'>
-                                Draft Smart Project Proposals with AI, Curated Knowledge and Peer Review. ⚠️ Beta Version ⚠️  
-                                         
-                                </div> 
-                        </header>  
+                                        Draft Smart Project Proposals with AI, Curated Knowledge and Peer Review. ⚠️ Beta Version ⚠️
+                                </div>
+                                <div
+                                        className="ai-disclaimer"
+                                        style={{
+                                                background: "#fff8e1", border: "1px solid #fdd835",
+                                                color: "#372800", borderRadius: "8px", fontSize: "14px",
+                                                padding: "7px 16px", margin: '0 0 0 24px',
+                                                boxShadow: "0 2px 10px 0 rgb(0 0 0 / 7%)", zIndex: 3, position: "relative", minWidth: 210
+                                        }}
+                                >
+                                        <strong>Note:</strong> AI-generated content may be incorrect or require verification. Please review carefully before using.
+                                </div>
+                        </header>
+
 
                         <nav className="tabs" aria-label="Dashboard sections">
                                 <div role="tablist" aria-orientation="horizontal" className="tablist">
@@ -308,7 +303,7 @@ export default function Dashboard ()
                                                 tabIndex={selectedTab === 'proposals' ? 0 : -1}
                                                 data-testid="proposals-tab"
                                         >
-                                                 <i className="fa-solid fa-file-lines" aria-hidden="true"></i>  My Proposals 
+                                                <i className="fa-solid fa-file-lines" aria-hidden="true"></i>  My Proposals
                                         </button>
                                         <button
                                                 id="knowledge-tab"
@@ -323,7 +318,7 @@ export default function Dashboard ()
                                                 tabIndex={selectedTab === 'knowledge' ? 0 : -1}
                                                 data-testid="knowledge-tab"
                                         >
-                                                <i className="fa-solid fa-book-open" aria-hidden="true"></i>  Knowledge Card 
+                                                <i className="fa-solid fa-book-open" aria-hidden="true"></i>  Knowledge Card
                                         </button>
                                         <button
                                                 id="reviews-tab"
@@ -338,7 +333,7 @@ export default function Dashboard ()
                                                 tabIndex={selectedTab === 'reviews' ? 0 : -1}
                                                 data-testid="reviews-tab"
                                         >
-                                                <i className="fa-solid fa-magnifying-glass" aria-hidden="true"></i>  Pending Reviews 
+                                                <i className="fa-solid fa-magnifying-glass" aria-hidden="true"></i>  Pending Reviews
                                         </button>
 
                                         <button
@@ -354,7 +349,7 @@ export default function Dashboard ()
                                                 tabIndex={selectedTab === 'metrics' ? 0 : -1}
                                                 data-testid="metrics-tab"
                                         >
-                                                <i className="fa-solid fa-gauge-high" aria-hidden="true"></i>  Metrics 
+                                                <i className="fa-solid fa-gauge-high" aria-hidden="true"></i>  Metrics
                                         </button>
                                 </div>
                         </nav>
@@ -408,22 +403,22 @@ export default function Dashboard ()
 
                         <section id="reviews-panel" role="tabpanel" aria-labelledby="reviews-tab" className={`tab-panel ${selectedTab === 'reviews' ? 'active' : ''}`} hidden={selectedTab !== 'reviews'}>
                                 <div className="Dashboard_projects" id="reviews-grid">
-                                {displayProjects && displayProjects.map((review) =>
-                                        <Project
-                                                key={review.proposal_id}
-                                                project={review}
-                                                date={cleanedDate(review.updated_at)}
-                                                onClick={(e) => handleProjectClick(e, review.proposal_id, true)}
-                                                isReview={true}
-                                                handleDeleteProject={handleDeleteProject}
-                                                handleTransferOwnership={handleTransferOwnership}
-                                        />
-                                )}
+                                        {displayProjects && displayProjects.map((review) =>
+                                                <Project
+                                                        key={review.proposal_id}
+                                                        project={review}
+                                                        date={cleanedDate(review.updated_at)}
+                                                        onClick={(e) => handleProjectClick(e, review.proposal_id, true)}
+                                                        isReview={true}
+                                                        handleDeleteProject={handleDeleteProject}
+                                                        handleTransferOwnership={handleTransferOwnership}
+                                                />
+                                        )}
                                 </div>
                         </section>
 
                         <section id="metrics-panel" role="tabpanel" aria-labelledby="metrics-tab" className={`tab-panel ${selectedTab === 'metrics' ? 'active' : ''}`} hidden={selectedTab !== 'metrics'}>
-                                <MetricsDashboard />
+                                {selectedTab === 'metrics' && <MetricsDashboard />}
                         </section>
                 </div>
 

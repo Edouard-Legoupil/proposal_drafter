@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './Review.css';
 import Markdown from 'react-markdown';
+import rehypeSanitize from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
 
 const Review = ({ review, onSaveResponse }) => {
@@ -18,7 +19,7 @@ const Review = ({ review, onSaveResponse }) => {
     <div className="review-container">
       <div className="review-comment">
         <p className="reviewer-name">{review.reviewer_name} commented:</p>
-        <Markdown remarkPlugins={[remarkGfm]}>{review.review_text}</Markdown>
+        <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>{review.review_text}</Markdown>
       </div>
       <div className="author-response">
         <textarea

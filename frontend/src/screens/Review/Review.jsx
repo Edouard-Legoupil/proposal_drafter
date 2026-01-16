@@ -3,6 +3,7 @@ import './Review.css'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Markdown from 'react-markdown'
+import rehypeSanitize from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faThumbsUp, faThumbsDown } from '@fortawesome/free-solid-svg-icons'
@@ -148,7 +149,8 @@ export default function Review() {
                         <div className="Review_header">
                                 <h1>Reviewing: {proposal.form_data['Project Draft Short name']}</h1>
                         </div>
-                        <div className="Review_proposal" data-testid="review-proposal-content">
+                        
+<div className="Review_proposal" data-testid="review-proposal-content">
                                 {Object.entries(proposal.generated_sections).map(([section, content]) => (
                                         <div key={section} className={`Review_section ${reviewStatus[section] === 'up' ? 'thumb-up-section' : reviewStatus[section] === 'down' ? 'thumb-down-section' : ''}`} data-testid={`review-section-${section}`}>
                                                 <div className="Review_section_main">
@@ -170,7 +172,7 @@ export default function Review() {
                                                                 </div>
                                                         </div>
                                                         <div className="Review_section_content">
-                                                                <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
+                                                                <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>{content}</Markdown>
                                                         </div>
                                                 </div>
                                                 {reviewStatus[section] === 'down' && (
