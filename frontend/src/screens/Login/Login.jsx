@@ -16,15 +16,14 @@ import logo from "../../assets/images/App_logo.svg"
 import show from "../../assets/images/login_showPassword.svg"
 import hide from "../../assets/images/login_hidePassword.svg"
 
-export default function Login (props)
-{
+export default function Login(props) {
         const navigate = useNavigate()
 
         const errorPopover = useRef()
         const [errorText, setErrorText] = useState("")
         useEffect(() => {
                 const sessionExpiredError = sessionStorage.getItem("session_expired")
-                if(sessionExpiredError && errorPopover.current.showPopover) {
+                if (sessionExpiredError && errorPopover.current.showPopover) {
                         setErrorText(sessionExpiredError)
                         errorPopover.current.showPopover()
                         sessionStorage.removeItem("session_expired")
@@ -81,7 +80,7 @@ export default function Login (props)
         }, []);
 
         useEffect(() => {
-                if(errorPopover.current?.hidePopover && password) {
+                if (errorPopover.current?.hidePopover && password) {
                         setErrorText("")
                         errorPopover.current.hidePopover()
                 }
@@ -89,8 +88,7 @@ export default function Login (props)
                         setShowPassword(false)
         }, [email, password])
 
-        async function handleLoginClick (e)
-        {
+        async function handleLoginClick(e) {
                 e.preventDefault()
 
                 setSubmitButtonText("LOGGING IN")
@@ -99,16 +97,14 @@ export default function Login (props)
                 const response = await fetch(`${API_BASE_URL}/login`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email, password }),
+                        body: JSON.stringify({ identifier: email, password }),
                         credentials: 'include'
                 })
 
-                if (response.ok)
-                {
+                if (response.ok) {
                         navigate("/dashboard")
                 }
-                else
-                {
+                else {
                         setSubmitButtonText(props?.register ? "REGISTER" : "LOGIN")
                         setLoading(false)
 
@@ -116,14 +112,13 @@ export default function Login (props)
 
                         setPassword("")
                         setShowPassword(false)
-                        if(errorPopover.current.showPopover)
+                        if (errorPopover.current.showPopover)
                                 errorPopover.current.showPopover()
                         setErrorText(data.error)
                 }
         }
 
-        async function handleRegisterClick (e)
-        {
+        async function handleRegisterClick(e) {
                 setSubmitButtonText("REGISTERING")
                 setLoading(true)
 
@@ -144,8 +139,7 @@ export default function Login (props)
 
                 if (response.ok)
                         handleLoginClick(e)
-                else
-                {
+                else {
                         setSubmitButtonText("REGISTER")
                         setLoading(false)
 
@@ -164,7 +158,7 @@ export default function Login (props)
                 }
         }
 
-        return  <div className="Login_container" data-testid="login-container">
+        return <div className="Login_container" data-testid="login-container">
                 <div className='Login'>
                         <div popover="auto" className='Login-errorPopover' ref={errorPopover} data-testid="error-popover">
                                 <span>🛇 {errorText}</span>
@@ -194,29 +188,29 @@ export default function Login (props)
                                                                 />
                                                                 <label className='Login-label' htmlFor='Login_teamInput'>Team</label>
                                                                 <select
-                                                                    id="Login_teamInput"
-                                                                    value={teamId}
-                                                                    onChange={e => setTeamId(e.target.value)}
-                                                                    required
-                                                                    data-testid="team-select"
+                                                                        id="Login_teamInput"
+                                                                        value={teamId}
+                                                                        onChange={e => setTeamId(e.target.value)}
+                                                                        required
+                                                                        data-testid="team-select"
                                                                 >
-                                                                    <option value="" disabled>Select your team</option>
-                                                                    {teams.map(team => (
-                                                                        <option key={team.id} value={team.id}>{team.name}</option>
-                                                                    ))}
+                                                                        <option value="" disabled>Select your team</option>
+                                                                        {teams.map(team => (
+                                                                                <option key={team.id} value={team.id}>{team.name}</option>
+                                                                        ))}
                                                                 </select>
                                                         </>
                                                         :
                                                         ""
                                                 }
-                                                <label className='Login-label' htmlFor='Login_emailInput'>Email</label>
+                                                <label className='Login-label' htmlFor='Login_identifierInput'>Username or Email</label>
                                                 <input
-                                                        type="email"
-                                                        id="Login_emailInput"
+                                                        type="text"
+                                                        id="Login_identifierInput"
                                                         value={email}
-                                                        placeholder={props?.register ? 'example@email.com' : 'Enter your email here'}
-                                                        onChange={e => /^[a-zA-Z0-9@._%+-]*$/.test(e.target.value) && setEmail(e.target.value.toLowerCase())}
-                                                        data-testid="email-input"
+                                                        placeholder={props?.register ? 'example@email.com' : 'Enter your username or email'}
+                                                        onChange={e => setEmail(e.target.value)}
+                                                        data-testid="identifier-input"
                                                 />
                                                 <label className='Login-label' htmlFor='Login_passwordInput'>Password</label>
                                                 <input
@@ -230,7 +224,7 @@ export default function Login (props)
                                                         data-testid="password-input"
                                                 />
                                                 {password ? <div className="Login_showPasswordToggleContainer">
-                                                        <img className='Login_passwordShowToggle' src={showPassword ? hide : show} onClick={() => setShowPassword(p => !p)} data-testid="show-password-toggle"/>
+                                                        <img className='Login_passwordShowToggle' src={showPassword ? hide : show} onClick={() => setShowPassword(p => !p)} data-testid="show-password-toggle" />
                                                 </div> : ""}
                                                 {props?.register ?
                                                         <>
@@ -239,7 +233,7 @@ export default function Login (props)
                                                                         id="Login_securityQuestionInput"
                                                                         value={securityQuestion}
                                                                         onChange={e => setSecurityQuestion(e.target.value)}
-                                                                        style={securityQuestion === "" ? {color: "rgb(117, 117, 117)"} : {}}
+                                                                        style={securityQuestion === "" ? { color: "rgb(117, 117, 117)" } : {}}
                                                                         data-testid="security-question-select"
                                                                 >
                                                                         <option value="" disabled>Select security question</option>
@@ -280,7 +274,7 @@ export default function Login (props)
                                                 {!props?.register ? <a href='/forgotpassword' className='Login-forgotpw' data-testid="forgot-password-link">Forgot Password?</a> : ""}
                                                 <CommonButton
                                                         type="submit"
-                                                        disabled={(props?.register && !username) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length >= 255 || password.length < 8 || (props?.register && !securityAnswer) || (props?.register && !acknowledged)}
+                                                        disabled={(props?.register && !username) || (props?.register ? !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) : !email) || email.length >= 255 || password.length < 8 || (props?.register && !securityAnswer) || (props?.register && !acknowledged)}
                                                         label={submitButtonText}
                                                         loading={loading}
                                                         style={{ marginTop: "20px" }}
@@ -302,9 +296,9 @@ export default function Login (props)
                                                                                                 style={{ marginTop: "20px", backgroundColor: "#2F2F2F" }}
                                                                                         />
                                                                                         <div className='Login-divider'>
-                                                                                                <hr/>
+                                                                                                <hr />
                                                                                                 <span>OR</span>
-                                                                                                <hr/>
+                                                                                                <hr />
                                                                                         </div>
                                                                                 </>
                                                                         )}
@@ -333,7 +327,7 @@ export default function Login (props)
                                         </div>
                                 </div>
                                 <div style={{ marginTop: '20px', fontSize: '12px', color: 'grey', textAlign: 'center' }}>
-                                    <p>You are now running <a href="https://github.com/Edouard-Legoupil/proposal_drafter/releases/tag/0.4" target="_blank" rel="noopener noreferrer">v.0.4</a></p>
+                                        <p>You are now running <a href="https://github.com/Edouard-Legoupil/proposal_drafter/releases/tag/0.4" target="_blank" rel="noopener noreferrer">v.0.4</a></p>
                                 </div>
                         </div>
                 </div>

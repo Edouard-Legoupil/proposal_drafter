@@ -9,11 +9,11 @@ import Login from './Login'
 const mockNavigate = vi.fn()
 
 vi.mock('react-router-dom', async () => {
-    const actual = await vi.importActual('react-router-dom')
-    return {
-        ...actual,
-        useNavigate: () => mockNavigate,
-    }
+        const actual = await vi.importActual('react-router-dom')
+        return {
+                ...actual,
+                useNavigate: () => mockNavigate,
+        }
 })
 
 describe('Login Form Validation', () => {
@@ -55,6 +55,11 @@ describe('Login Form Validation', () => {
                 await userEvent.clear(emailInput);
                 await userEvent.clear(passwordInput);
                 expect(loginButton).toBeDisabled();
+
+                // 7. Enter simple username (no email format) => enabled
+                await userEvent.type(emailInput, 'simpleuser');
+                await userEvent.type(passwordInput, 'validPass123');
+                expect(loginButton).toBeEnabled();
         }, 10000)
 })
 
