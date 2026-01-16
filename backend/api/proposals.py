@@ -192,7 +192,7 @@ async def create_session(request: CreateSessionRequest, current_user: dict = Dep
         raise HTTPException(status_code=500, detail="Failed to create a new proposal session.")
 
 
-async def generate_all_sections_background(session_id: str, proposal_id: str, user_id: str):
+def generate_all_sections_background(session_id: str, proposal_id: str, user_id: str):
     """
     Runs the proposal generation process for all sections in the background.
     """
@@ -1387,15 +1387,37 @@ async def get_proposal_status(proposal_id: uuid.UUID, current_user: dict = Depen
     try:
         with get_engine().connect() as connection:
             result = connection.execute(
-                text("SELECT status, generated_sections FROM proposals WHERE id = :id AND user_id = :uid"),
+                text("SELECT status, generated_sections, template_name FROM proposals WHERE id = :id AND user_id = :uid"),
                 {"id": proposal_id, "uid": user_id}
             ).fetchone()
 
             if not result:
                 raise HTTPException(status_code=404, detail="Proposal not found.")
 
-            status, generated_sections = result
-            return {"status": status, "generated_sections": generated_sections or {}}
+            status, generated_sections, template_name = result
+            
+            # Robust JSON parsing for generated_sections
+            if isinstance(generated_sections, str):
+                try:
+                    generated_sections = json.loads(generated_sections)
+                except Exception:
+                    logger.error(f"Failed to parse generated_sections JSON for {proposal_id}")
+                    generated_sections = {}
+
+            # Count expected sections for progress tracking
+            expected_sections = 0
+            if template_name:
+                try:
+                    template_data = load_proposal_template(template_name)
+                    expected_sections = len(template_data.get("sections", []))
+                except Exception as e:
+                    logger.warning(f"Failed to load template {template_name} for section count: {e}")
+
+            return {
+                "status": status, 
+                "generated_sections": generated_sections or {},
+                "expected_sections": expected_sections
+            }
 
     except HTTPException as http_exc:
         raise http_exc
