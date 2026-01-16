@@ -1039,6 +1039,18 @@ async def generate_content_background(card_id: uuid.UUID):
             try:
                 result = crew.create_crew().kickoff(inputs=inputs)
                 generated_sections[section_name] = str(result)
+                
+                # --- PARTIAL SAVE: Update DB after each section ---
+                try:
+                    with get_engine().begin() as connection:
+                        connection.execute(
+                            text("UPDATE knowledge_cards SET generated_sections = :sections, updated_at = CURRENT_TIMESTAMP WHERE id = :id"),
+                            {"sections": json.dumps(generated_sections), "id": card_id}
+                        )
+                except Exception as db_save_error:
+                    logger.error(f"Failed to save partial progress for section {section_name}: {db_save_error}")
+                # ----------------------------------------------------
+
                 _update_progress(card_id, f"Generated section {i+1}/{num_sections}: {section_name}", progress, section_name, str(result))
             except Exception as section_error:
                 logger.error(f"[SECTION GENERATION ERROR] Failed to generate section {section_name}: {section_error}")

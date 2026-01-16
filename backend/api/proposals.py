@@ -332,6 +332,17 @@ async def generate_all_sections_background(session_id: str, proposal_id: str, us
 
             all_sections[section_name] = generated_text
 
+             # --- PARTIAL SAVE: Update DB after each section ---
+            try:
+                with get_engine().begin() as connection:
+                    connection.execute(
+                        text("UPDATE proposals SET generated_sections = :sections, updated_at = CURRENT_TIMESTAMP WHERE id = :id"),
+                        {"sections": json.dumps(all_sections), "id": proposal_id}
+                    )
+            except Exception as db_save_error:
+                logger.error(f"Failed to save partial progress for section {section_name}: {db_save_error}")
+            # ----------------------------------------------------
+
         with get_engine().begin() as connection:
             connection.execute(
                 text("UPDATE proposals SET generated_sections = :sections, status = 'draft', updated_at = CURRENT_TIMESTAMP WHERE id = :id"),
