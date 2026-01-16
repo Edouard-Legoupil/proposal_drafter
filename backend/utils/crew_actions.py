@@ -10,6 +10,70 @@ from backend.utils.proposal_logic import regenerate_section_logic
 logger = logging.getLogger(__name__)
 
 
+def repair_json_string(json_str):
+    """
+    Attempts to repair common AI JSON syntax errors.
+    """
+    # Clean only truly problematic control characters
+    clean_json_str = re.sub(r"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]", "", json_str)
+    
+    try:
+        return json.loads(clean_json_str)
+    except json.JSONDecodeError as e:
+        logger.warning(f"Initial JSON parse failed, attempting repair: {e}")
+        
+        # Step 1: Escape literal newlines inside JSON strings
+        # Use a NON-GREEDY match for strings to avoid matching across properties
+        def escape_newlines_callback(match):
+            return match.group(0).replace("\n", "\\n").replace("\r", "\\r")
+        
+        repaired = re.sub(r'"(?:[^"\\]|\\.)*?"', escape_newlines_callback, clean_json_str, flags=re.DOTALL)
+        
+        # Step 2: Fix numbers with commas (thousands separators like 1,800.00)
+        for _ in range(3):
+            repaired = re.sub(r'(\d),(\d{3})(?!\d)', r'\1\2', repaired)
+
+        # Step 3: Remove trailing commas within objects and arrays
+        repaired = re.sub(r",\s*([}\]])", r"\1", repaired)
+        
+        # Step 4: Quote unquoted keys
+        # We look for words followed by a colon. We exclude things already in quotes.
+        # This is safer: find {key: or ,key:
+        repaired = re.sub(r"([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)(\s*:)", r'\1"\2"\3', repaired)
+        
+        # Step 5: Handle single quote usage for keys/values
+        # Keys: {'key': ...} -> {"key": ...}
+        repaired = re.sub(r"([{,]\s*)'([a-zA-Z_][a-zA-Z0-9_]*)'(\s*:)", r'\1"\2"\3', repaired)
+        # Values: {..., "key": 'value'} -> {..., "key": "value"}
+        repaired = re.sub(r"(:\s*)'([^']*)'(\s*[,}])", r'\1"\2"\3', repaired)
+        
+        try:
+            return json.loads(repaired)
+        except Exception as repair_err:
+            logger.error(f"JSON repair failed final attempt: {repair_err}")
+            return None
+
+
+def extract_json_from_crew_output(result):
+    """
+    Extracts and parses JSON from CrewAI result, handling potential markdown blocks.
+    """
+    try:
+        raw_output = result.raw if hasattr(result, "raw") and result.raw else ""
+        if not raw_output:
+            return None
+
+        # Try to find JSON content often wrapped in markdown blocks
+        json_match = re.search(r"\{.*\}", raw_output, re.DOTALL)
+        if not json_match:
+            return None
+        
+        return repair_json_string(json_match.group(0))
+    except Exception as e:
+        logger.error(f"Critical error in extract_json_from_crew_output: {e}")
+        return None
+
+
 def handle_text_format(
     section_config,
     crew_instance,
@@ -54,12 +118,9 @@ def handle_text_format(
     else:
         inputs["word_limit"] = limit_value
     result = crew_instance.kickoff(inputs=inputs)
-    try:
-        raw_output = result.raw if hasattr(result, "raw") and result.raw else ""
-        clean_output = re.sub(r"[`\x00-\x1F\x7F]", "", raw_output)
-        parsed = json.loads(clean_output)
-    except (AttributeError, json.JSONDecodeError) as e:
-        print(f"[CREWAI PARSE ERROR] for section {section_name}: {e}")
+    parsed = extract_json_from_crew_output(result)
+    if not parsed:
+        logger.error(f"[CREWAI PARSE ERROR] for section {section_name}")
         return ""
 
     generated_text = parsed.get("generated_content", "").strip()
@@ -107,17 +168,15 @@ def handle_number_format(
     }
     result = crew_instance.kickoff(inputs=inputs)
 
-    try:
-        raw_output = result.raw if hasattr(result, "raw") and result.raw else ""
-        clean_output = re.sub(r"[`\x00-\x1F\x7F]", "", raw_output)
-        parsed = json.loads(clean_output)
-        generated_text = parsed.get("generated_content", "").strip()
-        # Extract the first number from the output
-        match = re.search(r"\d+", generated_text)
-        return match.group(0) if match else "0"
-    except (AttributeError, json.JSONDecodeError) as e:
-        print(f"[CREWAI PARSE ERROR] for section {section_name}: {e}")
+    parsed = extract_json_from_crew_output(result)
+    if not parsed:
+        logger.error(f"[CREWAI PARSE ERROR] for section {section_name}")
         return "0"
+
+    generated_text = parsed.get("generated_content", "").strip()
+    # Extract the first number from the output
+    match = re.search(r"\d+", generated_text)
+    return match.group(0) if match else "0"
 
 
 def handle_table_format(
@@ -183,24 +242,26 @@ def handle_table_format(
 
     result = crew_instance.kickoff(inputs=inputs)
 
+    parsed_crew_output = extract_json_from_crew_output(result)
+    if not parsed_crew_output:
+        logger.error(f"[CREWAI PARSE ERROR] for section {section_name}")
+        return ""
+
+    generated_content = parsed_crew_output.get("generated_content", "")
+    logger.info(
+        f"Generated content for section '{section_name}':\n{json.dumps(generated_content, indent=2)}"
+    )
+
+    table_data = {}
+    pre_text = ""
+    post_text = ""
+
     try:
-        raw_output = result.raw if hasattr(result, "raw") and result.raw else ""
-        clean_output = re.sub(r"[`\x00-\x1F\x7F]", "", raw_output)
-        parsed_crew_output = json.loads(clean_output)
-        generated_content = parsed_crew_output.get("generated_content", "")
-        logger.info(
-            f"Generated content for section '{section_name}':\n{json.dumps(generated_content, indent=2)}"
-        )
-
-        table_data = {}
-        pre_text = ""
-        post_text = ""
-
-        # Handle  dict  format for generated_content
+        # Handle dict format for generated_content
         if isinstance(generated_content, dict):
             table_data = generated_content
 
-        # Handle str  format for generated_content
+        # Handle str format for generated_content
         elif isinstance(generated_content, str):
             json_match = re.search(r"\{.*\}", generated_content, re.DOTALL)
             if json_match:
@@ -208,8 +269,8 @@ def handle_table_format(
                 pre_text = generated_content[: json_match.start()].strip()
                 post_text = generated_content[json_match.end() :].strip()
                 try:
-                    table_data = json.loads(json_str)
-                except json.JSONDecodeError:
+                    table_data = repair_json_string(json_str) or {}
+                except Exception:
                     logger.warning(
                         f"Could not parse JSON from string for section '{section_name}'. Returning as is."
                     )
@@ -245,10 +306,15 @@ def handle_table_format(
 
         header_line = f"| {' | '.join(headers)} |"
         separator_line = f"| {' | '.join(['---'] * len(headers))} |"
-        row_lines = [
-            f"| {' | '.join([str(row.get(h, '')) for h in headers])} |"
-            for row in table_rows
-        ]
+        row_lines = []
+        for row in table_rows:
+            formatted_cells = []
+            for h in headers:
+                cell_value = str(row.get(h, ""))
+                # Replace both literal and escaped newlines with <br> for markdown tables
+                cell_value = cell_value.replace("\\n", "<br>").replace("\n", "<br>")
+                formatted_cells.append(cell_value)
+            row_lines.append(f"| {' | '.join(formatted_cells)} |")
 
         markdown_table = "\n".join([header_line, separator_line] + row_lines)
 
@@ -270,8 +336,8 @@ def handle_table_format(
         )
         return final_output
 
-    except (AttributeError, json.JSONDecodeError) as e:
+    except Exception as e:
         logger.error(
-            f"[CREWAI PARSE ERROR] for section {section_name}: {e}", exc_info=True
+            f"[CREWAI TABLE FORMAT ERROR] for section {section_name}: {e}", exc_info=True
         )
         return ""
