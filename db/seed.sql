@@ -10,7 +10,7 @@ INSERT INTO teams (id, name) VALUES
 (gen_random_uuid(), 'HQ Protection'),
 (gen_random_uuid(), 'Test');
 
-INSERT INTO donor_groups (id, name) VALUES
+INSERT INTO teams  (id, name) VALUES
 (gen_random_uuid(), 'Brussels Donor Group'),
 (gen_random_uuid(), 'DRRM Donor Group 1'),
 (gen_random_uuid(), 'DRRM Donor Group 2'),
