@@ -14,7 +14,10 @@ export default function App()
                 <Route path="/register" element={<Login register />} />
                 <Route path="/forgotpassword" element={<Login forgotPassword/>} />
                 <Route path="/dashboard" element={<Dashboard/>} />
+                <Route path="/dashboard/:folder" element={<Dashboard/>} />
+                <Route path="/dashboard/:folder/:subfolder" element={<Dashboard/>} />
                 <Route path="/chat" element={<Chat/>} />
+                <Route path="/chat/:id" element={<Chat/>} />
                 <Route path="/review/:proposal_id" element={<Review />} />
                 <Route path="/knowledge-card/new" element={<KnowledgeCard />} />
                 <Route path="/knowledge-card/:id" element={<KnowledgeCard />} />

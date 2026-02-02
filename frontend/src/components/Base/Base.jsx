@@ -5,13 +5,13 @@ import { useNavigate } from 'react-router-dom'
 
 import OSSFooter from '../OSSFooter/OSSFooter'
 import UserSettingsModal from '../UserSettingsModal/UserSettingsModal'
+import Sidebar from '../Sidebar/Sidebar'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
 
 import masterlogo from '../../assets/images/App_invertedLogo.svg'
 import downarrow from "../../assets/images/downarrow.svg"
 import logout_icon from "../../assets/images/Header_logout.svg"
-import settings_icon from "../../assets/images/Header_settings.svg"
 
 export default function Base (props)
 {
@@ -21,6 +21,8 @@ export default function Base (props)
                 "name": "",
                 "email": ""
         })
+        const [userRoles, setUserRoles] = useState([])
+        const [sidebarOpen, setSidebarOpen] = useState(true)
         const [showSettingsModal, setShowSettingsModal] = useState(false)
 
         function handleLogoClick ()
@@ -43,6 +45,7 @@ export default function Base (props)
                                         name: data.user.name,
                                         email: data.user.email
                                 })
+                                setUserRoles(data.user.roles || [])
                         }
                         else if(response.status === 401)
                         {
@@ -79,6 +82,9 @@ export default function Base (props)
         return  <div className='Base'>
                 <header className='Header'>
                         <span className='Header_logoContainer'>
+                                <button className='Header_sidebarToggle' onClick={() => setSidebarOpen(!sidebarOpen)} data-testid="sidebar-toggle">
+                                        <i className="fa-solid fa-bars"></i>
+                                </button>
                                 <img className='Header_orgLogo' src={masterlogo} onClick={handleLogoClick} alt="Organisation" data-testid="logo" />
                         </span>
 
@@ -96,19 +102,22 @@ export default function Base (props)
 
                         <div popover='auto' id="ID_Chat_logoutPopover" className='Chat_logoutPopover'>
                                 <div onClick={() => setShowSettingsModal(true)} data-testid="settings-button">
-                                        <img src={settings_icon} />
+                                        <i className="fa-solid fa-gear" style={{ marginRight: '8px' }}></i>
                                         Settings
                                 </div>
                                 <div onClick={handleLogoutClick} data-testid="logout-button">
-                                        <img src={logout_icon} />
+                                        <img src={logout_icon} alt="Logout" />
                                         Logout
                                 </div>
                         </div>
                 </header>
 
-                <main className='Main'>
-                        {props?.children}
-                </main>
+                <div className='Base_content'>
+                        <Sidebar userRoles={userRoles} isOpen={sidebarOpen} />
+                        <main className='Main'>
+                                {props?.children}
+                        </main>
+                </div>
 
                 <UserSettingsModal show={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
 

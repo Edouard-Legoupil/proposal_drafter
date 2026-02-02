@@ -2,7 +2,7 @@ import './Chat.css'
 import { Snackbar, Alert } from '@mui/material';
 
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import Markdown from 'react-markdown'
 import rehypeSanitize from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
@@ -37,6 +37,7 @@ import approved_icon from "../../assets/images/Chat_approved.svg"
 
 export default function Chat(props) {
         const navigate = useNavigate()
+        const { id } = useParams()
 
         const [sidebarOpen, setSidebarOpen] = useState(false);
         const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -73,39 +74,43 @@ export default function Chat(props) {
         const [newBudgetRanges, setNewBudgetRanges] = useState([]);
         const [newDurations, setNewDurations] = useState([]);
 
-        useEffect(() => {
-                async function fetchData() {
-                        try {
-                                const [donorsRes, outcomesRes, fieldContextsRes] = await Promise.all([
-                                        fetch(`${API_BASE_URL}/donors`, { credentials: 'include' }),
-                                        fetch(`${API_BASE_URL}/outcomes`, { credentials: 'include' }),
-                                        fetch(`${API_BASE_URL}/field-contexts`, { credentials: 'include' })
-                                ]);
+        async function fetchData() {
+                try {
+                        const [donorsRes, outcomesRes, fieldContextsRes] = await Promise.all([
+                                fetch(`${API_BASE_URL}/donors`, { credentials: 'include' }),
+                                fetch(`${API_BASE_URL}/outcomes`, { credentials: 'include' }),
+                                fetch(`${API_BASE_URL}/field-contexts`, { credentials: 'include' })
+                        ]);
 
-                                if (donorsRes.ok) {
-                                        const data = await donorsRes.json();
-                                        setDonors(data.donors);
-                                }
-                                if (outcomesRes.ok) {
-                                        const data = await outcomesRes.json();
-                                        setOutcomes(data.outcomes);
-                                }
-                                if (fieldContextsRes.ok) {
-                                        const data = await fieldContextsRes.json();
-                                        const sortedFieldContexts = data.field_contexts.sort((a, b) => a.name.localeCompare(b.name));
-                                        setFieldContexts(sortedFieldContexts);
-                                        setFilteredFieldContexts(sortedFieldContexts);
-                                }
-                        } catch (error) {
-                                console.error("Error fetching form data:", error);
+                        if (donorsRes.ok) {
+                                const data = await donorsRes.json();
+                                setDonors(data.donors);
                         }
+                        if (outcomesRes.ok) {
+                                const data = await outcomesRes.json();
+                                setOutcomes(data.outcomes);
+                        }
+                        if (fieldContextsRes.ok) {
+                                const data = await fieldContextsRes.json();
+                                const sortedFieldContexts = data.field_contexts.sort((a, b) => a.name.localeCompare(b.name));
+                                setFieldContexts(sortedFieldContexts);
+                                setFilteredFieldContexts(sortedFieldContexts);
+                        }
+                } catch (error) {
+                        console.error("Error fetching form data:", error);
+                }
+        }
+
+        useEffect(() => {
+                if (id) {
+                        sessionStorage.setItem("proposal_id", id);
                 }
                 fetchData().then(() => {
                         if (sessionStorage.getItem("proposal_id")) {
                                 getContent();
                         }
                 });
-        }, []);
+        }, [id]);
 
         async function getUsers() {
                 const response = await fetch(`${API_BASE_URL}/users`, {
@@ -768,20 +773,6 @@ export default function Chat(props) {
         }
 
         async function getStatusHistory() {
-                // if (sessionStorage.getItem("proposal_id")) {
-                //      const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/status-history`, {
-                //              method: "GET",
-                //              headers: { 'Content-Type': 'application/json' },
-                //              credentials: "include"
-                //      });
-                //      if (response.ok) {
-                //              const data = await response.json();
-                //              setStatusHistory(data.statuses);
-                //      } else if (response.status === 403) {
-                //              // If forbidden, user doesn't have rights, so we don't show history.
-                //              setStatusHistory([]);
-                //      }
-                // }
         }
 
         async function getContent() {
@@ -804,7 +795,7 @@ export default function Chat(props) {
                                 setFormData(p => Object.fromEntries(Object.entries(data.form_data).map(field =>
                                         [field[0], {
                                                 value: field[1],
-                                                mandatory: p[field[0]].mandatory
+                                                mandatory: p[field[0]]?.mandatory || false
                                         }]
                                 )))
 
@@ -1101,7 +1092,7 @@ export default function Chat(props) {
                                         <>
                                                 <div className='Dashboard_top'>
                                                         <div className='Dashboard_label' data-testid="chat-title">
-                                                                <img className='Dashboard_label_fileIcon' src={fileIcon} />
+                                                                <img className='Dashboard_label_fileIcon' src={fileIcon} alt="" />
                                                                 {titleName}
                                                         </div>
                                                 </div>
@@ -1190,18 +1181,18 @@ export default function Chat(props) {
                                 {sidebarOpen ? <>
                                         <div className='Dashboard_top'>
                                                 <div className='Dashboard_label'>
-                                                        <img className='Dashboard_label_fileIcon' src={resultsIcon} />
+                                                        <img className='Dashboard_label_fileIcon' src={resultsIcon} alt="" />
                                                         Results
                                                 </div>
 
                                                 {Object.keys(proposal).length > 0 ? <div className='Chat_exportButtons'>
                                                         <button type="button" onClick={() => handleExport("docx")} data-testid="export-word-button">
-                                                                <img src={word_icon} />
+                                                                <img src={word_icon} alt="" />
                                                                 Download Document
                                                         </button>
 
                                                         <button type="button" onClick={() => handleExportTables()} data-testid="export-excel-button">
-                                                                <img src={excel_icon} />
+                                                                <img src={excel_icon} alt="" />
                                                                 Download Tables
                                                         </button>
                                                         <div className="Chat_workflow_status_container">
@@ -1285,24 +1276,24 @@ export default function Chat(props) {
 
                                                                                 {!generateLoading && sectionObj.content && sectionObj.open && proposalStatus !== 'submitted' ? <div className="Chat_sectionOptions" data-testid={`section-options-${kebabSectionName}`}>
                                                                                         {!isEdit || (selectedSection === i && isEdit) ? <button type="button" onClick={() => handleEditClick(i)} style={(selectedSection === i && isEdit && regenerateSectionLoading) ? { pointerEvents: "none" } : {}} aria-label={`edit-section-${i}`} disabled={proposalStatus === 'in_review'} data-testid={`edit-save-button-${kebabSectionName}`}>
-                                                                                                <img src={(selectedSection === i && isEdit) ? save : edit} />
+                                                                                                <img src={(selectedSection === i && isEdit) ? save : edit} alt="" />
                                                                                                 <span>{(selectedSection === i && isEdit) ? "Save" : "Edit"}</span>
                                                                                         </button> : ""}
 
                                                                                         {selectedSection === i && isEdit ? <button type="button" onClick={() => setIsEdit(false)} data-testid={`cancel-edit-button-${kebabSectionName}`}>
-                                                                                                <img src={cancel} />
+                                                                                                <img src={cancel} alt="" />
                                                                                                 <span>Cancel</span>
                                                                                         </button> : ""}
 
                                                                                         {!isEdit ?
                                                                                                 <>
                                                                                                         <button type="button" onClick={() => handleCopyClick(i, sectionObj.content)} data-testid={`copy-button-${kebabSectionName}`}>
-                                                                                                                <img src={(selectedSection === i && isCopied) ? tick : copy} />
+                                                                                                                <img src={(selectedSection === i && isCopied) ? tick : copy} alt="" />
                                                                                                                 <span>{(selectedSection === i && isCopied) ? "Copied" : "Copy"}</span>
                                                                                                         </button>
 
                                                                                                         <button type="button" className='Chat_sectionOptions_regenerate' onClick={() => handleRegenerateIconClick(i)} disabled={proposalStatus !== 'draft'} data-testid={`regenerate-button-${kebabSectionName}`} >
-                                                                                                                <img src={regenerate} />
+                                                                                                                <img src={regenerate} alt="" />
                                                                                                                 <span>Regenerate</span>
                                                                                                         </button>
                                                                                                 </>
@@ -1310,7 +1301,7 @@ export default function Chat(props) {
                                                                                 </div> : ""}
 
                                                                                 {sectionObj.content && !(isEdit && selectedSection === i) ? <div className={`Chat_expanderArrow ${sectionObj.open ? "" : "closed"}`} onClick={() => handleExpanderToggle(i)} data-testid={`section-expander-${kebabSectionName}`}>
-                                                                                        <img src={arrow} />
+                                                                                        <img src={arrow} alt="" />
                                                                                 </div> : ""}
                                                                         </div>
 
@@ -1350,7 +1341,7 @@ export default function Chat(props) {
                         <dialog ref={dialogRef} className='Chat_regenerate' data-testid="regenerate-dialog">
                                 <header className='Chat_regenerate_header'>
                                         Regenerate — {proposalTemplate ? proposalTemplate.sections[selectedSection]?.section_name : Object.keys(proposal)[selectedSection]}
-                                        <img src={regenerateClose} onClick={() => { setRegenerateSectionLoading(false); setRegenerateInput(""); dialogRef.current.close() }} data-testid="regenerate-dialog-close-button" />
+                                        <img src={regenerateClose} alt="" onClick={() => { setRegenerateSectionLoading(false); setRegenerateInput(""); dialogRef.current.close() }} data-testid="regenerate-dialog-close-button" />
                                 </header>
 
                                 <main className='Chat_right'>
@@ -1366,4 +1357,3 @@ export default function Chat(props) {
                 </div>
         </Base>
 }
-
