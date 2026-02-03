@@ -75,7 +75,7 @@
         background-image: url("https://texturegenerator.sirv.com/Images/marble.jpg?opacity=65");
         background-position: 0% 0%;
         background-size: 100% 100%;
-        background-color: rgba(250,250,255,1);
+        background-color: rgba(250, 250, 255, 1);
 
         height: 40px;
         aspect-ratio: 1;
@@ -134,26 +134,37 @@
         border: 5px solid white;
         border-radius: 8px;
 
-        height: 50px;
+        height: auto;
         width: 175px;
 
         display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 5px 0;
+}
+
+.Chat_logoutPopover>div {
+        width: 100%;
+        display: flex;
         align-items: center;
-        padding: 0 15px;
-        gap: 8px;
+        gap: 12px;
+        padding: 12px 16px;
+        cursor: pointer;
+        transition: background 0.2s;
 
         font-family: "Noto";
         font-size: 14px;
         font-weight: 350;
-
-        cursor: pointer;
+        color: #333;
 }
 
-.Chat_logoutPopover:popover-open:hover {
-        background: hsl(0, 0%, 95%);
+.Chat_logoutPopover>div:hover {
+        background: #f1f5f9;
 }
 
-.Chat_logoutPopover > img {
+.Chat_logoutPopover>div img {
+        width: 18px;
+        height: 18px;
         filter: brightness(0);
 }
 

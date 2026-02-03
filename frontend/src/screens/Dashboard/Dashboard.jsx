@@ -36,20 +36,19 @@ export default function Dashboard() {
         };
 
         async function getProfile() {
-            const response = await fetch(`${API_BASE_URL}/profile`, {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include'
-            });
+                const response = await fetch(`${API_BASE_URL}/profile`, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include'
+                });
 
-            if (response.ok) {
-                const data = await response.json();
-                setUserRoles(data.user.roles);
-            }
+                if (response.ok) {
+                        const data = await response.json();
+                        setUserRoles(data.user.roles || []);
+                }
         }
 
-        async function getProjects ()
-        {
+        async function getProjects() {
                 const response = await fetch(`${API_BASE_URL}/list-drafts`, {
                         method: 'GET',
                         headers: { 'Content-Type': 'application/json' },
@@ -97,7 +96,7 @@ export default function Dashboard() {
 
                 if (response.ok) {
                         const data = await response.json()
-                        setUsers(data.users.map(user => ({ id: user.id, name: user.name })))
+                        setUsers((data || []).map(user => ({ id: user.id, name: user.name })))
                 }
         }
 
@@ -216,14 +215,14 @@ export default function Dashboard() {
                         );
                 }
 
-                if (userRoles.includes('knowledge manager donors')) {
-                    const donorCards = filteredCards.filter(card => card.donor_name);
-                    const otherCards = filteredCards.filter(card => !card.donor_name);
-                    filteredCards = [...donorCards, ...otherCards];
+                if (userRoles && userRoles.includes('knowledge manager donors')) {
+                        const donorCards = filteredCards.filter(card => card.donor_name);
+                        const otherCards = filteredCards.filter(card => !card.donor_name);
+                        filteredCards = [...donorCards, ...otherCards];
                 }
 
                 setDisplayKnowledgeCards(filteredCards);
-            }, [knowledgeCards, searchTerm, knowledgeCardTypeFilter, userRoles]);
+        }, [knowledgeCards, searchTerm, knowledgeCardTypeFilter, userRoles]);
 
         useEffect(() => {
                 const findDuplicates = () => {
@@ -312,23 +311,23 @@ export default function Dashboard() {
 
                         <nav className="tabs" aria-label="Dashboard sections">
                                 <div role="tablist" aria-orientation="horizontal" className="tablist">
-                                    {userRoles.includes('proposal writer') && (
-                                        <button
-                                                id="proposals-tab"
-                                                ref={tabRefs.proposals}
-                                                role="tab"
-                                                aria-selected={selectedTab === 'proposals'}
-                                                aria-controls="proposals-panel"
-                                                className="tab"
-                                                data-tab="proposals"
-                                                onClick={() => activateTab('proposals')}
-                                                onKeyDown={onTabKeydown}
-                                                tabIndex={selectedTab === 'proposals' ? 0 : -1}
-                                                data-testid="proposals-tab"
-                                        >
-                                                <i className="fa-solid fa-file-lines" aria-hidden="true"></i>  My Proposals
-                                        </button>
-                                    )}
+                                        {userRoles && userRoles.includes('proposal writer') && (
+                                                <button
+                                                        id="proposals-tab"
+                                                        ref={tabRefs.proposals}
+                                                        role="tab"
+                                                        aria-selected={selectedTab === 'proposals'}
+                                                        aria-controls="proposals-panel"
+                                                        className="tab"
+                                                        data-tab="proposals"
+                                                        onClick={() => activateTab('proposals')}
+                                                        onKeyDown={onTabKeydown}
+                                                        tabIndex={selectedTab === 'proposals' ? 0 : -1}
+                                                        data-testid="proposals-tab"
+                                                >
+                                                        <i className="fa-solid fa-file-lines" aria-hidden="true"></i>  My Proposals
+                                                </button>
+                                        )}
                                         <button
                                                 id="knowledge-tab"
                                                 ref={tabRefs.reviews}
@@ -344,23 +343,23 @@ export default function Dashboard() {
                                         >
                                                 <i className="fa-solid fa-book-open" aria-hidden="true"></i>  Knowledge Card
                                         </button>
-                                    {userRoles.includes('project reviewer') && (
-                                        <button
-                                                id="reviews-tab"
-                                                ref={tabRefs.reviews}
-                                                role="tab"
-                                                aria-selected={selectedTab === 'reviews'}
-                                                aria-controls="reviews-panel"
-                                                className="tab"
-                                                data-tab="reviews"
-                                                onClick={() => activateTab('reviews')}
-                                                onKeyDown={onTabKeydown}
-                                                tabIndex={selectedTab === 'reviews' ? 0 : -1}
-                                                data-testid="reviews-tab"
-                                        >
-                                                <i className="fa-solid fa-magnifying-glass" aria-hidden="true"></i>  Pending Reviews
-                                        </button>
-                                    )}
+                                        {userRoles && userRoles.includes('project reviewer') && (
+                                                <button
+                                                        id="reviews-tab"
+                                                        ref={tabRefs.reviews}
+                                                        role="tab"
+                                                        aria-selected={selectedTab === 'reviews'}
+                                                        aria-controls="reviews-panel"
+                                                        className="tab"
+                                                        data-tab="reviews"
+                                                        onClick={() => activateTab('reviews')}
+                                                        onKeyDown={onTabKeydown}
+                                                        tabIndex={selectedTab === 'reviews' ? 0 : -1}
+                                                        data-testid="reviews-tab"
+                                                >
+                                                        <i className="fa-solid fa-magnifying-glass" aria-hidden="true"></i>  Pending Reviews
+                                                </button>
+                                        )}
 
                                         <button
                                                 id="metrics-tab"

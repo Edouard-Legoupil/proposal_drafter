@@ -34,7 +34,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 #  Internal Modules
-from backend.api import auth, proposals, session, documents, health, users, knowledge, metrics
+from backend.api import auth, proposals, session, documents, health, users, knowledge, metrics, admin
 from backend.core.middleware import (
     setup_cors_middleware,
     custom_http_exception_handler,
@@ -98,6 +98,7 @@ app.include_router(documents.router, prefix="/api", tags=["Documents"])
 app.include_router(users.router, prefix="/api", tags=["Users"])
 app.include_router(knowledge.router, prefix="/api", tags=["Knowledge"])
 app.include_router(metrics.router, prefix="/api", tags=["Metrics"])
+app.include_router(admin.router, prefix="/api", tags=["Admin"])
 app.include_router(health.router, tags=["Health & Debugging"])
 
 # --- Root Endpoint: Health Check + SPA ---

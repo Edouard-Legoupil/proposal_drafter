@@ -25,6 +25,10 @@ class UserOutcome(BaseModel):
     user_id: uuid.UUID
     outcome_id: uuid.UUID
 
+class UserFieldContext(BaseModel):
+    user_id: uuid.UUID
+    field_context_id: uuid.UUID
+
 class UserSettings(BaseModel):
     geographic_coverage_type: Optional[str] = None
     geographic_coverage_region: Optional[str] = None
@@ -32,6 +36,7 @@ class UserSettings(BaseModel):
     roles: List[int]
     donor_groups: Optional[List[str]] = None
     outcomes: Optional[List[uuid.UUID]] = None
+    field_contexts: Optional[List[uuid.UUID]] = None
 
 class User(BaseModel):
     id: uuid.UUID
@@ -42,8 +47,10 @@ class User(BaseModel):
     geographic_coverage_region: Optional[str] = None
     geographic_coverage_country: Optional[str] = None
     roles: List[Role] = []
+    is_admin: bool = False
     donor_groups: List[str] = []
     outcomes: List[uuid.UUID] = []
+    field_contexts: List[uuid.UUID] = []
 
 
 class BaseDataRequest(BaseModel):

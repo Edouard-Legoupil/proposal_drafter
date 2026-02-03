@@ -6,7 +6,7 @@ import uuid
 
 #  Third-Party Libraries
 import jwt
-from fastapi import Request, HTTPException
+from fastapi import Request, HTTPException, Depends
 from sqlalchemy import text
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -88,6 +88,7 @@ def get_current_user(request: Request) -> dict:
                 "name": user[1],
                 "email": user[2],
                 "roles": roles,
+                "is_admin": "system admin" in roles
             }
 
     except jwt.ExpiredSignatureError:
@@ -100,6 +101,15 @@ def get_current_user(request: Request) -> dict:
         # Generic error for other potential issues.
         logger.error(f"Authentication error for user {email if 'email' in locals() else 'unknown'}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Authentication error")
+
+
+def is_system_admin(current_user: dict = Depends(get_current_user)):
+    """
+    Dependency to check if the current user is a system admin.
+    """
+    if not current_user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required.")
+    return current_user
 
 
 def check_user_group_access(current_user: dict, donor_id: Optional[Any] = None, outcome_id: Optional[Any] = None, field_context_id: Optional[Any] = None, owner_id: Optional[str] = None):
@@ -144,6 +154,7 @@ def check_user_group_access(current_user: dict, donor_id: Optional[Any] = None, 
 # Exposing functions for use in other parts of the application.
 __all__ = [
     "get_current_user",
+    "is_system_admin",
     "check_user_group_access",
     "generate_password_hash",
     "check_password_hash",
