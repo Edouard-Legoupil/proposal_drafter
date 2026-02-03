@@ -50,6 +50,8 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+
+
 @router.get("/templates")
 async def get_templates():
     """
@@ -104,6 +106,7 @@ async def create_session(request: CreateSessionRequest, current_user: dict = Dep
         templates_map = get_available_templates()
         donor_id = request.form_data.get("Targeted Donor")
         template_name = "proposal_template_unhcr.json"  # Default template
+        
 
         with get_engine().begin() as connection:
             if donor_id:
@@ -406,13 +409,16 @@ async def process_section(session_id: str, request: SectionRequest, current_user
     # Persist the updated session back to Redis.
     redis_client.setex(session_id, 3600, json.dumps(session_data, default=str))
 
-    # Prevent editing of finalized proposals.
+    # Prevent editing of finalized proposals and check RBAC.
     with get_engine().connect() as connection:
-        res = connection.execute(
+        proposal_info = connection.execute(
             text("SELECT is_accepted FROM proposals WHERE id = :id AND user_id = :uid"),
             {"id": request.proposal_id, "uid": current_user["user_id"]}
-        ).scalar()
-        if res:
+        ).fetchone()
+        
+        if not proposal_info:
+            raise HTTPException(status_code=404, detail="Proposal not found.")
+            
             raise HTTPException(status_code=403, detail="This proposal is finalized and cannot be modified.")
 
     form_data = session_data["form_data"]
@@ -493,13 +499,16 @@ async def regenerate_section(proposal_id: str, request: RegenerateRequest, curre
     """
     Manually regenerates a section using concise user input.
     """
-    # Prevent editing of finalized proposals.
+    # Prevent editing of finalized proposals and check RBAC.
     with get_engine().connect() as connection:
-        res = connection.execute(
+        proposal_info = connection.execute(
             text("SELECT is_accepted FROM proposals WHERE id = :id AND user_id = :uid"),
             {"id": proposal_id, "uid": current_user["user_id"]}
-        ).scalar()
-        if res:
+        ).fetchone()
+        
+        if not proposal_info:
+            raise HTTPException(status_code=404, detail="Proposal not found.")
+            
             raise HTTPException(status_code=403, detail="This proposal is finalized and cannot be modified.")
 
     # Create a temporary session for the regeneration process
@@ -539,14 +548,14 @@ async def update_section_content(request: UpdateSectionRequest, current_user: di
     try:
         with get_engine().begin() as conn:
             # First, verify the proposal belongs to the user and is not finalized.
-            proposal_check = conn.execute(
+            proposal_info = conn.execute(
                 text("SELECT is_accepted FROM proposals WHERE id = :id AND user_id = :uid"),
                 {"id": request.proposal_id, "uid": user_id}
-            ).scalar()
-
-            if proposal_check is None:
+            ).fetchone()
+            
+            if not proposal_info:
                 raise HTTPException(status_code=404, detail="Proposal not found.")
-            if proposal_check:
+            if proposal_info.is_accepted:
                 raise HTTPException(status_code=403, detail="Cannot modify a finalized proposal.")
 
             # Use jsonb_set to update the specific key in the generated_sections JSON object.
@@ -586,24 +595,14 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
     user_id = current_user["user_id"]
     # If proposal_id is not provided in the request, generate a new one.
     proposal_id = request.proposal_id or uuid.uuid4()
-    # If proposal_id is not provided in the request, generate a new one.
-    proposal_id = request.proposal_id or uuid.uuid4()
 
     try:
         with get_engine().begin() as connection:
             # Check if a draft with this ID already exists for the user.
-            # Check if a draft with this ID already exists for the user.
             existing = connection.execute(
                 text("SELECT id FROM proposals WHERE id = :id AND user_id = :uid"),
-                {"id": proposal_id, "uid": user_id}
+                {"id": str(proposal_id), "uid": user_id}
             ).fetchone()
-
-            # Prepare the data for insertion/update.
-            # The 'generated_sections' are now expected to be a dict of Pydantic models,
-            # so we need to convert them to a JSON-serializable dict.
-            sections_to_save = {
-                key: value.dict() for key, value in request.generated_sections.items()
-            } if request.generated_sections else {}
 
             # Prepare the data for insertion/update.
             # The 'generated_sections' are now expected to be a dict of Pydantic models,
@@ -653,14 +652,7 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
     except SQLAlchemyError as db_error:
         logger.error(f"[SAVE DRAFT DB ERROR] {db_error}", exc_info=True)
         raise HTTPException(status_code=500, detail="A database error occurred while saving the draft.")
-        # Return the proposal_id as a string for JSON serialization.
-        return {"message": message, "proposal_id": str(proposal_id)}
-    except SQLAlchemyError as db_error:
-        logger.error(f"[SAVE DRAFT DB ERROR] {db_error}", exc_info=True)
-        raise HTTPException(status_code=500, detail="A database error occurred while saving the draft.")
     except Exception as e:
-        logger.error(f"[SAVE DRAFT ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="An unexpected error occurred while saving the draft.")
         logger.error(f"[SAVE DRAFT ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="An unexpected error occurred while saving the draft.")
 
@@ -671,6 +663,9 @@ async def get_proposals_for_review(current_user: dict = Depends(get_current_user
     Lists all proposals assigned to the current user for review, both pending and completed.
     """
     user_id = current_user["user_id"]
+    if "project reviewer" not in current_user.get("roles", []):
+        return {"message": "User is not a project reviewer.", "reviews": []}
+
     try:
         with get_engine().connect() as connection:
             query = text("""
@@ -762,6 +757,9 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
     """
     Lists all drafts for the current user, including sample templates.
     """
+    if "proposal writer" not in current_user.get("roles", []):
+        return {"message": "User is not a proposal writer.", "drafts": []}
+
     logger.info(f"Attempting to list drafts for user: {current_user['user_id']}")
     user_id = current_user["user_id"]
     draft_list = []
@@ -987,7 +985,10 @@ async def submit_proposal(proposal_id: uuid.UUID, current_user: dict = Depends(g
     user_id = current_user["user_id"]
     try:
         with get_engine().begin() as connection:
-            # Get the current sections to create a snapshot
+            # RBAC Fix: Check group access
+            check_proposal_access(current_user, connection, proposal_id)
+
+            # Get the current sections
             sections = connection.execute(
                 text("SELECT generated_sections FROM proposals WHERE id = :id"),
                 {"id": proposal_id}
@@ -1025,6 +1026,9 @@ async def save_contribution_id(proposal_id: uuid.UUID, request: SaveContribution
             if not proposal_status:
                 raise HTTPException(status_code=404, detail="Proposal not found.")
 
+            # RBAC Fix: Check group access
+            check_proposal_access(current_user, connection, proposal_id)
+
             if proposal_status != 'submitted':
                 raise HTTPException(status_code=403, detail="Contribution ID can only be added to submitted proposals.")
 
@@ -1060,12 +1064,15 @@ async def upload_submitted_pdf(proposal_id: uuid.UUID, file: UploadFile = File(.
 
             if not owner_id or owner_id != user_id:
                 raise HTTPException(status_code=403, detail="You do not have permission to modify this proposal.")
+            
+            # RBAC Fix: Check group access
+            check_proposal_access(current_user, connection, proposal_id)
 
             # Get the proposal template to know which sections to look for
             template_name = connection.execute(
                 text("SELECT template_name FROM proposals WHERE id = :id"),
                 {"id": proposal_id}
-            ).scalar() or "proposal_template_unhcr.json"
+            ).scalar() or "unhcr_proposal_template.json"
 
             proposal_template = load_proposal_template(template_name)
             section_titles = [section['section_name'] for section in proposal_template.get('sections', [])]
@@ -1616,6 +1623,9 @@ async def delete_draft(proposal_id: uuid.UUID, current_user: dict = Depends(get_
     user_id = current_user["user_id"]
     try:
         with get_engine().begin() as connection:
+            # RBAC Fix: Check group access before deletion
+            check_proposal_access(current_user, connection, proposal_id)
+
             result = connection.execute(
                 text("DELETE FROM proposals WHERE id = :id AND user_id = :uid AND is_accepted = FALSE RETURNING id"),
                 {"id": proposal_id, "uid": user_id}
@@ -1637,6 +1647,9 @@ async def delete_proposal(proposal_id: uuid.UUID, current_user: dict = Depends(g
     user_id = current_user["user_id"]
     try:
         with get_engine().begin() as connection:
+            # RBAC Fix: Check group access before marking as deleted
+            check_proposal_access(current_user, connection, proposal_id)
+
             result = connection.execute(
                 text("UPDATE proposals SET status = 'deleted', updated_at = CURRENT_TIMESTAMP WHERE id = :id AND user_id = :uid RETURNING id"),
                 {"id": proposal_id, "uid": user_id}
@@ -1670,6 +1683,9 @@ async def transfer_ownership(proposal_id: uuid.UUID, request: TransferOwnershipR
             if not new_owner_exists:
                 raise HTTPException(status_code=404, detail="New owner not found.")
 
+            # RBAC Fix: Check group access before transfer
+            check_proposal_access(current_user, connection, proposal_id)
+
             # Then, update the proposal's user_id
             result = connection.execute(
                 text("UPDATE proposals SET user_id = :new_owner_id, updated_at = CURRENT_TIMESTAMP WHERE id = :id AND user_id = :uid RETURNING id"),
@@ -1695,6 +1711,9 @@ async def revert_to_status(proposal_id: uuid.UUID, status: str, current_user: di
     user_id = current_user["user_id"]
     try:
         with get_engine().begin() as connection:
+            # RBAC Fix: Check group access before revert
+            check_proposal_access(current_user, connection, proposal_id)
+            
             # Find the most recent snapshot for the given status
             history_entry = connection.execute(
                 text("""

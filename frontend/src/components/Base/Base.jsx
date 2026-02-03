@@ -4,12 +4,14 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import OSSFooter from '../OSSFooter/OSSFooter'
+import UserSettingsModal from '../UserSettingsModal/UserSettingsModal'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
 
 import masterlogo from '../../assets/images/App_invertedLogo.svg'
 import downarrow from "../../assets/images/downarrow.svg"
 import logout_icon from "../../assets/images/Header_logout.svg"
+import settings_icon from "../../assets/images/Header_settings.svg"
 
 export default function Base (props)
 {
@@ -19,6 +21,7 @@ export default function Base (props)
                 "name": "",
                 "email": ""
         })
+        const [showSettingsModal, setShowSettingsModal] = useState(false)
 
         function handleLogoClick ()
         {
@@ -91,15 +94,23 @@ export default function Base (props)
 
                         </button>
 
-                        <div popover='auto' id="ID_Chat_logoutPopover" className='Chat_logoutPopover' onClick={handleLogoutClick} data-testid="logout-button">
-                                <img src={logout_icon} />
-                                Logout
+                        <div popover='auto' id="ID_Chat_logoutPopover" className='Chat_logoutPopover'>
+                                <div onClick={() => setShowSettingsModal(true)} data-testid="settings-button">
+                                        <img src={settings_icon} />
+                                        Settings
+                                </div>
+                                <div onClick={handleLogoutClick} data-testid="logout-button">
+                                        <img src={logout_icon} />
+                                        Logout
+                                </div>
                         </div>
                 </header>
 
                 <main className='Main'>
                         {props?.children}
                 </main>
+
+                <UserSettingsModal show={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
 
                 <OSSFooter />
         </div>

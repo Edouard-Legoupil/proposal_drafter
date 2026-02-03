@@ -14,6 +14,7 @@ const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
 export default function Dashboard() {
         const navigate = useNavigate()
 
+        const [userRoles, setUserRoles] = useState([]);
         const [projects, setProjects] = useState([])
         const [reviews, setReviews] = useState([])
         const [knowledgeCards, setKnowledgeCards] = useState([])
@@ -34,7 +35,21 @@ export default function Dashboard() {
                 metrics: useRef(null)
         };
 
-        async function getProjects() {
+        async function getProfile() {
+            const response = await fetch(`${API_BASE_URL}/profile`, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setUserRoles(data.user.roles);
+            }
+        }
+
+        async function getProjects ()
+        {
                 const response = await fetch(`${API_BASE_URL}/list-drafts`, {
                         method: 'GET',
                         headers: { 'Content-Type': 'application/json' },
@@ -93,6 +108,7 @@ export default function Dashboard() {
                         sessionStorage.removeItem('selectedDashboardTab');
                 }
                 sessionStorage.removeItem("proposal_id")
+                getProfile();
                 getProjects()
                 getReviews()
                 getKnowledgeCards()
@@ -200,8 +216,14 @@ export default function Dashboard() {
                         );
                 }
 
+                if (userRoles.includes('knowledge manager donors')) {
+                    const donorCards = filteredCards.filter(card => card.donor_name);
+                    const otherCards = filteredCards.filter(card => !card.donor_name);
+                    filteredCards = [...donorCards, ...otherCards];
+                }
+
                 setDisplayKnowledgeCards(filteredCards);
-        }, [knowledgeCards, searchTerm, knowledgeCardTypeFilter]);
+            }, [knowledgeCards, searchTerm, knowledgeCardTypeFilter, userRoles]);
 
         useEffect(() => {
                 const findDuplicates = () => {
@@ -290,6 +312,7 @@ export default function Dashboard() {
 
                         <nav className="tabs" aria-label="Dashboard sections">
                                 <div role="tablist" aria-orientation="horizontal" className="tablist">
+                                    {userRoles.includes('proposal writer') && (
                                         <button
                                                 id="proposals-tab"
                                                 ref={tabRefs.proposals}
@@ -305,6 +328,7 @@ export default function Dashboard() {
                                         >
                                                 <i className="fa-solid fa-file-lines" aria-hidden="true"></i>  My Proposals
                                         </button>
+                                    )}
                                         <button
                                                 id="knowledge-tab"
                                                 ref={tabRefs.reviews}
@@ -320,6 +344,7 @@ export default function Dashboard() {
                                         >
                                                 <i className="fa-solid fa-book-open" aria-hidden="true"></i>  Knowledge Card
                                         </button>
+                                    {userRoles.includes('project reviewer') && (
                                         <button
                                                 id="reviews-tab"
                                                 ref={tabRefs.reviews}
@@ -335,6 +360,7 @@ export default function Dashboard() {
                                         >
                                                 <i className="fa-solid fa-magnifying-glass" aria-hidden="true"></i>  Pending Reviews
                                         </button>
+                                    )}
 
                                         <button
                                                 id="metrics-tab"
