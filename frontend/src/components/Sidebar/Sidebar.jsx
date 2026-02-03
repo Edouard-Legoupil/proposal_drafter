@@ -1,17 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import './Sidebar.css';
+
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 
 const Sidebar = ({ userRoles, isOpen }) => {
     const [expandedFolders, setExpandedFolders] = useState({
         proposals: true,
-        knowledge: true
+        knowledge: true,
+        otherProposals: false
     });
+
+    const [teams, setTeams] = useState([]);
+    const [expandedTeams, setExpandedTeams] = useState({});
+
+    useEffect(() => {
+        const fetchTeams = async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/teams`);
+                const data = await response.json();
+                if (data.teams) {
+                    setTeams(data.teams);
+                }
+            } catch (error) {
+                console.error('Error fetching teams:', error);
+            }
+        };
+
+        if (isOpen) {
+            fetchTeams();
+        }
+    }, [isOpen]);
 
     const toggleFolder = (folder) => {
         setExpandedFolders(prev => ({
             ...prev,
             [folder]: !prev[folder]
+        }));
+    };
+
+    const toggleTeam = (teamId) => {
+        setExpandedTeams(prev => ({
+            ...prev,
+            [teamId]: !prev[teamId]
         }));
     };
 
@@ -69,6 +100,36 @@ const Sidebar = ({ userRoles, isOpen }) => {
                     <i className="fa-solid fa-gauge-high"></i>
                     <span>Metrics</span>
                 </NavLink>
+
+                <div className="Sidebar_folder">
+                    <div className="Sidebar_folderHeader" onClick={() => toggleFolder('otherProposals')} data-testid="sidebar-other-proposals-folder">
+                        <i className={`fa-solid ${expandedFolders.otherProposals ? 'fa-folder-open' : 'fa-folder'}`}></i>
+                        <span>Other Proposals</span>
+                        <i className={`fa-solid fa-chevron-${expandedFolders.otherProposals ? 'down' : 'right'} Sidebar_chevron`}></i>
+                    </div>
+                    {expandedFolders.otherProposals && (
+                        <div className="Sidebar_subItems">
+                            {teams.map(team => (
+                                <div key={team.id} className="Sidebar_teamFolder">
+                                    <div className="Sidebar_folderHeader Sidebar_subFolderHeader" onClick={() => toggleTeam(team.id)}>
+                                        <i className={`fa-solid ${expandedTeams[team.id] ? 'fa-folder-open' : 'fa-folder'}`}></i>
+                                        <span>{team.name}</span>
+                                        <i className={`fa-solid fa-chevron-${expandedTeams[team.id] ? 'down' : 'right'} Sidebar_chevron`}></i>
+                                    </div>
+                                    {expandedTeams[team.id] && (
+                                        <div className="Sidebar_subItems Sidebar_nestedSubItems">
+                                            <NavLink to={`/dashboard/other/${team.id}/all`} className="Sidebar_link">All</NavLink>
+                                            <NavLink to={`/dashboard/other/${team.id}/draft`} className="Sidebar_link">Drafting</NavLink>
+                                            <NavLink to={`/dashboard/other/${team.id}/in_review`} className="Sidebar_link">In Review</NavLink>
+                                            <NavLink to={`/dashboard/other/${team.id}/pre_submission`} className="Sidebar_link">Pre-Submission</NavLink>
+                                            <NavLink to={`/dashboard/other/${team.id}/submitted`} className="Sidebar_link">Submitted</NavLink>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </nav>
         </aside>
     );

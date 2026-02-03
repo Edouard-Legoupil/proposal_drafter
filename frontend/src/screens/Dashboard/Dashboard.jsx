@@ -13,10 +13,11 @@ const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
 
 export default function Dashboard() {
         const navigate = useNavigate()
-        const { folder, subfolder } = useParams()
+        const { folder, subfolder, filter } = useParams()
 
         const [userRoles, setUserRoles] = useState([]);
         const [projects, setProjects] = useState([])
+        const [allProposals, setAllProposals] = useState([])
         const [reviews, setReviews] = useState([])
         const [knowledgeCards, setKnowledgeCards] = useState([])
         const [displayKnowledgeCards, setDisplayKnowledgeCards] = useState(knowledgeCards)
@@ -88,6 +89,19 @@ export default function Dashboard() {
                 }
         }
 
+        async function getAllProposals() {
+                const response = await fetch(`${API_BASE_URL}/list-all-proposals`, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include'
+                })
+
+                if (response.ok) {
+                        const data = await response.json()
+                        setAllProposals(data.proposals)
+                }
+        }
+
         async function getUsers() {
                 const response = await fetch(`${API_BASE_URL}/users`, {
                         method: 'GET',
@@ -108,6 +122,7 @@ export default function Dashboard() {
                 getReviews()
                 getKnowledgeCards()
                 getUsers()
+                getAllProposals()
         }, [])
 
         useEffect(() => {
@@ -188,6 +203,8 @@ export default function Dashboard() {
                         source = projects;
                 } else if (selectedTab === 'reviews') {
                         source = reviews;
+                } else if (selectedTab === 'other') {
+                        source = allProposals;
                 }
 
                 if (source && source.length > 0) {
@@ -197,6 +214,13 @@ export default function Dashboard() {
 
                         if (statusFilter) {
                                 filteredProjects = filteredProjects.filter(project => project.status === statusFilter);
+                        }
+
+                        if (selectedTab === 'other' && subfolder) {
+                                filteredProjects = filteredProjects.filter(project => project.team_id === subfolder);
+                                if (filter && filter !== 'all') {
+                                        filteredProjects = filteredProjects.filter(project => project.status === filter);
+                                }
                         }
 
                         if (selectedTab === 'reviews') {
@@ -327,7 +351,7 @@ export default function Dashboard() {
                 <div className="Dashboard">
                         <header className="Dashboard_top" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
                                 <div className='Dashboard_label'>
-                                        {selectedTab.charAt(0).toUpperCase() + selectedTab.slice(1)} Explorer {subfolder && subfolder !== 'all' ? `> ${subfolder}` : ''}
+                                        {selectedTab.charAt(0).toUpperCase() + selectedTab.slice(1)} Explorer {subfolder && subfolder !== 'all' ? `> ${subfolder}` : ''} {filter && filter !== 'all' ? `> ${filter}` : ''}
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                         <div className="view-mode-toggle">
@@ -502,6 +526,49 @@ export default function Dashboard() {
 
                         <section id="metrics-panel" role="tabpanel" className={`tab-panel ${selectedTab === 'metrics' ? 'active' : ''}`} hidden={selectedTab !== 'metrics'}>
                                 {selectedTab === 'metrics' && <MetricsDashboard />}
+                        </section>
+
+                        <section id="other-panel" role="tabpanel" className={`tab-panel ${selectedTab === 'other' ? 'active' : ''}`} hidden={selectedTab !== 'other'}>
+                                {viewMode === 'vignette' ? (
+                                        <div className="Dashboard_projects" id="other-grid">
+                                                {displayProjects && displayProjects.map((project) =>
+                                                        <Project
+                                                                key={project.proposal_id}
+                                                                project={project}
+                                                                date={cleanedDate(project.updated_at)}
+                                                                onClick={(e) => handleProjectClick(e, project.proposal_id, false)}
+                                                                isReview={true} // Use isReview to hide standard author actions
+                                                                handleDeleteProject={handleDeleteProject}
+                                                                handleTransferOwnership={handleTransferOwnership}
+                                                        />
+                                                )}
+                                        </div>
+                                ) : (
+                                        <div className="Dashboard_tableContainer">
+                                                <table className="table table-hover">
+                                                        <thead>
+                                                                <tr>
+                                                                        <th onClick={() => handleSort('project_title')} className="sortable">Title {sortConfig.key === 'project_title' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                                                        <th onClick={() => handleSort('team_name')} className="sortable">Team {sortConfig.key === 'team_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                                                        <th onClick={() => handleSort('author_name')} className="sortable">Author {sortConfig.key === 'author_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                                                        <th onClick={() => handleSort('status')} className="sortable">Status {sortConfig.key === 'status' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                                                        <th onClick={() => handleSort('updated_at')} className="sortable">Last Updated {sortConfig.key === 'updated_at' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                                                </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                                {sortedProjects.map((project) => (
+                                                                        <tr key={project.proposal_id} onClick={(e) => handleProjectClick(e, project.proposal_id, false)} style={{ cursor: 'pointer' }}>
+                                                                                <td>{project.project_title}</td>
+                                                                                <td>{project.team_name}</td>
+                                                                                <td>{project.author_name}</td>
+                                                                                <td><span className={`Dashboard_project_label status-${project.status}`}>{project.status}</span></td>
+                                                                                <td>{cleanedDate(project.updated_at)}</td>
+                                                                        </tr>
+                                                                ))}
+                                                        </tbody>
+                                                </table>
+                                        </div>
+                                )}
                         </section>
                 </div>
 

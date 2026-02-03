@@ -42,6 +42,15 @@
     flex-direction: column;
 }
 
+.Sidebar_subFolderHeader {
+    padding-left: 25px !important;
+    font-size: 0.85rem !important;
+}
+
+.Sidebar_nestedSubItems {
+    padding-left: 15px;
+}
+
 .Sidebar_link {
     padding: 8px 45px;
     color: #6c757d;

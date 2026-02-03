@@ -16,6 +16,7 @@ export default function App()
                 <Route path="/dashboard" element={<Dashboard/>} />
                 <Route path="/dashboard/:folder" element={<Dashboard/>} />
                 <Route path="/dashboard/:folder/:subfolder" element={<Dashboard/>} />
+                <Route path="/dashboard/:folder/:subfolder/:filter" element={<Dashboard/>} />
                 <Route path="/chat" element={<Chat/>} />
                 <Route path="/chat/:id" element={<Chat/>} />
                 <Route path="/review/:proposal_id" element={<Review />} />

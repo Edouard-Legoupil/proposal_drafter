@@ -850,6 +850,88 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
         logger.error(f"[LIST DRAFTS ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch drafts")
 
+@router.get("/list-all-proposals")
+async def list_all_proposals(current_user: dict = Depends(get_current_user)):
+    """
+    Lists all proposals in the system for the 'Other Proposals' view,
+    excluding those owned by the current user.
+    """
+    user_id = current_user["user_id"]
+    proposal_list = []
+
+    try:
+        engine = get_engine()
+        with engine.connect() as connection:
+            query = text("""
+                SELECT
+                    p.id,
+                    p.form_data,
+                    p.project_description,
+                    p.status,
+                    p.created_at,
+                    p.updated_at,
+                    p.is_accepted,
+                    string_agg(DISTINCT d.name, ', ') AS donor_name,
+                    fc.name AS country_name,
+                    string_agg(DISTINCT o.name, ', ') AS outcome_names,
+                    t.name AS team_name,
+                    t.id AS team_id,
+                    u.name AS author_name
+                FROM
+                    proposals p
+                JOIN
+                    users u ON p.user_id = u.id
+                JOIN
+                    teams t ON u.team_id = t.id
+                LEFT JOIN
+                    proposal_donors pd ON p.id = pd.proposal_id
+                LEFT JOIN
+                    donors d ON pd.donor_id = d.id
+                LEFT JOIN
+                    proposal_field_contexts pfc ON p.id = pfc.proposal_id
+                LEFT JOIN
+                    field_contexts fc ON pfc.field_context_id = fc.id
+                LEFT JOIN
+                    proposal_outcomes po ON p.id = po.proposal_id
+                LEFT JOIN
+                    outcomes o ON po.outcome_id = o.id
+                WHERE
+                    p.user_id != :uid AND p.status != 'deleted'
+                GROUP BY
+                    p.id, d.name, fc.name, t.name, t.id, u.name
+                ORDER BY
+                    p.updated_at DESC
+            """)
+
+            result = connection.execute(query, {"uid": user_id})
+            rows = result.mappings().fetchall()
+
+            for row in rows:
+                form_data = json.loads(row['form_data']) if isinstance(row['form_data'], str) else row['form_data']
+
+                proposal_list.append({
+                    "proposal_id": row['id'],
+                    "project_title": form_data.get("Project Draft Short name") or form_data.get("Project title", "Untitled Proposal"),
+                    "summary": row['project_description'] or "",
+                    "created_at": row['created_at'].isoformat() if row['created_at'] else None,
+                    "updated_at": row['updated_at'].isoformat() if row['updated_at'] else None,
+                    "is_accepted": row['is_accepted'],
+                    "status": row['status'],
+                    "donor": row['donor_name'],
+                    "country": row['country_name'],
+                    "outcomes": row['outcome_names'].split(', ') if row['outcome_names'] else [],
+                    "budget": form_data.get("Budget Range", "N/A"),
+                    "team_name": row['team_name'],
+                    "team_id": str(row['team_id']),
+                    "author_name": row['author_name']
+                })
+
+        return {"message": "All proposals fetched successfully.", "proposals": proposal_list}
+
+    except Exception as e:
+        logger.error(f"[LIST ALL PROPOSALS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch all proposals")
+
 @router.get("/sections")
 async def get_sections():
     """
