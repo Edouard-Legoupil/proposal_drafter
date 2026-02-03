@@ -102,3 +102,54 @@
     padding: 2rem;
     font-size: 1.5rem;
 }
+
+.Review_author_reply {
+    margin-top: 15px;
+    padding: 10px;
+    background: #f0f4f8;
+    border-radius: 8px;
+    border-left: 4px solid #3498db;
+}
+
+.Review_reply_textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 8px;
+    border: 1px solid #bdc3c7;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+.Review_reply_actions {
+    display: flex;
+    gap: 10px;
+}
+
+.Review_reply_actions button {
+    padding: 5px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.Review_reply_actions button:first-child {
+    background: #3498db;
+    color: white;
+}
+
+.Review_reply_btn {
+    padding: 5px 12px;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.author-response-display {
+    margin-top: 15px;
+    padding: 10px;
+    background: #eaf2f8;
+    border-radius: 8px;
+    border-left: 4px solid #2980b9;
+}

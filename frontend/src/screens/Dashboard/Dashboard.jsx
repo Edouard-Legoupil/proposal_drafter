@@ -1,7 +1,7 @@
 import './Dashboard.css'
 
-import { useEffect, useState, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState, useRef, useMemo } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 
 import Base from '../../components/Base/Base'
 import Project from './components/Project/Project'
@@ -13,9 +13,12 @@ const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
 
 export default function Dashboard() {
         const navigate = useNavigate()
+        const { folder, subfolder, filter } = useParams()
 
         const [userRoles, setUserRoles] = useState([]);
+        const [currentUser, setCurrentUser] = useState(null);
         const [projects, setProjects] = useState([])
+        const [allProposals, setAllProposals] = useState([])
         const [reviews, setReviews] = useState([])
         const [knowledgeCards, setKnowledgeCards] = useState([])
         const [displayKnowledgeCards, setDisplayKnowledgeCards] = useState(knowledgeCards)
@@ -27,25 +30,25 @@ export default function Dashboard() {
         const [knowledgeCardTypeFilter, setKnowledgeCardTypeFilter] = useState('')
         const [statusFilter, setStatusFilter] = useState('')
         const [duplicateCardIds, setDuplicateCardIds] = useState(new Set());
-
-        const tabRefs = {
-                proposals: useRef(null),
-                reviews: useRef(null),
-                knowledge: useRef(null),
-                metrics: useRef(null)
-        };
+        const [viewMode, setViewMode] = useState('vignette')
+        const [sortConfig, setSortConfig] = useState({ key: 'updated_at', direction: 'desc' });
 
         async function getProfile() {
+            try {
                 const response = await fetch(`${API_BASE_URL}/profile`, {
-                        method: 'GET',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include'
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include'
                 });
 
                 if (response.ok) {
-                        const data = await response.json();
-                        setUserRoles(data.user.roles || []);
+                    const data = await response.json();
+                    setCurrentUser(data.user);
+                    setUserRoles(data.user?.roles || []);
                 }
+            } catch (err) {
+                console.error("Profile fetch error", err);
+            }
         }
 
         async function getProjects() {
@@ -87,6 +90,19 @@ export default function Dashboard() {
                 }
         }
 
+        async function getAllProposals() {
+                const response = await fetch(`${API_BASE_URL}/list-all-proposals`, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include'
+                })
+
+                if (response.ok) {
+                        const data = await response.json()
+                        setAllProposals(data.proposals)
+                }
+        }
+
         async function getUsers() {
                 const response = await fetch(`${API_BASE_URL}/users`, {
                         method: 'GET',
@@ -101,26 +117,40 @@ export default function Dashboard() {
         }
 
         useEffect(() => {
-                const savedTab = sessionStorage.getItem('selectedDashboardTab');
-                if (savedTab) {
-                        setSelectedTab(savedTab);
-                        sessionStorage.removeItem('selectedDashboardTab');
-                }
                 sessionStorage.removeItem("proposal_id")
                 getProfile();
                 getProjects()
                 getReviews()
                 getKnowledgeCards()
                 getUsers()
+                getAllProposals()
         }, [])
 
-        async function handleProjectClick(e, proposal_id, isReview = false) {
-                // This logic might need to be adapted depending on the final card structure in Project.jsx
-                sessionStorage.setItem("proposal_id", proposal_id)
-                if (isReview) {
-                        navigate(`/review/${proposal_id}`)
+        useEffect(() => {
+                if (folder) {
+                        setSelectedTab(folder);
                 } else {
-                        navigate("/chat")
+                        setSelectedTab('proposals');
+                }
+
+                if (folder === 'proposals') {
+                        setStatusFilter(subfolder === 'all' ? '' : subfolder || '');
+                        setKnowledgeCardTypeFilter('');
+                } else if (folder === 'knowledge') {
+                        setKnowledgeCardTypeFilter(subfolder === 'all' ? '' : subfolder || '');
+                        setStatusFilter('');
+                } else {
+                        setStatusFilter('');
+                        setKnowledgeCardTypeFilter('');
+                }
+        }, [folder, subfolder]);
+
+        async function handleProjectClick(e, proposal_id, isReview = false) {
+                sessionStorage.setItem("proposal_id", proposal_id)
+                if (isReview || selectedTab === 'other') {
+                        navigate(`/review/proposal/${proposal_id}`)
+                } else {
+                        navigate(`/chat/${proposal_id}`)
                 }
         }
 
@@ -159,6 +189,7 @@ export default function Dashboard() {
         }
 
         function cleanedDate(date) {
+                if (!date) return 'N/A';
                 const cleaned = date.replace(/\.\d+/, "");
                 const data = new Date(cleaned);
                 const readable = data.toISOString().split('T')[0];
@@ -173,6 +204,8 @@ export default function Dashboard() {
                         source = projects;
                 } else if (selectedTab === 'reviews') {
                         source = reviews;
+                } else if (selectedTab === 'other') {
+                        source = allProposals;
                 }
 
                 if (source && source.length > 0) {
@@ -182,6 +215,13 @@ export default function Dashboard() {
 
                         if (statusFilter) {
                                 filteredProjects = filteredProjects.filter(project => project.status === statusFilter);
+                        }
+
+                        if (selectedTab === 'other' && subfolder) {
+                                filteredProjects = filteredProjects.filter(project => project.team_id === subfolder);
+                                if (filter && filter !== 'all') {
+                                        filteredProjects = filteredProjects.filter(project => project.status === filter);
+                                }
                         }
 
                         if (selectedTab === 'reviews') {
@@ -216,9 +256,9 @@ export default function Dashboard() {
                 }
 
                 if (userRoles && userRoles.includes('knowledge manager donors')) {
-                        const donorCards = filteredCards.filter(card => card.donor_name);
-                        const otherCards = filteredCards.filter(card => !card.donor_name);
-                        filteredCards = [...donorCards, ...otherCards];
+                    const donorCards = filteredCards.filter(card => card.donor_name);
+                    const otherCards = filteredCards.filter(card => !card.donor_name);
+                    filteredCards = [...donorCards, ...otherCards];
                 }
 
                 setDisplayKnowledgeCards(filteredCards);
@@ -249,7 +289,6 @@ export default function Dashboard() {
                                 }
                         }
                         setDuplicateCardIds(duplicates);
-                        console.log('Duplicate Card IDs:', duplicates);
                 };
 
                 findDuplicates();
@@ -269,115 +308,74 @@ export default function Dashboard() {
                 }
         }
 
-        const activateTab = (tabId) => {
-                setSelectedTab(tabId);
-        }
-
-        const onTabKeydown = (e) => {
-                const tabs = ['proposals', 'reviews'];
-                const i = tabs.indexOf(selectedTab);
-                let nextIndex = i;
-                if (e.key === 'ArrowLeft') nextIndex = (i - 1 + tabs.length) % tabs.length;
-                if (e.key === 'ArrowRight') nextIndex = (i + 1) % tabs.length;
-                if (e.key === 'Home') nextIndex = 0;
-                if (e.key === 'End') nextIndex = tabs.length - 1;
-
-                if (nextIndex !== i) {
-                        const nextTabId = tabs[nextIndex];
-                        activateTab(nextTabId);
-                        tabRefs[nextTabId].current.focus();
+        const handleSort = (key) => {
+                let direction = 'asc';
+                if (sortConfig.key === key && sortConfig.direction === 'asc') {
+                        direction = 'desc';
                 }
-        }
+                setSortConfig({ key, direction });
+        };
+
+        const sortedProjects = useMemo(() => {
+                let sortableProjects = [...displayProjects];
+                if (sortConfig.key !== null) {
+                        sortableProjects.sort((a, b) => {
+                                if (a[sortConfig.key] < b[sortConfig.key]) {
+                                        return sortConfig.direction === 'asc' ? -1 : 1;
+                                }
+                                if (a[sortConfig.key] > b[sortConfig.key]) {
+                                        return sortConfig.direction === 'asc' ? 1 : -1;
+                                }
+                                return 0;
+                        });
+                }
+                return sortableProjects;
+        }, [displayProjects, sortConfig]);
+
+        const sortedKnowledgeCards = useMemo(() => {
+                let sortableCards = [...displayKnowledgeCards];
+                if (sortConfig.key !== null) {
+                        sortableCards.sort((a, b) => {
+                                if (a[sortConfig.key] < b[sortConfig.key]) {
+                                        return sortConfig.direction === 'asc' ? -1 : 1;
+                                }
+                                if (a[sortConfig.key] > b[sortConfig.key]) {
+                                        return sortConfig.direction === 'asc' ? 1 : -1;
+                                }
+                                return 0;
+                        });
+                }
+                return sortableCards;
+        }, [displayKnowledgeCards, sortConfig]);
 
         return <Base>
                 <div className="Dashboard">
                         <header className="Dashboard_top" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
                                 <div className='Dashboard_label'>
-                                        Draft Smart Project Proposals with AI, Curated Knowledge and Peer Review. ⚠️ Beta Version ⚠️
+                                        {selectedTab.charAt(0).toUpperCase() + selectedTab.slice(1)} Explorer {subfolder && subfolder !== 'all' ? `> ${subfolder}` : ''} {filter && filter !== 'all' ? `> ${filter}` : ''}
                                 </div>
-                                <div
-                                        className="ai-disclaimer"
-                                        style={{
-                                                background: "#fff8e1", border: "1px solid #fdd835",
-                                                color: "#372800", borderRadius: "8px", fontSize: "14px",
-                                                padding: "7px 16px", margin: '0 0 0 24px',
-                                                boxShadow: "0 2px 10px 0 rgb(0 0 0 / 7%)", zIndex: 3, position: "relative", minWidth: 210
-                                        }}
-                                >
-                                        <strong>Note:</strong> AI-generated content may be incorrect or require verification. Please review carefully before using.
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                        <div className="view-mode-toggle">
+                                                <button className={`view-btn ${viewMode === 'vignette' ? 'active' : ''}`} onClick={() => setViewMode('vignette')} title="Vignette View" data-testid="vignette-view-button">
+                                                        <i className="fa-solid fa-grip"></i>
+                                                </button>
+                                                <button className={`view-btn ${viewMode === 'table' ? 'active' : ''}`} onClick={() => setViewMode('table')} title="Table View" data-testid="table-view-button">
+                                                        <i className="fa-solid fa-table-list"></i>
+                                                </button>
+                                        </div>
+                                        <div
+                                                className="ai-disclaimer"
+                                                style={{
+                                                        background: "#fff8e1", border: "1px solid #fdd835",
+                                                        color: "#372800", borderRadius: "8px", fontSize: "14px",
+                                                        padding: "7px 16px",
+                                                        boxShadow: "0 2px 10px 0 rgb(0 0 0 / 7%)", zIndex: 3, position: "relative", minWidth: 210
+                                                }}
+                                        >
+                                                <strong>Note:</strong> AI-generated content may be incorrect or require verification.
+                                        </div>
                                 </div>
                         </header>
-
-
-                        <nav className="tabs" aria-label="Dashboard sections">
-                                <div role="tablist" aria-orientation="horizontal" className="tablist">
-                                        {userRoles && userRoles.includes('proposal writer') && (
-                                                <button
-                                                        id="proposals-tab"
-                                                        ref={tabRefs.proposals}
-                                                        role="tab"
-                                                        aria-selected={selectedTab === 'proposals'}
-                                                        aria-controls="proposals-panel"
-                                                        className="tab"
-                                                        data-tab="proposals"
-                                                        onClick={() => activateTab('proposals')}
-                                                        onKeyDown={onTabKeydown}
-                                                        tabIndex={selectedTab === 'proposals' ? 0 : -1}
-                                                        data-testid="proposals-tab"
-                                                >
-                                                        <i className="fa-solid fa-file-lines" aria-hidden="true"></i>  My Proposals
-                                                </button>
-                                        )}
-                                        <button
-                                                id="knowledge-tab"
-                                                ref={tabRefs.reviews}
-                                                role="tab"
-                                                aria-selected={selectedTab === 'knowledge'}
-                                                aria-controls="knowledge-panel"
-                                                className="tab"
-                                                data-tab="knowledge"
-                                                onClick={() => activateTab('knowledge')}
-                                                onKeyDown={onTabKeydown}
-                                                tabIndex={selectedTab === 'knowledge' ? 0 : -1}
-                                                data-testid="knowledge-tab"
-                                        >
-                                                <i className="fa-solid fa-book-open" aria-hidden="true"></i>  Knowledge Card
-                                        </button>
-                                        {userRoles && userRoles.includes('project reviewer') && (
-                                                <button
-                                                        id="reviews-tab"
-                                                        ref={tabRefs.reviews}
-                                                        role="tab"
-                                                        aria-selected={selectedTab === 'reviews'}
-                                                        aria-controls="reviews-panel"
-                                                        className="tab"
-                                                        data-tab="reviews"
-                                                        onClick={() => activateTab('reviews')}
-                                                        onKeyDown={onTabKeydown}
-                                                        tabIndex={selectedTab === 'reviews' ? 0 : -1}
-                                                        data-testid="reviews-tab"
-                                                >
-                                                        <i className="fa-solid fa-magnifying-glass" aria-hidden="true"></i>  Pending Reviews
-                                                </button>
-                                        )}
-
-                                        <button
-                                                id="metrics-tab"
-                                                ref={tabRefs.reviews}
-                                                role="tab"
-                                                aria-selected={selectedTab === 'metrics'}
-                                                aria-controls="metrics-panel"
-                                                className="tab"
-                                                data-tab="metrics"
-                                                onClick={() => activateTab('metrics')}
-                                                onKeyDown={onTabKeydown}
-                                                tabIndex={selectedTab === 'metrics' ? 0 : -1}
-                                                data-testid="metrics-tab"
-                                        >
-                                                <i className="fa-solid fa-gauge-high" aria-hidden="true"></i>  Metrics
-                                        </button>
-                                </div>
-                        </nav>
 
                         {selectedTab !== 'metrics' &&
                                 <div className="Dashboard_search" role="search">
@@ -390,60 +388,192 @@ export default function Dashboard() {
                                 </div>
                         }
 
-                        <section id="proposals-panel" data-testid="proposals-panel" role="tabpanel" aria-labelledby="proposals-tab" className={`tab-panel ${selectedTab === 'proposals' ? 'active' : ''}`} hidden={selectedTab !== 'proposals'}>
-                                <div className="Dashboard_projects" id="proposals-grid">
-                                        <div className="card card--cta">
-                                                <button className="btn" type="button" aria-label="Start a new proposal" onClick={() => navigate("/chat")} data-testid="new-proposal-button">Start New Proposal</button>
+                        <section id="proposals-panel" data-testid="proposals-panel" role="tabpanel" className={`tab-panel ${selectedTab === 'proposals' ? 'active' : ''}`} hidden={selectedTab !== 'proposals'}>
+                                {viewMode === 'vignette' ? (
+                                        <div className="Dashboard_projects" id="proposals-grid">
+                                                <div className="card card--cta">
+                                                        <button className="btn" type="button" aria-label="Start a new proposal" onClick={() => navigate("/chat")} data-testid="new-proposal-button">Start New Proposal</button>
+                                                </div>
+                                                {displayProjects && displayProjects.map((project) =>
+                                                        <Project
+                                                                key={project.proposal_id}
+                                                                project={project}
+                                                                date={cleanedDate(project.updated_at)}
+                                                                onClick={(e) => handleProjectClick(e, project.proposal_id, false)}
+                                                                handleDeleteProject={handleDeleteProject}
+                                                                handleTransferOwnership={handleTransferOwnership}
+                                                        />
+                                                )}
                                         </div>
-                                        {displayProjects && displayProjects.map((project) =>
-                                                <Project
-                                                        key={project.proposal_id}
-                                                        project={project}
-                                                        date={cleanedDate(project.updated_at)}
-                                                        onClick={(e) => handleProjectClick(e, project.proposal_id, false)}
-                                                        handleDeleteProject={handleDeleteProject}
-                                                        handleTransferOwnership={handleTransferOwnership}
-                                                />
-                                        )}
-                                </div>
-                        </section>
-
-                        <section id="knowledge-panel" role="tabpanel" aria-labelledby="knowledge-tab" className={`tab-panel ${selectedTab === 'knowledge' ? 'active' : ''}`} hidden={selectedTab !== 'knowledge'}>
-                                <div className="Dashboard_projects" id="knowledge-grid">
-                                        <div className="card card--cta">
-                                                <button className="btn" type="button" aria-label="Start a new knowledge card" onClick={() => navigate("/knowledge-card/new")} data-testid="new-knowledge-card-button">Create New Knowledge Card</button>
+                                ) : (
+                                        <div className="Dashboard_tableContainer">
+                                                <div className="card card--cta" style={{ marginBottom: '20px', width: 'fit-content' }}>
+                                                        <button className="btn" type="button" aria-label="Start a new proposal" onClick={() => navigate("/chat")} data-testid="new-proposal-button-table">Start New Proposal</button>
+                                                </div>
+                                                <table className="table table-hover">
+                                                        <thead>
+                                                                <tr>
+                                                                        <th onClick={() => handleSort('project_title')} className="sortable">Title {sortConfig.key === 'project_title' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                                                        <th onClick={() => handleSort('status')} className="sortable">Status {sortConfig.key === 'status' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                                                        <th onClick={() => handleSort('updated_at')} className="sortable">Last Updated {sortConfig.key === 'updated_at' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                                                        <th>Actions</th>
+                                                                </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                                {sortedProjects.map((project) => (
+                                                                        <tr key={project.proposal_id} onClick={(e) => handleProjectClick(e, project.proposal_id, false)} style={{ cursor: 'pointer' }}>
+                                                                                <td>{project.project_title}</td>
+                                                                                <td><span className={`Dashboard_project_label status-${project.status}`}>{project.status}</span></td>
+                                                                                <td>{cleanedDate(project.updated_at)}</td>
+                                                                                <td>
+                                                                                        <i className="fa-solid fa-eye" title="View"></i>
+                                                                                </td>
+                                                                        </tr>
+                                                                ))}
+                                                        </tbody>
+                                                </table>
                                         </div>
-                                        {displayKnowledgeCards && displayKnowledgeCards.map((card) =>
-                                                <KnowledgeCard
-                                                        key={card.id}
-                                                        card={card}
-                                                        date={cleanedDate(card.updated_at)}
-                                                        onClick={() => navigate(`/knowledge-card/${card.id}`)}
-                                                        isDuplicate={duplicateCardIds.has(card.id)}
-                                                        onDelete={() => handleDeleteKnowledgeCard(card.id)}
-                                                />
-                                        )}
-                                </div>
+                                )}
                         </section>
 
-                        <section id="reviews-panel" role="tabpanel" aria-labelledby="reviews-tab" className={`tab-panel ${selectedTab === 'reviews' ? 'active' : ''}`} hidden={selectedTab !== 'reviews'}>
-                                <div className="Dashboard_projects" id="reviews-grid">
-                                        {displayProjects && displayProjects.map((review) =>
-                                                <Project
-                                                        key={review.proposal_id}
-                                                        project={review}
-                                                        date={cleanedDate(review.updated_at)}
-                                                        onClick={(e) => handleProjectClick(e, review.proposal_id, true)}
-                                                        isReview={true}
-                                                        handleDeleteProject={handleDeleteProject}
-                                                        handleTransferOwnership={handleTransferOwnership}
-                                                />
-                                        )}
-                                </div>
+                        <section id="knowledge-panel" role="tabpanel" className={`tab-panel ${selectedTab === 'knowledge' ? 'active' : ''}`} hidden={selectedTab !== 'knowledge'}>
+                                {viewMode === 'vignette' ? (
+                                        <div className="Dashboard_projects" id="knowledge-grid">
+                                                <div className="card card--cta">
+                                                        <button className="btn" type="button" aria-label="Start a new knowledge card" onClick={() => navigate("/knowledge-card/new")} data-testid="new-knowledge-card-button">Create New Knowledge Card</button>
+                                                </div>
+                                                {displayKnowledgeCards && displayKnowledgeCards.map((card) => {
+                                                        const isKCOwner = currentUser && (currentUser.id === card.created_by || currentUser.user_id === card.created_by);
+                                                        return <KnowledgeCard
+                                                                key={card.id}
+                                                                card={card}
+                                                                date={cleanedDate(card.updated_at)}
+                                                                onClick={() => isKCOwner ? navigate(`/knowledge-card/${card.id}`) : navigate(`/review/knowledge-card/${card.id}`)}
+                                                                isDuplicate={duplicateCardIds.has(card.id)}
+                                                                onDelete={() => handleDeleteKnowledgeCard(card.id)}
+                                                        />
+                                                })}
+                                        </div>
+                                ) : (
+                                        <div className="Dashboard_tableContainer">
+                                                <div className="card card--cta" style={{ marginBottom: '20px', width: 'fit-content' }}>
+                                                        <button className="btn" type="button" aria-label="Start a new knowledge card" onClick={() => navigate("/knowledge-card/new")} data-testid="new-knowledge-card-button-table">Create New Knowledge Card</button>
+                                                </div>
+                                                <table className="table table-hover">
+                                                        <thead>
+                                                                <tr>
+                                                                        <th onClick={() => handleSort('summary')} className="sortable">Summary {sortConfig.key === 'summary' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                                                        <th onClick={() => handleSort('updated_at')} className="sortable">Last Updated {sortConfig.key === 'updated_at' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                                                        <th>Type</th>
+                                                                </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                                {sortedKnowledgeCards.map((card) => {
+                                                                        const isKCOwner = currentUser && (currentUser.id === card.created_by || currentUser.user_id === card.created_by);
+                                                                        return (
+                                                                        <tr key={card.id} onClick={() => isKCOwner ? navigate(`/knowledge-card/${card.id}`) : navigate(`/review/knowledge-card/${card.id}`)} style={{ cursor: 'pointer' }}>
+                                                                                <td style={{ maxWidth: '400px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{card.summary}</td>
+                                                                                <td>{cleanedDate(card.updated_at)}</td>
+                                                                                <td>
+                                                                                        {card.donor_name && 'Donor'}
+                                                                                        {card.outcome_name && 'Outcome'}
+                                                                                        {card.field_context_name && 'Field Context'}
+                                                                                </td>
+                                                                        </tr>
+                                                                        );
+                                                                })}
+                                                        </tbody>
+                                                </table>
+                                        </div>
+                                )}
                         </section>
 
-                        <section id="metrics-panel" role="tabpanel" aria-labelledby="metrics-tab" className={`tab-panel ${selectedTab === 'metrics' ? 'active' : ''}`} hidden={selectedTab !== 'metrics'}>
+                        <section id="reviews-panel" role="tabpanel" className={`tab-panel ${selectedTab === 'reviews' ? 'active' : ''}`} hidden={selectedTab !== 'reviews'}>
+                                {viewMode === 'vignette' ? (
+                                        <div className="Dashboard_projects" id="reviews-grid">
+                                                {displayProjects && displayProjects.map((review) =>
+                                                        <Project
+                                                                key={review.proposal_id}
+                                                                project={review}
+                                                                date={cleanedDate(review.updated_at)}
+                                                                onClick={(e) => handleProjectClick(e, review.proposal_id, true)}
+                                                                isReview={true}
+                                                                handleDeleteProject={handleDeleteProject}
+                                                                handleTransferOwnership={handleTransferOwnership}
+                                                        />
+                                                )}
+                                        </div>
+                                ) : (
+                                        <div className="Dashboard_tableContainer">
+                                                <table className="table table-hover">
+                                                        <thead>
+                                                                <tr>
+                                                                        <th onClick={() => handleSort('project_title')} className="sortable">Title {sortConfig.key === 'project_title' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                                                        <th onClick={() => handleSort('requester_name')} className="sortable">Requester {sortConfig.key === 'requester_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                                                        <th onClick={() => handleSort('deadline')} className="sortable">Deadline {sortConfig.key === 'deadline' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                                                        <th onClick={() => handleSort('updated_at')} className="sortable">Last Updated {sortConfig.key === 'updated_at' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                                                </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                                {sortedProjects.map((review) => (
+                                                                        <tr key={review.proposal_id} onClick={(e) => handleProjectClick(e, review.proposal_id, true)} style={{ cursor: 'pointer' }}>
+                                                                                <td>{review.project_title}</td>
+                                                                                <td>{review.requester_name || 'N/A'}</td>
+                                                                                <td>{review.deadline ? new Date(review.deadline).toLocaleDateString() : 'N/A'}</td>
+                                                                                <td>{cleanedDate(review.updated_at)}</td>
+                                                                        </tr>
+                                                                ))}
+                                                        </tbody>
+                                                </table>
+                                        </div>
+                                )}
+                        </section>
+
+                        <section id="metrics-panel" role="tabpanel" className={`tab-panel ${selectedTab === 'metrics' ? 'active' : ''}`} hidden={selectedTab !== 'metrics'}>
                                 {selectedTab === 'metrics' && <MetricsDashboard />}
+                        </section>
+
+                        <section id="other-panel" role="tabpanel" className={`tab-panel ${selectedTab === 'other' ? 'active' : ''}`} hidden={selectedTab !== 'other'}>
+                                {viewMode === 'vignette' ? (
+                                        <div className="Dashboard_projects" id="other-grid">
+                                                {displayProjects && displayProjects.map((project) =>
+                                                        <Project
+                                                                key={project.proposal_id}
+                                                                project={project}
+                                                                date={cleanedDate(project.updated_at)}
+                                                                onClick={(e) => handleProjectClick(e, project.proposal_id, false)}
+                                                                isReview={true} // Use isReview to hide standard author actions
+                                                                handleDeleteProject={handleDeleteProject}
+                                                                handleTransferOwnership={handleTransferOwnership}
+                                                        />
+                                                )}
+                                        </div>
+                                ) : (
+                                        <div className="Dashboard_tableContainer">
+                                                <table className="table table-hover">
+                                                        <thead>
+                                                                <tr>
+                                                                        <th onClick={() => handleSort('project_title')} className="sortable">Title {sortConfig.key === 'project_title' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                                                        <th onClick={() => handleSort('team_name')} className="sortable">Team {sortConfig.key === 'team_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                                                        <th onClick={() => handleSort('author_name')} className="sortable">Author {sortConfig.key === 'author_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                                                        <th onClick={() => handleSort('status')} className="sortable">Status {sortConfig.key === 'status' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                                                        <th onClick={() => handleSort('updated_at')} className="sortable">Last Updated {sortConfig.key === 'updated_at' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                                                </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                                {sortedProjects.map((project) => (
+                                                                        <tr key={project.proposal_id} onClick={(e) => handleProjectClick(e, project.proposal_id, false)} style={{ cursor: 'pointer' }}>
+                                                                                <td>{project.project_title}</td>
+                                                                                <td>{project.team_name}</td>
+                                                                                <td>{project.author_name}</td>
+                                                                                <td><span className={`Dashboard_project_label status-${project.status}`}>{project.status}</span></td>
+                                                                                <td>{cleanedDate(project.updated_at)}</td>
+                                                                        </tr>
+                                                                ))}
+                                                        </tbody>
+                                                </table>
+                                        </div>
+                                )}
                         </section>
                 </div>
 
@@ -457,13 +587,12 @@ export default function Dashboard() {
                                         <select id="status-filter" data-testid="status-filter" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
                                                 <option value="">All</option>
                                                 <option value="draft">Drafting</option>
-                                                <option value="review">Pending Review</option>
+                                                <option value="in_review">Pending Review</option>
+                                                <option value="pre_submission">Pre-Submission</option>
                                                 <option value="submission">Pending Submission</option>
                                                 <option value="submitted">Submitted</option>
                                                 <option value="approved">Approved</option>
                                         </select>
-
-                                        {/* Add other filters as needed */}
                                 </div>
 
                                 <div className="filter-section" data-tab="reviews" hidden={selectedTab !== 'reviews'}>

@@ -24,7 +24,7 @@
         box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
 
         position: relative;
-        z-index: 1;
+        z-index: 10;
 }
 
 .Header_logoContainer {
@@ -32,11 +32,26 @@
 
         display: flex;
         align-items: center;
+        gap: 20px;
+}
+
+.Header_sidebarToggle {
+        background: transparent;
+        border: none;
+        color: white;
+        font-size: 20px;
+        cursor: pointer;
+        padding: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+}
+
+.Header_sidebarToggle:hover {
+        opacity: 0.8;
 }
 
 .Header_orgLogo {
-        margin-right: 20px;
-
         height: 35px;
 
         padding: 2.5px 0;
@@ -168,9 +183,17 @@
         filter: brightness(0);
 }
 
+.Base_content {
+        display: flex;
+        flex-direction: row;
+        flex-grow: 1;
+        overflow: hidden;
+}
+
 .Main {
         display: flex;
         flex-direction: column;
         flex-grow: 1;
-        overflow: auto;
+        overflow-y: auto;
+        position: relative;
 }

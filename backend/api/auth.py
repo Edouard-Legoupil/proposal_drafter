@@ -359,6 +359,7 @@ async def profile(current_user: dict = Depends(get_current_user)):
         return {
             "message": "Profile fetched successfully",
             "user": {
+                "id": current_user["user_id"],
                 "name": current_user["name"],
                 "email": current_user["email"],
                 "roles": current_user.get("roles", []),

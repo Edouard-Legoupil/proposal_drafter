@@ -123,7 +123,7 @@ describe('Dashboard Component', () => {
 
                 await waitFor(() => {
                         expect(sessionStorage.getItem('proposal_id')).toBe('1')
-                        expect(mockNavigate).toHaveBeenCalledWith('/chat')
+                        expect(mockNavigate).toHaveBeenCalledWith('/chat/1')
                 })
         })
 

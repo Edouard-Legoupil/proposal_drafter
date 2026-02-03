@@ -143,6 +143,7 @@ CREATE TABLE IF NOT EXISTS proposal_peer_reviews (
     reviewer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     proposal_status_history_id UUID REFERENCES proposal_status_history(id),
     section_name TEXT,
+    rating VARCHAR(10),
     status VARCHAR(50) DEFAULT 'pending',
     deadline TIMESTAMPTZ,
     review_text TEXT,
@@ -183,6 +184,20 @@ CREATE TABLE IF NOT EXISTS knowledge_card_history (
     generated_sections_snapshot JSONB,
     created_by UUID NOT NULL REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS knowledge_card_reviews (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    knowledge_card_id UUID NOT NULL REFERENCES knowledge_cards(id) ON DELETE CASCADE,
+    reviewer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    section_name TEXT,
+    rating VARCHAR(10),
+    review_text TEXT,
+    author_response TEXT,
+    status VARCHAR(50) DEFAULT 'pending',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (knowledge_card_id, reviewer_id, section_name)
 );
 
 -- Create Knowledge Card References table  

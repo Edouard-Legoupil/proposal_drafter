@@ -677,8 +677,8 @@ async def get_proposals_for_review(current_user: dict = Depends(get_current_user
                     p.created_at,
                     p.updated_at,
                     p.is_accepted,
-                    d.name AS donor_name,
-                    fc.name AS country_name,
+                    string_agg(DISTINCT d.name, ', ') AS donor_name,
+                    string_agg(DISTINCT fc.name, ', ') AS country_name,
                     string_agg(DISTINCT o.name, ', ') AS outcome_names,
                     u.name AS requester_name,
                     -- Determine the review status by checking for any 'completed' status for this reviewer and proposal
@@ -710,7 +710,7 @@ async def get_proposals_for_review(current_user: dict = Depends(get_current_user
                 WHERE
                     pp.reviewer_id = :uid
                 GROUP BY
-                    p.id, d.name, fc.name, u.name
+                    p.id, u.name
                 ORDER BY
                     MAX(pp.updated_at) DESC
             """)
@@ -783,9 +783,9 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
                     p.created_at,
                     p.updated_at,
                     p.is_accepted,
-                    d.name AS donor_name,
-                    fc.name AS country_name,
-                    string_agg(o.name, ', ') AS outcome_names
+                    string_agg(DISTINCT d.name, ', ') AS donor_name,
+                    string_agg(DISTINCT fc.name, ', ') AS country_name,
+                    string_agg(DISTINCT o.name, ', ') AS outcome_names
                 FROM
                     proposals p
                 LEFT JOIN
@@ -803,7 +803,7 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
                 WHERE
                     p.user_id = :uid AND p.status != 'deleted'
                 GROUP BY
-                    p.id, d.name, fc.name
+                    p.id
                 ORDER BY
                     p.updated_at DESC
             """)
@@ -841,6 +841,88 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
     except Exception as e:
         logger.error(f"[LIST DRAFTS ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch drafts")
+
+@router.get("/list-all-proposals")
+async def list_all_proposals(current_user: dict = Depends(get_current_user)):
+    """
+    Lists all proposals in the system for the 'Other Proposals' view,
+    excluding those owned by the current user.
+    """
+    user_id = current_user["user_id"]
+    proposal_list = []
+
+    try:
+        engine = get_engine()
+        with engine.connect() as connection:
+            query = text("""
+                SELECT
+                    p.id,
+                    p.form_data,
+                    p.project_description,
+                    p.status,
+                    p.created_at,
+                    p.updated_at,
+                    p.is_accepted,
+                    string_agg(DISTINCT d.name, ', ') AS donor_name,
+                    string_agg(DISTINCT fc.name, ', ') AS country_name,
+                    string_agg(DISTINCT o.name, ', ') AS outcome_names,
+                    t.name AS team_name,
+                    t.id AS team_id,
+                    u.name AS author_name
+                FROM
+                    proposals p
+                JOIN
+                    users u ON p.user_id = u.id
+                JOIN
+                    teams t ON u.team_id = t.id
+                LEFT JOIN
+                    proposal_donors pd ON p.id = pd.proposal_id
+                LEFT JOIN
+                    donors d ON pd.donor_id = d.id
+                LEFT JOIN
+                    proposal_field_contexts pfc ON p.id = pfc.proposal_id
+                LEFT JOIN
+                    field_contexts fc ON pfc.field_context_id = fc.id
+                LEFT JOIN
+                    proposal_outcomes po ON p.id = po.proposal_id
+                LEFT JOIN
+                    outcomes o ON po.outcome_id = o.id
+                WHERE
+                    p.user_id != :uid AND p.status != 'deleted'
+                GROUP BY
+                    p.id, t.name, t.id, u.name
+                ORDER BY
+                    p.updated_at DESC
+            """)
+
+            result = connection.execute(query, {"uid": user_id})
+            rows = result.mappings().fetchall()
+
+            for row in rows:
+                form_data = json.loads(row['form_data']) if isinstance(row['form_data'], str) else row['form_data']
+
+                proposal_list.append({
+                    "proposal_id": row['id'],
+                    "project_title": form_data.get("Project Draft Short name") or form_data.get("Project title", "Untitled Proposal"),
+                    "summary": row['project_description'] or "",
+                    "created_at": row['created_at'].isoformat() if row['created_at'] else None,
+                    "updated_at": row['updated_at'].isoformat() if row['updated_at'] else None,
+                    "is_accepted": row['is_accepted'],
+                    "status": row['status'],
+                    "donor": row['donor_name'],
+                    "country": row['country_name'],
+                    "outcomes": row['outcome_names'].split(', ') if row['outcome_names'] else [],
+                    "budget": form_data.get("Budget Range", "N/A"),
+                    "team_name": row['team_name'],
+                    "team_id": str(row['team_id']),
+                    "author_name": row['author_name']
+                })
+
+        return {"message": "All proposals fetched successfully.", "proposals": proposal_list}
+
+    except Exception as e:
+        logger.error(f"[LIST ALL PROPOSALS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch all proposals")
 
 @router.get("/sections")
 async def get_sections():
@@ -1153,7 +1235,7 @@ async def save_draft_review(proposal_id: uuid.UUID, request: SubmitReviewRequest
             # Check if the user is assigned to review this proposal
             reviewer_id_from_db = connection.execute(
                 text("SELECT reviewer_id FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND (status = 'pending' OR status = 'draft')"),
-                {"proposal_id": proposal_id, "user_id": user_id}
+                {"proposal_id": str(proposal_id), "user_id": str(user_id)}
             ).scalar()
 
             if not reviewer_id_from_db:
@@ -1168,25 +1250,26 @@ async def save_draft_review(proposal_id: uuid.UUID, request: SubmitReviewRequest
             # Delete existing draft comments for this user and proposal
             connection.execute(
                 text("DELETE FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND status = 'draft'"),
-                {"proposal_id": proposal_id, "user_id": user_id}
+                {"proposal_id": str(proposal_id), "user_id": str(user_id)}
             )
 
             # Insert each comment as a new row with 'draft' status
             for comment in request.comments:
-                if comment.review_text: # Only save comments that have text
+                if comment.review_text or comment.rating: # Save if text or rating exists
                     connection.execute(
                         text("""
-                            INSERT INTO proposal_peer_reviews (proposal_id, reviewer_id, proposal_status_history_id, section_name, review_text, type_of_comment, severity, status)
-                            VALUES (:pid, :rid, :hid, :section, :text, :type, :severity, 'draft')
+                            INSERT INTO proposal_peer_reviews (proposal_id, reviewer_id, proposal_status_history_id, section_name, review_text, type_of_comment, severity, rating, status)
+                            VALUES (:pid, :rid, :hid, :section, :text, :type, :severity, :rating, 'draft')
                         """),
                         {
-                            "pid": proposal_id,
-                            "rid": user_id,
-                            "hid": history_id,
+                            "pid": str(proposal_id),
+                            "rid": str(user_id),
+                            "hid": str(history_id) if history_id else None,
                             "section": comment.section_name,
                             "text": comment.review_text,
                             "type": comment.type_of_comment,
-                            "severity": comment.severity
+                            "severity": comment.severity,
+                            "rating": comment.rating
                         }
                     )
 
@@ -1207,7 +1290,7 @@ async def submit_review(proposal_id: uuid.UUID, request: SubmitReviewRequest, cu
             # Check if the user is assigned to review this proposal
             reviewer_id_from_db = connection.execute(
                 text("SELECT reviewer_id FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND (status = 'pending' OR status = 'draft')"),
-                {"proposal_id": proposal_id, "user_id": user_id}
+                {"proposal_id": str(proposal_id), "user_id": str(user_id)}
             ).scalar()
 
             if not reviewer_id_from_db:
@@ -1216,44 +1299,45 @@ async def submit_review(proposal_id: uuid.UUID, request: SubmitReviewRequest, cu
             # Get the latest 'in_review' status history ID
             history_id = connection.execute(
                 text("SELECT id FROM proposal_status_history WHERE proposal_id = :pid AND status = 'in_review' ORDER BY created_at DESC LIMIT 1"),
-                {"pid": proposal_id}
+                {"pid": str(proposal_id)}
             ).scalar()
 
             # Delete existing draft/pending comments for this user and proposal
             connection.execute(
                 text("DELETE FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND (status = 'pending' OR status = 'draft')"),
-                {"proposal_id": proposal_id, "user_id": user_id}
+                {"proposal_id": str(proposal_id), "user_id": str(user_id)}
             )
 
             # Insert each comment as a new row
             for comment in request.comments:
-                if comment.review_text: # Only save comments that have text
+                if comment.review_text or comment.rating: # Save if text or rating exists
                     connection.execute(
                         text("""
-                            INSERT INTO proposal_peer_reviews (proposal_id, reviewer_id, proposal_status_history_id, section_name, review_text, type_of_comment, severity, status)
-                            VALUES (:pid, :rid, :hid, :section, :text, :type, :severity, 'completed')
+                            INSERT INTO proposal_peer_reviews (proposal_id, reviewer_id, proposal_status_history_id, section_name, review_text, type_of_comment, severity, rating, status)
+                            VALUES (:pid, :rid, :hid, :section, :text, :type, :severity, :rating, 'completed')
                         """),
                         {
-                            "pid": proposal_id,
-                            "rid": user_id,
-                            "hid": history_id,
+                            "pid": str(proposal_id),
+                            "rid": str(user_id),
+                            "hid": str(history_id) if history_id else None,
                             "section": comment.section_name,
                             "text": comment.review_text,
                             "type": comment.type_of_comment,
-                            "severity": comment.severity
+                            "severity": comment.severity,
+                            "rating": comment.rating
                         }
                     )
 
             # Check if all reviews are completed
             pending_reviews = connection.execute(
                 text("SELECT COUNT(*) FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND status = 'pending'"),
-                {"proposal_id": proposal_id}
+                {"proposal_id": str(proposal_id)}
             ).scalar()
 
             if pending_reviews == 0:
                 connection.execute(
                     text("UPDATE proposals SET status = 'pre_submission', updated_at = CURRENT_TIMESTAMP WHERE id = :id"),
-                    {"id": proposal_id}
+                    {"id": str(proposal_id)}
                 )
 
         return {"message": "Review submitted successfully."}
@@ -1760,18 +1844,18 @@ async def get_status_history(proposal_id: uuid.UUID, current_user: dict = Depend
             # Verify the user has access to the proposal (owner or reviewer)
             proposal_owner = connection.execute(
                 text("SELECT user_id FROM proposals WHERE id = :id"),
-                {"id": proposal_id}
+                {"id": str(proposal_id)}
             ).scalar()
 
             is_reviewer = connection.execute(
                 text("SELECT 1 FROM proposal_peer_reviews WHERE proposal_id = :pid AND reviewer_id = :rid"),
-                {"pid": proposal_id, "rid": user_id}
+                {"pid": str(proposal_id), "rid": str(user_id)}
             ).scalar()
 
             if not proposal_owner:
                 raise HTTPException(status_code=404, detail="Proposal not found.")
 
-            if proposal_owner != user_id and not is_reviewer:
+            if str(proposal_owner) != str(user_id) and not is_reviewer:
                 raise HTTPException(status_code=403, detail="You do not have permission to view this proposal's history.")
 
             # Get distinct statuses from the history
@@ -1781,7 +1865,7 @@ async def get_status_history(proposal_id: uuid.UUID, current_user: dict = Depend
                     FROM proposal_status_history
                     WHERE proposal_id = :pid
                 """),
-                {"pid": proposal_id}
+                {"pid": str(proposal_id)}
             )
             statuses = [row[0] for row in result.fetchall()]
             return {"statuses": statuses}
@@ -1803,18 +1887,18 @@ async def get_peer_reviews(proposal_id: uuid.UUID, current_user: dict = Depends(
             # Verify the user has access to the proposal (owner, reviewer, or admin)
             proposal_owner = connection.execute(
                 text("SELECT user_id FROM proposals WHERE id = :id"),
-                {"id": proposal_id}
+                {"id": str(proposal_id)}
             ).scalar()
 
             is_reviewer = connection.execute(
                 text("SELECT 1 FROM proposal_peer_reviews WHERE proposal_id = :pid AND reviewer_id = :rid"),
-                {"pid": proposal_id, "rid": user_id}
+                {"pid": str(proposal_id), "rid": str(user_id)}
             ).scalar()
 
             if not proposal_owner:
                 raise HTTPException(status_code=404, detail="Proposal not found.")
 
-            if str(proposal_owner) != user_id and not is_reviewer:
+            if str(proposal_owner) != str(user_id) and not is_reviewer:
                 raise HTTPException(status_code=403, detail="You do not have permission to view this proposal's reviews.")
 
             query = text("""
@@ -1823,6 +1907,7 @@ async def get_peer_reviews(proposal_id: uuid.UUID, current_user: dict = Depends(
                     pr.section_name,
                     pr.review_text,
                     pr.author_response,
+                    pr.rating,
                     u.name as reviewer_name
                 FROM
                     proposal_peer_reviews pr
@@ -1831,13 +1916,14 @@ async def get_peer_reviews(proposal_id: uuid.UUID, current_user: dict = Depends(
                 WHERE
                     pr.proposal_id = :pid
             """)
-            result = connection.execute(query, {"pid": proposal_id})
+            result = connection.execute(query, {"pid": str(proposal_id)})
             reviews = [
                 {
                     "id": row.id,
                     "section_name": row.section_name,
                     "review_text": row.review_text,
                     "author_response": row.author_response,
+                    "rating": row.rating,
                     "reviewer_name": row.reviewer_name
                 }
                 for row in result.mappings()
@@ -1861,7 +1947,7 @@ async def save_author_response(review_id: uuid.UUID, request: AuthorResponseRequ
             # Verify that the user is the author of the proposal
             proposal_id = connection.execute(
                 text("SELECT proposal_id FROM proposal_peer_reviews WHERE id = :rid"),
-                {"rid": review_id}
+                {"rid": str(review_id)}
             ).scalar()
 
             if not proposal_id:
@@ -1869,16 +1955,16 @@ async def save_author_response(review_id: uuid.UUID, request: AuthorResponseRequ
 
             proposal_owner = connection.execute(
                 text("SELECT user_id FROM proposals WHERE id = :pid"),
-                {"pid": proposal_id}
+                {"pid": str(proposal_id)}
             ).scalar()
 
-            if not proposal_owner or proposal_owner != user_id:
+            if not proposal_owner or str(proposal_owner) != str(user_id):
                 raise HTTPException(status_code=403, detail="You do not have permission to respond to this review.")
 
             # Update the author_response
             connection.execute(
                 text("UPDATE proposal_peer_reviews SET author_response = :response, updated_at = CURRENT_TIMESTAMP WHERE id = :rid"),
-                {"response": request.author_response, "rid": review_id}
+                {"response": request.author_response, "rid": str(review_id)}
             )
 
         return {"message": "Response saved successfully."}

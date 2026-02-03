@@ -27,16 +27,28 @@ body {
 }
 .Dashboard_label { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 18px; }
 
-/* Tabs */
-.tabs { display: flex; gap: 6px; padding: 0 30px; background: var(--surface); border-bottom: 1px solid var(--border); }
-.tablist { display: flex; width: 100%; gap: 6px; }
-.tab {
-  appearance: none; -webkit-appearance: none; border: 1px solid var(--border);
-  border-bottom: none; border-radius: 8px 8px 0 0; background: #eee; color: #222;
-  padding: 10px 14px; cursor: pointer; font-weight: 600; flex: 1; text-align: center;
+.view-mode-toggle {
+    display: flex;
+    background: #eee;
+    padding: 3px;
+    border-radius: 8px;
 }
-.tab[aria-selected="true"] { background: var(--brand); color: #fff; border-color: var(--brand); }
-.tab:focus-visible { outline: 3px solid #94c6e6; outline-offset: 2px; }
+
+.view-btn {
+    background: transparent;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all 0.2s;
+}
+
+.view-btn.active {
+    background: white;
+    color: var(--brand);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
 
 .Dashboard_search {
   margin: 15px 30px; background: var(--surface); border: 1px solid var(--border);
@@ -84,13 +96,46 @@ body {
   background: #fafafa;
 }
 
-/* Reduce motion preference */
-@media (prefers-reduced-motion: no-preference) {
-  .tab-panel { transition: opacity .2s ease; }
-  .tab-panel.active { animation: fadeIn .18s ease; }
-  @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+/* Table View */
+.Dashboard_tableContainer {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: var(--shadow);
 }
 
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table th, .table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+
+.table th.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.table th.sortable:hover {
+    background: #f8f9fa;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #f1f8ff;
+}
+
+.Dashboard_project_label {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: white;
+    text-transform: capitalize;
+}
 
 /* Status badges */
 .status-badge {
@@ -105,10 +150,10 @@ body {
 
 .status-draft { background: #757575; }          /* grey */
 .status-review { background: #FF9800; }         /* orange */
+.status-in_review { background: #FF9800; }      /* orange */
 .status-pre-submission {background: #0072BC;}   /* blue */
 .status-submission { background: #0072BC; }     /* blue */
-/*.status-submitted { background: #6A1B9A; }   */   /* purple */
-.status-submitted { background: #2E7D32; }      /* purple */
+.status-submitted { background: #2E7D32; }      /* green */
 .status-approved { background: #2E7D32; }       /* green */
 
 /* Filter button */
@@ -170,28 +215,6 @@ body {
     }
 }
 
-.Dashboard_tabs {
-    display: flex;
-    gap: 10px;
-    padding: 0 50px;
-    border-bottom: 1px solid #ccc;
-    margin-bottom: 20px;
-}
-
-.Dashboard_tab {
-    padding: 10px 20px;
-    cursor: pointer;
-    border: none;
-    background-color: transparent;
-    font-size: 16px;
-    border-bottom: 2px solid transparent;
-}
-
-.Dashboard_tab.active {
-    border-bottom: 2px solid #007bff;
-    font-weight: bold;
-}
-
 .filter-section { margin: 12px 0; }
 .filter-section label { display: block; margin-bottom: 6px; font-weight: 600; }
 .filter-section select, .filter-section input {
@@ -200,4 +223,3 @@ body {
     border: 1px solid var(--border);
     border-radius: 6px;
 }
-
