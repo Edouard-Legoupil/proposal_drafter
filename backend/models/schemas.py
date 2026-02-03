@@ -133,9 +133,10 @@ class SubmitPeerReviewRequest(BaseModel):
 
 class ReviewComment(BaseModel):
     section_name: str
-    review_text: str
-    type_of_comment: str
-    severity: str
+    review_text: Optional[str] = ""
+    type_of_comment: Optional[str] = "General"
+    severity: Optional[str] = "Medium"
+    rating: Optional[str] = None
 
 class SubmitReviewRequest(BaseModel):
     """

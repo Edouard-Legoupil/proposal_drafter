@@ -36,6 +36,7 @@ import litellm
 import numpy as np
 import io
 from backend.utils.doc_export import create_word_from_knowledge_card
+from backend.models.schemas import SubmitReviewRequest, AuthorResponseRequest
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -286,6 +287,7 @@ async def get_knowledge_cards(
                     kc.created_at,
                     kc.updated_at,
                     kc.generated_sections,
+                    kc.created_by,
                     kc.donor_id,
                     kc.outcome_id,
                     kc.field_context_id,
@@ -1636,3 +1638,231 @@ async def delete_knowledge_card_reference_by_id(reference_id: uuid.UUID, current
     except Exception as e:
         logger.error(f"[DELETE KC REFERENCE ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to delete reference.")
+
+@router.get("/review-knowledge-card/{card_id}")
+async def get_knowledge_card_for_review(card_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
+    """
+    Fetches a knowledge card and its existing reviews for a reviewer.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().connect() as connection:
+            # Fetch the card data
+            query = text("""
+                SELECT
+                    kc.id, kc.summary, kc.generated_sections, kc.created_at, kc.updated_at, kc.created_by,
+                    kc.donor_id, kc.outcome_id, kc.field_context_id,
+                    d.name as donor_name, o.name as outcome_name, fc.name as field_context_name
+                FROM knowledge_cards kc
+                LEFT JOIN donors d ON kc.donor_id = d.id
+                LEFT JOIN outcomes o ON kc.outcome_id = o.id
+                LEFT JOIN field_contexts fc ON kc.field_context_id = fc.id
+                WHERE kc.id = :card_id
+            """)
+            card = connection.execute(query, {"card_id": str(card_id)}).mappings().fetchone()
+            if not card:
+                raise HTTPException(status_code=404, detail="Knowledge card not found.")
+
+            # Fetch existing reviews/comments by this user
+            reviews_query = text("""
+                SELECT section_name, review_text, type_of_comment, severity, rating, author_response
+                FROM knowledge_card_reviews
+                WHERE knowledge_card_id = :card_id AND reviewer_id = :user_id
+            """)
+            reviews = connection.execute(reviews_query, {"card_id": str(card_id), "user_id": str(user_id)}).mappings().fetchall()
+
+            draft_comments = {}
+            for row in reviews:
+                draft_comments[row['section_name']] = {
+                    "review_text": row['review_text'],
+                    "type_of_comment": row['type_of_comment'],
+                    "severity": row['severity'],
+                    "rating": row['rating'],
+                    "author_response": row['author_response']
+                }
+
+            card_dict = dict(card)
+            if card_dict.get('generated_sections'):
+                if isinstance(card_dict['generated_sections'], str):
+                    card_dict['generated_sections'] = json.loads(card_dict['generated_sections'])
+
+            return {
+                "knowledge_card": card_dict,
+                "draft_comments": draft_comments
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[GET KC REVIEW ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch knowledge card for review.")
+
+@router.post("/knowledge-cards/{card_id}/review")
+async def submit_knowledge_card_review(card_id: uuid.UUID, request: SubmitReviewRequest, current_user: dict = Depends(get_current_user)):
+    """
+    Submits a finalized review for a knowledge card.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().begin() as connection:
+            # Delete existing draft/pending comments for this user and card
+            connection.execute(
+                text("DELETE FROM knowledge_card_reviews WHERE knowledge_card_id = :card_id AND reviewer_id = :user_id"),
+                {"card_id": str(card_id), "user_id": str(user_id)}
+            )
+
+            # Insert each comment
+            for comment in request.comments:
+                if comment.review_text or comment.rating:
+                    connection.execute(
+                        text("""
+                            INSERT INTO knowledge_card_reviews (knowledge_card_id, reviewer_id, section_name, review_text, type_of_comment, severity, rating, status)
+                            VALUES (:cid, :rid, :section, :text, :type, :severity, :rating, 'completed')
+                        """),
+                        {
+                            "cid": str(card_id),
+                            "rid": str(user_id),
+                            "section": comment.section_name,
+                            "text": comment.review_text,
+                            "type": comment.type_of_comment,
+                            "severity": comment.severity,
+                            "rating": comment.rating
+                        }
+                    )
+        return {"message": "Review submitted successfully."}
+    except Exception as e:
+        logger.error(f"[SUBMIT KC REVIEW ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to submit knowledge card review.")
+
+@router.post("/knowledge-cards/{card_id}/save-draft-review")
+async def save_knowledge_card_draft_review(card_id: uuid.UUID, request: SubmitReviewRequest, current_user: dict = Depends(get_current_user)):
+    """
+    Saves a draft review for a knowledge card.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().begin() as connection:
+            # Delete existing comments for this user and card
+            connection.execute(
+                text("DELETE FROM knowledge_card_reviews WHERE knowledge_card_id = :card_id AND reviewer_id = :user_id"),
+                {"card_id": str(card_id), "user_id": str(user_id)}
+            )
+
+            # Insert each comment as draft
+            for comment in request.comments:
+                if comment.review_text or comment.rating:
+                    connection.execute(
+                        text("""
+                            INSERT INTO knowledge_card_reviews (knowledge_card_id, reviewer_id, section_name, review_text, type_of_comment, severity, rating, status)
+                            VALUES (:cid, :rid, :section, :text, :type, :severity, :rating, 'draft')
+                        """),
+                        {
+                            "cid": str(card_id),
+                            "rid": str(user_id),
+                            "section": comment.section_name,
+                            "text": comment.review_text,
+                            "type": comment.type_of_comment,
+                            "severity": comment.severity,
+                            "rating": comment.rating
+                        }
+                    )
+        return {"message": "Draft review saved successfully."}
+    except Exception as e:
+        logger.error(f"[SAVE KC DRAFT REVIEW ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to save draft review.")
+
+@router.put("/knowledge-card-reviews/{review_id}/response")
+async def save_knowledge_card_author_response(review_id: uuid.UUID, request: AuthorResponseRequest, current_user: dict = Depends(get_current_user)):
+    """
+    Saves the author's response to a knowledge card review comment.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().begin() as connection:
+            # Verify that the user is the author of the knowledge card
+            card_id = connection.execute(
+                text("SELECT knowledge_card_id FROM knowledge_card_reviews WHERE id = :rid"),
+                {"rid": str(review_id)}
+            ).scalar()
+
+            if not card_id:
+                raise HTTPException(status_code=404, detail="Review not found.")
+
+            card_owner = connection.execute(
+                text("SELECT created_by FROM knowledge_cards WHERE id = :cid"),
+                {"cid": str(card_id)}
+            ).scalar()
+
+            if not card_owner or str(card_owner) != str(user_id):
+                raise HTTPException(status_code=403, detail="You do not have permission to respond to this review.")
+
+            # Update the author_response
+            connection.execute(
+                text("UPDATE knowledge_card_reviews SET author_response = :response, updated_at = CURRENT_TIMESTAMP WHERE id = :rid"),
+                {"response": request.author_response, "rid": str(review_id)}
+            )
+
+        return {"message": "Response saved successfully."}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[SAVE KC AUTHOR RESPONSE ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to save author response.")
+
+@router.get("/knowledge-cards/{card_id}/all-reviews")
+async def get_all_knowledge_card_reviews(card_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
+    """
+    Fetches all reviews for a given knowledge card.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().connect() as connection:
+            # Verify access: owner or someone who reviewed it
+            card_owner = connection.execute(
+                text("SELECT created_by FROM knowledge_cards WHERE id = :cid"),
+                {"cid": str(card_id)}
+            ).scalar()
+
+            is_reviewer = connection.execute(
+                text("SELECT 1 FROM knowledge_card_reviews WHERE knowledge_card_id = :cid AND reviewer_id = :rid"),
+                {"cid": str(card_id), "rid": str(user_id)}
+            ).scalar()
+
+            if not card_owner:
+                raise HTTPException(status_code=404, detail="Knowledge card not found.")
+
+            if str(card_owner) != str(user_id) and not is_reviewer:
+                raise HTTPException(status_code=403, detail="You do not have permission to view this card's reviews.")
+
+            query = text("""
+                SELECT
+                    kcr.id,
+                    kcr.section_name,
+                    kcr.review_text,
+                    kcr.author_response,
+                    kcr.rating,
+                    u.name as reviewer_name
+                FROM
+                    knowledge_card_reviews kcr
+                JOIN
+                    users u ON kcr.reviewer_id = u.id
+                WHERE
+                    kcr.knowledge_card_id = :cid
+            """)
+            result = connection.execute(query, {"cid": str(card_id)})
+            reviews = [
+                {
+                    "id": row.id,
+                    "section_name": row.section_name,
+                    "review_text": row.review_text,
+                    "author_response": row.author_response,
+                    "rating": row.rating,
+                    "reviewer_name": row.reviewer_name
+                }
+                for row in result.mappings()
+            ]
+            return {"reviews": reviews}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[GET ALL KC REVIEWS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch reviews.")

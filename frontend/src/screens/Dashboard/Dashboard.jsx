@@ -16,6 +16,7 @@ export default function Dashboard() {
         const { folder, subfolder, filter } = useParams()
 
         const [userRoles, setUserRoles] = useState([]);
+        const [currentUser, setCurrentUser] = useState(null);
         const [projects, setProjects] = useState([])
         const [allProposals, setAllProposals] = useState([])
         const [reviews, setReviews] = useState([])
@@ -42,6 +43,7 @@ export default function Dashboard() {
 
                 if (response.ok) {
                     const data = await response.json();
+                    setCurrentUser(data.user);
                     setUserRoles(data.user?.roles || []);
                 }
             } catch (err) {
@@ -146,8 +148,8 @@ export default function Dashboard() {
 
         async function handleProjectClick(e, proposal_id, isReview = false) {
                 sessionStorage.setItem("proposal_id", proposal_id)
-                if (isReview) {
-                        navigate(`/review/${proposal_id}`)
+                if (isReview || selectedTab === 'other') {
+                        navigate(`/review/proposal/${proposal_id}`)
                 } else {
                         navigate(`/chat/${proposal_id}`)
                 }
@@ -441,16 +443,17 @@ export default function Dashboard() {
                                                 <div className="card card--cta">
                                                         <button className="btn" type="button" aria-label="Start a new knowledge card" onClick={() => navigate("/knowledge-card/new")} data-testid="new-knowledge-card-button">Create New Knowledge Card</button>
                                                 </div>
-                                                {displayKnowledgeCards && displayKnowledgeCards.map((card) =>
-                                                        <KnowledgeCard
+                                                {displayKnowledgeCards && displayKnowledgeCards.map((card) => {
+                                                        const isKCOwner = currentUser && (currentUser.id === card.created_by || currentUser.user_id === card.created_by);
+                                                        return <KnowledgeCard
                                                                 key={card.id}
                                                                 card={card}
                                                                 date={cleanedDate(card.updated_at)}
-                                                                onClick={() => navigate(`/knowledge-card/${card.id}`)}
+                                                                onClick={() => isKCOwner ? navigate(`/knowledge-card/${card.id}`) : navigate(`/review/knowledge-card/${card.id}`)}
                                                                 isDuplicate={duplicateCardIds.has(card.id)}
                                                                 onDelete={() => handleDeleteKnowledgeCard(card.id)}
                                                         />
-                                                )}
+                                                })}
                                         </div>
                                 ) : (
                                         <div className="Dashboard_tableContainer">
@@ -466,8 +469,10 @@ export default function Dashboard() {
                                                                 </tr>
                                                         </thead>
                                                         <tbody>
-                                                                {sortedKnowledgeCards.map((card) => (
-                                                                        <tr key={card.id} onClick={() => navigate(`/knowledge-card/${card.id}`)} style={{ cursor: 'pointer' }}>
+                                                                {sortedKnowledgeCards.map((card) => {
+                                                                        const isKCOwner = currentUser && (currentUser.id === card.created_by || currentUser.user_id === card.created_by);
+                                                                        return (
+                                                                        <tr key={card.id} onClick={() => isKCOwner ? navigate(`/knowledge-card/${card.id}`) : navigate(`/review/knowledge-card/${card.id}`)} style={{ cursor: 'pointer' }}>
                                                                                 <td style={{ maxWidth: '400px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{card.summary}</td>
                                                                                 <td>{cleanedDate(card.updated_at)}</td>
                                                                                 <td>
@@ -476,7 +481,8 @@ export default function Dashboard() {
                                                                                         {card.field_context_name && 'Field Context'}
                                                                                 </td>
                                                                         </tr>
-                                                                ))}
+                                                                        );
+                                                                })}
                                                         </tbody>
                                                 </table>
                                         </div>

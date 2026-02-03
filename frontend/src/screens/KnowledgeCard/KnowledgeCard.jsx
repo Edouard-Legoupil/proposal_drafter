@@ -59,6 +59,7 @@ export default function KnowledgeCard() {
     const [initialDataLoaded, setInitialDataLoaded] = useState(false);
     const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
     const [alertModalMessage, setAlertModalMessage] = useState('');
+    const [currentUser, setCurrentUser] = useState(null);
 
     // Use refs to track current state without stale closures
     const summaryRef = useRef(summary);
@@ -123,11 +124,29 @@ export default function KnowledgeCard() {
 
     const fetchData = useCallback(async () => {
         try {
+            // Get profile for ownership check
+            const profRes = await authenticatedFetch(`${API_BASE_URL}/profile`, { credentials: 'include' });
+            let curUser = null;
+            if (profRes.ok) {
+                const profData = await profRes.json();
+                curUser = profData.user;
+                setCurrentUser(curUser);
+            }
+
             if (id) {
                 const cardRes = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${id}`, { credentials: 'include' });
                 if (cardRes.ok) {
                     const data = await cardRes.json();
                     const card = data.knowledge_card;
+
+                    if (curUser) {
+                        const isOwner = curUser.id === card.created_by || curUser.user_id === card.created_by;
+                        if (!isOwner) {
+                            navigate(`/review/knowledge-card/${id}`);
+                            return;
+                        }
+                    }
+
                     setSummary(card.summary || '');
                     let determinedLinkType = '';
                     if (card.donor_id) {

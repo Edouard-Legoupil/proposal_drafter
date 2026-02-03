@@ -19,7 +19,7 @@ export default function App()
                 <Route path="/dashboard/:folder/:subfolder/:filter" element={<Dashboard/>} />
                 <Route path="/chat" element={<Chat/>} />
                 <Route path="/chat/:id" element={<Chat/>} />
-                <Route path="/review/:proposal_id" element={<Review />} />
+                <Route path="/review/:type/:id" element={<Review />} />
                 <Route path="/knowledge-card/new" element={<KnowledgeCard />} />
                 <Route path="/knowledge-card/:id" element={<KnowledgeCard />} />
         </Routes>

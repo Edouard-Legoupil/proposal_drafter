@@ -60,6 +60,7 @@ export default function Chat(props) {
         const [isPeerReviewModalOpen, setIsPeerReviewModalOpen] = useState(false)
         const [isAssociateKnowledgeModalOpen, setIsAssociateKnowledgeModalOpen] = useState(false)
         const [isPdfUploadModalOpen, setIsPdfUploadModalOpen] = useState(false)
+        const [currentUser, setCurrentUser] = useState(null)
         const [users, setUsers] = useState([])
         const [selectedUsers, setSelectedUsers] = useState([])
         const [associatedKnowledgeCards, setAssociatedKnowledgeCards] = useState([]);
@@ -775,6 +776,18 @@ export default function Chat(props) {
         async function getStatusHistory() {
         }
 
+        async function getProfile() {
+                const response = await fetch(`${API_BASE_URL}/profile`, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include'
+                });
+                if (response.ok) {
+                        const result = await response.json();
+                        setCurrentUser(result.user);
+                }
+        }
+
         async function getContent() {
 
                 if (sessionStorage.getItem("proposal_id")) {
@@ -786,6 +799,20 @@ export default function Chat(props) {
 
                         if (response.ok) {
                                 const data = await response.json()
+
+                                // Ownership check
+                                const profileRes = await fetch(`${API_BASE_URL}/profile`, { credentials: 'include' });
+                                if (profileRes.ok) {
+                                        const profileData = await profileRes.json();
+                                        const curUser = profileData.user;
+                                        const ownerId = data.user_id;
+                                        const isOwner = curUser.id === ownerId || curUser.user_id === ownerId;
+
+                                        if (!isOwner) {
+                                                navigate(`/review/proposal/${data.proposal_id}`);
+                                                return;
+                                        }
+                                }
 
                                 sessionStorage.setItem("proposal_id", data.proposal_id)
                                 sessionStorage.setItem("session_id", data.session_id)
