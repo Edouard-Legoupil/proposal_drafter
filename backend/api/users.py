@@ -124,13 +124,18 @@ async def get_user_settings(current_user: dict = Depends(get_current_user)):
             outcomes_result = connection.execute(outcomes_query, {"user_id": user_id}).fetchall()
             outcomes = [row[0] for row in outcomes_result]
 
+            field_contexts_query = text("SELECT field_context_id FROM user_field_contexts WHERE user_id = :user_id")
+            field_contexts_result = connection.execute(field_contexts_query, {"user_id": user_id}).fetchall()
+            field_contexts = [row[0] for row in field_contexts_result]
+
             return UserSettings(
                 geographic_coverage_type=user_result[0],
                 geographic_coverage_region=user_result[1],
                 geographic_coverage_country=user_result[2],
                 roles=roles,
                 donor_groups=donor_groups,
-                outcomes=outcomes
+                outcomes=outcomes,
+                field_contexts=field_contexts
             )
     except Exception as e:
         logger.error(f"[GET USER SETTINGS ERROR] {e}", exc_info=True)
@@ -160,10 +165,11 @@ async def update_user_settings(settings: UserSettings, current_user: dict = Depe
                     "user_id": user_id
                 })
 
-                # Clear existing user roles, donor groups, and outcomes
+                # Clear existing user roles, donor groups, outcomes, and field contexts
                 connection.execute(text("DELETE FROM user_roles WHERE user_id = :user_id"), {"user_id": user_id})
                 connection.execute(text("DELETE FROM user_donor_groups WHERE user_id = :user_id"), {"user_id": user_id})
                 connection.execute(text("DELETE FROM user_outcomes WHERE user_id = :user_id"), {"user_id": user_id})
+                connection.execute(text("DELETE FROM user_field_contexts WHERE user_id = :user_id"), {"user_id": user_id})
 
                 # Insert new roles
                 if settings.roles:
@@ -179,6 +185,11 @@ async def update_user_settings(settings: UserSettings, current_user: dict = Depe
                 if settings.outcomes:
                     outcome_insert_query = text("INSERT INTO user_outcomes (user_id, outcome_id) VALUES (:user_id, :outcome_id)")
                     connection.execute(outcome_insert_query, [{"user_id": user_id, "outcome_id": outcome_id} for outcome_id in settings.outcomes])
+
+                # Insert new field contexts
+                if settings.field_contexts:
+                    fc_insert_query = text("INSERT INTO user_field_contexts (user_id, field_context_id) VALUES (:user_id, :fc_id)")
+                    connection.execute(fc_insert_query, [{"user_id": user_id, "fc_id": fc_id} for fc_id in settings.field_contexts])
     except Exception as e:
         logger.error(f"[UPDATE USER SETTINGS ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Could not update user settings.")

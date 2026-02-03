@@ -6,13 +6,13 @@ import react from '@vitejs/plugin-react-swc'
 // 👈 Set up depployment mode if pushed on github page
 export default defineConfig(({ mode }) => {
   const isProduction = mode === 'production'
-// 👈 dynamic base if the front end is on github page
-// const base = isProduction ? '/proposal_drafter/' : '/'
+  // 👈 dynamic base if the front end is on github page
+  // const base = isProduction ? '/proposal_drafter/' : '/'
   const base = isProduction ? '/' : '/'
   return {
 
-  server: {
-      
+    server: {
+
       port: 8503,
       host: '0.0.0.0',
       allowedHosts: [

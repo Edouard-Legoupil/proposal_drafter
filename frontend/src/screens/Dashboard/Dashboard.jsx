@@ -51,8 +51,7 @@ export default function Dashboard() {
             }
         }
 
-        async function getProjects ()
-        {
+        async function getProjects() {
                 const response = await fetch(`${API_BASE_URL}/list-drafts`, {
                         method: 'GET',
                         headers: { 'Content-Type': 'application/json' },
@@ -113,7 +112,7 @@ export default function Dashboard() {
 
                 if (response.ok) {
                         const data = await response.json()
-                        setUsers(data.users.map(user => ({ id: user.id, name: user.name })))
+                        setUsers((data || []).map(user => ({ id: user.id, name: user.name })))
                 }
         }
 
@@ -263,7 +262,7 @@ export default function Dashboard() {
                 }
 
                 setDisplayKnowledgeCards(filteredCards);
-            }, [knowledgeCards, searchTerm, knowledgeCardTypeFilter, userRoles]);
+        }, [knowledgeCards, searchTerm, knowledgeCardTypeFilter, userRoles]);
 
         useEffect(() => {
                 const findDuplicates = () => {

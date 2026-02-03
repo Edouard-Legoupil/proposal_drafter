@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 
 from backend.core.db import get_engine
 from backend.core.redis import redis_client
-from backend.core.security import get_current_user
+from backend.core.security import get_current_user, check_user_group_access
 try:
     from backend.core.redis import DictStorage
 except ImportError:
@@ -192,6 +192,9 @@ async def create_knowledge_card(card: KnowledgeCardIn, current_user: dict = Depe
     foreign_keys = [card.donor_id, card.outcome_id, card.field_context_id]
     if sum(k is not None for k in foreign_keys) > 1:
         raise HTTPException(status_code=400, detail="A knowledge card can only be linked to one donor, outcome, or field context at a time.")
+
+    # RBAC Fix: Check if user has permission to create content for this donor or outcome
+    check_user_group_access(current_user, card.donor_id, card.outcome_id, card.field_context_id)
 
     # Determine the template name based on the linked entity if not provided
     template_name = card.template_name
@@ -483,13 +486,16 @@ async def update_knowledge_card_section(card_id: uuid.UUID, section_name: str, s
     try:
         with engine.begin() as connection:
             # Add user permission check
-            # card_owner_check = connection.execute(
-            #     text("SELECT created_by FROM knowledge_cards WHERE id = :id"),
-            #     {"id": card_id}
-            # ).fetchone()
+            card_info = connection.execute(
+                text("SELECT donor_id, outcome_id, field_context_id, created_by FROM knowledge_cards WHERE id = :id"),
+                {"id": str(card_id)}
+            ).fetchone()
             
-            # if not card_owner_check:
-            #     raise HTTPException(status_code=404, detail="Knowledge card not found.")
+            if not card_info:
+                raise HTTPException(status_code=404, detail="Knowledge card not found.")
+            
+            # RBAC Fix: Check group access before allowing edit
+            check_user_group_access(current_user, donor_id=card_info.donor_id, outcome_id=card_info.outcome_id, field_context_id=card_info.field_context_id, owner_id=card_info.created_by)
 
             # First, fetch the existing generated_sections
             result = connection.execute(
@@ -544,12 +550,18 @@ async def update_knowledge_card(card_id: uuid.UUID, card: KnowledgeCardIn, curre
         with get_engine().begin() as connection:
             # CRITICAL FIX: Add user permission check
             existing_card = connection.execute(
-                text("SELECT id, created_by FROM knowledge_cards WHERE id = :id"), 
+                text("SELECT id, created_by, donor_id, outcome_id, field_context_id FROM knowledge_cards WHERE id = :id"), 
                 {"id": card_id}
             ).fetchone()
             
             if not existing_card:
                 raise HTTPException(status_code=404, detail="Knowledge card not found.")
+
+            # RBAC Fix: Check group access before allowing edit
+            # Check original groups
+            check_user_group_access(current_user, donor_id=existing_card.donor_id, outcome_id=existing_card.outcome_id, field_context_id=existing_card.field_context_id, owner_id=existing_card.created_by)
+            # Check new groups being assigned
+            check_user_group_access(current_user, donor_id=card.donor_id, outcome_id=card.outcome_id, field_context_id=card.field_context_id, owner_id=existing_card.created_by)
 
             # Update the main knowledge card fields
             connection.execute(
@@ -653,11 +665,14 @@ async def create_knowledge_card_reference(card_id: uuid.UUID, reference: Knowled
         with get_engine().begin() as connection:
             # Validate card exists
             card_check = connection.execute(
-                text("SELECT id FROM knowledge_cards WHERE id = :id"),
-                {"id": card_id}
+                text("SELECT id, donor_id, outcome_id, field_context_id, created_by FROM knowledge_cards WHERE id = :id"),
+                {"id": str(card_id)}
             ).fetchone()
             if not card_check:
                 raise HTTPException(status_code=404, detail="Knowledge card not found.")
+            
+            # RBAC Fix: Check group access
+            check_user_group_access(current_user, donor_id=card_check.donor_id, outcome_id=card_check.outcome_id, field_context_id=card_check.field_context_id, owner_id=card_check.created_by)
 
             # Check if reference already exists
             existing_ref = connection.execute(
@@ -744,19 +759,22 @@ async def delete_knowledge_card_reference(card_id: uuid.UUID, reference_id: uuid
     """
     try:
         with get_engine().begin() as connection:
-            # Validate the association exists
-            association_check = connection.execute(
+            # Validate the association exists and check permissions
+            card_check = connection.execute(
                 text("""
-                    SELECT knowledge_card_id FROM knowledge_card_to_references
-                    WHERE knowledge_card_id = :kcid AND reference_id = :ref_id
+                    SELECT kc.id, kc.donor_id, kc.outcome_id, kc.field_context_id, kc.created_by
+                    FROM knowledge_cards kc
+                    JOIN knowledge_card_to_references kctr ON kc.id = kctr.knowledge_card_id
+                    WHERE kc.id = :kcid AND kctr.reference_id = :ref_id
                 """),
-                {"kcid": card_id, "ref_id": reference_id}
+                {"kcid": str(card_id), "ref_id": str(reference_id)}
             ).fetchone()
             
-            if not association_check:
+            if not card_check:
                 raise HTTPException(status_code=404, detail="Reference association not found.")
                 
-            # Delete the association
+            # RBAC Fix: Check group access
+            check_user_group_access(current_user, donor_id=card_check.donor_id, outcome_id=card_check.outcome_id, field_context_id=card_check.field_context_id, owner_id=card_check.created_by)
             connection.execute(
                 text("DELETE FROM knowledge_card_to_references WHERE knowledge_card_id = :kcid AND reference_id = :ref_id"),
                 {"kcid": card_id, "ref_id": reference_id}
@@ -776,15 +794,16 @@ async def delete_knowledge_card(card_id: uuid.UUID, current_user: dict = Depends
     """
     try:
         with get_engine().begin() as connection:
-            # First, check if the card exists
+            # First, check if the card exists and get permissions
             card_check = connection.execute(
-                text("SELECT id FROM knowledge_cards WHERE id = :id"),
+                text("SELECT id, donor_id, outcome_id, field_context_id, created_by FROM knowledge_cards WHERE id = :id"),
                 {"id": str(card_id)}
             ).fetchone()
             if not card_check:
                 raise HTTPException(status_code=404, detail="Knowledge card not found.")
 
-            # Delete associations in the join table
+            # RBAC Fix: Check group access
+            check_user_group_access(current_user, donor_id=card_check.donor_id, outcome_id=card_check.outcome_id, field_context_id=card_check.field_context_id, owner_id=card_check.created_by)
             connection.execute(
                 text("DELETE FROM knowledge_card_to_references WHERE knowledge_card_id = :kcid"),
                 {"kcid": str(card_id)}
@@ -1115,11 +1134,14 @@ async def ingest_knowledge_card_references(
     """
     with get_engine().connect() as connection:
         card_check = connection.execute(
-            text("SELECT id FROM knowledge_cards WHERE id = :card_id"),
-            {"card_id": card_id}
+            text("SELECT id, donor_id, outcome_id FROM knowledge_cards WHERE id = :card_id"),
+            {"card_id": str(card_id)}
         ).fetchone()
         if not card_check:
             raise HTTPException(status_code=404, detail="Knowledge card not found.")
+            
+        # RBAC Fix: Check group access
+        check_user_group_access(current_user, card_check.donor_id, card_check.outcome_id)
 
     async def ingest_references_background(card_id: uuid.UUID, ids: Optional[List[uuid.UUID]]):
         with get_engine().begin() as connection:
@@ -1153,15 +1175,19 @@ async def reingest_knowledge_card_reference(card_id: uuid.UUID, reference_id: uu
     with get_engine().connect() as connection:
         ref_check = connection.execute(
             text("""
-                SELECT kcr.id FROM knowledge_card_references kcr
-                JOIN knowledge_card_to_references kctr ON kcr.id = kctr.reference_id
-                WHERE kctr.knowledge_card_id = :card_id AND kcr.id = :ref_id
+                SELECT kc.id, kc.donor_id, kc.outcome_id, kc.field_context_id, kc.created_by 
+                FROM knowledge_cards kc
+                JOIN knowledge_card_to_references kctr ON kc.id = kctr.knowledge_card_id
+                WHERE kctr.knowledge_card_id = :card_id AND kctr.reference_id = :ref_id
             """),
-            {"card_id": card_id, "ref_id": reference_id}
+            {"card_id": str(card_id), "ref_id": str(reference_id)}
         ).fetchone()
 
         if not ref_check:
             raise HTTPException(status_code=404, detail="Reference not found for the given knowledge card.")
+            
+        # RBAC Fix: Check group access
+        check_user_group_access(current_user, donor_id=ref_check.donor_id, outcome_id=ref_check.outcome_id, field_context_id=ref_check.field_context_id, owner_id=ref_check.created_by)
 
     async def ingest_single_reference_background(card_id: uuid.UUID, reference_id: uuid.UUID):
         with get_engine().begin() as connection:
@@ -1182,12 +1208,15 @@ async def generate_knowledge_card_content(card_id: uuid.UUID, background_tasks: 
     #  Validate card exists and user has permission
     with get_engine().connect() as connection:
         card_check = connection.execute(
-            text("SELECT id FROM knowledge_cards WHERE id = :card_id"), 
+            text("SELECT id, donor_id, outcome_id, field_context_id, created_by FROM knowledge_cards WHERE id = :card_id"), 
             {"card_id": card_id}
         ).fetchone()
         
         if not card_check:
             raise HTTPException(status_code=404, detail="Knowledge card not found.")
+            
+        # RBAC Fix: Check access
+        check_user_group_access(current_user, donor_id=card_check.donor_id, outcome_id=card_check.outcome_id, field_context_id=card_check.field_context_id, owner_id=card_check.created_by)
     
     background_tasks.add_task(generate_content_background, card_id)
     return {"message": "Knowledge card content generation started in the background."}
@@ -1347,16 +1376,15 @@ async def identify_references(card_id: uuid.UUID, data: IdentifyReferencesIn, cu
     #  Validate card exists and user has permission
     with get_engine().connect() as connection:
         card_check = connection.execute(
-            text("SELECT id, created_by FROM knowledge_cards WHERE id = :card_id"), 
-            {"card_id": card_id}
+            text("SELECT id, created_by, donor_id, outcome_id, field_context_id FROM knowledge_cards WHERE id = :card_id"), 
+            {"card_id": str(card_id)}
         ).fetchone()
         
         if not card_check:
             raise HTTPException(status_code=404, detail="Knowledge card not found.")
         
-        # Optional: Check user permission
-        # if card_check.created_by != current_user['user_id']:
-        #     raise HTTPException(status_code=403, detail="Access denied.")
+        # RBAC Fix: Check group access
+        check_user_group_access(current_user, donor_id=card_check.donor_id, outcome_id=card_check.outcome_id, field_context_id=card_check.field_context_id, owner_id=card_check.created_by)
 
     logger.info(f"Identifying references for query: {data.title}")
 

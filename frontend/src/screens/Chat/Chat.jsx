@@ -13,6 +13,7 @@ import MultiSelectModal from '../../components/MultiSelectModal/MultiSelectModal
 import AssociateKnowledgeModal from '../../components/AssociateKnowledgeModal/AssociateKnowledgeModal'
 import PdfUploadModal from '../../components/PdfUploadModal/PdfUploadModal'
 import ProgressModal from '../../components/ProgressModal/ProgressModal';
+import Select from 'react-select';
 import CreatableSelect from 'react-select/creatable';
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
@@ -252,18 +253,6 @@ export default function Chat(props) {
                 const handleCreate = (inputValue, label) => {
                         const newOption = { id: `new_${inputValue}`, name: inputValue };
                         switch (label) {
-                                case "Main Outcome":
-                                        setNewOutcomes(prev => [...prev, newOption]);
-                                        handleFormInput({ target: { value: [...field.value, newOption.id] } }, label);
-                                        break;
-                                case "Targeted Donor":
-                                        setNewDonors(prev => [...prev, newOption]);
-                                        handleFormInput({ target: { value: newOption.id } }, label);
-                                        break;
-                                case "Country / Location(s)":
-                                        setNewFieldContexts(prev => [...prev, newOption]);
-                                        handleFormInput({ target: { value: newOption.id } }, label);
-                                        break;
                                 case "Duration":
                                         setNewDurations(prev => [...prev, newOption]);
                                         handleFormInput({ target: { value: newOption.id } }, label);
@@ -275,8 +264,9 @@ export default function Chat(props) {
                         }
                 };
 
-                const isCreatableSelect = ["Targeted Donor", "Country / Location(s)", "Duration", "Budget Range"].includes(label);
-                const isCreatableMultiSelect = label === "Main Outcome";
+                const isCreatableSelect = ["Duration", "Budget Range"].includes(label);
+                const isSelect = ["Targeted Donor", "Country / Location(s)"].includes(label);
+                const isMultiSelect = label === "Main Outcome";
                 const isNormalSelect = label === "Geographical Scope";
 
                 return (
@@ -303,14 +293,26 @@ export default function Chat(props) {
                                                         inputId={fieldId}
                                                 />
                                         </div>
-                                ) : isCreatableMultiSelect ? (
-                                        <div data-testid={`creatable-multiselect-container-${toKebabCase(label)}`}>
-                                                <CreatableSelect
+                                ) : isSelect ? (
+                                        <div data-testid={`select-container-${toKebabCase(label)}`}>
+                                                <Select
+                                                        isClearable
+                                                        aria-label={label}
+                                                        classNamePrefix={toKebabCase(label)}
+                                                        onChange={option => handleFormInput({ target: { value: option ? option.value : "" } }, label)}
+                                                        options={getOptions(label)}
+                                                        value={getOptions(label).find(o => o.value === field.value)}
+                                                        isDisabled={disabled}
+                                                        inputId={fieldId}
+                                                />
+                                        </div>
+                                ) : isMultiSelect ? (
+                                        <div data-testid={`multiselect-container-${toKebabCase(label)}`}>
+                                                <Select
                                                         isMulti
                                                         aria-label={label}
                                                         classNamePrefix={toKebabCase(label)}
                                                         onChange={options => handleFormInput({ target: { value: options ? options.map(o => o.value) : [] } }, label)}
-                                                        onCreateOption={inputValue => handleCreate(inputValue, label)}
                                                         options={getOptions(label)}
                                                         value={field.value.map(v => getOptions(label).find(o => o.value === v)).filter(Boolean)}
                                                         isDisabled={disabled}
@@ -528,18 +530,6 @@ export default function Chat(props) {
                                 const data = await response.json();
                                 return data.id;
                         };
-
-                        if (updatedFormData["Targeted Donor"] && updatedFormData["Targeted Donor"].startsWith("new_")) {
-                                updatedFormData["Targeted Donor"] = await createNewOption("donors", updatedFormData["Targeted Donor"]);
-                        }
-                        if (updatedFormData["Country / Location(s)"] && updatedFormData["Country / Location(s)"].startsWith("new_")) {
-                                updatedFormData["Country / Location(s)"] = await createNewOption("field-contexts", updatedFormData["Country / Location(s)"]);
-                        }
-                        if (updatedFormData["Main Outcome"]) {
-                                updatedFormData["Main Outcome"] = await Promise.all(
-                                        updatedFormData["Main Outcome"].map(o => o.startsWith("new_") ? createNewOption("outcomes", o) : o)
-                                );
-                        }
 
                         // Call the new, streamlined endpoint to create the session and initial draft.
                         const response = await fetch(`${API_BASE_URL}/create-session`, {

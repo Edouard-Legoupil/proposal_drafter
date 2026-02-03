@@ -238,6 +238,11 @@ async def signup(request: Request):
                 outcome_insert_query = text("INSERT INTO user_outcomes (user_id, outcome_id) VALUES (:user_id, :outcome_id)")
                 connection.execute(outcome_insert_query, [{"user_id": user_id, "outcome_id": outcome_id} for outcome_id in settings.outcomes])
 
+            # Insert new field contexts
+            if settings.field_contexts:
+                fc_insert_query = text("INSERT INTO user_field_contexts (user_id, field_context_id) VALUES (:user_id, :fc_id)")
+                connection.execute(fc_insert_query, [{"user_id": user_id, "fc_id": fc_id} for fc_id in settings.field_contexts])
+
 
         return JSONResponse(status_code=201, content={"message": "Signup successful! Please log in."})
     except Exception as e:
@@ -357,7 +362,8 @@ async def profile(current_user: dict = Depends(get_current_user)):
                 "id": current_user["user_id"],
                 "name": current_user["name"],
                 "email": current_user["email"],
-                "roles": current_user.get("roles", [])
+                "roles": current_user.get("roles", []),
+                "is_admin": current_user.get("is_admin", False)
             },
         }
     except Exception as e:

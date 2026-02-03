@@ -18,7 +18,7 @@
     },
     {
       "section_name": "3. Implementation Guidance & Best Practices",
-      "instructions": "Provide practical, actionable guidance on how to effectively implement each of the previously listed interventions. Include best practices, enabling factors, lessons learned, and recommendations from related past evaluations, policies and guidance. For each recommendation, indicate its evidence source in brackets with full name and classification: e.g., (UNHCR Operational Handbook - Technical Guidance) or (WFP Somalia Post-Implementation Review - Program Evaluation). Highlight critical success factors and common pitfalls to avoid.",
+      "instructions": "Provide practical, actionable guidance on how to effectively implement each of the previously listed interventions. Include best practices, enabling factors, lessons learned, and recommendations from related past evaluations, policies and guidance. For each recommendation, indicate its evidence source in brackets with full name and classification: e.g., (UNHCR Operational Handbook - Technical Guidance) or (UNHCR Somalia Post-Implementation Review - Program Evaluation). Highlight critical success factors and common pitfalls to avoid.",
       "word_limit": 1000,
       "key_word": "humanitarian implementation guidance best practices lessons learned"
     },
@@ -54,7 +54,7 @@
     },
     {
       "section_name": "9. Sustainability and Exit Strategies",
-      "instructions": "Discuss the long-term sustainability of the interventions. Outline potential exit strategies that ensure the continuation of positive outcomes after the program ends. Describe how local capacity can be built and strengthened to support a sustainable transition. Reference specific evaluations or guidance: e.g., [UNHCR Transition Guidelines - Policy Framework] or [UNDP Sustainability Evaluation in Colombia - Multi-Year Program Evaluation].",
+      "instructions": "Discuss the long-term sustainability of the interventions. Outline potential exit strategies that ensure the continuation of positive outcomes after the program ends. Describe how local capacity can be built and strengthened to support a sustainable transition. Reference specific evaluations or guidance: e.g., [UNHCR Transition Guidelines - Policy Framework] or [UNHCR Sustainability Evaluation in Colombia - Multi-Year Program Evaluation].",
       "word_limit": 500,
       "key_word": "humanitarian program sustainability exit strategy capacity building"
     },

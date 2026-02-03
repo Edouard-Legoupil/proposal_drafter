@@ -1,22 +1,38 @@
---
--- PostgreSQL database dump
---
 
--- Dumped from database version 13.5 (Debian 13.5-0+deb11u1)
--- Dumped by pg_dump version 13.5 (Debian 13.5-0+deb11u1)
 
-SET statement_timeout = 0;
-SET lock_timeout = 0;
-SET idle_in_transaction_session_timeout = 0;
-SET client_encoding = 'UTF8';
-SET standard_conforming_strings = on;
-SELECT pg_catalog.set_config('search_path', '', false);
-SET check_function_bodies = false;
-SET xmloption = content;
-SET client_min_messages = warning;
-SET row_security = off;
 
---
+-- Clear existing data
+TRUNCATE TABLE teams, users, donors, outcomes, field_contexts, proposals, proposal_donors, proposal_outcomes, proposal_field_contexts, proposal_peer_reviews, proposal_status_history, knowledge_cards, knowledge_card_references RESTART IDENTITY CASCADE;
+
+-- Insert Teams with properly formatted UUIDs
+INSERT INTO teams (id, name) VALUES
+(gen_random_uuid(), 'DRRM'),
+(gen_random_uuid(), 'HQ Protection'),
+(gen_random_uuid(), 'Test');
+
+INSERT INTO donor_groups (id, name) VALUES
+(gen_random_uuid(), 'Brussels Donor Group'),
+(gen_random_uuid(), 'DRRM Donor Group 1'),
+(gen_random_uuid(), 'DRRM Donor Group 2'),
+(gen_random_uuid(), 'DRRM Donor Group 3'),
+(gen_random_uuid(), 'DRRM Donor Group 4'),
+(gen_random_uuid(), 'DRRM Donor Group 5'),
+(gen_random_uuid(), 'DRRM Donor Group 6'),
+(gen_random_uuid(), 'DRRM Donor Group 1'),
+(gen_random_uuid(), 'DRRM Donor Group 4'),
+(gen_random_uuid(), 'IRU - Income Recording');
+
+
+-- -- Insert Donors
+INSERT INTO donors (id, account_id, name, country, donor_group) VALUES
+(gen_random_uuid(), 'IGOV-EU-10723', 'EU ECHO', 'EU', 'Brussels Donor Group');
+
+INSERT INTO field_contexts (id, name, category, geographic_coverage) VALUES
+(gen_random_uuid(),  'Afghanistan', 'Country', 'One Country Operation'),
+(gen_random_uuid(),  'Algeria', 'Country', 'One Country Operation'),
+
+(gen_random_uuid(),  'Zimbabwe', 'Country', 'One Country Operation');
+
 -- Data for Name: teams; Type: TABLE DATA; Schema: public; Owner: admin
 --
 

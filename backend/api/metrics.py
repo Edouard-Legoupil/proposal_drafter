@@ -75,7 +75,15 @@ async def get_average_funding(
     date_start: Optional[str] = Query(None),
     date_end: Optional[str] = Query(None),
 ):
-    q = "SELECT AVG(NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9]', '', 'g'), '')::numeric) as avg_funding FROM proposals p {where_clause}"
+    q = """
+    SELECT AVG(
+        CASE 
+            WHEN p.form_data->>'Budget Range' ~* 'k' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000)
+            WHEN p.form_data->>'Budget Range' ~* 'M' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000000)
+            ELSE NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric
+        END
+    ) as avg_funding FROM proposals p {where_clause}
+    """
     where_clause, params = _get_filter_clauses(
         current_user, filter_by, status_filter=status
     )
@@ -94,7 +102,7 @@ async def get_proposal_volume(
     date_start: Optional[str] = Query(None),
     date_end: Optional[str] = Query(None),
 ):
-    q = "SELECT p.form_data->>'Category' as category, COUNT(p.id) as proposal_count FROM proposals p {where_clause} GROUP BY category ORDER BY proposal_count DESC"
+    q = "SELECT COALESCE(p.form_data->>'Category', p.template_name) as category, COUNT(p.id) as proposal_count FROM proposals p {where_clause} GROUP BY category ORDER BY proposal_count DESC"
     where_clause, params = _get_filter_clauses(current_user, filter_by)
     query = q.format(where_clause=where_clause)
     return robust_query(
@@ -102,7 +110,7 @@ async def get_proposal_volume(
         params,
         {"categories": [], "counts": []},
         lambda rows: {
-            "categories": [row["category"] for row in rows if "category" in row],
+            "categories": [row["category"] for row in rows if row.get("category")],
             "counts": [
                 row["proposal_count"] for row in rows if "proposal_count" in row
             ],
@@ -120,7 +128,16 @@ async def get_funding_by_category(
     date_start: Optional[str] = Query(None),
     date_end: Optional[str] = Query(None),
 ):
-    q = "SELECT p.form_data->>'Category' as category, SUM(COALESCE(NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9]', '', 'g'), '')::numeric, 0)) as total_amount FROM proposals p {where_clause} GROUP BY category"
+    q = """
+    SELECT COALESCE(p.form_data->>'Category', p.template_name) as category, 
+           SUM(COALESCE(
+               CASE 
+                   WHEN p.form_data->>'Budget Range' ~* 'k' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000)
+                   WHEN p.form_data->>'Budget Range' ~* 'M' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000000)
+                   ELSE NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric
+               END, 0)) as total_amount 
+    FROM proposals p {where_clause} GROUP BY category
+    """
     where_clause, params = _get_filter_clauses(current_user, filter_by)
     query = q.format(where_clause=where_clause)
     return robust_query(
@@ -128,7 +145,7 @@ async def get_funding_by_category(
         params,
         {"categories": [], "amounts": []},
         lambda rows: {
-            "categories": [row["category"] for row in rows if "category" in row],
+            "categories": [row["category"] for row in rows if row.get("category")],
             "amounts": [
                 float(row["total_amount"]) for row in rows if "total_amount" in row
             ],
@@ -284,7 +301,14 @@ async def get_edit_activity(
     date_start: Optional[str] = Query(None),
     date_end: Optional[str] = Query(None),
 ):
-    q = "SELECT u.name as author, COUNT(pe.id) as edit_count FROM proposal_edits pe JOIN users u ON pe.user_id = u.id JOIN proposals p ON pe.proposal_id = p.id {where_clause} GROUP BY u.name ORDER BY edit_count DESC"
+    q = """
+    SELECT p.id as proposal_id, COUNT(psh.id) as edit_count 
+    FROM proposal_status_history psh 
+    JOIN proposals p ON psh.proposal_id = p.id 
+    {where_clause} 
+    GROUP BY p.id 
+    ORDER BY edit_count DESC
+    """
     where_clause, params = _get_filter_clauses(current_user, filter_by)
     query = q.format(where_clause=where_clause)
     return robust_query(
@@ -292,7 +316,7 @@ async def get_edit_activity(
         params,
         {"authors": [], "edit_counts": []},
         lambda rows: {
-            "authors": [row["author"] for row in rows if "author" in row],
+            "authors": [f"Proposal {str(row['proposal_id'])[:8]}" for row in rows if "proposal_id" in row],
             "edit_counts": [row["edit_count"] for row in rows if "edit_count" in row],
         },
     )
@@ -312,7 +336,7 @@ async def get_reviewer_activity(
     date_start: Optional[str] = Query(None),
     date_end: Optional[str] = Query(None),
 ):
-    q = "SELECT r.name as reviewer, COUNT(pr.id) as reviews FROM proposal_reviews pr JOIN users r ON pr.reviewer_id = r.id JOIN proposals p ON pr.proposal_id = p.id {where_clause} GROUP BY r.name ORDER BY reviews DESC"
+    q = "SELECT r.name as reviewer, COUNT(pr.id) as reviews FROM proposal_peer_reviews pr JOIN users r ON pr.reviewer_id = r.id JOIN proposals p ON pr.proposal_id = p.id {where_clause} GROUP BY r.name ORDER BY reviews DESC"
     where_clause, params = _get_filter_clauses(current_user, filter_by)
     query = q.format(where_clause=where_clause)
     return robust_query(
@@ -362,13 +386,13 @@ async def get_knowledge_cards_history(
     date_start: Optional[str] = Query(None),
     date_end: Optional[str] = Query(None),
 ):
-    q = "SELECT kc.id as card_id, COUNT(kr.id) as revisions FROM knowledge_card_revisions kr JOIN knowledge_cards kc ON kr.card_id = kc.id GROUP BY kc.id"
+    q = "SELECT kc.id as card_id, COUNT(kr.id) as revisions FROM knowledge_card_history kr JOIN knowledge_cards kc ON kr.knowledge_card_id = kc.id GROUP BY kc.id"
     return robust_query(
         q,
         {},
         {"card_ids": [], "revisions": []},
         lambda rows: {
-            "card_ids": [row["card_id"] for row in rows if "card_id" in row],
+            "card_ids": [str(row["card_id"]) for row in rows if "card_id" in row],
             "revisions": [row["revisions"] for row in rows if "revisions" in row],
         },
     )
@@ -384,7 +408,7 @@ async def get_reference_metrics(
     date_start: Optional[str] = Query(None),
     date_end: Optional[str] = Query(None),
 ):
-    q = "SELECT kc.type, COUNT(kcr.url) as references FROM knowledge_card_references kcr JOIN knowledge_cards kc ON kcr.card_id = kc.id GROUP BY kc.type"
+    q = "SELECT kc.type, COUNT(kcr.id) as references FROM knowledge_card_references kcr JOIN knowledge_card_to_references kctr ON kcr.id = kctr.reference_id JOIN knowledge_cards kc ON kctr.knowledge_card_id = kc.id GROUP BY kc.type"
     return robust_query(
         q,
         {},
@@ -406,7 +430,7 @@ async def get_reference_usage_metrics(
     date_start: Optional[str] = Query(None),
     date_end: Optional[str] = Query(None),
 ):
-    q = "SELECT kcr.url, COUNT(DISTINCT kcr.card_id) as usage_count FROM knowledge_card_references kcr GROUP BY kcr.url HAVING COUNT(DISTINCT kcr.card_id) > 1"
+    q = "SELECT kcr.url, COUNT(DISTINCT kctr.knowledge_card_id) as usage_count FROM knowledge_card_references kcr JOIN knowledge_card_to_references kctr ON kcr.id = kctr.reference_id GROUP BY kcr.url HAVING COUNT(DISTINCT kctr.knowledge_card_id) > 1"
     return robust_query(
         q,
         {},
@@ -430,16 +454,9 @@ async def get_reference_issue_metrics(
     date_start: Optional[str] = Query(None),
     date_end: Optional[str] = Query(None),
 ):
-    q = "SELECT kcre.error_type, COUNT(*) as count FROM knowledge_card_reference_errors kcre GROUP BY kcre.error_type"
-    return robust_query(
-        q,
-        {},
-        {"error_types": [], "counts": []},
-        lambda rows: {
-            "error_types": [row["error_type"] for row in rows if "error_type" in row],
-            "counts": [row["count"] for row in rows if "count" in row],
-        },
-    )
+    # knowledge_card_reference_errors table is not currently in the schema
+    # Returning empty result to maintain endpoint availability
+    return {"error_types": [], "counts": []}
 
 
 @router.get("/metrics/card-edit-frequency",
@@ -452,13 +469,19 @@ async def get_card_edit_frequency(
     date_start: Optional[str] = Query(None),
     date_end: Optional[str] = Query(None),
 ):
-    q = "SELECT kc.id as card_id, COUNT(kr.id)/GREATEST(1, EXTRACT(MONTH FROM AGE(NOW(), kc.created_at))) as edit_frequency FROM knowledge_card_revisions kr JOIN knowledge_cards kc ON kr.card_id = kc.id GROUP BY kc.id, kc.created_at"
+    q = """
+    SELECT kc.id as card_id, 
+           COUNT(kr.id)/GREATEST(1, EXTRACT(MONTH FROM AGE(NOW(), kc.created_at))) as edit_frequency 
+    FROM knowledge_card_history kr 
+    JOIN knowledge_cards kc ON kr.knowledge_card_id = kc.id 
+    GROUP BY kc.id, kc.created_at
+    """
     return robust_query(
         q,
         {},
         {"card_ids": [], "edit_frequency": []},
         lambda rows: {
-            "card_ids": [row["card_id"] for row in rows if "card_id" in row],
+            "card_ids": [str(row["card_id"]) for row in rows if "card_id" in row],
             "edit_frequency": [
                 row["edit_frequency"] for row in rows if "edit_frequency" in row
             ],
@@ -476,18 +499,9 @@ async def get_card_impact_score(
     date_start: Optional[str] = Query(None),
     date_end: Optional[str] = Query(None),
 ):
-    q = "SELECT kc.id as card_id, COALESCE(SUM(kcu.views), 0) as impact_score FROM knowledge_card_usage kcu JOIN knowledge_cards kc ON kcu.card_id = kc.id GROUP BY kc.id"
-    return robust_query(
-        q,
-        {},
-        {"card_ids": [], "impact_scores": []},
-        lambda rows: {
-            "card_ids": [row["card_id"] for row in rows if "card_id" in row],
-            "impact_scores": [
-                row["impact_score"] for row in rows if "impact_score" in row
-            ],
-        },
-    )
+    # knowledge_card_usage table is not currently in the schema
+    # Returning empty result to maintain endpoint availability
+    return {"card_ids": [], "impact_scores": []}
 
 
 @router.get("/metrics/knowledge-silos",
@@ -500,14 +514,25 @@ async def get_knowledge_silos(
     date_start: Optional[str] = Query(None),
     date_end: Optional[str] = Query(None),
 ):
-    q = "SELECT kc.id as isolated_card_id, t.name as silo_team FROM knowledge_cards kc JOIN users u ON kc.created_by = u.id JOIN teams t ON u.team_id = t.id WHERE kc.id IN (SELECT kcr.card_id FROM knowledge_card_references kcr GROUP BY kcr.card_id HAVING COUNT(DISTINCT kcr.card_id) = 1)"
+    q = """
+    SELECT kc.id as isolated_card_id, t.name as silo_team 
+    FROM knowledge_cards kc 
+    JOIN users u ON kc.created_by = u.id 
+    JOIN teams t ON u.team_id = t.id 
+    WHERE kc.id IN (
+        SELECT kctr.knowledge_card_id 
+        FROM knowledge_card_to_references kctr 
+        GROUP BY kctr.knowledge_card_id 
+        HAVING COUNT(DISTINCT kctr.reference_id) = 1
+    )
+    """
     return robust_query(
         q,
         {},
         {"isolated_card_ids": [], "silo_teams": []},
         lambda rows: {
             "isolated_card_ids": [
-                row["isolated_card_id"] for row in rows if "isolated_card_id" in row
+                str(row["isolated_card_id"]) for row in rows if "isolated_card_id" in row
             ],
             "silo_teams": [row["silo_team"] for row in rows if "silo_team" in row],
         },
