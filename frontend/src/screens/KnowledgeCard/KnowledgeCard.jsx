@@ -993,84 +993,133 @@ export default function KnowledgeCard() {
                 <div className="kc-form-container">
                     <form onSubmit={handlePopulate} className="kc-form" data-testid="knowledge-card-form">
                         {/* Header */}
-                        <div className="kc-form-header">
-                            <h2 data-testid="kc-form-header-title">{id ? 'View/Edit Knowledge Card' : 'Create New Knowledge Card'}</h2>
+                        <div className="kc-form-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '10px' }}>
+                            <div style={{ width: '100%' }}>
+                                <h1 data-testid="kc-form-header-title" style={{ marginBottom: '5px' }}>
+                                    {id ? (
+                                        `${linkType === 'donor' ? 'Donor' : linkType === 'outcome' ? 'Outcome' : 'Field Context'} Knowledge Card: ${linkOptions.find(o => o.id === linkedId)?.name || linkedId}`
+                                    ) : 'Create New Knowledge Card'}
+                                </h1>
+                                {id && <p style={{ fontSize: '14px', color: '#666', marginTop: '0', marginBottom: '15px' }}>{summary}</p>}
+                            </div>
+
+                            {/* Action Buttons - Moved to Top */}
+                            <div className="kc-form-actions-box" style={{ marginTop: '0', marginBottom: '10px', width: '100%' }}>
+                                <div className="kc-form-actions" style={{ justifyContent: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
+                                    <CommonButton
+                                        type="button"
+                                        onClick={handleIdentifyReferences}
+                                        label="1. Identify References"
+                                        className="squared-btn small-btn"
+                                        style={{ padding: '6px 12px', fontSize: '13px' }}
+                                        data-testid="identify-references-button"
+                                        disabled={!linkType || !linkedId}
+                                    />
+                                    <CommonButton
+                                        type="button"
+                                        onClick={() => handleIngestReferences()}
+                                        label="2. Ingest References"
+                                        className="squared-btn small-btn"
+                                        style={{ padding: '6px 12px', fontSize: '13px' }}
+                                        data-testid="ingest-references-button"
+                                        disabled={references.length === 0}
+                                    />
+                                    <CommonButton
+                                        type="submit"
+                                        label="3. Populate Card Content"
+                                        className="squared-btn small-btn"
+                                        style={{ padding: '6px 12px', fontSize: '13px' }}
+                                        data-testid="populate-card-button"
+                                        disabled={!linkType || !linkedId}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* History Button - Moved Below Action Buttons */}
                             {id && (
-                                <CommonButton
-                                    type="button"
-                                    onClick={fetchHistory}
-                                    label="View Content History"
-                                    data-testid="view-history-button"
-                                />
+                                <div style={{ marginBottom: '20px' }}>
+                                    <CommonButton
+                                        type="button"
+                                        onClick={fetchHistory}
+                                        label="View Content History"
+                                        className="squared-btn"
+                                        style={{ padding: '4px 10px', fontSize: '12px' }}
+                                        data-testid="view-history-button"
+                                    />
+                                </div>
                             )}
                         </div>
 
-                        {/* Form Fields */}
-                        <label htmlFor="kc-link-type">Link To</label>
-                        <select
-                            id="kc-link-type"
-                            value={linkType}
-                            onChange={e => setLinkType(e.target.value)}
-                            data-testid="link-type-select"
-                            required
-                        >
-                            <option value="">Select Type...</option>
-                            <option value="donor">Donor</option>
-                            <option value="outcome">Outcome</option>
-                            <option value="field_context">Field Context</option>
-                        </select>
-
-                        {linkType === 'field_context' && (
+                        {/* Form Fields - Conditionally Read-Only (Only for New Cards) */}
+                        {!id && (
                             <>
-                                <label htmlFor="kc-geo-coverage">Geographic Coverage</label>
+                                <label htmlFor="kc-link-type">Link To</label>
                                 <select
-                                    id="kc-geo-coverage"
-                                    value={selectedGeoCoverage}
-                                    onChange={e => setSelectedGeoCoverage(e.target.value)}
-                                    data-testid="geo-coverage-select"
-                                >
-                                    <option value="">All</option>
-                                    {geographicCoverages.map(geo => (
-                                        <option key={geo} value={geo}>{geo}</option>
-                                    ))}
-                                </select>
-                            </>
-                        )}
-
-                        {linkType && (
-                            <>
-                                <label htmlFor="kc-linked-id">Select Item*</label>
-                                <CreatableSelect
-                                    isClearable
-                                    inputId="kc-linked-id"
-                                    classNamePrefix="kc-linked-item-select"
-                                    name="kc-linked-id"
-                                    value={linkOptions.find(o => o.id === linkedId) ?
-                                        { value: linkedId, label: linkOptions.find(o => o.id === linkedId).name } : null}
-                                    onChange={option => setLinkedId(option ? option.value : '')}
-                                    onCreateOption={inputValue => {
-                                        const newOption = { id: `new_${inputValue}`, name: inputValue };
-                                        if (linkType === 'donor') setNewDonors(prev => [...prev, newOption]);
-                                        if (linkType === 'outcome') setNewOutcomes(prev => [...prev, newOption]);
-                                        if (linkType === 'field_context') setNewFieldContexts(prev => [...prev, newOption]);
-                                        setLinkedId(newOption.id);
-                                    }}
-                                    options={linkOptions.map(o => ({ ...o, value: o.id, label: o.name }))}
-                                    data-testid="linked-item-select"
+                                    id="kc-link-type"
+                                    value={linkType}
+                                    onChange={e => setLinkType(e.target.value)}
+                                    data-testid="link-type-select"
                                     required
+                                >
+                                    <option value="">Select Type...</option>
+                                    <option value="donor">Donor</option>
+                                    <option value="outcome">Outcome</option>
+                                    <option value="field_context">Field Context</option>
+                                </select>
+
+                                {linkType === 'field_context' && (
+                                    <>
+                                        <label htmlFor="kc-geo-coverage">Geographic Coverage</label>
+                                        <select
+                                            id="kc-geo-coverage"
+                                            value={selectedGeoCoverage}
+                                            onChange={e => setSelectedGeoCoverage(e.target.value)}
+                                            data-testid="geo-coverage-select"
+                                        >
+                                            <option value="">All</option>
+                                            {geographicCoverages.map(geo => (
+                                                <option key={geo} value={geo}>{geo}</option>
+                                            ))}
+                                        </select>
+                                    </>
+                                )}
+
+                                {linkType && (
+                                    <>
+                                        <label htmlFor="kc-linked-id">Select Item*</label>
+                                        <CreatableSelect
+                                            isClearable
+                                            inputId="kc-linked-id"
+                                            classNamePrefix="kc-linked-item-select"
+                                            name="kc-linked-id"
+                                            value={linkOptions.find(o => o.id === linkedId) ?
+                                                { value: linkedId, label: linkOptions.find(o => o.id === linkedId).name } : null}
+                                            onChange={option => setLinkedId(option ? option.value : '')}
+                                            onCreateOption={inputValue => {
+                                                const newOption = { id: `new_${inputValue}`, name: inputValue };
+                                                if (linkType === 'donor') setNewDonors(prev => [...prev, newOption]);
+                                                if (linkType === 'outcome') setNewOutcomes(prev => [...prev, newOption]);
+                                                if (linkType === 'field_context') setNewFieldContexts(prev => [...prev, newOption]);
+                                                setLinkedId(newOption.id);
+                                            }}
+                                            options={linkOptions.map(o => ({ ...o, value: o.id, label: o.name }))}
+                                            data-testid="linked-item-select"
+                                            required
+                                        />
+                                    </>
+                                )}
+
+                                <label htmlFor="kc-summary">Description*</label>
+                                <textarea
+                                    id="kc-summary"
+                                    value={summary}
+                                    onChange={e => setSummary(e.target.value)}
+                                    required
+                                    data-testid="summary-textarea"
+                                    placeholder="Enter a description for this knowledge card..."
                                 />
                             </>
                         )}
-
-                        <label htmlFor="kc-summary">Description*</label>
-                        <textarea
-                            id="kc-summary"
-                            value={summary}
-                            onChange={e => setSummary(e.target.value)}
-                            required
-                            data-testid="summary-textarea"
-                            placeholder="Enter a description for this knowledge card..."
-                        />
 
                         <KnowledgeCardReferences
                             references={references}
@@ -1087,41 +1136,6 @@ export default function KnowledgeCard() {
                             onReingestClick={handleIngestReferences}
                         />
 
-                        {/* Form Actions */}
-                        <div className="kc-form-actions-box">
-                            <div className="kc-form-actions">
-                                <CommonButton
-                                    type="button"
-                                    onClick={handleIdentifyReferences}
-                                    label="1. Identify References"
-                                    className="squared-btn"
-                                    data-testid="identify-references-button"
-                                    disabled={!linkType || !linkedId}
-                                />
-                                <CommonButton
-                                    type="button"
-                                    onClick={() => handleIngestReferences()}
-                                    label="2. Ingest References"
-                                    className="squared-btn"
-                                    data-testid="ingest-references-button"
-                                    disabled={references.length === 0}
-                                />
-                                <CommonButton
-                                    type="submit"
-                                    label="3. Populate Card Content"
-                                    className="squared-btn"
-                                    data-testid="populate-card-button"
-                                    disabled={!linkType || !linkedId}
-                                />
-                                <CommonButton
-                                    type="button"
-                                    onClick={() => handleSave()}
-                                    label="Save & Close"
-                                    className="squared-btn"
-                                    data-testid="close-card-button"
-                                />
-                            </div>
-                        </div>
                     </form>
                 </div>
 

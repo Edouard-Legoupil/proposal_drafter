@@ -70,9 +70,36 @@
     border-right: 3px solid #0072bc;
 }
 
-.Sidebar_link_header.active {
-    background-color: #e7f1f9;
-    color: #0072bc;
-    font-weight: 600;
-    border-right: 3px solid #0072bc;
+.Sidebar_link i {
+    width: 20px;
+    margin-right: 8px;
+    text-align: center;
+}
+
+.status-draft-icon {
+    color: #757575;
+}
+
+.status-review-icon {
+    color: #FF9800;
+}
+
+.status-pre-submission-icon {
+    color: #0072BC;
+}
+
+.status-submitted-icon {
+    color: #2E7D32;
+}
+
+.donor {
+    color: #6A1B9A;
+}
+
+.outcome {
+    color: #EF6C00;
+}
+
+.field-context {
+    color: #2E7D32;
 }

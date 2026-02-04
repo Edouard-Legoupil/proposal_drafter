@@ -43,9 +43,13 @@ async def get_users(current_user: dict = Depends(get_current_user)):
     try:
         with get_engine().connect() as connection:
             query = text("""
-                SELECT u.id, u.name, u.email, t.name as team_name
+                SELECT DISTINCT u.id, u.name, u.email, t.name as team_name
                 FROM users u
                 LEFT JOIN teams t ON u.team_id = t.id
+                JOIN user_roles ur ON u.id = ur.user_id
+                JOIN roles r ON ur.role_id = r.id
+                WHERE LOWER(r.name) IN ('project reviewer', 'proposal reviewer')
+                ORDER BY t.name, u.name
             """)
             result = connection.execute(query)
             users = [User(**row) for row in result.mappings()]

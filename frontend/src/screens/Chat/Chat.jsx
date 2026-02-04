@@ -123,7 +123,7 @@ export default function Chat(props) {
 
                 if (response.ok) {
                         const data = await response.json()
-                        setUsers(data.users.map(user => ({ id: user.id, name: user.name })))
+                        setUsers(data.map(user => ({ id: user.id, name: user.name, team: user.team_name || 'Unassigned' })))
                 }
         }
 

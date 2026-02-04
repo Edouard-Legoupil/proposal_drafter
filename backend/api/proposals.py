@@ -753,9 +753,11 @@ async def get_proposals_for_review(current_user: dict = Depends(get_current_user
 
 
 @router.get("/list-drafts")
-async def list_drafts(current_user: dict = Depends(get_current_user)):
+async def list_drafts(status: Optional[str] = None, current_user: dict = Depends(get_current_user)):
     """
     Lists all drafts for the current user, including sample templates.
+    If status is 'deleted', lists only deleted proposals.
+    Otherwise, lists non-deleted proposals.
     """
     if "proposal writer" not in current_user.get("roles", []):
         return {"message": "User is not a proposal writer.", "drafts": []}
@@ -773,8 +775,8 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
         with engine.connect() as connection:
             logger.info("Database connection established")
 
-            # This query now joins with related tables to fetch names instead of relying on form_data
-            query = text("""
+            # Base query
+            query_str = """
                 SELECT
                     p.id,
                     p.form_data,
@@ -801,13 +803,22 @@ async def list_drafts(current_user: dict = Depends(get_current_user)):
                 LEFT JOIN
                     outcomes o ON po.outcome_id = o.id
                 WHERE
-                    p.user_id = :uid AND p.status != 'deleted'
+                    p.user_id = :uid
+            """
+            
+            if status == 'deleted':
+                query_str += " AND p.status = 'deleted'"
+            else:
+                query_str += " AND p.status != 'deleted'"
+                
+            query_str += """
                 GROUP BY
                     p.id
                 ORDER BY
                     p.updated_at DESC
-            """)
-
+            """
+            
+            query = text(query_str)
             result = connection.execute(query, {"uid": user_id})
             rows = result.mappings().fetchall() # Use .mappings() to get dict-like rows
             logger.info(f"Found {len(rows)} drafts in database")
@@ -1255,11 +1266,11 @@ async def save_draft_review(proposal_id: uuid.UUID, request: SubmitReviewRequest
 
             # Insert each comment as a new row with 'draft' status
             for comment in request.comments:
-                if comment.review_text or comment.rating: # Save if text or rating exists
+                if comment.review_text: # Save if text exists
                     connection.execute(
                         text("""
-                            INSERT INTO proposal_peer_reviews (proposal_id, reviewer_id, proposal_status_history_id, section_name, review_text, type_of_comment, severity, rating, status)
-                            VALUES (:pid, :rid, :hid, :section, :text, :type, :severity, :rating, 'draft')
+                            INSERT INTO proposal_peer_reviews (proposal_id, reviewer_id, proposal_status_history_id, section_name, review_text, type_of_comment, severity, status)
+                            VALUES (:pid, :rid, :hid, :section, :text, :type, :severity, 'draft')
                         """),
                         {
                             "pid": str(proposal_id),
@@ -1268,8 +1279,7 @@ async def save_draft_review(proposal_id: uuid.UUID, request: SubmitReviewRequest
                             "section": comment.section_name,
                             "text": comment.review_text,
                             "type": comment.type_of_comment,
-                            "severity": comment.severity,
-                            "rating": comment.rating
+                            "severity": comment.severity
                         }
                     )
 
@@ -1310,11 +1320,11 @@ async def submit_review(proposal_id: uuid.UUID, request: SubmitReviewRequest, cu
 
             # Insert each comment as a new row
             for comment in request.comments:
-                if comment.review_text or comment.rating: # Save if text or rating exists
+                if comment.review_text: # Save if text exists
                     connection.execute(
                         text("""
-                            INSERT INTO proposal_peer_reviews (proposal_id, reviewer_id, proposal_status_history_id, section_name, review_text, type_of_comment, severity, rating, status)
-                            VALUES (:pid, :rid, :hid, :section, :text, :type, :severity, :rating, 'completed')
+                            INSERT INTO proposal_peer_reviews (proposal_id, reviewer_id, proposal_status_history_id, section_name, review_text, type_of_comment, severity, status)
+                            VALUES (:pid, :rid, :hid, :section, :text, :type, :severity, 'completed')
                         """),
                         {
                             "pid": str(proposal_id),
@@ -1323,8 +1333,7 @@ async def submit_review(proposal_id: uuid.UUID, request: SubmitReviewRequest, cu
                             "section": comment.section_name,
                             "text": comment.review_text,
                             "type": comment.type_of_comment,
-                            "severity": comment.severity,
-                            "rating": comment.rating
+                            "severity": comment.severity
                         }
                     )
 
@@ -1520,21 +1529,28 @@ async def get_proposal_status(proposal_id: uuid.UUID, current_user: dict = Depen
 @router.get("/review-proposal/{proposal_id}")
 async def get_proposal_for_review(proposal_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
     """
-    Fetches a proposal for a user assigned to review it, allowing access to both pending and completed reviews.
+    Fetches a proposal for review. All users with 'project reviewer' role can access and review any proposal.
+    Assignment in proposal_peer_reviews is only for deadline tracking and folder organization.
     """
     user_id = current_user["user_id"]
+    user_roles = current_user.get("roles", [])
+    
+    # Check if user has project reviewer role
+    if "project reviewer" not in user_roles:
+        raise HTTPException(status_code=403, detail="You must have the 'project reviewer' role to review proposals.")
+    
     try:
         with get_engine().connect() as connection:
-            # Check if the user is assigned to review this proposal, regardless of status
+            # Check if the user has an assignment (for tracking purposes, not access control)
             review_assignment = connection.execute(
                 text("SELECT status FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id ORDER BY created_at DESC LIMIT 1"),
                 {"proposal_id": proposal_id, "user_id": user_id}
             ).fetchone()
 
-            if not review_assignment:
-                raise HTTPException(status_code=403, detail="You are not assigned to review this proposal.")
-
-            review_status = review_assignment.status
+            # Determine review status based on assignment (if any)
+            review_status = "pending"  # Default for non-assigned reviewers
+            if review_assignment:
+                review_status = review_assignment.status
 
             # Fetch the proposal data
             draft = connection.execute(
@@ -1550,18 +1566,18 @@ async def get_proposal_for_review(proposal_id: uuid.UUID, current_user: dict = D
             if not draft:
                 raise HTTPException(status_code=404, detail="Proposal not found.")
 
+            # Load any draft comments this reviewer has saved (whether assigned or not)
             draft_comments = {}
-            if review_status == 'draft':
-                comments_result = connection.execute(
-                    text("SELECT section_name, review_text, type_of_comment, severity FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND status = 'draft'"),
-                    {"proposal_id": proposal_id, "user_id": user_id}
-                ).mappings().fetchall()
-                for comment in comments_result:
-                    draft_comments[comment['section_name']] = {
-                        "review_text": comment['review_text'],
-                        "type_of_comment": comment['type_of_comment'],
-                        "severity": comment['severity']
-                    }
+            comments_result = connection.execute(
+                text("SELECT section_name, review_text, type_of_comment, severity FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND status = 'draft'"),
+                {"proposal_id": proposal_id, "user_id": user_id}
+            ).mappings().fetchall()
+            for comment in comments_result:
+                draft_comments[comment['section_name']] = {
+                    "review_text": comment['review_text'],
+                    "type_of_comment": comment['type_of_comment'],
+                    "severity": comment['severity']
+                }
 
             template_name = draft.template_name or "unhcr_proposal_template.json"
             proposal_template = load_proposal_template(template_name)
@@ -1721,6 +1737,31 @@ async def delete_draft(proposal_id: uuid.UUID, current_user: dict = Depends(get_
     except Exception as e:
         logger.error(f"[DELETE DRAFT ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to delete draft.")
+
+
+@router.put("/proposals/{proposal_id}/restore")
+async def restore_proposal(proposal_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
+    """
+    Restores a 'deleted' proposal by setting its status back to 'draft'.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().begin() as connection:
+            # RBAC Fix: Check group access before restoration
+            # check_proposal_access(current_user, connection, proposal_id)
+
+            result = connection.execute(
+                text("UPDATE proposals SET status = 'draft', updated_at = CURRENT_TIMESTAMP WHERE id = :id AND user_id = :uid AND status = 'deleted' RETURNING id"),
+                {"id": proposal_id, "uid": user_id}
+            )
+            if not result.fetchone():
+                raise HTTPException(status_code=404, detail="Deleted proposal not found.")
+        return {"message": f"Proposal '{proposal_id}' restored to draft."}
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        logger.error(f"[RESTORE PROPOSAL ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to restore proposal.")
 
 
 @router.put("/proposals/{proposal_id}/delete")
@@ -1907,7 +1948,6 @@ async def get_peer_reviews(proposal_id: uuid.UUID, current_user: dict = Depends(
                     pr.section_name,
                     pr.review_text,
                     pr.author_response,
-                    pr.rating,
                     u.name as reviewer_name
                 FROM
                     proposal_peer_reviews pr
@@ -1923,7 +1963,6 @@ async def get_peer_reviews(proposal_id: uuid.UUID, current_user: dict = Depends(
                     "section_name": row.section_name,
                     "review_text": row.review_text,
                     "author_response": row.author_response,
-                    "rating": row.rating,
                     "reviewer_name": row.reviewer_name
                 }
                 for row in result.mappings()

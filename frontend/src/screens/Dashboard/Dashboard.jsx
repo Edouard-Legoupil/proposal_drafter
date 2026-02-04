@@ -32,27 +32,32 @@ export default function Dashboard() {
         const [duplicateCardIds, setDuplicateCardIds] = useState(new Set());
         const [viewMode, setViewMode] = useState('vignette')
         const [sortConfig, setSortConfig] = useState({ key: 'updated_at', direction: 'desc' });
+        const [teams, setTeams] = useState([]);
 
         async function getProfile() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/profile`, {
-                    method: 'GET',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include'
-                });
+                try {
+                        const response = await fetch(`${API_BASE_URL}/profile`, {
+                                method: 'GET',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include'
+                        });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    setCurrentUser(data.user);
-                    setUserRoles(data.user?.roles || []);
+                        if (response.ok) {
+                                const data = await response.json();
+                                setCurrentUser(data.user);
+                                setUserRoles(data.user?.roles || []);
+                        }
+                } catch (err) {
+                        console.error("Profile fetch error", err);
                 }
-            } catch (err) {
-                console.error("Profile fetch error", err);
-            }
         }
 
         async function getProjects() {
-                const response = await fetch(`${API_BASE_URL}/list-drafts`, {
+                const url = subfolder === 'deleted'
+                        ? `${API_BASE_URL}/list-drafts?status=deleted`
+                        : `${API_BASE_URL}/list-drafts`;
+
+                const response = await fetch(url, {
                         method: 'GET',
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include'
@@ -61,6 +66,18 @@ export default function Dashboard() {
                 if (response.ok) {
                         const data = await response.json()
                         setProjects(data.drafts)
+                }
+        }
+
+        async function fetchTeams() {
+                try {
+                        const response = await fetch(`${API_BASE_URL}/teams`);
+                        const data = await response.json();
+                        if (data.teams) {
+                                setTeams(data.teams);
+                        }
+                } catch (error) {
+                        console.error('Error fetching teams:', error);
                 }
         }
 
@@ -124,7 +141,14 @@ export default function Dashboard() {
                 getKnowledgeCards()
                 getUsers()
                 getAllProposals()
+                fetchTeams()
         }, [])
+
+        useEffect(() => {
+                if (folder === 'proposals') {
+                        getProjects();
+                }
+        }, [subfolder]);
 
         useEffect(() => {
                 if (folder) {
@@ -164,6 +188,20 @@ export default function Dashboard() {
                 if (response.ok) {
                         getProjects()
                         getReviews()
+                        getAllProposals()
+                }
+        }
+
+        async function handleRestoreProject(proposal_id) {
+                const response = await fetch(`${API_BASE_URL}/proposals/${proposal_id}/restore`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include'
+                })
+
+                if (response.ok) {
+                        getProjects()
+                        getAllProposals()
                 }
         }
 
@@ -217,7 +255,7 @@ export default function Dashboard() {
                                 filteredProjects = filteredProjects.filter(project => project.status === statusFilter);
                         }
 
-                        if (selectedTab === 'other' && subfolder) {
+                        if (selectedTab === 'other' && subfolder && subfolder !== 'all') {
                                 filteredProjects = filteredProjects.filter(project => project.team_id === subfolder);
                                 if (filter && filter !== 'all') {
                                         filteredProjects = filteredProjects.filter(project => project.status === filter);
@@ -232,7 +270,7 @@ export default function Dashboard() {
                 } else {
                         setDisplayProjects([]);
                 }
-        }, [projects, reviews, searchTerm, selectedTab, statusFilter]);
+        }, [projects, reviews, allProposals, searchTerm, selectedTab, statusFilter, subfolder, filter]);
 
         useEffect(() => {
                 let filteredCards = knowledgeCards;
@@ -256,9 +294,9 @@ export default function Dashboard() {
                 }
 
                 if (userRoles && userRoles.includes('knowledge manager donors')) {
-                    const donorCards = filteredCards.filter(card => card.donor_name);
-                    const otherCards = filteredCards.filter(card => !card.donor_name);
-                    filteredCards = [...donorCards, ...otherCards];
+                        const donorCards = filteredCards.filter(card => card.donor_name);
+                        const otherCards = filteredCards.filter(card => !card.donor_name);
+                        filteredCards = [...donorCards, ...otherCards];
                 }
 
                 setDisplayKnowledgeCards(filteredCards);
@@ -336,10 +374,18 @@ export default function Dashboard() {
                 let sortableCards = [...displayKnowledgeCards];
                 if (sortConfig.key !== null) {
                         sortableCards.sort((a, b) => {
-                                if (a[sortConfig.key] < b[sortConfig.key]) {
+                                let aValue = a[sortConfig.key];
+                                let bValue = b[sortConfig.key];
+
+                                if (sortConfig.key === 'name') {
+                                        aValue = a.donor_name || a.outcome_name || a.field_context_name || '';
+                                        bValue = b.donor_name || b.outcome_name || b.field_context_name || '';
+                                }
+
+                                if (aValue < bValue) {
                                         return sortConfig.direction === 'asc' ? -1 : 1;
                                 }
-                                if (a[sortConfig.key] > b[sortConfig.key]) {
+                                if (aValue > bValue) {
                                         return sortConfig.direction === 'asc' ? 1 : -1;
                                 }
                                 return 0;
@@ -351,8 +397,23 @@ export default function Dashboard() {
         return <Base>
                 <div className="Dashboard">
                         <header className="Dashboard_top" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-                                <div className='Dashboard_label'>
-                                        {selectedTab.charAt(0).toUpperCase() + selectedTab.slice(1)} Explorer {subfolder && subfolder !== 'all' ? `> ${subfolder}` : ''} {filter && filter !== 'all' ? `> ${filter}` : ''}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                                        <div className='Dashboard_label'>
+                                                {selectedTab.charAt(0).toUpperCase() + selectedTab.slice(1)} Explorer
+                                                {selectedTab === 'other' && subfolder && subfolder !== 'all' && teams.length > 0 && (
+                                                        ` > ${teams.find(t => t.id === subfolder)?.name || subfolder}`
+                                                )}
+                                                {selectedTab === 'other' && subfolder === 'all' && ` > All`}
+                                                {selectedTab !== 'other' && subfolder && subfolder !== 'all' && ` > ${subfolder}`}
+                                                {filter && filter !== 'all' && ` > ${filter}`}
+                                        </div>
+                                        {selectedTab !== 'metrics' && (
+                                                <div className="Dashboard_search" role="search" style={{ marginLeft: 8 }}>
+                                                        <i className="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                                                        <label htmlFor="quick-search" className="sr-only">Quick search</label>
+                                                        <input id="quick-search" type="text" placeholder="Quick search..." className="Dashboard_search_input" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} data-testid="search-input" />
+                                                </div>
+                                        )}
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                         <div className="view-mode-toggle">
@@ -367,26 +428,15 @@ export default function Dashboard() {
                                                 className="ai-disclaimer"
                                                 style={{
                                                         background: "#fff8e1", border: "1px solid #fdd835",
-                                                        color: "#372800", borderRadius: "8px", fontSize: "14px",
+                                                        color: "#372800", borderRadius: "8px", fontSize: "12px",
                                                         padding: "7px 16px",
                                                         boxShadow: "0 2px 10px 0 rgb(0 0 0 / 7%)", zIndex: 3, position: "relative", minWidth: 210
                                                 }}
                                         >
-                                                <strong>Note:</strong> AI-generated content may be incorrect or require verification.
+                                                <strong>Note:</strong> AI-generated content may be inaccurate and should be verified.
                                         </div>
                                 </div>
                         </header>
-
-                        {selectedTab !== 'metrics' &&
-                                <div className="Dashboard_search" role="search">
-                                        <i className="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-                                        <label htmlFor="quick-search" className="sr-only">Quick search</label>
-                                        <input id="quick-search" type="text" placeholder="Quick search..." className="Dashboard_search_input" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} data-testid="search-input" />
-                                        <button className="filter-btn" id="filter-btn" aria-label="Open filters" onClick={() => setIsFilterModalOpen(true)} data-testid="filter-button">
-                                                <i className="fa-solid fa-sliders"></i>
-                                        </button>
-                                </div>
-                        }
 
                         <section id="proposals-panel" data-testid="proposals-panel" role="tabpanel" className={`tab-panel ${selectedTab === 'proposals' ? 'active' : ''}`} hidden={selectedTab !== 'proposals'}>
                                 {viewMode === 'vignette' ? (
@@ -401,6 +451,7 @@ export default function Dashboard() {
                                                                 date={cleanedDate(project.updated_at)}
                                                                 onClick={(e) => handleProjectClick(e, project.proposal_id, false)}
                                                                 handleDeleteProject={handleDeleteProject}
+                                                                handleRestoreProject={handleRestoreProject}
                                                                 handleTransferOwnership={handleTransferOwnership}
                                                         />
                                                 )}
@@ -414,6 +465,10 @@ export default function Dashboard() {
                                                         <thead>
                                                                 <tr>
                                                                         <th onClick={() => handleSort('project_title')} className="sortable">Title {sortConfig.key === 'project_title' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                                                        <th onClick={() => handleSort('country')} className="sortable">Country {sortConfig.key === 'country' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                                                        <th onClick={() => handleSort('donor')} className="sortable">Donor {sortConfig.key === 'donor' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                                                        <th onClick={() => handleSort('budget')} className="sortable">Budget {sortConfig.key === 'budget' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                                                        <th>Outcomes</th>
                                                                         <th onClick={() => handleSort('status')} className="sortable">Status {sortConfig.key === 'status' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
                                                                         <th onClick={() => handleSort('updated_at')} className="sortable">Last Updated {sortConfig.key === 'updated_at' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
                                                                         <th>Actions</th>
@@ -423,10 +478,29 @@ export default function Dashboard() {
                                                                 {sortedProjects.map((project) => (
                                                                         <tr key={project.proposal_id} onClick={(e) => handleProjectClick(e, project.proposal_id, false)} style={{ cursor: 'pointer' }}>
                                                                                 <td>{project.project_title}</td>
+                                                                                <td>{project.country}</td>
+                                                                                <td>{project.donor}</td>
+                                                                                <td>{project.budget}</td>
+                                                                                <td title={project.outcomes?.join(', ')}>
+                                                                                        {project.outcomes && project.outcomes.length > 0
+                                                                                                ? (project.outcomes.length > 1 ? `${project.outcomes[0]} +${project.outcomes.length - 1}` : project.outcomes[0])
+                                                                                                : 'N/A'
+                                                                                        }
+                                                                                </td>
                                                                                 <td><span className={`Dashboard_project_label status-${project.status}`}>{project.status}</span></td>
                                                                                 <td>{cleanedDate(project.updated_at)}</td>
-                                                                                <td>
-                                                                                        <i className="fa-solid fa-eye" title="View"></i>
+                                                                                <td onClick={(e) => e.stopPropagation()}>
+                                                                                        <div style={{ display: 'flex', gap: '10px' }}>
+                                                                                                <i className="fa-solid fa-eye" title="View" onClick={(e) => handleProjectClick(e, project.proposal_id, false)}></i>
+                                                                                                {project.status === 'deleted' ? (
+                                                                                                        <i className="fa-solid fa-trash-arrow-up" title="Restore" onClick={() => handleRestoreProject(project.proposal_id)}></i>
+                                                                                                ) : (
+                                                                                                        <>
+                                                                                                                <i className="fa-solid fa-trash-can" title="Delete" onClick={() => handleDeleteProject(project.proposal_id)}></i>
+                                                                                                                <i className="fa-solid fa-share-from-square" title="Transfer" onClick={() => handleTransferOwnership(project.proposal_id)}></i>
+                                                                                                        </>
+                                                                                                )}
+                                                                                        </div>
                                                                                 </td>
                                                                         </tr>
                                                                 ))}
@@ -462,24 +536,30 @@ export default function Dashboard() {
                                                 <table className="table table-hover">
                                                         <thead>
                                                                 <tr>
+                                                                        <th onClick={() => handleSort('card_type')} className="sortable">Type {sortConfig.key === 'card_type' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                                                        <th onClick={() => handleSort('name')} className="sortable">Name {sortConfig.key === 'name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
                                                                         <th onClick={() => handleSort('summary')} className="sortable">Summary {sortConfig.key === 'summary' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
                                                                         <th onClick={() => handleSort('updated_at')} className="sortable">Last Updated {sortConfig.key === 'updated_at' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
-                                                                        <th>Type</th>
                                                                 </tr>
                                                         </thead>
                                                         <tbody>
                                                                 {sortedKnowledgeCards.map((card) => {
                                                                         const isKCOwner = currentUser && (currentUser.id === card.created_by || currentUser.user_id === card.created_by);
+                                                                        const cardType = card.donor_name ? 'Donor' : card.outcome_name ? 'Outcome' : 'Field Context';
+                                                                        const cardName = card.donor_name || card.outcome_name || card.field_context_name || 'N/A';
+
                                                                         return (
-                                                                        <tr key={card.id} onClick={() => isKCOwner ? navigate(`/knowledge-card/${card.id}`) : navigate(`/review/knowledge-card/${card.id}`)} style={{ cursor: 'pointer' }}>
-                                                                                <td style={{ maxWidth: '400px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{card.summary}</td>
-                                                                                <td>{cleanedDate(card.updated_at)}</td>
-                                                                                <td>
-                                                                                        {card.donor_name && 'Donor'}
-                                                                                        {card.outcome_name && 'Outcome'}
-                                                                                        {card.field_context_name && 'Field Context'}
-                                                                                </td>
-                                                                        </tr>
+                                                                                <tr key={card.id} onClick={() => isKCOwner ? navigate(`/knowledge-card/${card.id}`) : navigate(`/review/knowledge-card/${card.id}`)} style={{ cursor: 'pointer' }}>
+                                                                                        <td>
+                                                                                                {card.donor_name && <i className="fa-solid fa-money-bill-wave donor"></i>}
+                                                                                                {card.outcome_name && <i className="fa-solid fa-bullseye outcome"></i>}
+                                                                                                {card.field_context_name && <i className="fa-solid fa-earth-americas field-context"></i>}
+                                                                                                {' '}{cardType}
+                                                                                        </td>
+                                                                                        <td>{cardName}</td>
+                                                                                        <td style={{ maxWidth: '400px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{card.summary}</td>
+                                                                                        <td>{cleanedDate(card.updated_at)}</td>
+                                                                                </tr>
                                                                         );
                                                                 })}
                                                         </tbody>
@@ -536,14 +616,15 @@ export default function Dashboard() {
                         <section id="other-panel" role="tabpanel" className={`tab-panel ${selectedTab === 'other' ? 'active' : ''}`} hidden={selectedTab !== 'other'}>
                                 {viewMode === 'vignette' ? (
                                         <div className="Dashboard_projects" id="other-grid">
-                                                {displayProjects && displayProjects.map((project) =>
+                                                {displayProjects && displayProjects.map((review) =>
                                                         <Project
-                                                                key={project.proposal_id}
-                                                                project={project}
-                                                                date={cleanedDate(project.updated_at)}
-                                                                onClick={(e) => handleProjectClick(e, project.proposal_id, false)}
-                                                                isReview={true} // Use isReview to hide standard author actions
+                                                                key={review.proposal_id}
+                                                                project={review}
+                                                                date={cleanedDate(review.updated_at)}
+                                                                onClick={(e) => handleProjectClick(e, review.proposal_id, true)}
+                                                                isReview={true}
                                                                 handleDeleteProject={handleDeleteProject}
+                                                                handleRestoreProject={handleRestoreProject}
                                                                 handleTransferOwnership={handleTransferOwnership}
                                                         />
                                                 )}
@@ -556,6 +637,9 @@ export default function Dashboard() {
                                                                         <th onClick={() => handleSort('project_title')} className="sortable">Title {sortConfig.key === 'project_title' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
                                                                         <th onClick={() => handleSort('team_name')} className="sortable">Team {sortConfig.key === 'team_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
                                                                         <th onClick={() => handleSort('author_name')} className="sortable">Author {sortConfig.key === 'author_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                                                        <th onClick={() => handleSort('country')} className="sortable">Country {sortConfig.key === 'country' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                                                        <th onClick={() => handleSort('donor')} className="sortable">Donor {sortConfig.key === 'donor' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
+                                                                        <th onClick={() => handleSort('budget')} className="sortable">Budget {sortConfig.key === 'budget' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
                                                                         <th onClick={() => handleSort('status')} className="sortable">Status {sortConfig.key === 'status' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
                                                                         <th onClick={() => handleSort('updated_at')} className="sortable">Last Updated {sortConfig.key === 'updated_at' && (sortConfig.direction === 'asc' ? '↑' : '↓')}</th>
                                                                 </tr>
@@ -566,6 +650,9 @@ export default function Dashboard() {
                                                                                 <td>{project.project_title}</td>
                                                                                 <td>{project.team_name}</td>
                                                                                 <td>{project.author_name}</td>
+                                                                                <td>{project.country || '-'}</td>
+                                                                                <td>{project.donor || '-'}</td>
+                                                                                <td>{project.budget || '-'}</td>
                                                                                 <td><span className={`Dashboard_project_label status-${project.status}`}>{project.status}</span></td>
                                                                                 <td>{cleanedDate(project.updated_at)}</td>
                                                                         </tr>
