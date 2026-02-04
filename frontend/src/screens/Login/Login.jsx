@@ -70,16 +70,16 @@ export default function Login(props) {
                                         setTeams(data.teams);
                                 }
                                 if (rolesRes.ok) {
-                                    const data = await rolesRes.json();
-                                    setRoles(data.map(r => ({ value: r.id, label: r.name })));
+                                        const data = await rolesRes.json();
+                                        setRoles(data.map(r => ({ value: r.id, label: r.name })));
                                 }
                                 if (donorGroupsRes.ok) {
-                                    const data = await donorGroupsRes.json();
-                                    setDonorGroups(data.donor_groups.map(dg => ({ value: dg, label: dg })));
+                                        const data = await donorGroupsRes.json();
+                                        setDonorGroups(data.donor_groups.map(dg => ({ value: dg, label: dg })));
                                 }
                                 if (outcomesRes.ok) {
-                                    const data = await outcomesRes.json();
-                                    setOutcomes(data.outcomes.map(o => ({ value: o.id, label: o.name })));
+                                        const data = await outcomesRes.json();
+                                        setOutcomes(data.outcomes.map(o => ({ value: o.id, label: o.name })));
                                 }
                         } catch (error) {
                                 console.error("Failed to fetch form data:", error);
@@ -155,12 +155,12 @@ export default function Login(props) {
                 e.preventDefault()
 
                 const settings = {
-                    geographic_coverage_type: geographicCoverageType,
-                    geographic_coverage_region: geographicCoverageRegion,
-                    geographic_coverage_country: geographicCoverageCountry,
-                    roles: selectedRoles.map(r => r.value),
-                    donor_groups: selectedDonorGroups.map(dg => dg.value),
-                    outcomes: selectedOutcomes.map(o => o.value)
+                        geographic_coverage_type: geographicCoverageType,
+                        geographic_coverage_region: geographicCoverageRegion,
+                        geographic_coverage_country: geographicCoverageCountry,
+                        roles: selectedRoles.map(r => r.value),
+                        donor_groups: selectedDonorGroups.map(dg => dg.value),
+                        outcomes: selectedOutcomes.map(o => o.value)
                 }
 
                 const response = await fetch(`${API_BASE_URL}/signup`, {
@@ -270,48 +270,48 @@ export default function Login(props) {
                                                         <>
                                                                 <label className='Login-label'>Roles</label>
                                                                 <Select
-                                                                    isMulti
-                                                                    options={roles}
-                                                                    value={selectedRoles}
-                                                                    onChange={setSelectedRoles}
+                                                                        isMulti
+                                                                        options={roles}
+                                                                        value={selectedRoles}
+                                                                        onChange={setSelectedRoles}
                                                                 />
 
                                                                 {selectedRoles.some(r => r.label === 'knowledge manager donors') && (
-                                                                    <>
-                                                                        <label className='Login-label'>Donor Groups</label>
-                                                                        <Select
-                                                                            isMulti
-                                                                            options={donorGroups}
-                                                                            value={selectedDonorGroups}
-                                                                            onChange={setSelectedDonorGroups}
-                                                                        />
-                                                                    </>
+                                                                        <>
+                                                                                <label className='Login-label'>Donor Groups</label>
+                                                                                <Select
+                                                                                        isMulti
+                                                                                        options={donorGroups}
+                                                                                        value={selectedDonorGroups}
+                                                                                        onChange={setSelectedDonorGroups}
+                                                                                />
+                                                                        </>
                                                                 )}
 
                                                                 {selectedRoles.some(r => r.label === 'knowledge manager outcome') && (
-                                                                    <>
-                                                                        <label className='Login-label'>Outcomes</label>
-                                                                        <Select
-                                                                            isMulti
-                                                                            options={outcomes}
-                                                                            value={selectedOutcomes}
-                                                                            onChange={setSelectedOutcomes}
-                                                                        />
-                                                                    </>
+                                                                        <>
+                                                                                <label className='Login-label'>Outcomes</label>
+                                                                                <Select
+                                                                                        isMulti
+                                                                                        options={outcomes}
+                                                                                        value={selectedOutcomes}
+                                                                                        onChange={setSelectedOutcomes}
+                                                                                />
+                                                                        </>
                                                                 )}
 
                                                                 <label className='Login-label'>Geographic Coverage</label>
                                                                 <select value={geographicCoverageType} onChange={e => setGeographicCoverageType(e.target.value)}>
-                                                                    <option value="global">Global</option>
-                                                                    <option value="regional">Regional</option>
-                                                                    <option value="country">Country</option>
+                                                                        <option value="global">Global</option>
+                                                                        <option value="regional">Regional</option>
+                                                                        <option value="country">Country</option>
                                                                 </select>
 
                                                                 {geographicCoverageType === 'regional' && (
-                                                                    <input type="text" placeholder="Region" value={geographicCoverageRegion} onChange={e => setGeographicCoverageRegion(e.target.value)} />
+                                                                        <input type="text" placeholder="Region" value={geographicCoverageRegion} onChange={e => setGeographicCoverageRegion(e.target.value)} />
                                                                 )}
                                                                 {geographicCoverageType === 'country' && (
-                                                                    <input type="text" placeholder="Country" value={geographicCoverageCountry} onChange={e => setGeographicCoverageCountry(e.target.value)} />
+                                                                        <input type="text" placeholder="Country" value={geographicCoverageCountry} onChange={e => setGeographicCoverageCountry(e.target.value)} />
                                                                 )}
                                                                 <label className='Login-label' htmlFor='Login_securityQuestionInput'>Security Question</label>
                                                                 <select
@@ -412,7 +412,7 @@ export default function Login(props) {
                                         </div>
                                 </div>
                                 <div style={{ marginTop: '20px', fontSize: '12px', color: 'grey', textAlign: 'center' }}>
-                                        <p>You are now running <a href="https://github.com/Edouard-Legoupil/proposal_drafter/releases/tag/0.4" target="_blank" rel="noopener noreferrer">v.0.4</a></p>
+                                        <p>You are now running <a href="https://github.com/Edouard-Legoupil/proposal_drafter/releases/tag/0.5" target="_blank" rel="noopener noreferrer">v.0.5</a></p>
                                 </div>
                         </div>
                 </div>
