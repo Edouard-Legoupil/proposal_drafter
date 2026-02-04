@@ -61,6 +61,7 @@ class BaseDataRequest(BaseModel):
     form_data: Dict[str, Any]
     project_description: str
     associated_knowledge_cards: Optional[List[Dict[str, Any]]] = None
+    document_type: Optional[str] = "proposal"
     template_name: str
 
 class SectionRequest(BaseModel):
@@ -114,6 +115,7 @@ class CreateSessionRequest(BaseModel):
     form_data: Dict[str, Any]
     project_description: str
     associated_knowledge_cards: Optional[List[Dict[str, Any]]] = None
+    document_type: Optional[str] = "proposal"
 
 
 class UpdateSectionRequest(BaseModel):

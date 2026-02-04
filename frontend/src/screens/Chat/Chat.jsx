@@ -40,6 +40,7 @@ export default function Chat(props) {
         const navigate = useNavigate()
         const { id } = useParams()
 
+        const [documentType, setDocumentType] = useState("proposal")
         const [sidebarOpen, setSidebarOpen] = useState(false);
         const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
         const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -357,12 +358,14 @@ export default function Chat(props) {
         const isGenerating = useRef(false);
 
         useEffect(() => {
-                if (sidebarOpen) {
-                        if (titleName === "Generate Draft Proposal")
-                                setTitleName("Generate Draft Proposal")
+                if (titleName === "Generate Draft Proposal" || titleName === "Generate Concept Note") {
+                        if (documentType === "concept note") {
+                                setTitleName("Generate Concept Note");
+                        } else {
+                                setTitleName("Generate Draft Proposal");
+                        }
                 }
-                // eslint-disable-next-line react-hooks/exhaustive-deps
-        }, [sidebarOpen])
+        }, [documentType]);
 
         useEffect(() => {
                 if (!generateLoading && proposal && Object.values(proposal).every(section => section.content)) {
@@ -538,7 +541,8 @@ export default function Chat(props) {
                                 body: JSON.stringify({
                                         project_description: userPrompt,
                                         form_data: updatedFormData,
-                                        associated_knowledge_cards: finalAssociatedCards
+                                        associated_knowledge_cards: finalAssociatedCards,
+                                        document_type: documentType
                                 }),
                                 credentials: 'include'
                         });
@@ -829,6 +833,12 @@ export default function Chat(props) {
                                         setAssociatedKnowledgeCards(data.associated_knowledge_cards);
                                 }
 
+                                if (data.template_name && data.template_name.startsWith("concept_note_")) {
+                                        setDocumentType("concept note");
+                                } else {
+                                        setDocumentType("proposal");
+                                }
+
                                 setProposalStatus(data.status)
                                 setContributionId(data.contribution_id || "")
                                 setSidebarOpen(true)
@@ -1115,6 +1125,26 @@ export default function Chat(props) {
                                                 </div>
 
                                                 <div className="Chat_inputArea">
+                                                        <div className="Chat_docTypeSwitcher" data-testid="doc-type-switcher">
+                                                                <button
+                                                                        type="button"
+                                                                        className={`Chat_docTypeButton ${documentType === 'proposal' ? 'active' : ''}`}
+                                                                        onClick={() => proposalStatus === 'draft' && setDocumentType('proposal')}
+                                                                        disabled={proposalStatus !== 'draft'}
+                                                                        data-testid="doc-type-proposal-button"
+                                                                >
+                                                                        Proposal
+                                                                </button>
+                                                                <button
+                                                                        type="button"
+                                                                        className={`Chat_docTypeButton ${documentType === 'concept note' ? 'active' : ''}`}
+                                                                        onClick={() => proposalStatus === 'draft' && setDocumentType('concept note')}
+                                                                        disabled={proposalStatus !== 'draft'}
+                                                                        data-testid="doc-type-concept-note-button"
+                                                                >
+                                                                        Concept Note
+                                                                </button>
+                                                        </div>
                                                         {renderFormField("Project Draft Short name", proposalStatus !== 'draft')}
                                                         <textarea id="main-prompt" name="main-prompt" value={userPrompt} onChange={e => setUserPrompt(e.target.value)} placeholder='Provide as much details as possible on your initial project idea!' className='Chat_inputArea_prompt' disabled={proposalStatus !== 'draft'} data-testid="main-prompt" />
 
