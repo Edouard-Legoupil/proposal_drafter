@@ -183,7 +183,7 @@ def get_available_templates():
                 continue # Skip to the next file
 
     # Ensure "Not Yet Specified" option points to the default UNHCR template.
-    unhcr_template_file = "unhcr_proposal_template.json"
+    unhcr_template_file = "proposal_template_unhcr.json"
     if os.path.isfile(os.path.join(TEMPLATES_DIR, unhcr_template_file)):
         templates_map["Not Yet Specified"] = unhcr_template_file
 

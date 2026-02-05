@@ -1,0 +1,105 @@
+.Sidebar {
+    width: 250px;
+    background-color: #f8f9fa;
+    border-right: 1px solid #dee2e6;
+    height: 100%;
+    overflow-y: auto;
+    transition: width 0.3s ease;
+    flex-shrink: 0;
+}
+
+.Sidebar_nav {
+    padding: 20px 0;
+}
+
+.Sidebar_folder {
+    margin-bottom: 5px;
+}
+
+.Sidebar_folderHeader {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    cursor: pointer;
+    color: #495057;
+    text-decoration: none;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.Sidebar_folderHeader:hover {
+    background-color: #e9ecef;
+}
+
+.Sidebar_chevron {
+    margin-left: auto;
+    font-size: 0.8em;
+}
+
+.Sidebar_subItems {
+    display: flex;
+    flex-direction: column;
+}
+
+.Sidebar_subFolderHeader {
+    padding-left: 25px !important;
+    font-size: 0.85rem !important;
+}
+
+.Sidebar_nestedSubItems {
+    padding-left: 15px;
+}
+
+.Sidebar_link {
+    padding: 8px 45px;
+    color: #6c757d;
+    text-decoration: none;
+    font-size: 13px;
+}
+
+.Sidebar_link:hover {
+    background-color: #e9ecef;
+    color: #0072bc;
+}
+
+.Sidebar_link.active {
+    background-color: #e7f1f9;
+    color: #0072bc;
+    font-weight: 600;
+    border-right: 3px solid #0072bc;
+}
+
+.Sidebar_link i {
+    width: 20px;
+    margin-right: 8px;
+    text-align: center;
+}
+
+.status-draft-icon {
+    color: #757575;
+}
+
+.status-review-icon {
+    color: #FF9800;
+}
+
+.status-pre-submission-icon {
+    color: #0072BC;
+}
+
+.status-submitted-icon {
+    color: #2E7D32;
+}
+
+.donor {
+    color: #6A1B9A;
+}
+
+.outcome {
+    color: #EF6C00;
+}
+
+.field-context {
+    color: #2E7D32;
+}

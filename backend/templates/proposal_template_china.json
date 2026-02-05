@@ -1,0 +1,801 @@
+{
+    "template_type": "Proposal",
+    "donors": [
+        "China - Ministry of Foreign Affairs",
+        "China -International Development Cooperation Agency"
+    ],
+    "special_requirements": {
+        "instructions": [
+            "Show UNHCR's unique capacity and access",
+            "Strictly base all content on the provided inputs and knowledge base.",
+            "Do not invent or hallucinate facts, figures, or dates.",
+            "If information is missing, explicitly state that it is not available in the context.",
+            "Ensure tone, style, and formatting match a professional humanitarian proposal.",
+            "when referencing donor, use donor name and never  donor_id",
+            "when referencing outcomes, use outcome name and never  outcome_id",
+            "when referencing, field context, use field_context name and never field context_id"
+        ]
+    },
+    "sections": [
+        {
+            "section_name": "Project Background",
+            "section_label": "1. Project Background",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 400,
+            "instructions": "Introduce the social and economic situation where the project is implemented, focusing on issues targeted and displacement context (refugees/IDPs/stateless/returnees) and any emergencies using ONLY provided context. Do not invent history or statistics."
+        },
+        {
+            "section_name": "Necessity Requirements",
+            "section_label": "2.1 Project Requirements Analysis",
+            "section_parent": "2. Necessity",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 400,
+            "instructions": "Describe issues targeted, analyze necessity/importance/urgency, and explain needs identification (protection monitoring, assessments) based on available data. Link to multi-year strategy."
+        },
+        {
+            "section_name": "Necessity Conformity",
+            "section_label": "2.2 Conformity with relevant policies and plans",
+            "section_parent": "2. Necessity",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 450,
+            "instructions": "Explain alignment with Chinese policies (e.g., Global Development Initiative, Belt and Road) and host government frameworks (e.g., 1951 Convention/1967 Protocol, domestic laws, GRF pledges) based on the inputs; add host government support details."
+        },
+        {
+            "section_name": "Objectives SDGs",
+            "section_label": "3.1 Major SDGs, sub-goals and indicators",
+            "section_parent": "3. Project Objectives",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 300,
+            "instructions": "List major SDGs and sub-goals (consistent with Basic Information) and corresponding indicators (from SDGs indicator framework) based strictly on the logframe."
+        },
+        {
+            "section_name": "Objectives Specific",
+            "section_label": "3.2 Specific objective of the Project",
+            "section_parent": "3. Project Objectives",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 100,
+            "instructions": "Provide concise specific objective (100 words)."
+        },
+        {
+            "section_name": "Expected Outputs",
+            "section_label": "4. Expected Outputs (aligned to UNHCR Global Results Framework)",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 500,
+            "instructions": "Map activities to UNHCR Global Results Framework Impact Areas and Outcome Areas based on the logframe. For each output: verification indicators, corresponding SDGs/sub-goals, input (USD), baseline and expected values."
+        },
+        {
+            "section_name": "Conditions Prep Work",
+            "section_label": "5.1 Preparatory work or earlier interventions",
+            "section_parent": "5. Conditions of Project Implementation",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 400,
+            "instructions": "Describe groundwork and prior responses, government support/letters, and link to background and requirements analysis using provided info."
+        },
+        {
+            "section_name": "Conditions Required",
+            "section_label": "5.2 Conditions of Project Implementation",
+            "section_parent": "5. Conditions of Project Implementation",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "List necessary conditions (e.g., mobilization capacity, distribution capacity, monitoring/reporting systems) and describe completeness based on the plan.",
+            "columns": [
+                {
+                    "name": "Necessary condition",
+                    "format_type": "text",
+                    "instructions": "Name the condition."
+                },
+                {
+                    "name": "Brief description of completeness",
+                    "format_type": "text",
+                    "instructions": "Explain status and readiness."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Condition 1",
+                    "instructions": "Enter first necessary condition."
+                },
+                {
+                    "row_title": "Condition 2",
+                    "instructions": "Enter second necessary condition."
+                }
+            ]
+        },
+        {
+            "section_name": "Capabilities Applicant",
+            "section_label": "6.1 Implementation Capabilities of the Applicant and Partners",
+            "section_parent": "6. Capabilities of Project Implementation and Management",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 600,
+            "instructions": "Summarize UNHCR overview/strengths and add operation-specific capacity using available data; add one-paragraph overview per implementing partner."
+        },
+        {
+            "section_name": "Similar Projects Table",
+            "section_label": "Information Table of Three Latest Similar Projects",
+            "section_parent": "6. Capabilities of Project Implementation and Management",
+            "format_type": "table",
+            "mandatory": false,
+            "instructions": "List similar CRI/NFI distribution projects using provided records.",
+            "columns": [
+                {
+                    "name": "No.",
+                    "format_type": "number",
+                    "instructions": "1, 2, 3"
+                },
+                {
+                    "name": "Project Title",
+                    "format_type": "text",
+                    "instructions": "Title of the project."
+                },
+                {
+                    "name": "Start date",
+                    "format_type": "text",
+                    "instructions": "YYYY-MM"
+                },
+                {
+                    "name": "End date",
+                    "format_type": "text",
+                    "instructions": "YYYY-MM"
+                },
+                {
+                    "name": "Country/region",
+                    "format_type": "text",
+                    "instructions": "Location."
+                },
+                {
+                    "name": "Thematic areas",
+                    "format_type": "text",
+                    "instructions": "e.g., Humanitarian Assistance."
+                },
+                {
+                    "name": "Funding (USD)",
+                    "format_type": "number",
+                    "instructions": "Amount."
+                },
+                {
+                    "name": "Partners",
+                    "format_type": "text",
+                    "instructions": "Implementing partners."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "1",
+                    "instructions": "Enter first similar project."
+                },
+                {
+                    "row_title": "2",
+                    "instructions": "Enter second similar project."
+                },
+                {
+                    "row_title": "3",
+                    "instructions": "Enter third similar project."
+                }
+            ]
+        },
+        {
+            "section_name": "Management Structure and Division of Labor",
+            "section_label": "6.2 Management Structure and Division of Labor",
+            "section_parent": "6. Capabilities of Project Implementation and Management",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 300,
+            "instructions": "List UNHCR units (Programme, Supply, ER/Reporting) and implementing partners; describe roles based on the plan."
+        },
+        {
+            "section_name": "Management Team Table",
+            "section_label": "6.3 Management Team for Project Implementation",
+            "section_parent": "6. Capabilities of Project Implementation and Management",
+            "format_type": "table",
+            "mandatory": false,
+            "instructions": "Provide team roster.",
+            "columns": [
+                {
+                    "name": "No.",
+                    "format_type": "number",
+                    "instructions": "Team member number."
+                },
+                {
+                    "name": "Name",
+                    "format_type": "text",
+                    "instructions": "Full name."
+                },
+                {
+                    "name": "Nationality",
+                    "format_type": "text",
+                    "instructions": "Nationality."
+                },
+                {
+                    "name": "Role in the team",
+                    "format_type": "text",
+                    "instructions": "e.g., Project Director, Project Manager."
+                },
+                {
+                    "name": "Organization",
+                    "format_type": "text",
+                    "instructions": "UNHCR/Partner."
+                },
+                {
+                    "name": "Title",
+                    "format_type": "text",
+                    "instructions": "Position title."
+                },
+                {
+                    "name": "Area of expertise and specialty",
+                    "format_type": "text",
+                    "instructions": "e.g., Humanitarian Assistance."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "1",
+                    "instructions": "Enter Project Director."
+                },
+                {
+                    "row_title": "2",
+                    "instructions": "Enter Project Manager."
+                }
+            ]
+        },
+        {
+            "section_name": "Internal Control System",
+            "section_label": "6.4 Internal Control System",
+            "section_parent": "6. Capabilities of Project Implementation and Management",
+            "format_type": "text",
+            "mandatory": true,
+            "instructions": "Provide standard narratives for internal control and oversight; subsections below detail specific systems."
+        },
+        {
+            "section_name": "Anti-corruption",
+            "section_label": "6.4.1 Anti-corruption & internal inspection systems",
+            "section_parent": "6.4 Internal Control System",
+            "format_type": "fixed_text",
+            "mandatory": true,
+            "word_limit": 250,
+            "fixed_text": "The Inspector General's Office (IGO) exists as the cornerstone of UNHCR's system of independent oversight. IGO provides the High Commissioner with independent assurance and oversight of UNHCR's activities and operations. Through strategic oversight and investigation services, the work of IGO helps deter fraud and abuse and improve the efficiency of UNHCR's programmes and operations. It contributes to the integrity of the organization and its accountability towards the people UNHCR protects, host communities, donors and other stakeholders. IGO's Investigation Service is responsible for receiving and assessing misconduct complaints related to UNHCR personnel, partner staff, vendors or contractors. Where appropriate, the Investigation Service conducts investigations into allegations of misconduct. Within UNHCR, it has the sole authority to do so. It also gathers, collates, processes and analyses information in order to detect or disrupt misconduct and prevent or mitigate risks thereof. These risks could be operational, financial, organizational/reputational, managerial or cyber-related in nature. In addition, UNHCR has an Independent Audit and Oversight Committee (IAOC) that is an expert advisory body established by UNHCR's Standing Committee in 2011 to assist the High Commissioner and the Executive Committee in exercising their oversight responsibilities in accordance with relevant best practices, industry standards, and the financial and staff regulations and rules applicable to UNHCR. It aims to 1) provide external, independent, senior-level advice regarding the functioning of audit and oversight in UNHCR; 2) review internal and external audit and oversight matters; and 3) review financial management and reporting within UNHCR. The Strategic Oversight Service under IGO is to strengthen the organization-wide response to oversight findings and facilitate coherence of all oversight functions by ensuring that there are no gaps or duplications. The Service is responsible for communication and coordination with internal and external oversight providers. In this context, the Service manages the relationship with the UN Office of Internal Oversight Services (OIOS), which carries out internal audits and advisories. It also acts as the focal point for the UN Joint Inspection Unit (JIU) and provides secretariat support for IAOC. Strategic Oversight also undertakes strategic analysis of oversight findings and conducts specific reviews and inquiries as appropriate. ."
+        },
+        {
+            "section_name": "Procurement System",
+            "section_label": "6.4.2 Procurement systems",
+            "section_parent": "6.4 Internal Control System",
+            "format_type": "fixed_text",
+            "mandatory": true,
+            "word_limit": 350,
+            "fixed_text": "To protect and provide solutions to people forced to flee, UNHCR must anticipate, plan, source, purchase and deliver goods and services and therefore requires a robust, agile, resilient and future-proof supply chain. UNHCR's Division of Emergency, Security and Supply (DESS) comprises the Supply Management Service (SMS) to support this effort. They are responsible for global supply chain management, operational support, planning and reporting on the use of resources. This includes the procurement of goods and services to support field operations and headquarters, the provision of logistical support to field operations, as well as warehouse, stockpile, fleet, and asset management. UNHCR maintains a global network of warehouses in strategic locations around the world (Accra, Amman, Copenhagen, Douala, Dubai, Nairobi, Panama City, and Termez) with stockpiles of essential emergency relief items. This means that when an emergency is declared anywhere, UNHCR is ready to deliver life-saving items like tents and blankets by road, sea or air for up to one million people. UNHCR also prepositions and manages regional and local stocks to scale up humanitarian assistance when needed. Furthermore, UNHCR deploys supply chain specialists who are trained in crisis situations and help establish or reinforce the supply infrastructure to ensure people's basic needs and long-term assistance. In the context of UNHCR's Business Transformation Programme and the adoption of a new Enterprise Resource Planning System (Cloud ERP), procurement management processes have been streamlined and integrated into one single platform, enhancing efficiencies and controls. External partners, such as suppliers, are now involved in processes supported by Cloud ERP. UNHCR is implementing a new Supply Operating Model, which aims to recalibrate roles and responsibilities between UNHCR global, regional and local supply teams, ensuring that UNHCR's day-to-day supply processes are aligned with its strategic objectives. UNHCR has strengthened the functional oversight of supply teams in the regional bureaux and helped ensure the second line of support to operations. UNHCR has zero tolerance for fraud, corruption, and other forms of misconduct. It expects the highest standards of ethics and integrity from suppliers and UNHCR personnel in UNHCR's procurement processes. UNHCR will ensure (i) potential suppliers are treated equally, fairly and without favoritism, including the avoidance of actual or perceived conflicts of interest; and (ii) processes are established to vet potential suppliers, and monitor that suppliers uphold standards set out in the UN Supplier Code of Conduct. "
+        },
+        {
+            "section_name": "Control Partner Selection",
+            "section_label": "6.4.3 Expert/partner selection systems",
+            "section_parent": "6.4 Internal Control System",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 250,
+            "instructions": "Outline competitive partner selection process, UN Partner Portal, MFT/IPMC, risk and competency criteria."
+        },
+        {
+            "section_name": "Risk Assessment/Management",
+            "section_label": "6.4.4 Risk assessment/management systems",
+            "section_parent": "6.4 Internal Control System",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 300,
+            "instructions": "Explain Enterprise Risk Management, risk registers and escalation, UNSMS security, disaster risk reduction, partner risk monitoring and mitigation, and cost volatility considerations."
+        },
+        {
+            "section_name": "Environmental & Social Impact Systems",
+            "section_label": "6.4.5 Environmental & social impact systems",
+            "section_parent": "6.4 Internal Control System",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 350,
+            "instructions": "Summarize UNHCR Strategic Plan for Climate Action 2024\u20132030, protection-centred climate principles, environmental sustainability in supply, and AGD/AAP engagement."
+        },
+        {
+            "section_name": "Emergency Management System",
+            "section_label": "6.4.6 Emergency management systems",
+            "section_parent": "6.4 Internal Control System",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 250,
+            "instructions": "Explain UNHCR emergency policy: preparedness, declaration criteria, simplified procedures, and Emergency Handbook references."
+        },
+        {
+            "section_name": "Asset Management",
+            "section_label": "6.4.7 Property rights/asset management",
+            "section_parent": "6.4 Internal Control System",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 200,
+            "instructions": "Describe PPE management, IPSAS compliance, and asset lifecycle controls."
+        },
+        {
+            "section_name": "Monitoring/Evaluation System",
+            "section_label": "6.4.8 Monitoring/Evaluation systems",
+            "section_parent": "6.4 Internal Control System",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 350,
+            "instructions": "Detail COMPASS (results), PROMS (implementation), context/protection monitoring, partner M&E, PDM, Programme Handbook, Evaluation Office independence."
+        },
+        {
+            "section_name": "Implementation Adopted Standards",
+            "section_label": "7.1 Adopted Technologies and Standards",
+            "section_parent": "7. Implementation Plan for Project Activities",
+            "format_type": "text",
+            "mandatory": false,
+            "word_limit": 150,
+            "instructions": "Enter relevant standards or N/A."
+        },
+        {
+            "section_name": "Implementation Plan",
+            "section_label": "7.2 Implementation Plan of Project Activities",
+            "section_parent": "7. Implementation Plan for Project Activities",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Define Project Output(s) and Activities with indicators based strictly on the logframe.",
+            "columns": [
+                {
+                    "name": "Level",
+                    "format_type": "text",
+                    "instructions": "Output / Activity"
+                },
+                {
+                    "name": "Name",
+                    "format_type": "text",
+                    "instructions": "Name of output/activity."
+                },
+                {
+                    "name": "Indicator 1",
+                    "format_type": "text",
+                    "instructions": "Primary verification indicator."
+                },
+                {
+                    "name": "Indicator 2",
+                    "format_type": "text",
+                    "instructions": "Secondary indicator (optional)."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Project Output 1",
+                    "instructions": "Enter Output 1 label."
+                },
+                {
+                    "row_title": "Project Activity 1.1",
+                    "instructions": "Enter Activity 1.1 with indicators."
+                },
+                {
+                    "row_title": "Project Activity 1.2",
+                    "instructions": "Enter Activity 1.2 with indicators."
+                },
+                {
+                    "row_title": "Project Output 2 \u2013 Project Management",
+                    "instructions": "Visibility & reporting activities."
+                },
+                {
+                    "row_title": "Project Activity 2.1 \u2013 Project visibility",
+                    "instructions": "Indicators: China Aid logo on multi-donor signages; \u22652 social posts."
+                },
+                {
+                    "row_title": "Project Activity 2.2 \u2013 Project reporting",
+                    "instructions": "Quarterly & final reports per agreement; External Relations team support and cost coverage as per Section 9.1."
+                }
+            ]
+        },
+        {
+            "section_name": "Procurement_Plan",
+            "section_label": "7.3 Project Procurement Plan",
+            "section_parent": "7. Implementation Plan for Project Activities",
+            "format_type": "text",
+            "mandatory": false,
+            "word_limit": 500,
+            "instructions": "Explain procurement basis (global stockpiles mobilization, transport/logistics budgeting ~20% of item net cost as reference, local procurement & FAs, price basis and stability) based on the financial plan."
+        },
+        {
+            "section_name": "Maintenance Support Plan",
+            "section_label": "7.4 Operation/Maintenance/Long-term Technical Support Plan",
+            "section_parent": "7. Implementation Plan for Project Activities",
+            "format_type": "fixed_text",
+            "fixed_text": "Not applicable. No follow-up management, technical support or maintenance is needed upon completion of the project.",
+            "mandatory": true
+        },
+        {
+            "section_name": "China Aid Logo Communication Plan",
+            "section_label": "7.5 Use of China Aid Logo & Communication Plan",
+            "section_parent": "7. Implementation Plan for Project Activities",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 500,
+            "instructions": "Detail logo usage per CIDCA Administrative Measures and communication plan aligned with visibility indicators in Section 7.2."
+        },
+        {
+            "section_name": "Intellectual Property Administration Plan",
+            "section_label": "7.6 Intellectual Property Administration Plan",
+            "section_parent": "7. Implementation Plan for Project Activities",
+            "format_type": "fixed_text",
+            "fixed_text": "N/A.",
+            "mandatory": true
+        },
+        {
+            "section_name": "Implementation Progress",
+            "section_label": "8. Project Implementation Progress (Gantt)",
+            "format_type": "text",
+            "mandatory": false,
+            "instructions": "Linked to Attachment 2 Gantt Chart; provide timeline across Y1\u2013Y2 (M1\u2013M12) and responsible parties."
+        },
+        {
+            "section_name": "Budget Calculation Basis",
+            "section_label": "9.1 Calculation Basis and Explanations",
+            "section_parent": "9. Project Budget",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 400,
+            "instructions": "For Output 1: unit cost & quantities (include 5\u201310% price buffer). Transport/logistics costs can be per kit or separate. Provide estimation basis. For Output 2: calculation basis for reporting/visibility personnel costs (see table). Note: ISC fixed 6.5%. Use strictly budget data."
+        },
+        {
+            "section_name": "Budget Items Table",
+            "section_label": "9.1.1 Budget items (Output 1)",
+            "section_parent": "9. Project Budget",
+            "format_type": "table",
+            "mandatory": false,
+            "instructions": "Itemized kit budgeting for Output 1.",
+            "columns": [
+                {
+                    "name": "Items",
+                    "format_type": "text",
+                    "instructions": "Item name (e.g., Item A, Item B)."
+                },
+                {
+                    "name": "Unit Price (USD)",
+                    "format_type": "number",
+                    "instructions": "Unit price incl. buffer if applicable."
+                },
+                {
+                    "name": "Quantity",
+                    "format_type": "number",
+                    "instructions": "Quantity."
+                },
+                {
+                    "name": "Subtotal (USD)",
+                    "format_type": "number",
+                    "instructions": "Auto-computed subtotal."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Item A",
+                    "instructions": "Enter first item."
+                },
+                {
+                    "row_title": "Item B",
+                    "instructions": "Enter second item."
+                }
+            ]
+        },
+        {
+            "section_name": "Budget Reporting Staff Table",
+            "section_label": "9.1.1 Project reporting staff costs (Output 2)",
+            "section_parent": "9. Project Budget",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Breakdown of reporting staff costs per annum.",
+            "columns": [
+                {
+                    "name": "Staff Category",
+                    "format_type": "text",
+                    "instructions": "e.g., General Service (20%)."
+                },
+                {
+                    "name": "Grade",
+                    "format_type": "text",
+                    "instructions": "e.g., G6 / NB."
+                },
+                {
+                    "name": "Cost Per Annum (USD)",
+                    "format_type": "number",
+                    "instructions": "Amount."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "General Service (20% of working hours)",
+                    "instructions": "Enter GS cost (e.g., 14,980)."
+                },
+                {
+                    "row_title": "National Officer (10% of working hours)",
+                    "instructions": "Enter NO cost (e.g., 15,590)."
+                },
+                {
+                    "row_title": "Total Cost Per Annum",
+                    "instructions": "Compute total (e.g., 30,570)."
+                }
+            ]
+        },
+        {
+            "section_name": "Budget Parameters ISC",
+            "section_label": "9.1.2 Parameters: Indirect Support Cost (ISC)",
+            "section_parent": "9. Project Budget",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 200,
+            "instructions": "Explain UNHCR fixed 6.5% ISC application and calculation (amount/1.065 allocated to activities; difference recorded as ISC revenue)."
+        },
+        {
+            "section_name": "Project Budget Overall",
+            "section_label": "9.2 Project budget (overall)",
+            "section_parent": "9. Project Budget",
+            "format_type": "text",
+            "mandatory": false,
+            "instructions": "To be prepared based on itemized budget (Attachment 3)."
+        },
+        {
+            "section_name": "Project Financing Usage",
+            "section_label": "9.3 Project Fundraising & Usage Plan",
+            "section_parent": "9. Project Budget",
+            "format_type": "text",
+            "mandatory": false,
+            "instructions": "If any other funding exists, provide financing plan and usage plan (linked to Attachments 2 & 3)."
+        },
+        {
+            "section_name": "Financial Analysis",
+            "section_label": "10. Project Financial Analysis",
+            "format_type": "fixed_text",
+            "fixed_text": "Not applicable to UNHCR.",
+            "mandatory": true
+        },
+        {
+            "section_name": "Project Risk Analysis Table",
+            "section_label": "11. Project Risk Analysis",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Compile major risk assessment and countermeasures table.",
+            "columns": [
+                {
+                    "name": "No",
+                    "format_type": "number",
+                    "instructions": "Risk item number."
+                },
+                {
+                    "name": "Risk Category",
+                    "format_type": "text",
+                    "instructions": "e.g., policy/legal, operational, financial, environmental/social, force majeure."
+                },
+                {
+                    "name": "Description",
+                    "format_type": "text",
+                    "instructions": "Describe specific risk factors and stage."
+                },
+                {
+                    "name": "Risk level",
+                    "format_type": "text",
+                    "instructions": "Very low/Low/Medium/High/Very high; include impact scale."
+                },
+                {
+                    "name": "Countermeasures",
+                    "format_type": "text",
+                    "instructions": "Prevention/mitigation measures."
+                },
+                {
+                    "name": "Responsible Party",
+                    "format_type": "text",
+                    "instructions": "UNHCR/Partner/Government."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "1",
+                    "instructions": "Enter first risk."
+                },
+                {
+                    "row_title": "2",
+                    "instructions": "Enter second risk."
+                },
+                {
+                    "row_title": "3",
+                    "instructions": "Enter third risk."
+                }
+            ]
+        },
+        {
+            "section_name": "Project Comprehensive Impact Analysis",
+            "section_label": "12. Project Comprehensive Impact Analysis",
+            "format_type": "text",
+            "mandatory": false,
+            "word_limit": 400,
+            "instructions": "Provide analyses of long-term, social, (economic if any) and environmental impact (include CRI greening narratives if relevant)."
+        },
+        {
+            "section_name": "Attachments List",
+            "section_label": "13. Attachments",
+            "format_type": "fixed_text",
+            "fixed_text": "Attachment 1: Results-oriented Project Logical Framework\nAttachment 2: Project Gantt Chart\nAttachment 3: Budget Estimate\nAttachment 4: Project Fundraising and Usage Plan\nAttachment 5: CV of Project Responsible Person or Chief Technical Advisor",
+            "mandatory": true
+        },
+        {
+            "section_name": "Bank Details",
+            "section_label": "14. Bank Details of the Applicant/Implementing Agency",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Provide bank coordinates for funding transfers.",
+            "columns": [
+                {
+                    "name": "Field",
+                    "format_type": "text",
+                    "instructions": "Name of the bank field."
+                },
+                {
+                    "name": "Value",
+                    "format_type": "text",
+                    "instructions": "Field value."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Name of Bank",
+                    "instructions": "UBS AG"
+                },
+                {
+                    "row_title": "Address of Bank",
+                    "instructions": "P.O. Box 2770, 1211 Geneva 2"
+                },
+                {
+                    "row_title": "Account Name",
+                    "instructions": "UNHCR Voluntary Funds"
+                },
+                {
+                    "row_title": "Currency",
+                    "instructions": "USD"
+                },
+                {
+                    "row_title": "Account No./IBAN No.",
+                    "instructions": "Account number: D710 0000 5; IBAN: CH79 0024 0240 D710 0000 5"
+                },
+                {
+                    "row_title": "SWIFT Code",
+                    "instructions": "UBSWCHZH80A"
+                },
+                {
+                    "row_title": "Other information",
+                    "instructions": "Clearing Number: 240; Contribution detail: B0010"
+                }
+            ]
+        },
+        {
+            "section_name": "Legal Declaration",
+            "section_label": "15. Declaration of the Legal Representative",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 200,
+            "instructions": "Insert declaration text and fields for name, seal, and date as per template; note system automation of partner acknowledgement."
+        },
+        {
+            "section_name": "Project Information",
+            "section_label": "Project Information",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Fill the table strictly using the provided project information. Do not infer or invent data.",
+            "columns": [
+                {
+                    "name": "Field",
+                    "format_type": "text",
+                    "instructions": "Field Name"
+                },
+                {
+                    "name": "Value",
+                    "format_type": "text",
+                    "instructions": "Enter the value for this field."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Proposal ID",
+                    "instructions": "Proposal ID (Filled by GDF)"
+                },
+                {
+                    "row_title": "Project Name Full",
+                    "instructions": "Project Name \u2013 Full"
+                },
+                {
+                    "row_title": "Project Name Short",
+                    "instructions": "Project Name \u2013 Short (\u226415 words)"
+                },
+                {
+                    "row_title": "Concept Note ID",
+                    "instructions": "Concept Note ID"
+                },
+                {
+                    "row_title": "Applicant Name",
+                    "instructions": "Applicant"
+                },
+                {
+                    "row_title": "Applicant Contact",
+                    "instructions": "Applicant Contact (Representative)"
+                },
+                {
+                    "row_title": "Applicant Address",
+                    "instructions": "Applicant Address"
+                },
+                {
+                    "row_title": "Applicant Title",
+                    "instructions": "Applicant Title"
+                },
+                {
+                    "row_title": "Applicant Telephone",
+                    "instructions": "Applicant Telephone"
+                },
+                {
+                    "row_title": "Applicant Email",
+                    "instructions": "Applicant Email"
+                },
+                {
+                    "row_title": "Partners",
+                    "instructions": "Implementing Partners (list)"
+                },
+                {
+                    "row_title": "Country/Region of Project Implementation",
+                    "instructions": "Country/Region of Project Implementation"
+                },
+                {
+                    "row_title": "Area of Assistance",
+                    "instructions": "Area of Assistance"
+                },
+                {
+                    "row_title": "Brief Introduction",
+                    "instructions": "Brief Introduction (\u2264300 words)"
+                },
+                {
+                    "row_title": "SDGs Major",
+                    "instructions": "Major relevant SDGs (1\u20132 goals; \u22643 sub-goals each)"
+                },
+                {
+                    "row_title": "SDGs Other",
+                    "instructions": "Other relevant SDGs (\u22643)"
+                },
+                {
+                    "row_title": "Implementation Duration Months",
+                    "instructions": "Implementation Duration (Months)"
+                },
+                {
+                    "row_title": "Total Budget USD",
+                    "instructions": "Total Budget (USD)"
+                },
+                {
+                    "row_title": "GDF Applied Amount USD",
+                    "instructions": "Amount of Applied Fund from GDF (USD)"
+                },
+                {
+                    "row_title": "Other Funding USD",
+                    "instructions": "Other Funding (USD)"
+                },
+                {
+                    "row_title": "Beneficiaries Total",
+                    "instructions": "Total number of beneficiaries"
+                },
+                {
+                    "row_title": "Beneficiaries Direct",
+                    "instructions": "Number of direct beneficiaries"
+                },
+                {
+                    "row_title": "Beneficiaries Women",
+                    "instructions": "Women (if any)"
+                },
+                {
+                    "row_title": "Beneficiaries Children",
+                    "instructions": "Children (if any)"
+                },
+                {
+                    "row_title": "Beneficiaries Indirect",
+                    "instructions": "Number of indirect beneficiaries (if any)"
+                }
+            ]
+        }
+    ]
+}

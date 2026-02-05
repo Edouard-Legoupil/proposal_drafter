@@ -7,6 +7,7 @@ GRANT USAGE ON SCHEMA public TO <DB_USERNAME>;
 
 -- Enable vector extension
 CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- Create Teams table
 CREATE TABLE IF NOT EXISTS teams (
@@ -24,7 +25,37 @@ CREATE TABLE IF NOT EXISTS users (
     security_questions JSONB,
     session_active BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    geographic_coverage_type TEXT,
+    geographic_coverage_region TEXT,
+    geographic_coverage_country TEXT
+);
+
+-- Create Roles table
+CREATE TABLE IF NOT EXISTS roles (
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL
+);
+
+-- Create User Roles table for many-to-many relationship
+CREATE TABLE IF NOT EXISTS user_roles (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, role_id)
+);
+
+-- Create User Donor Groups table
+CREATE TABLE IF NOT EXISTS user_donor_groups (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    donor_group TEXT NOT NULL,
+    PRIMARY KEY (user_id, donor_group)
+);
+
+-- Create User Outcomes table
+CREATE TABLE IF NOT EXISTS user_outcomes (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    outcome_id UUID NOT NULL REFERENCES outcomes(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, outcome_id)
 );
 
 
@@ -63,8 +94,16 @@ CREATE TABLE IF NOT EXISTS field_contexts (
 -- Create Proposal Status Enum Type
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'proposal_status_new') THEN
-        CREATE TYPE proposal_status_new AS ENUM ('draft', 'in_review', 'pre_submission', 'submitted', 'deleted', 'generating_sections', 'failed');
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'proposal_status') THEN
+        CREATE TYPE proposal_status AS ENUM (
+            'draft',
+            'in_review',
+            'pre_submission',
+            'submitted',
+            'deleted',
+            'generating_sections',
+            'failed'
+        );
     END IF;
 END$$;
 
@@ -78,7 +117,7 @@ CREATE TABLE IF NOT EXISTS proposals (
     generated_sections JSONB,
     reviews JSONB,
     is_accepted BOOLEAN DEFAULT FALSE,
-    status proposal_status_new DEFAULT 'draft',
+    status proposal_status DEFAULT 'draft',
     contribution_id TEXT,
     created_by UUID NOT NULL REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -104,6 +143,7 @@ CREATE TABLE IF NOT EXISTS proposal_peer_reviews (
     reviewer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     proposal_status_history_id UUID REFERENCES proposal_status_history(id),
     section_name TEXT,
+    rating VARCHAR(10),
     status VARCHAR(50) DEFAULT 'pending',
     deadline TIMESTAMPTZ,
     review_text TEXT,
@@ -144,6 +184,20 @@ CREATE TABLE IF NOT EXISTS knowledge_card_history (
     generated_sections_snapshot JSONB,
     created_by UUID NOT NULL REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS knowledge_card_reviews (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    knowledge_card_id UUID NOT NULL REFERENCES knowledge_cards(id) ON DELETE CASCADE,
+    reviewer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    section_name TEXT,
+    rating VARCHAR(10),
+    review_text TEXT,
+    author_response TEXT,
+    status VARCHAR(50) DEFAULT 'pending',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (knowledge_card_id, reviewer_id, section_name)
 );
 
 -- Create Knowledge Card References table  
@@ -206,12 +260,15 @@ CREATE TABLE IF NOT EXISTS proposal_field_contexts (
 
 -- Create index for faster user lookup
 CREATE INDEX IF NOT EXISTS idx_proposals_user_id ON proposals(user_id);
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email); 
 CREATE INDEX IF NOT EXISTS idx_knowledge_cards_donor_id ON knowledge_cards(donor_id);
 CREATE INDEX IF NOT EXISTS idx_knowledge_cards_outcome_id ON knowledge_cards(outcome_id);
-CREATE INDEX IF NOT EXISTS idx_knowledge_cards_field_context_id ON knowledge_cards(field_context_id);
-CREATE INDEX IF NOT EXISTS idx_knowledge_card_references_knowledge_card_id ON knowledge_card_references(knowledge_card_id);
-CREATE INDEX IF NOT EXISTS idx_knowledge_card_history_knowledge_card_id ON knowledge_card_references(knowledge_card_id);
+CREATE INDEX IF NOT EXISTS idx_knowledge_cards_field_context_id ON knowledge_cards(field_context_id); 
+
+CREATE INDEX IF NOT EXISTS idx_knowledge_card_to_references_card_id ON knowledge_card_to_references(knowledge_card_id);
+CREATE INDEX IF NOT EXISTS idx_knowledge_card_to_references_reference_id ON knowledge_card_to_references(reference_id);
+
+CREATE INDEX IF NOT EXISTS idx_knowledge_card_history_knowledge_card_id ON knowledge_card_history(knowledge_card_id);
 CREATE INDEX IF NOT EXISTS idx_proposal_peer_reviews_proposal_id ON proposal_peer_reviews(proposal_id);
 CREATE INDEX IF NOT EXISTS idx_proposal_peer_reviews_reviewer_id ON proposal_peer_reviews(reviewer_id);
 CREATE INDEX IF NOT EXISTS idx_proposal_status_history_proposal_id ON proposal_status_history(proposal_id);

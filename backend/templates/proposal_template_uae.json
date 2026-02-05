@@ -1,0 +1,269 @@
+{
+    "template_type": "Proposal",
+    "donors": [
+        "United Arab Emirates - Ministry of Foreign Affairs",
+        "United Arab Emirates - Dubai International Humanitarian City",
+        "United Arab Emirates - United Arab Emirates through Famine Relief Fund"
+    ],
+    "special_requirements": {
+        "instructions": [
+            "Show UNHCR's unique capacity and access",
+            "Strictly base all content on the provided inputs and knowledge base.",
+            "Do not invent or hallucinate facts, figures, or dates.",
+            "If information is missing, explicitly state that it is not available in the context.",
+            "Ensure tone, style, and formatting match a professional humanitarian proposal.",
+            "when referencing donor, use donor name and never  donor_id",
+            "when referencing outcomes, use outcome name and never  outcome_id",
+            "when referencing, field context, use field_context name and never field context_id"
+        ]
+    },
+    "sections": [
+        {
+            "section_name": "Project Information",
+            "section_label": "Project Information",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Fill the table .",
+            "columns": [
+                {
+                    "name": "Field",
+                    "format_type": "text",
+                    "instructions": "Field Name"
+                },
+                {
+                    "name": "Value",
+                    "format_type": "text",
+                    "instructions": "Enter the value for this field."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Project Title",
+                    "instructions": "Project Title"
+                },
+                {
+                    "row_title": "Agency",
+                    "instructions": "Agency"
+                },
+                {
+                    "row_title": "Overall Objectives",
+                    "instructions": "Overall Objectives"
+                },
+                {
+                    "row_title": "Beneficiaries (per country)",
+                    "instructions": "Beneficiaries (per country)"
+                },
+                {
+                    "row_title": "Duration",
+                    "instructions": "Duration"
+                },
+                {
+                    "row_title": "Estimated Cost (notes)",
+                    "instructions": "Estimated Cost (notes)"
+                }
+            ]
+        },
+        {
+            "section_name": "Operational Context",
+            "section_label": "Operational Context",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 400,
+            "instructions": "Describe the displacement flows, current refugee/returnee figures, projected arrivals, and key protection/assistance gaps using ONLY provided data. Include daily arrival surges, pressures on local resources, and needs for CRIs, shelters, and peaceful coexistence activities if mentioned in context."
+        },
+        {
+            "section_name": "UNHCR Response",
+            "section_label": "UNHCR Response",
+            "section_parent": "Response Plan",
+            "format_type": "fixed_text",
+            "fixed_text": "The project will provide emergency core relief items and shelter assistance, plus peaceful coexistence activities in areas hosting new arrivals and refugees.",
+            "mandatory": true
+        },
+        {
+            "section_name": "Shelter Assistance Details",
+            "section_label": "Shelter assistance (cash and in-kind)",
+            "section_parent": "Response Plan",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 400,
+            "instructions": "Cover emergency shelters at transit sites, communal and semi-permanent shelters in hosting areas, transit center extensions, and site/infrastructure improvements based strictly on the plan. Include procurement/transport/warehousing of materials and targeting of vulnerable groups only if part of the project."
+        },
+        {
+            "section_name": "Core Relief Items Details",
+            "section_label": "Core Relief Items",
+            "section_parent": "Response Plan",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 300,
+            "instructions": "Explain registration/identification of beneficiaries, procurement/transport/warehousing, and distribution as described in the inputs. Describe the CRI package composition (sleeping mats, blankets, jerry can, mosquito nets, dignity kits, soap) and prioritization criteria based on available details."
+        },
+        {
+            "section_name": "Peaceful Coexistence Details",
+            "section_label": "Peaceful coexistence activities",
+            "section_parent": "Response Plan",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 350,
+            "instructions": "Detail hafir (water dam) construction, education support, sensitization/awareness, community networks, PSS, peacebuilding, recreational activities ONLY if these are part of the provided project scope."
+        },
+        {
+            "section_name": "Beneficiaries Table",
+            "section_label": "Beneficiaries",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Provide beneficiaries by proposed activity and population group based on the data; include a total row. Do not invent numbers.",
+            "columns": [
+                {
+                    "name": "Proposed Activity",
+                    "format_type": "text",
+                    "instructions": "Shelter; Core Relief Items; Peaceful coexistence."
+                },
+                {
+                    "name": "Population group",
+                    "format_type": "text",
+                    "instructions": "e.g., Refugees, Returnees, IDPs (as applicable)."
+                },
+                {
+                    "name": "Number of beneficiaries",
+                    "format_type": "number",
+                    "instructions": "Enter total individuals reached per activity."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Shelter",
+                    "instructions": "Enter individual beneficiary total for shelter support."
+                },
+                {
+                    "row_title": "Core Relief Items",
+                    "instructions": "Enter individual beneficiary total for CRIs."
+                },
+                {
+                    "row_title": "Peaceful coexistence",
+                    "instructions": "Enter individual beneficiary total for peaceful coexistence."
+                },
+                {
+                    "row_title": "TOTAL",
+                    "instructions": "Compute and enter total beneficiaries across activities."
+                }
+            ]
+        },
+        {
+            "section_name": "Beneficiaries Summary (Households)",
+            "section_label": "Summary of beneficiaries (households)",
+            "format_type": "table",
+            "mandatory": false,
+            "instructions": "Provide household counts by activity and country using provided data. Use household size = 5 unless otherwise justified or configured in inputs.",
+            "columns": [
+                {
+                    "name": "Activity",
+                    "format_type": "text",
+                    "instructions": "Shelter; Core Relief Items; Peaceful coexistence."
+                },
+                {
+                    "name": "Total beneficiaries (HH)",
+                    "format_type": "number",
+                    "instructions": "Total households across all countries."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Shelter",
+                    "instructions": "Enter household totals by country for shelter."
+                },
+                {
+                    "row_title": "Core Relief Items",
+                    "instructions": "Enter household totals by country for CRIs."
+                },
+                {
+                    "row_title": "Peaceful coexistence",
+                    "instructions": "Enter household totals by country for peaceful coexistence."
+                },
+                {
+                    "row_title": "TOTAL",
+                    "instructions": "Compute total across activities and countries."
+                }
+            ]
+        },
+        {
+            "section_name": "Outcomes Expected",
+            "section_label": "Outcomes expected",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "List indicators and targets (by country operation if the project is multi-country) as defined in the logframe.",
+            "columns": [
+                {
+                    "name": "Country Operation",
+                    "format_type": "text",
+                    "instructions": "Country name "
+                },
+                {
+                    "name": "Indicator",
+                    "format_type": "text",
+                    "instructions": "Define clear output/outcome indicators."
+                },
+                {
+                    "name": "Target beneficiaries",
+                    "format_type": "number",
+                    "instructions": "Numerical target for each indicator."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Row 1",
+                    "instructions": "Add indicators and targets for South Sudan or other countries."
+                }
+            ]
+        },
+        {
+            "section_name": "Activities and Budget Breakdown",
+            "section_label": "Activities and Budget Breakdown",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Provide activity descriptions and amounts based on the budget; include subtotal, 6.5% programme support cost (ISC), and grand total. Ensure mathematical accuracy.",
+            "columns": [
+                {
+                    "name": "Activity",
+                    "format_type": "text",
+                    "instructions": "E.g., Shelter assistance and transit center management; Core Relief Item support; Strengthening peaceful coexistence."
+                },
+                {
+                    "name": "Description",
+                    "format_type": "text",
+                    "instructions": "Summarize key costed components and staffing."
+                },
+                {
+                    "name": "Amount in USD",
+                    "format_type": "number",
+                    "instructions": "Enter the amount for the line."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Shelter assistance and transit center management",
+                    "instructions": "Enter description and amount."
+                },
+                {
+                    "row_title": "Core Relief Item support",
+                    "instructions": "Enter description and amount."
+                },
+                {
+                    "row_title": "Strengthening peaceful coexistence between host and displaced populations",
+                    "instructions": "Enter description and amount."
+                },
+                {
+                    "row_title": "Sub Total",
+                    "instructions": "Compute subtotal across lines."
+                },
+                {
+                    "row_title": "UNHCR programme indirect support costs - ISC (6.5%)",
+                    "instructions": "Compute ISC as 6.5% of subtotal."
+                },
+                {
+                    "row_title": "Grand Total USD",
+                    "instructions": "Compute total = subtotal + ISC."
+                }
+            ]
+        }
+    ]
+}

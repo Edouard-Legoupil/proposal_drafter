@@ -1,0 +1,496 @@
+{
+    "template_type": "Proposal",
+    "donors": [
+        "Education Cannot Wait",
+        "Education Cannot Wait - Accelerated Facility Window",
+        "Education Cannot Wait - First Emergency Window",
+        "Education Cannot Wait - Multiyear Resilience Programme"
+    ],
+    "special_requirements": {
+        "instructions": [
+            "Show UNHCR's unique capacity and access",
+            "Strictly base all content on the provided inputs and knowledge base.",
+            "Do not invent or hallucinate facts, figures, or dates.",
+            "If information is missing, explicitly state that it is not available in the context.",
+            "Ensure tone, style, and formatting match a professional humanitarian proposal.",
+            "when referencing donor, use donor name and never  donor_id",
+            "when referencing outcomes, use outcome name and never  outcome_id",
+            "when referencing, field context, use field_context name and never field context_id"
+        ]
+    },
+    "sections": [
+        {
+            "section_name": "Grantee Details",
+            "section_label": "ECW FER Grantee Details",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Summarize per grantee: organization, girls & boys to be reached, intervention zones, funding allocation, planned cost per child (USD) using provided data. Planned cost per child = Total Budget / Total Target.",
+            "columns": [
+                {
+                    "name": "Organization",
+                    "format_type": "text",
+                    "instructions": "Name of grantee."
+                },
+                {
+                    "name": "Girls and Boys to be reached",
+                    "format_type": "number",
+                    "instructions": "Total children targeted (headcount annex for breakdown)."
+                },
+                {
+                    "name": "Intervention zones",
+                    "format_type": "text",
+                    "instructions": "Geographies of intervention."
+                },
+                {
+                    "name": "Funding allocation (USD)",
+                    "format_type": "number",
+                    "instructions": "Allocation to grantee."
+                },
+                {
+                    "name": "Planned Cost per child (USD)",
+                    "format_type": "number",
+                    "instructions": "Computed value."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Grantee 1",
+                    "instructions": "Enter details for first grantee."
+                },
+                {
+                    "row_title": "Grantee 2",
+                    "instructions": "Enter details for second grantee (if applicable)."
+                }
+            ]
+        },
+        {
+            "section_name": "Education Response: Needs Overview",
+            "section_label": "1. Education Response: Needs Overview",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 500,
+            "instructions": "Provide needs overview for girls and boys, including adolescents, across pre-primary, primary, and secondary; include gender, disability inclusion, and MHPSS considerations using ONLY provided context. Highlight data sources/gaps, disaggregate by sex/age/disability, and reference EiE WG/hrp context."
+        },
+        {
+            "section_name": "Intervention Strategy",
+            "section_label": "2. Intervention Strategy",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 750,
+            "instructions": "Describe programme results aligned with the Collective Results Framework based on the plan: outcomes & outputs across pre-primary (target 10%), primary, secondary (target 20%) and teachers; gender-responsive approach (60% girls target), disability inclusion (10% of children with disabilities), MHPSS integration, INEE Minimum Standards (access, quality, capacity development), coordination & referrals (CP, GBV, gender, PSEA, disability), and AAP."
+        },
+        {
+            "section_name": "Gender, Disability Inclusion & Intersecting Inequalities Approach",
+            "section_label": "3. Gender, Disability Inclusion & Intersecting Inequalities Approach",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 500,
+            "instructions": "Summarize overall gender and disability inclusion approach, intersecting inequalities (IDPs, refugees, ethnic minorities, adolescent girls) strictly as planned. Include GBV prevention/mitigation/response with at least one GBV risk mitigation indicator and budget line; note IASC GAM application and reference number; engagement of women-led and DPOs; address data gaps."
+        },
+        {
+            "section_name": "Education Sector Coordination Mechanisms",
+            "section_label": "4. Education Sector Coordination Mechanisms",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 200,
+            "instructions": "Explain the education coordination mechanism, leads/co-leads, participation, LEG involvement, and coordination with other clusters/sectors (CP, GBV, Health, WASH)."
+        },
+        {
+            "section_name": "Grant Application Development Process",
+            "section_label": "5. Grant Application Development Process",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 300,
+            "instructions": "Describe proposal development process: notification dates, meetings, decisions, inclusion of government, LEG, donors; engagement of local groups (parents/caregivers, women-led orgs, disability orgs) and MHPSS stakeholders."
+        },
+        {
+            "section_name": "Grantee Selection Process",
+            "section_label": "6. Grantee Selection Process",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 300,
+            "instructions": "Outline inclusive, transparent, conflict-of-interest-avoiding process based on provided documentation: timeline, independent selection committee composition, criteria, solicitation, communication of decisions and adjudication of challenges. ."
+        },
+        {
+            "section_name": "Joint Monitoring and Reporting",
+            "section_label": "7. Joint Monitoring and Reporting",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 200,
+            "instructions": "Explain joint monitoring of outcomes/outputs strictly as planned: data collection, aggregation/analysis, storage; monitoring frequency; tools; responsible org per indicator; engagement of local/national orgs with expertise in gender, disability, MHPSS. Specify Lead Grantee."
+        },
+        {
+            "section_name": "Annex A: Map of ECW Grantee interventions",
+            "section_label": "Annex A: Map of ECW Grantee interventions",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Identify intervention locations and grantee footprints. If multiple grantees, show who works where. Include admin levels and coordinates to enable GIS mapping.",
+            "columns": [
+                {
+                    "name": "Grantee",
+                    "format_type": "text",
+                    "instructions": "Organization name implementing activities in the location."
+                },
+                {
+                    "name": "Intervention Zone / Site",
+                    "format_type": "text",
+                    "instructions": "Name of the locality/site (camp, settlement, school catchment, etc.)."
+                },
+                {
+                    "name": "Admin Level 1",
+                    "format_type": "text",
+                    "instructions": "Province/State/Region."
+                },
+                {
+                    "name": "Admin Level 2",
+                    "format_type": "text",
+                    "instructions": "District/County."
+                },
+                {
+                    "name": "Latitude",
+                    "format_type": "number",
+                    "instructions": "Decimal degrees."
+                },
+                {
+                    "name": "Longitude",
+                    "format_type": "number",
+                    "instructions": "Decimal degrees."
+                },
+                {
+                    "name": "Modality / Intervention Type",
+                    "format_type": "text",
+                    "instructions": "e.g., Community-based classes, School rehabilitation, MHPSS, Teacher support, Learning materials."
+                },
+                {
+                    "name": "Population Group",
+                    "format_type": "text",
+                    "instructions": "Host, IDPs, Refugees, Returnees (specify)."
+                },
+                {
+                    "name": "Target (Girls/Boys)",
+                    "format_type": "text",
+                    "instructions": "Planned reach by sex (e.g., 2,400 girls / 2,100 boys)."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Location 1",
+                    "instructions": "First intervention geography."
+                },
+                {
+                    "row_title": "Location 2",
+                    "instructions": "Second intervention geography."
+                }
+            ]
+        },
+        {
+            "section_name": "Annex B: Collective Results Framework",
+            "section_label": "Annex B1: Collective Results Framework (Programme-wide)",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Programme results with outcomes, outputs and SMART indicators disaggregated by sex, age and disability, aligned with narrative and budget, based on the Results Framework.",
+            "columns": [
+                {
+                    "name": "Result Level",
+                    "format_type": "text",
+                    "instructions": "Outcome or Output."
+                },
+                {
+                    "name": "Statement",
+                    "format_type": "text",
+                    "instructions": "Exact outcome/output statement."
+                },
+                {
+                    "name": "Indicator",
+                    "format_type": "text",
+                    "instructions": "SMART indicator (include sex/age/disability disaggregation as relevant)."
+                },
+                {
+                    "name": "Baseline",
+                    "format_type": "number",
+                    "instructions": "Starting value with date/source."
+                },
+                {
+                    "name": "Target (Girls/Boys)",
+                    "format_type": "text",
+                    "instructions": "Numeric targets split by sex."
+                },
+                {
+                    "name": "Target (Age bands)",
+                    "format_type": "text",
+                    "instructions": "Pre-primary / Primary / Secondary (or 3-5 / 6-11 / 12-17)."
+                },
+                {
+                    "name": "Target (Disability)",
+                    "format_type": "text",
+                    "instructions": "Include intended %/count of children with disabilities."
+                },
+                {
+                    "name": "Means of Verification",
+                    "format_type": "text",
+                    "instructions": "e.g., Partner reports, school records, PDM, attendance sheets."
+                },
+                {
+                    "name": "Frequency",
+                    "format_type": "text",
+                    "instructions": "Monthly/Quarterly/Semestral."
+                },
+                {
+                    "name": "Responsible Grantee",
+                    "format_type": "text",
+                    "instructions": "Lead for data collection on this indicator."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Outcome 1",
+                    "instructions": "Programme-level outcome."
+                },
+                {
+                    "row_title": "Output 1.1",
+                    "instructions": "Linked output."
+                }
+            ]
+        },
+        {
+            "section_name": "Annex B: Headcount",
+            "section_label": "Annex B2: Consolidated Headcount by Grantee",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Consolidated target headcount disaggregated by sex, age and disability for each grantee and location.",
+            "columns": [
+                {
+                    "name": "Grantee",
+                    "format_type": "text",
+                    "instructions": "Implementing organization."
+                },
+                {
+                    "name": "Admin Level 1",
+                    "format_type": "text",
+                    "instructions": "Province/Region."
+                },
+                {
+                    "name": "Admin Level 2",
+                    "format_type": "text",
+                    "instructions": "District/County."
+                },
+                {
+                    "name": "Girls (3-5 / 6-11 / 12-17)",
+                    "format_type": "text",
+                    "instructions": "Targets per age band for girls (e.g., 300/1,200/900)."
+                },
+                {
+                    "name": "Boys (3-5 / 6-11 / 12-17)",
+                    "format_type": "text",
+                    "instructions": "Targets per age band for boys."
+                },
+                {
+                    "name": "Children with Disabilities",
+                    "format_type": "number",
+                    "instructions": "Planned reach (count or %), specify method (e.g., WG-SS)."
+                },
+                {
+                    "name": "Teachers (F/M)",
+                    "format_type": "text",
+                    "instructions": "Female/Male teachers targeted (e.g., 120F/80M)."
+                },
+                {
+                    "name": "Notes",
+                    "format_type": "text",
+                    "instructions": "Clarifications (e.g., self-reported disability, screening planned)."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Grantee A",
+                    "instructions": "Enter totals for all sites in its footprint."
+                },
+                {
+                    "row_title": "Grantee B",
+                    "instructions": "Enter totals for all sites in its footprint."
+                }
+            ]
+        },
+        {
+            "section_name": "Annex C: Budgets",
+            "section_label": "Annex C: Detailed Budget (by Output and Cost Category)",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Budget aligned to outputs and activities with unit costs, quantities, totals, funding source split and cost-per-child based strictly on the financial plan.",
+            "columns": [
+                {
+                    "name": "Output / Activity",
+                    "format_type": "text",
+                    "instructions": "Reference to output and activity (e.g., Output 1.1 - CBEs established)."
+                },
+                {
+                    "name": "Cost Category",
+                    "format_type": "text",
+                    "instructions": "e.g., Personnel, Supplies, Training, MHPSS, WASH in schools, Accessibility/adaptive devices, M&E."
+                },
+                {
+                    "name": "Unit",
+                    "format_type": "text",
+                    "instructions": "Teacher/month, kit, session, school, etc."
+                },
+                {
+                    "name": "Unit Cost (USD)",
+                    "format_type": "number",
+                    "instructions": "Cost per unit."
+                },
+                {
+                    "name": "Quantity",
+                    "format_type": "number",
+                    "instructions": "Number of units."
+                },
+                {
+                    "name": "Subtotal (USD)",
+                    "format_type": "number",
+                    "instructions": "Unit cost × Quantity."
+                },
+                {
+                    "name": "Funding Source",
+                    "format_type": "text",
+                    "instructions": "ECW / Co-funding (specify donor)."
+                },
+                {
+                    "name": "ECW Share (USD)",
+                    "format_type": "number",
+                    "instructions": "Portion financed by ECW."
+                },
+                {
+                    "name": "Cost per Child (USD)",
+                    "format_type": "number",
+                    "instructions": "Subtotal divided by target beneficiaries for the activity."
+                },
+                {
+                    "name": "Grantee",
+                    "format_type": "text",
+                    "instructions": "Responsible organization for spend."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Output 1.1 - Activity A",
+                    "instructions": "First budget line under Output 1.1."
+                },
+                {
+                    "row_title": "Output 1.1 - Activity B",
+                    "instructions": "Second budget line under Output 1.1."
+                }
+            ]
+        },
+        {
+            "section_name": "Annex D: Risk Matrix",
+            "section_label": "Annex D1: Programme Risk Matrix",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Complete risk assessment including safeguarding and PSEA-related risks based on the risk register; provide ratings and mitigation actions.",
+            "columns": [
+                {
+                    "name": "Risk Category",
+                    "format_type": "text",
+                    "instructions": "Operational, Contextual, Fiduciary, Safeguarding/PSEA, Security, MHPSS, Inclusion."
+                },
+                {
+                    "name": "Risk Description",
+                    "format_type": "text",
+                    "instructions": "Concise statement of the risk."
+                },
+                {
+                    "name": "Likelihood (Low/Med/High)",
+                    "format_type": "text",
+                    "instructions": "Qualitative rating (or 1-3 scale)."
+                },
+                {
+                    "name": "Impact (Low/Med/High)",
+                    "format_type": "text",
+                    "instructions": "Qualitative rating (or 1-3 scale)."
+                },
+                {
+                    "name": "Mitigation / Controls",
+                    "format_type": "text",
+                    "instructions": "Specific actions and controls to reduce risk (incl. GBV risk mitigation)."
+                },
+                {
+                    "name": "Residual Risk",
+                    "format_type": "text",
+                    "instructions": "Expected risk after mitigation."
+                },
+                {
+                    "name": "Owner",
+                    "format_type": "text",
+                    "instructions": "Team/Grantee responsible for mitigation."
+                },
+                {
+                    "name": "Timeline / Trigger",
+                    "format_type": "text",
+                    "instructions": "When actions are implemented; monitoring triggers."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Operational Risk 1",
+                    "instructions": "Example: access constraints."
+                },
+                {
+                    "row_title": "Safeguarding/PSEA Risk 1",
+                    "instructions": "Example: complaints mechanism coverage."
+                }
+            ]
+        },
+        {
+            "section_name": "Project Information",
+            "section_label": "Project Information",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Fill the table strictly using the provided project information. Do not infer or invent data.",
+            "columns": [
+                {
+                    "name": "Field",
+                    "format_type": "text",
+                    "instructions": "Field Name"
+                },
+                {
+                    "name": "Value",
+                    "format_type": "text",
+                    "instructions": "Enter the value for this field."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "FER Application Title",
+                    "instructions": "FER Application Title"
+                },
+                {
+                    "row_title": "Country/Context",
+                    "instructions": "Country/Context"
+                },
+                {
+                    "row_title": "Criteria for application (check all that apply)",
+                    "instructions": "Criteria for application (check all that apply)"
+                },
+                {
+                    "row_title": "Coordination Contacts",
+                    "instructions": "Contacts of agencies coordinating grant application"
+                },
+                {
+                    "row_title": "Resident/Humanitarian Coordinator",
+                    "instructions": "Resident/Humanitarian Coordinator (name, title, email)"
+                },
+                {
+                    "row_title": "FER Funding Request (USD)",
+                    "instructions": "FER Funding Request (USD)"
+                },
+                {
+                    "row_title": "Duration (Months)",
+                    "instructions": "Duration (# months)"
+                },
+                {
+                    "row_title": "Percentage of current funding gap to be financed by ECW (%)",
+                    "instructions": "Percentage of current funding gap to be financed by ECW (%)"
+                }
+            ]
+        }
+    ]
+}

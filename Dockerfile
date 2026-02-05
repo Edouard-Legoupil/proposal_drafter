@@ -1,95 +1,139 @@
+
 # ============================================
 # Stage 1: Frontend builder (Vite/React)
 # ============================================
 FROM node:20-alpine AS frontend-builder
 
 WORKDIR /app
+# Use separate copy to leverage Docker layer caching on npm installs
 COPY frontend/package*.json ./
-RUN npm install && echo "✅ NPM modules installed"
+RUN npm ci && echo "✅ NPM modules installed"
 
 COPY frontend/ .
-RUN npm run build && echo "✅ Frontend build complete" && ls -l dist/
+RUN npm run build && echo "✅ Frontend build complete"
 
 
 # ============================================
-# Stage 2: Final image with FastAPI only
+# Stage 2: Final Python application image
 # ============================================
 FROM python:3.11-slim AS final
 
-# Install OS dependencies including supervisor
-RUN apt-get update && \
-    apt-get install -y curl supervisor dnsutils gettext-base procps net-tools util-linux && \
-    apt-get clean
+# Install OS dependencies (only what we need)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    dnsutils \
+    procps \
+    net-tools \
+    util-linux \
+    build-essential \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Create a working directory
+# ------------------------------------------------
+# Create app directory
+# ------------------------------------------------
 WORKDIR /app
 
-# Create a virtual environment
+# ------------------------------------------------
+# Create ONE Python venv used by the whole image
+# ------------------------------------------------
 RUN python -m venv /venv
 ENV PATH="/venv/bin:$PATH"
-
-# Set the PYTHONPATH to include the /app directory
-# This allows Python to find the 'backend' module.
-# The `PYTHONPATH` will be set to `/app`
-# This allows Python to find the 'backend' module and prevents the warning.
+ENV PYTHONUNBUFFERED=1
+# Let Python resolve 'backend' via /app
 ENV PYTHONPATH=/app
 
-# Create the backend directory inside the container
-RUN mkdir backend
-
-# Copy the requirements file into the new backend directory
+# ------------------------------------------------
+# Dependency install (use requirements.txt first)
+# ------------------------------------------------
+# Copy only requirements first to maximize cache hits
+RUN mkdir -p backend
 COPY backend/requirements.txt backend/
 
-# Install dependencies from the requirements file
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir uvicorn fastapi gunicorn -r backend/requirements.txt && \
-    echo "✅ Python packages installed"
+RUN pip install --upgrade pip \
+    && pip install --no-cache-dir uvicorn fastapi gunicorn \
+    && pip install --no-cache-dir -r backend/requirements.txt
 
-# Copy all backend source code EXCEPT the knowledge folder into the backend folder
+# ------------------------------------------------
+# Optional: NLTK data
+# ------------------------------------------------
+ENV NLTK_DATA=/app/nltk_data
+RUN mkdir -p $NLTK_DATA \
+    && python - <<'PY'
+import nltk, os
+path = os.getenv("NLTK_DATA", "/app/nltk_data")
+nltk.data.path.append(path)
+try:
+    nltk.download("punkt", download_dir=path)
+    nltk.download("punkt_tab", download_dir=path)
+    print("✅ NLTK data downloaded")
+except Exception as e:
+    print("⚠️ NLTK download failed:", e)
+PY
+
+# ------------------------------------------------
+# Copy backend source code
+# ------------------------------------------------
 COPY backend/ backend/
 
-# confirm
-RUN which uvicorn && uvicorn --version
+# IMPORTANT: ensure no local virtualenv sneaks in
+RUN rm -rf /app/backend/venv || true
 
-# Copy frontend build into app/frontend (served by FastAPI)
+# ------------------------------------------------
+# Copy frontend static build files
+# ------------------------------------------------
 COPY --from=frontend-builder /app/dist /app/frontend/dist
 
-# Copy frontend build if using nginx
-# COPY --from=frontend-builder /app/dist /usr/share/nginx/html
+# ------------------------------------------------
+# Create directories for logs & data
+# ------------------------------------------------
+RUN mkdir -p /app/log /app/proposal-documents   \
+    && chmod -R 755 /app/log /app/proposal-documents /app/backend/knowledge
 
-# Create a logs directory for the application and data
-RUN mkdir -p /app/log /app/proposal-documents /app/knowledge && \
-    chmod -R 755 /app/log /app/proposal-documents /app/knowledge
+# Copy the knowledge files (if any) for your app
+COPY ./backend/knowledge/combine_example.json /app/backend/knowledge/
 
-# Copy the knowledge files for crewai
-COPY ./backend/knowledge/combine_example.json /app/knowledge/
+# Ensure stdout/stderr logging works (azure collects container stdout/stderr automatically)
+# You generally don't need to chmod /dev/stdout|/dev/stderr; leave them as-is
+# RUN chmod 777 /dev/stdout /dev/stderr
 
-# Let's confirm the file exists in the right place
-RUN echo "Checking knowledge dir after copy:" &&  \
-    ls -la /app/knowledge
-
-
-## ensure logs can be written
-RUN chmod 777 /dev/stdout /dev/stderr
-
-# Expose Cloud Run default port
+# ------------------------------------------------
+# Expose the container port (informational)
+# Azure App Service will route to the container port set via WEBSITES_PORT in App Settings
+# ------------------------------------------------
 EXPOSE 8080
 
-##
-# Copy custom nginx config
-#COPY nginx-proxy/nginx.conf /etc/nginx/conf.d/default.conf
-# Copy supervisor config
-# COPY supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-# CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
-
-# ============================================
-# Stage 3: Start FastAPI + Nginx in parallel 
-# ============================================
-
-## using a dedicated script..
-# Copy the startup script and make it executable
+# ------------------------------------------------
+# Add start script
+# ------------------------------------------------
 COPY supervisor/start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
-CMD ["/usr/local/bin/start.sh"]
+# ------------------------------------------------
+# Allow for SSH
+# ------------------------------------------------
 
+
+# Install OpenSSH server
+RUN apt-get update && apt-get install -y --no-install-recommends openssh-server \
+ && rm -rf /var/lib/apt/lists/*
+
+# Generate host keys and prepare runtime dir
+RUN ssh-keygen -A && mkdir -p /var/run/sshd
+
+# Azure tunnel expects this credential (used only via the localhost tunnel)
+RUN echo "root:Docker!" | chpasswd
+
+# Provide Azure-compatible SSH config (Port 2222, compatible ciphers/MACs)
+COPY sshd_config /etc/ssh/sshd_config
+
+
+#  expose 2222
+COPY sshd_config /etc/ssh/sshd_config
+EXPOSE 2222
+
+
+# ------------------------------------------------
+# Default command
+# ------------------------------------------------
+CMD ["/usr/local/bin/start.sh"]

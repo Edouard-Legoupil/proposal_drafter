@@ -1,0 +1,80 @@
+@import './scss/style.scss';
+
+/*
+        Josh's Custom CSS Reset
+        https://www.joshwcomeau.com/css/custom-css-reset/
+*/
+
+*, *::before, *::after {
+        box-sizing: border-box;
+}
+
+* {
+        margin: 0;
+        padding: 0;
+}
+
+body {
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+        overflow: hidden;
+}
+
+img, picture, video, canvas, svg {
+        display: block;
+        max-width: 100%;
+}
+
+input, button, textarea, select {
+        font: inherit;
+}
+
+input::-ms-reveal, input::-ms-clear {
+        display: none;
+}
+
+p, h1, h2, h3, h4, h5, h6 {
+        overflow-wrap: break-word;
+}
+
+p {
+        text-wrap: pretty;
+}
+
+h1, h2, h3, h4, h5, h6 {
+        text-wrap: balance;
+}
+
+dialog:modal {
+        max-height: 100svh;
+        max-width: 100svw;
+}
+
+#root, #__next {
+        isolation: isolate;
+
+        height: 100svh;
+}
+
+::-webkit-scrollbar {
+        width: 8px;
+}
+
+::-webkit-scrollbar-track {
+        background: hsl(253, 39%, 91%);
+        border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+        background: hsl(253, 15%, 71%);
+        border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+        background: #555;
+}
+
+@font-face {
+        font-family: "Noto";
+        src: url("assets/fonts/NotoSans-VariableFont_wdth,wght.ttf");
+}

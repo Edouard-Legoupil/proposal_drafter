@@ -30,7 +30,7 @@
     },
     {
       "section_name": "5. Strategic Alignment",
-      "instructions": "Analyze overlaps between the donor's priorities and UNHCR 16 strategic outcomes: OA1-Access to territory, registration and documentation, OA2-Status determination, OA3-Protection policy and law, OA4-Gender-based violence, OA5-Child protection, OA6-Safety and access to justice, OA7-Community engagement and women empowerment, OA8-Well-being and basic needs, OA9-Sustainable housing and settlements, OA10-Healthy lives, OA11-Education, OA12-Clean water, sanitation and hygiene, OA13-Self-reliance, economic inclusion and livelihoods, OA14-Voluntary return and sustainable reintegration, OA15-Resettlement and complementary pathways, OA16-Local integration and other local solutions. Highlight synergies, alignment with UNHCR's operational capacity, and entry points for proposals. Ensure actionable insights to strengthen strategic positioning.",
+      "instructions": "Analyze overlaps between the donor's priorities and UNHCR 16 strategic outcomes (OA1-Access to territory, registration and documentation, OA2-Status determination, OA3-Protection policy and law, OA4-Gender-based violence, OA5-Child protection, OA6-Safety and access to justice, OA7-Community engagement and women empowerment, OA8-Well-being and basic needs, OA9-Sustainable housing and settlements, OA10-Healthy lives, OA11-Education, OA12-Clean water, sanitation and hygiene, OA13-Self-reliance, economic inclusion and livelihoods, OA14-Voluntary return and sustainable reintegration, OA15-Resettlement and complementary pathways, OA16-Local integration and other local solutions). IMPORTANT: Explicitly identify and name the donor's specific strategic frameworks, foreign policy initiatives (e.g., Belt and Road Initiative, Global Development Initiative, TICAD, Indo-Pacific Strategy), and global commitments. Highlight synergies, alignment with UNHCR's operational capacity, and entry points for proposals. Ensure actionable insights to strengthen strategic positioning.",
       "word_limit": 750,
       "key_word": "donor UNHCR strategic alignment"
     },
@@ -63,6 +63,12 @@
       "instructions": "Detail the donor's approach to risk management, including their tolerance for reputational, operational, and financial risks. Specify their due diligence requirements, anti-fraud and corruption policies, and any mandatory training for partners. Outline their reporting and audit standards, including frequency and required formats.",
       "word_limit": 400,
       "key_word": "donor risk management compliance due diligence audit requirements"
+    },
+    {
+      "section_name": "11. Specific Requirements",
+      "instructions": "Document mandatory requirements: (1) Visual identity such as building signage, equipment, distributed goods, operational materials, staff clothing) and any known exemptions or sensitivities; (2) Reporting requirements, interim and final report expectations; (3) Visibility - communication and visibility obligations, coordination with donor communication team; (4) Resilience Marker - donor's emphasis on resilience, nexus, and transition approaches; (5) Specific priorities - current donor Humanitarian Implementation Plans (HIPs), geographic/thematic priorities for the year.",
+      "word_limit": 600,
+      "key_word": "visual identity reporting requirements resilience marker HIP priorities"
     }
   ]
 }

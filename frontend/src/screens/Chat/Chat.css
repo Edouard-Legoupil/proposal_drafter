@@ -749,4 +749,37 @@
 .Chat_proposalContainer th {
   background-color: #f2f2f2;
 }
-    
+
+.Chat_docTypeSwitcher {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.Chat_docTypeButton {
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid #0072bc;
+    background: white;
+    color: #0072bc;
+    cursor: pointer;
+    font-family: "Noto";
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.Chat_docTypeButton.active {
+    background: #0072bc;
+    color: white;
+}
+
+.Chat_docTypeButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: #ccc;
+    color: #ccc;
+}
+
+.Chat_docTypeButton:not(.active):not(:disabled):hover {
+    background: #f0f7ff;
+}

@@ -1,0 +1,277 @@
+# ============================================
+# Azure Container Apps Deployment Workflow
+# ============================================
+# This workflow builds a multi-stage Docker image (frontend + backend),
+# pushes it to Azure Container Registry, and deploys to Azure Container Apps.
+# 
+# Dockerfile stages:
+# 1. Frontend builder (Node.js 20 + Vite/React)
+# 2. Final image (Python 3.11 + FastAPI + Gunicorn/Uvicorn)
+#
+# More info: https://github.com/Azure/actions
+
+name: Build and Deploy Container to Azure - propalgen2
+
+on:
+  push:
+    branches:
+      - main_dev
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  # Azure Configuration
+  AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RG }}
+  ACR_NAME: ${{ secrets.ACR_NAME }}
+  CONTAINER_APP_NAME: ${{ secrets.CONTAINER_APP_NAME || 'proposalgen-app' }}
+  WEB_APP_NAME: ${{ secrets.WEB_APP_NAME || 'propalgen2' }}
+  
+  # Docker Image Configuration
+  IMAGE_NAME: backend
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  build-and-push:
+    name: Build Docker Image and Push to ACR
+    runs-on: ubuntu-latest
+    
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            image=moby/buildkit:latest
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to Azure Container Registry
+        run: |
+          az acr login --name ${{ env.ACR_NAME }}
+
+      - name: Extract Docker metadata
+        id: meta
+        run: |
+          IMAGE_FULL="${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}"
+          IMAGE_LATEST="${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest"
+          echo "tags=${IMAGE_FULL}" >> $GITHUB_OUTPUT
+          echo "latest=${IMAGE_LATEST}" >> $GITHUB_OUTPUT
+          echo "Building image: ${IMAGE_FULL}"
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.tags }}
+            ${{ steps.meta.outputs.latest }}
+          cache-from: type=registry,ref=${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:buildcache,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+
+      - name: Verify image in ACR
+        run: |
+          echo "Verifying image in ACR..."
+          az acr repository show --name ${{ env.ACR_NAME }} --image ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          echo "✅ Image successfully pushed to ACR"
+
+  deploy-container-apps:
+    name: Deploy to Azure Container Apps
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get ACR credentials
+        id: acr-creds
+        run: |
+          ACR_USERNAME=$(az acr credential show --name ${{ env.ACR_NAME }} --query username -o tsv)
+          ACR_PASSWORD=$(az acr credential show --name ${{ env.ACR_NAME }} --query passwords[0].value -o tsv)
+          echo "::add-mask::$ACR_PASSWORD"
+          echo "username=${ACR_USERNAME}" >> $GITHUB_OUTPUT
+          echo "password=${ACR_PASSWORD}" >> $GITHUB_OUTPUT
+
+      - name: Deploy to Azure Container Apps
+        run: |
+          echo "Deploying container to Azure Container Apps..."
+          
+          az containerapp update \
+            --name ${{ env.CONTAINER_APP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --image ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} \
+            --set-env-vars \
+              WEBSITES_PORT=8080 \
+              WEB_CONCURRENCY=2 \
+              PYTHONUNBUFFERED=1 \
+              PYTHONDONTWRITEBYTECODE=1 \
+              PYTHONPATH=/app \
+              NLTK_DATA=/app/nltk_data
+          
+          echo "✅ Deployment complete"
+
+      - name: Get Container App URL
+        id: app-url
+        run: |
+          FQDN=$(az containerapp show \
+            --name ${{ env.CONTAINER_APP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --query properties.configuration.ingress.fqdn -o tsv)
+          echo "url=https://${FQDN}" >> $GITHUB_OUTPUT
+          echo "🌐 Container App URL: https://${FQDN}"
+
+      - name: Health check
+        run: |
+          echo "Performing health check..."
+          sleep 30  # Wait for container to start
+          
+          HEALTH_URL="${{ steps.app-url.outputs.url }}/health"
+          echo "Checking: ${HEALTH_URL}"
+          
+          for i in {1..10}; do
+            if curl -f -s "${HEALTH_URL}" > /dev/null; then
+              echo "✅ Health check passed"
+              exit 0
+            fi
+            echo "Attempt $i/10 failed, waiting..."
+            sleep 10
+          done
+          
+          echo "⚠️ Health check failed after 10 attempts"
+          echo "Note: Application may still be starting up"
+
+  deploy-web-app:
+    name: Deploy to Azure Web App
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Configure Web App for Container
+        run: |
+          echo "Configuring Web App for container deployment..."
+          
+          # Set container settings
+          az webapp config container set \
+            --name ${{ env.WEB_APP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --docker-custom-image-name ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} \
+            --docker-registry-server-url https://${{ env.ACR_NAME }}.azurecr.io \
+            --docker-registry-server-user ${{ env.ACR_NAME }} \
+            --docker-registry-server-password $(az acr credential show --name ${{ env.ACR_NAME }} --query passwords[0].value -o tsv)
+          
+          echo "✅ Container configuration updated"
+
+      - name: Set Web App environment variables
+        run: |
+          echo "Setting environment variables..."
+          
+          az webapp config appsettings set \
+            --name ${{ env.WEB_APP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --settings \
+              WEBSITES_PORT=8080 \
+              WEB_CONCURRENCY=2 \
+              PYTHONUNBUFFERED=1 \
+              PYTHONDONTWRITEBYTECODE=1 \
+              PYTHONPATH=/app \
+              NLTK_DATA=/app/nltk_data \
+              DOCKER_ENABLE_CI=true
+          
+          echo "✅ Environment variables set"
+
+      - name: Restart Web App
+        run: |
+          echo "Restarting Web App to apply changes..."
+          az webapp restart \
+            --name ${{ env.WEB_APP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }}
+          echo "✅ Web App restarted"
+
+      - name: Get Web App URL
+        id: webapp-url
+        run: |
+          HOSTNAME=$(az webapp show \
+            --name ${{ env.WEB_APP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --query defaultHostName -o tsv)
+          echo "url=https://${HOSTNAME}" >> $GITHUB_OUTPUT
+          echo "🌐 Web App URL: https://${HOSTNAME}"
+
+      - name: Health check
+        run: |
+          echo "Performing health check..."
+          sleep 45  # Web App takes longer to start
+          
+          HEALTH_URL="${{ steps.webapp-url.outputs.url }}/health"
+          echo "Checking: ${HEALTH_URL}"
+          
+          for i in {1..15}; do
+            if curl -f -s "${HEALTH_URL}" > /dev/null; then
+              echo "✅ Health check passed"
+              exit 0
+            fi
+            echo "Attempt $i/15 failed, waiting..."
+            sleep 10
+          done
+          
+          echo "⚠️ Health check failed after 15 attempts"
+          echo "Note: Application may still be starting up"
+
+  notify:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [build-and-push, deploy-container-apps, deploy-web-app]
+    if: always()
+    
+    steps:
+      - name: Deployment Status
+        run: |
+          echo "============================================"
+          echo "📦 Deployment Summary"
+          echo "============================================"
+          echo "Image: ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}"
+          echo ""
+          echo "🎯 Deployment Targets:"
+          echo "  • Container App: ${{ env.CONTAINER_APP_NAME }}"
+          echo "  • Web App: ${{ env.WEB_APP_NAME }}"
+          echo "  • Resource Group: ${{ env.AZURE_RESOURCE_GROUP }}"
+          echo ""
+          echo "📊 Job Status:"
+          echo "  • Build & Push: ${{ needs.build-and-push.result }}"
+          echo "  • Container Apps Deploy: ${{ needs.deploy-container-apps.result }}"
+          echo "  • Web App Deploy: ${{ needs.deploy-web-app.result }}"
+          echo "============================================"

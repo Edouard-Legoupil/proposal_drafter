@@ -31,8 +31,8 @@ def scrape_url(url: str) -> str:
         if parsed_url.netloc == "www.unhcr.org" or is_unhcr_pdfjs:
             logger.info("UNHCR URL detected, adding authentication headers and delay.")
             time.sleep(10)  # Add a 10-second delay
-            client_id = os.getenv("CF-Access-Client-Id")
-            client_secret = os.getenv("CF-Access-Client-Secret")
+            client_id = os.getenv("cfAccessClientId")
+            client_secret = os.getenv("cfAccessClientSecret")
             if client_id and client_secret:
                 auth_token = f"{client_id}:{client_secret}"
                 headers["Authorization"] = f"Bearer {auth_token}"

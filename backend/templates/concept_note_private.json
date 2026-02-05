@@ -1,0 +1,75 @@
+{
+    "template_type": "Concept Note",
+    "donors": [
+        "Private Sector (Proactive Outreach)"
+    ],
+    "special_requirements": {
+        "instructions": [
+            "Strictly base all content on the provided inputs and knowledge base.",
+            "Do not invent or hallucinate facts, figures, or dates.",
+            "If information is missing, explicitly state that it is not available in the context.",
+            "Ensure tone, style, and formatting match a professional humanitarian concept note.",
+            "when referencing donor, use donor name and never  donor_id",
+            "when referencing outcomes, use outcome name and never  outcome_id",
+            "when referencing, field context, use field_context name and never field context_id"
+        ]
+    },
+    "sections": [
+        {
+            "section_name": "Summary",
+            "word_limit": 500,
+            "format_type": "text",
+            "instructions": "Briefly summarize the crisis/emergency context, humanitarian needs, target population, and key proposed activities. Focus on the core value proposition of the project.",
+            "mandatory": true
+        },
+        {
+            "section_name": "Rationale",
+            "word_limit": 300,
+            "format_type": "text",
+            "instructions": "Justify the project: What is the emergency? Why is this response necessary now? What is the gap being addressed?",
+            "mandatory": true
+        },
+        {
+            "section_name": "Project Description",
+            "word_limit": 500,
+            "format_type": "text",
+            "instructions": "Describe the main proposed interventions, expected outputs, and intended impact on the affected population.",
+            "mandatory": true
+        },
+        {
+            "section_name": "Implementation and Coordination Arrangements",
+            "word_limit": 300,
+            "format_type": "text",
+            "instructions": "Briefly describe coordination with government and other humanitarian actors, and the roles of key partners.",
+            "mandatory": true
+        },
+        {
+            "section_name": "Budget Estimate",
+            "instructions": "Provide a high-level budget breakdown by major category.",
+            "format_type": "table",
+            "columns": [
+                {
+                    "name": "Category",
+                    "format_type": "text",
+                    "instructions": "Major budget category (e.g., Staffing, Supplies, Grants)."
+                },
+                {
+                    "name": "Estimated Cost (USD)",
+                    "format_type": "number",
+                    "instructions": "High-level estimate."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Total Direct Costs",
+                    "instructions": "Estimate total direct project costs."
+                },
+                {
+                    "row_title": "Support Costs",
+                    "instructions": "Estimate indirect/support costs."
+                }
+            ],
+            "mandatory": true
+        }
+    ]
+}

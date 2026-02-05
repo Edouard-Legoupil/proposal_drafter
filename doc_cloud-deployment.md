@@ -20,10 +20,10 @@ The recommended architecture uses a single-container model where the FastAPI bac
 
 The deployment is managed through Infrastructure as Code (IaC) using Bicep and a CI/CD pipeline using GitHub Actions. This approach ensures that deployments are automated, repeatable, and version-controlled.
 
-- **Infrastructure as Code (IaC):** The Bicep templates in the `infrastructure/` directory define all the necessary Azure resources. The templates are parameterized to allow for the deployment of different environment sizes (e.g., "Testing," "Expanded").
+- **Infrastructure as Code (IaC):** The Bicep templates in the `infra/` directory define all the necessary Azure resources. The templates are parameterized to allow for the deployment of different environment sizes (e.g., "Testing," "Expanded").
 - **CI/CD Pipeline:** The GitHub Actions workflow in `.github/workflows/deploy.yml` automates the process of building the Docker image, pushing it to Azure Container Registry, and deploying the Bicep infrastructure.
 
-For detailed instructions on manual deployment and the structure of the Bicep files, please refer to the `infrastructure/README.md` file.
+For detailed instructions on manual deployment and the structure of the Bicep files, please refer to the `infra/README.md` file.
 
 ## 3. Cost Estimation
 

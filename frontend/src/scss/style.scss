@@ -1,0 +1,174 @@
+// General styles
+@import 'base.scss';
+
+@import "../../node_modules/bootstrap/scss/tables";
+@import "../../node_modules/bootstrap/scss/forms";
+@import "../../node_modules/bootstrap/scss/accordion";
+@import "../../node_modules/bootstrap/scss/buttons";
+@import "../../node_modules/bootstrap/scss/transitions";
+@import "../../node_modules/bootstrap/scss/dropdown";
+@import "../../node_modules/bootstrap/scss/button-group";
+@import "../../node_modules/bootstrap/scss/nav";
+@import "../../node_modules/bootstrap/scss/navbar";
+@import "../../node_modules/bootstrap/scss/card";
+@import "../../node_modules/bootstrap/scss/breadcrumb";
+@import "../../node_modules/bootstrap/scss/pagination";
+@import "../../node_modules/bootstrap/scss/badge";
+@import "../../node_modules/bootstrap/scss/alert";
+@import "../../node_modules/bootstrap/scss/progress";
+@import "../../node_modules/bootstrap/scss/list-group";
+@import "../../node_modules/bootstrap/scss/close";
+@import "../../node_modules/bootstrap/scss/toasts";
+@import "../../node_modules/bootstrap/scss/modal";
+@import "../../node_modules/bootstrap/scss/tooltip";
+@import "../../node_modules/bootstrap/scss/popover";
+@import "../../node_modules/bootstrap/scss/carousel";
+@import "../../node_modules/bootstrap/scss/spinners";
+@import "../../node_modules/bootstrap/scss/offcanvas";
+@import "../../node_modules/bootstrap/scss/placeholders";
+
+/* Storybook Frames styles start */
+
+/* Hide the "Default" column header */
+.docblock-argstable .docblock-argstable-head th:nth-child(3) {
+  display: none !important;
+}
+
+/* Hide the "Default" column cells in the body */
+.docblock-argstable .docblock-argstable-body td:nth-child(3) {
+  display: none !important;
+}
+
+#hero-component~.sbdocs,
+#carousel-variations~.sbdocs,
+#image-slider~.sbdocs,
+#navigation-components~.sbdocs {
+  position: relative;
+  right: 50%;
+  left: 50%;
+  -webkit-box-flex: 0;
+  -webkit-flex: 0 0 100vw;
+  -ms-flex: 0 0 100vw;
+  flex: 0 0 100vw;
+  width: 95vw;
+  max-width: none;
+  margin-right: -50vw !important;
+  margin-left: -47.5vw !important;
+}
+
+#cookies-message~.sbdocs {
+  .cookies {
+    position: static;
+  }
+}
+
+#logo~.sbdocs {
+  background: $black-05;
+}
+
+.sbdocs {
+  .modal {
+    display: block;
+    position: static;
+    opacity: 1 !important;
+    padding-top: 3rem;
+  }
+
+  .sbdocs-content,
+  .sbdocs.sbdocs-content {
+
+    pre {
+      font-size: 14px;
+    }
+
+    &:not(:has(.docs-story)) {
+      p, li {
+        font-size: 16px;
+      }
+
+      h1, h2, h3, h4, h5, h6, p, li{
+        color: $black;
+      }
+    }
+  }
+}
+
+/* Storybook Frames styles end */
+
+// Custom accordion stylesheet
+// @import '../stories/Components/UIcomponents/Accordion/Accordion.scss';
+
+// Buttons styles
+// @import '../stories/Components/UIcomponents/Buttons/Button.scss';
+
+// Badge styles
+// @import '../stories/Components/UIcomponents/Badge/Badge.scss';
+
+// Alert styles
+// @import '../stories/Components/UIcomponents/Alert/Alert.scss';
+
+//ProgressBar styles
+// @import '../stories/Components/UIcomponents/ProgressBar/ProgressBar.scss';
+
+//Icons styles
+// @import "../stories/Foundation/Icons/icons.scss";
+
+// Breadcrumbs styles
+// @import '../stories/Components/UIcomponents/Breadcrumb/Breadcrumb.scss';
+
+// Forms styles
+// @import '../stories/Components/UIcomponents/Forms/Forms.scss';
+
+// Tabs styles
+// @import '../stories/Components/UIcomponents/Tabs/Tabs.scss';
+
+// Taxonomy styles
+// @import '../stories/Components/UIcomponents/Tags/Tags.scss';
+
+// Pagination styles
+// @import '../stories/Components/UIcomponents/Pagination/Pagination.scss';
+
+// Links styles
+// @import '../stories/Components/UIcomponents/Links/Link.scss';
+
+// Tables styles
+// @import '../stories/Components/UIcomponents/Table/Table.scss';
+
+// Search Control styles
+// @import '../stories/Components/UIcomponents/Search/Search.scss';
+
+// Pullout boxes styles
+// @import '../stories/Components/UIcomponents/PulloutBox/PulloutBox.scss';
+
+// Slider controls styles
+// @import '../stories/Components/UIcomponents/Slider/Controls/SliderControls.scss';
+
+// Hero sections styles
+// @import '../stories/Components/UIcomponents/Hero/Hero.scss';
+
+// ImageSlider styles
+// @import '../stories/Components/UIcomponents/Slider/ImageSlider.scss';
+
+// Articles styles
+// @import '../stories/Components/UIcomponents/Article/Article.scss';
+
+// Modal styles
+// @import '../stories/Components/UIcomponents/Modal/Modal.scss';
+
+// Carousel styles
+// @import '../stories/Components/UIcomponents/Carousel/Carousel.scss';
+
+// Latest view styles
+// @import '../stories/Components/UIcomponents/Views/Views.scss';
+
+// Blocks styles
+// @import '../stories/Components/UIcomponents/Blocks/Blocks.scss';
+
+// Footer styles
+// @import '../stories/Components/UIcomponents/Navigation/Footer/Footer.scss';
+
+// Header styles
+// @import '../stories/Components/UIcomponents/Navigation/Header/scss/header.scss';
+
+// Popover styles
+// @import '../stories/Components/UIcomponents/Popovers/popover.scss';

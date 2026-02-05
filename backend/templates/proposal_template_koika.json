@@ -1,0 +1,219 @@
+{
+    "template_type": "Proposal",
+    "donors": [
+        "Republic of Korea - Ministry of Foreign Affairs",
+        "Republic of Korea - Korea International Cooperation Agency"
+    ],
+    "special_requirements": {
+        "instructions": [
+            "Show UNHCR's unique capacity and access",
+            "Strictly base all content on the provided inputs and knowledge base.",
+            "Do not invent or hallucinate facts, figures, or dates.",
+            "If information is missing, explicitly state that it is not available in the context.",
+            "Ensure tone, style, and formatting match a professional humanitarian proposal.",
+            "when referencing donor, use donor name and never  donor_id",
+            "when referencing outcomes, use outcome name and never  outcome_id",
+            "when referencing, field context, use field_context name and never field context_id"
+        ]
+    },
+    "sections": [
+        {
+            "section_name": "Project Information",
+            "section_label": "Project Information",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Fill the table strictly using the provided project information. Do not infer or invent data.",
+            "columns": [
+                {
+                    "name": "Field",
+                    "format_type": "text",
+                    "instructions": "Field Name"
+                },
+                {
+                    "name": "Value",
+                    "format_type": "text",
+                    "instructions": "Enter the value for this field."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Proposal Title",
+                    "instructions": "Proposal Title"
+                },
+                {
+                    "row_title": "Total Budget (USD)",
+                    "instructions": "Total Budget (USD)"
+                },
+                {
+                    "row_title": "Implementation Period",
+                    "instructions": "Implementation Period"
+                },
+                {
+                    "row_title": "Number of Beneficiaries",
+                    "instructions": "Number of Beneficiaries"
+                }
+            ]
+        },
+        {
+            "section_name": "cover_page",
+            "section_label": "Cover Page",
+            "format_type": "fixed_text",
+            "fixed_text": "Proposal to the Government of the Republic of Korea\nUNHCR",
+            "mandatory": true
+        },
+        {
+            "section_name": "background",
+            "section_label": "Background",
+            "section_parent": "Operational Context",
+            "format_type": "text",
+            "word_limit": 300,
+            "instructions": "Summarize the crisis context, needs, and rationale for intervention using ONLY provided context. Include latest figures, geography, affected groups, and key challenges as available in the data.",
+            "mandatory": true
+        },
+        {
+            "section_name": "operational_context",
+            "section_label": "Operational Context",
+            "section_parent": "Operational Context",
+            "format_type": "text",
+            "word_limit": 250,
+            "instructions": "Describe current operations, partners, coordination mechanisms, and alignment with HRP/CRP/UNHCR strategies.",
+            "mandatory": true
+        },
+        {
+            "section_name": "achievement",
+            "section_label": "UNHCR Achievements",
+            "format_type": "text",
+            "word_limit": 250,
+            "instructions": "Highlight key achievements relevant to this proposal: outputs delivered, coverage, lessons learned, and impact evidence based on available records.",
+            "mandatory": true
+        },
+        {
+            "section_name": "implementation_areas",
+            "section_label": "Implementation Areas",
+            "format_type": "text",
+            "word_limit": 150,
+            "instructions": "List target implementation areas and reference an operational map (Annex 1).",
+            "mandatory": true
+        },
+        {
+            "section_name": "project_activity",
+            "section_label": "Project Activity",
+            "format_type": "text",
+            "word_limit": 400,
+            "instructions": "Detail the activities to be implemented, linking each to outcomes and outputs from the logframe. Provide timelines and responsible units based on the plan.",
+            "mandatory": true
+        },
+        {
+            "section_name": "justification_for_support",
+            "section_label": "Justification for Support from the Republic of Korea",
+            "format_type": "text",
+            "word_limit": 250,
+            "instructions": "Explain why ROK support is critical: strategic fit, humanitarian imperative, comparative advantage, and expected value for money based on the inputs.",
+            "mandatory": true
+        },
+        {
+            "section_name": "beneficiaries_table",
+            "section_label": "Beneficiaries",
+            "format_type": "table",
+            "instructions": "For each key activity, estimate the number of direct and indirect beneficiaries using provided data. Do not invent numbers.",
+            "columns": [
+                {
+                    "name": "Activity",
+                    "format_type": "text",
+                    "instructions": "Name of the activity (e.g., cash assistance, shelter kits)."
+                },
+                {
+                    "name": "Beneficiaries (direct + indirect)",
+                    "format_type": "number",
+                    "instructions": "Provide total beneficiaries as a number; add breakdown notes in footnotes if needed."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Activity 1",
+                    "instructions": "Describe activity and provide beneficiary estimate."
+                },
+                {
+                    "row_title": "Activity 2",
+                    "instructions": "Describe activity and provide beneficiary estimate."
+                },
+                {
+                    "row_title": "Activity 3",
+                    "instructions": "Describe activity and provide beneficiary estimate."
+                }
+            ],
+            "mandatory": true
+        },
+        {
+            "section_name": "implementation_and_monitoring",
+            "section_label": "Implementation and Monitoring",
+            "format_type": "text",
+            "word_limit": 300,
+            "instructions": "Outline delivery modalities, partner roles, risk management, monitoring plan (KPIs, frequency, data sources), and reporting cadence based on the M&E plan.",
+            "mandatory": true
+        },
+        {
+            "section_name": "donor_visibility",
+            "section_label": "Donor Visibility",
+            "format_type": "text",
+            "word_limit": 150,
+            "instructions": "Detail visibility activities for ROK MOFA (branding, media, field visits, acknowledgement).",
+            "mandatory": true
+        },
+        {
+            "section_name": "budget_table",
+            "section_label": "Budget",
+            "format_type": "table",
+            "instructions": "Provide a budget table in USD covering outcome areas/activities, beneficiaries, unit costs, requested support based strictly on the financial plan; include subtotal, ISC 6.5%, and total.",
+            "columns": [
+                {
+                    "name": "Outcome Areas/Activities",
+                    "format_type": "text",
+                    "instructions": "Describe each outcome area or activity line."
+                },
+                {
+                    "name": "Beneficiaries",
+                    "format_type": "number",
+                    "instructions": "Number of beneficiaries attributable to the line (if applicable)."
+                },
+                {
+                    "name": "Unit Cost (USD)",
+                    "format_type": "number",
+                    "instructions": "Unit cost for the item or per beneficiary."
+                },
+                {
+                    "name": "Requested Financial Support (USD)",
+                    "format_type": "number",
+                    "instructions": "Total requested amount for the line."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Line Item 1",
+                    "instructions": "Fill with the first outcome area/activity budget line."
+                },
+                {
+                    "row_title": "Line Item 2",
+                    "instructions": "Fill with the second outcome area/activity budget line."
+                },
+                {
+                    "row_title": "Line Item 3",
+                    "instructions": "Fill with the third outcome area/activity budget line."
+                },
+                {
+                    "row_title": "Subtotal",
+                    "instructions": "Compute subtotal of requested support across lines."
+                },
+                {
+                    "row_title": "Indirect Support Cost (ISC) \u2013 6.5%",
+                    "instructions": "Compute ISC as 6.5% of subtotal."
+                },
+                {
+                    "row_title": "Total",
+                    "instructions": "Compute total = subtotal + ISC."
+                }
+            ],
+            "mandatory": true
+        }
+    ]
+}

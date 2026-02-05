@@ -12,6 +12,13 @@ This script populates the database with initial data from a multi-sheet Excel fi
 
 2.  **User ID**: You must provide the UUID of an existing user in the database. The created records will be associated with this user.
 
+3.  **Dependencies**: activate the app virtual environment 
+
+```bash
+source backend/venv/bin/activate
+```
+
+
 ### How to Get a `user_id`
 
 You can get a `user_id` by connecting to the database with `psql` and running the following command:
@@ -95,3 +102,39 @@ To force the regeneration of content for all knowledge cards, regardless of thei
 ```bash
 python3 backend/scripts/3-generate_card_content.py --force --user-id <your_user_id>
 ```
+
+## `4-find-references.py`
+
+This script automates the discovery and linking of web references for existing knowledge cards. It uses an AI agent (`ReferenceIdentificationCrew`) to search for relevant URLs based on the name/topic of each knowledge card and populates the `knowledge_card_references` table.
+
+### How It Works
+
+1.  **Selects Target Cards**: Based on the `card_type` argument (`outcome`, `field_context`, `donor`, or `all`), it retrieves the ID and name of relevant cards from the database.
+2.  **AI Reference Search**: For each card, it triggers the `ReferenceIdentificationCrew` to find relevant web resources.
+3.  **Extracts URLs**: It parses the AI agent's output to extract URLs.
+4.  **Updates Database**:
+    *   Checks if the URL already exists in `knowledge_card_references`.
+    *   If not, creates a new reference entry.
+    *   Links the reference to the specific knowledge card in the `knowledge_card_to_references` table.
+
+### Usage
+
+The script requires a `--card-type` (or `all`) and a valid `--user-id` for auditing purposes.
+
+To find references for **all** knowledge card types:
+
+```bash
+python3 backend/scripts/4-find-references.py --card-type all --user-id <your_user_id>
+```
+
+To find references for a **specific** type (e.g., `donor`):
+
+```bash
+python3 backend/scripts/4-find-references.py --card-type donor --user-id <your_user_id>
+```
+
+**Available Card Types:**
+*   `outcome`
+*   `field_context`
+*   `donor`
+*   `all`

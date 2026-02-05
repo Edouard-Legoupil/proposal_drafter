@@ -1,56 +1,92 @@
 {
   "donors": [],
-    "template_type": "Knowledge Card",
-    "template_name": "Humanitarian Outcome Knowledge Card",
-    "description": "You are building a detailed knowledge cards that synthesizes evidence on the effectiveness of humanitarian interventions to specifically achieve the following: ",
-    "sections": [
-      {
-        "section_name": "1. Outcome Definition & Rationale",
-        "instructions": "Define this specific humanitarian outcome: Explain its relevance and importance in a humanitarian context, citing core policies, strategies, and guidance documents from leading humanitarian bodies.",
-        "word_limit": 150,
-        "key_word": "humanitarian outcome definition rationale UNHCR policy"
-      },
-      {
-        "section_name": "2. Evidence-Based Interventions",
-        "instructions": "List and describe interventions that have strong, clear evidence of contributing to this outcome. For each intervention, present the information within a table using the PICO framework - P: Population & Problem Statement /I: Intervention Description / C: Comparison / O: Outcome & Evidence Synthesis. Then, in bullet points, for each potential intervention, provide a brief summary of the evidence base. Include key findings from past evaluations, meta-analyses, or research studies. Include references /url to the specific Evaluation reports where each evidences are presented.",
-        "word_limit": 2000,
-        "key_word": "humanitarian evidence-based interventions evaluations meta-analysis"
-      },
-      {
-        "section_name": "3. Implementation Guidance & Best Practices",
-        "instructions": "Provide practical, actionable guidance on how to effectively implement each of the previously listed interventions. Include best practices, enabling factors, lessons learned, and recommendations from related past evaluations, policies and guidance (Include reference). Highlight critical success factors and common pitfalls to avoid.",
-        "word_limit": 1000,
-        "key_word": "humanitarian implementation guidance best practices lessons learned"
-      },
-      {
-        "section_name": "4. Key Performance Indicators (KPIs)",
-        "instructions": "Identify a set of robust and measurable KPIs for both output and outcome from UNHCR Result Framework that can be used to track progress and measure the achievement of this outcome. Explain why each indicator is a good proxy for measuring success. Present this within a formatted table",
-        "word_limit": 450,
-        "key_word": "UNHCR humanitarian outcome KPIs result framework"
-      },
-      {
-        "section_name": "5. Cross-Cutting Considerations",
-        "instructions": "Describe important cross-cutting issues that impact this specific outcome, such as gender equality, disability inclusion, accountability to affected population, localisation, and environmental sustainability. Explain how these should be integrated into program design and implementation.",
-        "word_limit": 150,
-        "key_word": "humanitarian cross-cutting issues gender disability environment"
-      },
-      {
-        "section_name": "6. Challenges & Future Directions",
-        "instructions": "Summarize the major challenges or knowledge gaps related to achieving this outcome. Suggest areas for further research, pilot programs, or policy development based on the lessons learned from previous interventions.",
-        "word_limit": 150,
-        "key_word": "humanitarian challenges future research policy gaps"
-      },
-      {
-        "section_name": "7. Cost-Effectiveness and Value for Money",
-        "instructions": "Provide an analysis of the cost-effectiveness of the described interventions. Compare the relative costs of different approaches to achieving the same outcome. Include any available data or benchmarks on value for money.",
-        "word_limit": 300,
-        "key_word": "humanitarian intervention cost-effectiveness value for money"
-      },
-      {
-        "section_name": "8. Sustainability and Exit Strategies",
-        "instructions": "Discuss the long-term sustainability of the interventions. Outline potential exit strategies that ensure the continuation of positive outcomes after the program ends. Describe how local capacity can be built and strengthened to support a sustainable transition.",
-        "word_limit": 300,
-        "key_word": "humanitarian program sustainability exit strategy capacity building"
-      }
-    ]
-  }
+  "template_type": "Knowledge Card",
+  "template_name": "Humanitarian Outcome Knowledge Card",
+  "description": "You are building a detailed knowledge cards that synthesizes evidence on the effectiveness of humanitarian interventions to specifically achieve the following: ",
+  "sections": [
+    {
+      "section_name": "1. Outcome Definition & Rationale",
+      "instructions": "Define this specific humanitarian outcome: Explain its relevance and importance in a humanitarian context, citing core policies, strategies, and guidance documents from leading humanitarian bodies. [Include full source names in citation brackets with their evidence type classification: e.g., (UNHCR Global Policy Framework - Policy Document) or (IASC Guidelines - Technical Guidance)]",
+      "word_limit": 150,
+      "key_word": "humanitarian outcome definition rationale UNHCR policy"
+    },
+    {
+      "section_name": "2. Evidence-Based Interventions",
+      "instructions": "List and describe interventions that have strong, clear evidence of contributing to this outcome. For each intervention, present the information within a table using the PICO framework with the following columns: P: Population & Problem Statement / I: Intervention Description / C: Comparison / O: Outcome & Evidence Synthesis / Evidence Source Type. In the Evidence Source Type column, classify each piece of evidence as one of: 1) Global Systematic Review/Meta-Analysis, 2) Multi-Country Evaluation, 3) Single Country Case Study, 4) Rigorous Impact Evaluation (RCT), 5) Quasi-Experimental Study, 6) Qualitative Research, 7) Program Monitoring Data, 8) Expert Consensus/Guideline. Then, in bullet points, for each potential intervention, provide a brief summary of the evidence base. Include key findings from past evaluations, meta-analyses, or research studies. Always include references/URLs to the specific evaluation reports where each evidence is presented, with full source names in brackets indicating evidence type: e.g., [UNHCR Global Evaluation of Protection Programs 2022 - Multi-Country Evaluation] or [IRC Ethiopia Case Study 2021 - Single Country Case Study].",
+      "word_limit": 2000,
+      "key_word": "humanitarian evidence-based interventions evaluations meta-analysis"
+    },
+    {
+      "section_name": "3. Implementation Guidance & Best Practices",
+      "instructions": "Provide practical, actionable guidance on how to effectively implement each of the previously listed interventions. Include best practices, enabling factors, lessons learned, and recommendations from related past evaluations, policies and guidance. For each recommendation, indicate its evidence source in brackets with full name and classification: e.g., (UNHCR Operational Handbook - Technical Guidance) or (UNHCR Somalia Post-Implementation Review - Program Evaluation). Highlight critical success factors and common pitfalls to avoid.",
+      "word_limit": 1000,
+      "key_word": "humanitarian implementation guidance best practices lessons learned"
+    },
+    {
+      "section_name": "4. Key Performance Indicators (KPIs)",
+      "instructions": "Identify a set of robust and measurable KPIs for both output and outcome from UNHCR Result Framework that can be used to track progress and measure the achievement of this outcome. Explain why each indicator is a good proxy for measuring success. Present this within a formatted table. Indicate the source of each indicator in brackets: e.g., (UNHCR Results Framework 2022-2026 - Institutional Framework).",
+      "word_limit": 1000,
+      "key_word": "UNHCR humanitarian outcome KPIs result framework"
+    },
+    {
+      "section_name": "5. Cross-Cutting Considerations",
+      "instructions": "Describe important cross-cutting issues that impact this specific outcome, such as gender equality, disability inclusion, accountability to affected population, localisation, and environmental sustainability. Explain how these should be integrated into program design and implementation. Reference specific guidance documents with full names and classifications: e.g., [IASC Gender Handbook - Technical Guidance] or [UNHCR Environmental Sustainability Evaluation 2023 - Program Evaluation].",
+      "word_limit": 500,
+      "key_word": "humanitarian cross-cutting issues gender disability environment"
+    },
+    {
+      "section_name": "6. Challenges & Future Directions",
+      "instructions": "Summarize the major challenges or knowledge gaps related to achieving this outcome. Suggest areas for further research, pilot programs, or policy development based on the lessons learned from previous interventions. Classify each knowledge gap by evidence type: e.g., 'Lack of rigorous impact evaluations in urban contexts [Evidence Gap: Rigorous Impact Evaluations]' or 'Insufficient documentation of implementation challenges [Evidence Gap: Qualitative Implementation Research]'.",
+      "word_limit": 800,
+      "key_word": "humanitarian challenges future research policy gaps"
+    },
+    {
+      "section_name": "7. Cost-Effectiveness and Value for Money",
+      "instructions": "Provide an analysis of the cost-effectiveness of the described interventions. Compare the relative costs of different approaches to achieving the same outcome. Include any available data or benchmarks on value for money. Always specify the evidence source and type for cost data: e.g., [World Bank Cost-Effectiveness Analysis 2021 - Economic Evaluation] or [UNHCR Jordan Unit Cost Study 2022 - Program Cost Analysis].",
+      "word_limit": 500,
+      "key_word": "humanitarian intervention cost-effectiveness value for money"
+    },
+    {
+      "section_name": "8. Contextualized Unit Costs & Budgeting",
+      "instructions": "Synthesize budget data, specifically Unit Costs, in relation to the described Interventions and Activities. Importantly, differentiate these costs based on different field contexts (e.g., emergency vs. protracted crisis, urban vs. rural, camp vs. out-of-camp) to provide a nuanced understanding of resource requirements. Provide range estimates where possible. For each cost estimate, indicate the source and evidence type: e.g., [UNHCR Global Cost Database - Institutional Cost Data] or [IRC Uganda Emergency Response Review 2023 - Single Country Cost Analysis].",
+      "word_limit": 800,
+      "key_word": "humanitarian unit costs budget estimates context-specific pricing"
+    },
+    {
+      "section_name": "9. Sustainability and Exit Strategies",
+      "instructions": "Discuss the long-term sustainability of the interventions. Outline potential exit strategies that ensure the continuation of positive outcomes after the program ends. Describe how local capacity can be built and strengthened to support a sustainable transition. Reference specific evaluations or guidance: e.g., [UNHCR Transition Guidelines - Policy Framework] or [UNHCR Sustainability Evaluation in Colombia - Multi-Year Program Evaluation].",
+      "word_limit": 500,
+      "key_word": "humanitarian program sustainability exit strategy capacity building"
+    },
+    {
+      "section_name": "10. Gender, Age, and Diversity (AGD) Integration",
+      "instructions": "Describe how UNHCR's Age, Gender, and Diversity approach should be integrated into interventions for this outcome. Address: (1) Gender and age analysis - how to conduct participatory assessments and collect sex- and age-disaggregated data; (2) Adapted assistance - how to tailor interventions for women, men, boys, girls, older persons, and persons with disabilities; (3) Prevention of negative effects - how AGD principles prevent protection risks (GBV, child protection, PSEA); (4) Meaningful participation - how to ensure inclusive participation in program design, implementation, and monitoring. Provide concrete examples of AGD-responsive programming for this outcome. Reference specific AGD tools and evaluations: e.g., [UNHCR AGD Policy 2018 - Institutional Policy] or [Women's Refugee Commission Participatory Assessment in Lebanon - Qualitative Research].",
+      "word_limit": 500,
+      "key_word": "UNHCR AGD gender age diversity inclusive programming participation"
+    },
+    {
+      "section_name": "11. Monitoring, Evaluation & Accountability",
+      "instructions": "Describe M&E approaches and accountability mechanisms for this outcome. Address: (1) Monitoring systems - data collection methods, frequency, responsible actors; (2) Accountability to Affected Populations (AAP) - feedback and complaint mechanisms (hotlines, suggestion boxes, community committees); (3) Evaluation approaches - when and how to conduct outcome evaluations - When randomization is ethically or operationally feasible, what best randomization methods would fit among: a) individual-level randomization assigns eligible participants directly to treatment or control arms, maximizing statistical power but potentially creating contamination risks. b) Cluster randomization—randomizing groups like villages, schools, or camps—reduces spillover effects and is preferred when programs operate at community scale, though it requires larger sample sizes to maintain statistical power. c) Phased rollout or stepped-wedge designs randomize the timing of program introduction across clusters, allowing all participants to eventually receive services while preserving a counterfactual for evaluation. If not, what is the best alternative among quasi-experimental methods such as regression discontinuity (RDD), difference-in-differences (DiD), or propensity score matching (PSM)?; (4) Remote management - if applicable, how to monitor when direct access is limited. Reference UNHCR's AAP framework and standard M&E tools with full source names: e.g., [UNHCR AAP Framework 2020 - Institutional Framework] or [3ie Humanitarian Evaluation Synthesis 2022 - Evidence Synthesis].",
+      "word_limit": 2000,
+      "key_word": "UNHCR monitoring evaluation AAP accountability feedback mechanisms"
+    },
+    {
+      "section_name": "12. Key Result Indicators (KRI) - Output Level",
+      "instructions": "Identify output-level indicators (KRI) distinct from outcome indicators (KOI in Section 4). KRIs measure direct outputs/services delivered (e.g., # of people trained, # of shelters constructed, # of legal consultations provided). For each intervention listed in Section 2, provide 2-3 relevant KRIs from UNHCR's Results Framework. Present in table format with indicator name, definition, typical targets, and source: e.g., (UNHCR Results Framework Indicator RF-001 - Institutional Indicator).",
+      "word_limit": 1000,
+      "key_word": "UNHCR KRI output indicators results framework"
+    },
+    {
+      "section_name": "13. Budget Structure & Financial Planning",
+      "instructions": "Provide typical budget structure for interventions achieving this outcome. Address: (1) Cost categories - breakdown by personnel (%), supplies/commodities (%), equipment (%), travel (%), contractual services (%), partner transfers (%), operating costs (%). Provide typical ranges for each category. (2) Unit cost benchmarks - reference Section 8 for context-specific unit costs. (3) Budget justification - common cost drivers, economies of scale, cost-efficiency measures. (4) Multi-year considerations - if applicable, phasing of costs across years, front-loading vs. steady-state budgets. Reference budget guidance documents: e.g., [UNHCR Financial Rules and Regulations - Institutional Guidelines] or [ECHO Cost Norms 2023 - Donor Guidelines].",
+      "word_limit": 800,
+      "key_word": "budget structure cost categories unit costs financial planning overhead ISC"
+    },
+    {
+      "section_name": "14. Implementation Timelines & Phasing",
+      "instructions": "Describe typical implementation timelines and activity sequencing for interventions achieving this outcome. Address: (1) Duration - typical project length (6 months emergency, 12 months standard, 24+ months multi-year). (2) Startup phase - mobilization, procurement, partner agreements (typically months 1-2). (3) Implementation phase - core activity delivery, typical monthly/quarterly milestones. (4) Closeout phase - final distributions, reporting, evaluations (typically final month). (5) Critical path - key dependencies and sequencing (e.g., procurement before distribution, training before service delivery). (6) Seasonal factors - if relevant, optimal timing based on climate, agricultural cycles, school calendars. Provide Gantt-ready guidance with typical activity timelines. Reference planning tools and evaluations: e.g., [UNHCR Project Management Handbook - Technical Guidance] or [IASC Emergency Response Timeline Analysis - Multi-Agency Review].",
+      "word_limit": 500,
+      "key_word": "implementation timeline workplan phasing sequencing Gantt milestones critical path"
+    }
+  ]
+}

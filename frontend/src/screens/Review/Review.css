@@ -20,9 +20,48 @@
 }
 
 .Review_section {
+    display: flex;
+    gap: 1.5rem;
     border: 1px solid #ccc;
     padding: 1rem;
     border-radius: 8px;
+}
+
+.Review_section_main {
+    flex: 3; /* Takes up 3/4 of the space */
+}
+
+.Review_comment_section {
+    flex: 1; /* Takes up 1/4 of the space */
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.Review_section_header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.Review_thumbs {
+    display: flex;
+    gap: 1rem;
+    font-size: 1.5rem;
+}
+
+.thumb-up, .thumb-down {
+    cursor: pointer;
+    color: #ccc;
+}
+
+.thumb-up.active {
+    color: green;
+}
+
+.thumb-down.active {
+    color: red;
 }
 
 .Review_section_content {
@@ -62,4 +101,55 @@
     text-align: center;
     padding: 2rem;
     font-size: 1.5rem;
+}
+
+.Review_author_reply {
+    margin-top: 15px;
+    padding: 10px;
+    background: #f0f4f8;
+    border-radius: 8px;
+    border-left: 4px solid #3498db;
+}
+
+.Review_reply_textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 8px;
+    border: 1px solid #bdc3c7;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+.Review_reply_actions {
+    display: flex;
+    gap: 10px;
+}
+
+.Review_reply_actions button {
+    padding: 5px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.Review_reply_actions button:first-child {
+    background: #3498db;
+    color: white;
+}
+
+.Review_reply_btn {
+    padding: 5px 12px;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.author-response-display {
+    margin-top: 15px;
+    padding: 10px;
+    background: #eaf2f8;
+    border-radius: 8px;
+    border-left: 4px solid #2980b9;
 }

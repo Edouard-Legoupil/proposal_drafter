@@ -5,6 +5,7 @@ import os
 import sys
 import uuid
 import logging
+import pathlib
 from dotenv import load_dotenv
 import psycopg2
 from psycopg2.extras import register_uuid
@@ -16,18 +17,7 @@ register_uuid()
 from backend.utils.crew_knowledge import ContentGenerationCrew
 from backend.core.config import load_proposal_template
 
-# Ensure the log directory exists
-os.makedirs("log", exist_ok=True)
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler("log/generate_card_content.log"),
-        logging.StreamHandler()
-    ]
-)
 
 def _save_knowledge_card_content_to_file(cur, card_id: uuid.UUID, generated_sections: dict):
     """
@@ -124,8 +114,31 @@ def create_knowledge_card_history_entry(cur, card_id, generated_sections, user_i
 def main():
     parser = argparse.ArgumentParser(description="Generate content for knowledge cards.")
     parser.add_argument("--force", action="store_true", help="Force regeneration of content for all knowledge cards.")
+    parser.add_argument("--generate-if-null", action="store_true", help="Generate content for knowledge cards only when generated_sections is NULL or empty.")
+    parser.add_argument("--card-type", choices=["all", "donor", "outcome", "field_context"], default="all", help="Filter processing by card type (donor, outcome, field_context). Default is all.")
     parser.add_argument("--user-id", required=True, help="The UUID of the user to associate with the created records.")
     args = parser.parse_args()
+
+    log_file = os.path.join(os.path.dirname(__file__), 'generate_card_content.log')
+    
+    # Configure root logger
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_file),
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
+
+    # Configure specific loggers to capture API calls and other external libs
+    for logger_name in ["litellm", "httpx", "httpcore", "openai"]:
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(logging.INFO)
+        # Avoid adding duplicate handlers if they already propagate to root or have handlers
+        if not logger.handlers and not logger.propagate:
+             for handler in logging.getLogger().handlers:
+                 logger.addHandler(handler)
 
     logging.info("Starting content generation process...")
 
@@ -138,8 +151,8 @@ def main():
         db_username = os.getenv("DB_USERNAME").strip('"')
         db_password = os.getenv("DB_PASSWORD")
         db_name = os.getenv("DB_NAME")
-        db_host = "localhost"
-        db_port = "5432"
+        db_host = os.getenv("DB_HOST")
+        db_port = os.getenv("DB_PORT")
 
         conn = psycopg2.connect(
             dbname=db_name,
@@ -151,8 +164,7 @@ def main():
         with conn.cursor() as cur:
             user_id = uuid.UUID(args.user_id)
 
-            # Get all knowledge cards
-            cur.execute("""
+            query = """
                 SELECT 
                     kc.id, 
                     kc.template_name, 
@@ -165,18 +177,36 @@ def main():
                 LEFT JOIN donors d ON kc.donor_id = d.id
                 LEFT JOIN outcomes o ON kc.outcome_id = o.id
                 LEFT JOIN field_contexts fc ON kc.field_context_id = fc.id
-            """)
+            """
+
+            where_clauses = []
+            if args.generate_if_null:
+                where_clauses.append("(kc.generated_sections IS NULL OR kc.generated_sections::text = '{}' OR kc.generated_sections::text = 'null')")
+            
+            if args.card_type != "all":
+                if args.card_type == "donor":
+                    where_clauses.append("kc.donor_id IS NOT NULL")
+                elif args.card_type == "outcome":
+                    where_clauses.append("kc.outcome_id IS NOT NULL")
+                elif args.card_type == "field_context":
+                    where_clauses.append("kc.field_context_id IS NOT NULL")
+
+            if where_clauses:
+                query += " WHERE " + " AND ".join(where_clauses)
+
+            cur.execute(query)
             knowledge_cards = cur.fetchall()
             logging.info(f"Found {len(knowledge_cards)} knowledge cards to process.")
 
             for card in knowledge_cards:
                 card_id, template_name, generated_sections, card_updated_at, donor_name, outcome_name, field_context_name = card
+                card_name = donor_name or outcome_name or field_context_name or f"Card {card_id}"
+                
                 should_generate = False
                 try:
-
                     if args.force:
                         should_generate = True
-                    elif not generated_sections or generated_sections == '{}':
+                    elif args.generate_if_null:
                         should_generate = True
                     else:
                         # Check if any reference is newer than the card
@@ -190,10 +220,9 @@ def main():
                             should_generate = True
 
                     if should_generate:
-                        logging.info(f"Generating content for knowledge card {card_id}...")
+                        logging.info(f"Generating content for knowledge card: {card_name}...")
                         template = load_proposal_template(template_name)
-                        name = donor_name or outcome_name or field_context_name
-                        pre_prompt = f"{template.get('description', '')} {name}."
+                        pre_prompt = f"{template.get('description', '')} {card_name}."
                         new_generated_sections = {}
                         crew = ContentGenerationCrew(knowledge_card_id=str(card_id), pre_prompt=pre_prompt)
 
@@ -213,12 +242,20 @@ def main():
                             SET generated_sections = %s, updated_at = CURRENT_TIMESTAMP
                             WHERE id = %s
                         """, (json.dumps(new_generated_sections), card_id))
+                        
+                        # Verification
+                        cur.execute("SELECT generated_sections FROM knowledge_cards WHERE id = %s", (card_id,))
+                        updated_data = cur.fetchone()
+                        if updated_data and updated_data[0]:
+                             logging.info(f"Verification successful: Content persisted for {card_name}")
+                        else:
+                             logging.error(f"Verification FAILED: Content NOT persisted for {card_name}")
 
                         # Create a history entry
                         create_knowledge_card_history_entry(cur, card_id, new_generated_sections, user_id)
-                        logging.info(f"Successfully generated content for knowledge card {card_id}")
+                        logging.info(f"Successfully generated content for knowledge card: {card_name}")
                 except Exception as e:
-                    logging.error(f"Error processing knowledge card {card_id}: {e}", exc_info=True)
+                    logging.error(f"Error processing knowledge card {card_name}: {e}", exc_info=True)
                     conn.rollback() # Rollback the transaction for the failed card
 
 

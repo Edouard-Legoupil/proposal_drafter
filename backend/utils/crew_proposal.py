@@ -21,8 +21,16 @@ class ProposalCrew():
 
     agents_config = 'config/agents_proposal.yaml'
     tasks_config = 'config/tasks_proposal.yaml'
-    generate_proposal_log = 'log/log_proposal.txt'
-    regenerate_proposal_log = 'log/log_proposal_regenerate.txt'
+
+    # # Ensure log directory exists
+    # current_dir = os.path.dirname(os.path.abspath(__file__))
+    # log_dir = os.path.join(current_dir, '..', '..', 'logs')
+    # os.makedirs(log_dir, exist_ok=True)
+    # log_file1 = os.path.join(log_dir, 'log_proposal.txt')
+    # log_file2 = os.path.join(log_dir, 'log_proposal_regenerate.txt')
+    
+    # generate_proposal_log = log_file1
+    # regenerate_proposal_log = log_file2
 
 ## List of agents ##########
     @agent
@@ -85,7 +93,7 @@ class ProposalCrew():
             tasks=[self.content_generation_task(), self.evaluation_task()],
             process=Process.sequential,
             verbose=True,
-            output_log_file = self.generate_proposal_log,
+            #output_log_file = self.generate_proposal_log,
             embedder=get_embedder_config()
         )
 
@@ -98,6 +106,6 @@ class ProposalCrew():
             tasks=[self.regeneration_task(), self.evaluation_task()],
             process=Process.sequential,
             verbose=True,
-            output_log_file = self.regenerate_proposal_log,
+           # output_log_file = self.regenerate_proposal_log,
             embedder=get_embedder_config()
         )

@@ -9,6 +9,50 @@ from pydantic import BaseModel
 # data validation. Pydantic ensures that the data received by the API conforms
 # to the expected structure and types.
 
+class Role(BaseModel):
+    id: int
+    name: str
+
+class UserRole(BaseModel):
+    user_id: uuid.UUID
+    role_id: int
+
+class UserDonorGroup(BaseModel):
+    user_id: uuid.UUID
+    donor_group: str
+
+class UserOutcome(BaseModel):
+    user_id: uuid.UUID
+    outcome_id: uuid.UUID
+
+class UserFieldContext(BaseModel):
+    user_id: uuid.UUID
+    field_context_id: uuid.UUID
+
+class UserSettings(BaseModel):
+    geographic_coverage_type: Optional[str] = None
+    geographic_coverage_region: Optional[str] = None
+    geographic_coverage_country: Optional[str] = None
+    roles: List[int]
+    donor_groups: Optional[List[str]] = None
+    outcomes: Optional[List[uuid.UUID]] = None
+    field_contexts: Optional[List[uuid.UUID]] = None
+
+class User(BaseModel):
+    id: uuid.UUID
+    email: str
+    name: Optional[str] = None
+    team_id: Optional[uuid.UUID] = None
+    geographic_coverage_type: Optional[str] = None
+    geographic_coverage_region: Optional[str] = None
+    geographic_coverage_country: Optional[str] = None
+    roles: List[Role] = []
+    is_admin: bool = False
+    donor_groups: List[str] = []
+    outcomes: List[uuid.UUID] = []
+    field_contexts: List[uuid.UUID] = []
+
+
 class BaseDataRequest(BaseModel):
     """
     Schema for the initial data required to start a proposal.
@@ -17,6 +61,7 @@ class BaseDataRequest(BaseModel):
     form_data: Dict[str, Any]
     project_description: str
     associated_knowledge_cards: Optional[List[Dict[str, Any]]] = None
+    document_type: Optional[str] = "proposal"
     template_name: str
 
 class SectionRequest(BaseModel):
@@ -70,6 +115,7 @@ class CreateSessionRequest(BaseModel):
     form_data: Dict[str, Any]
     project_description: str
     associated_knowledge_cards: Optional[List[Dict[str, Any]]] = None
+    document_type: Optional[str] = "proposal"
 
 
 class UpdateSectionRequest(BaseModel):
@@ -96,9 +142,10 @@ class SubmitPeerReviewRequest(BaseModel):
 
 class ReviewComment(BaseModel):
     section_name: str
-    review_text: str
-    type_of_comment: str
-    severity: str
+    review_text: Optional[str] = ""
+    type_of_comment: Optional[str] = "General"
+    severity: Optional[str] = "Medium"
+    rating: Optional[str] = None
 
 class SubmitReviewRequest(BaseModel):
     """

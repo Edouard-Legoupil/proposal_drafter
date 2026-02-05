@@ -1,7 +1,7 @@
 #  Third-Party Libraries
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from fastapi.responses import FileResponse
@@ -23,17 +23,18 @@ import sys
 log_dir = Path(__file__).parent / "log"
 log_dir.mkdir(exist_ok=True)
 log_file = log_dir / "app.log"
-
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 handler = logging.FileHandler(log_file)
 handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 logging.getLogger().addHandler(handler)
 
+
+
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 #  Internal Modules
-from backend.api import auth, proposals, session, documents, health, users, knowledge, metrics
+from backend.api import auth, proposals, session, documents, health, users, knowledge, metrics, admin
 from backend.core.middleware import (
     setup_cors_middleware,
     custom_http_exception_handler,
@@ -52,8 +53,8 @@ async def lifespan(app: FastAPI):
     Manages application startup and shutdown events.
     """
     logging.info("Application is starting up...")
-    setup_scheduler()
-    logging.info("Background scheduler has been started.")
+   # setup_scheduler()
+   # logging.info("Background scheduler has been started.")
     yield
     # Cleanup tasks can be added here if needed
     logging.info("Application is shutting down...")
@@ -97,14 +98,42 @@ app.include_router(documents.router, prefix="/api", tags=["Documents"])
 app.include_router(users.router, prefix="/api", tags=["Users"])
 app.include_router(knowledge.router, prefix="/api", tags=["Knowledge"])
 app.include_router(metrics.router, prefix="/api", tags=["Metrics"])
+app.include_router(admin.router, prefix="/api", tags=["Admin"])
 app.include_router(health.router, tags=["Health & Debugging"])
+
+# --- Root Endpoint: Health Check + SPA ---
+# This MUST be defined before the SPA fallback to take priority
+@app.get("/")
+async def root_endpoint(request: Request):
+    """
+    Smart root endpoint that serves dual purposes:
+    1. Health check for Azure probes (returns JSON when Accept: application/json)
+    2. React SPA for browser requests (returns index.html for text/html)
+    """
+    # Check Accept header to determine if this is a health probe or browser request
+    accept_header = request.headers.get("accept", "")
+    
+    # Health probes typically accept application/json or */*
+    # Browsers typically accept text/html as the primary type
+    if "text/html" in accept_header:
+        # Browser request - serve React app
+        frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))
+        index_file = os.path.join(frontend_path, "index.html")
+        if os.path.isfile(index_file):
+            return FileResponse(index_file)
+        return {"detail": "Frontend not built"}
+    else:
+        # Health probe or API request - return health status
+        return {"status": "ok", "service": "proposal-drafter"}
 
 # --- Serve React Frontend ---
 frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))
 #frontend_path = os.path.join(os.path.dirname(__file__), "..", "/frontend/dist")
 if os.path.isdir(frontend_path):
     # Serve static assets first
-    app.mount("/assets", StaticFiles(directory=os.path.join(frontend_path, "assets")), name="assets")
+    assets_path = os.path.join(frontend_path, "assets")
+    if os.path.isdir(assets_path):
+        app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
     
     # Serve other static files that might exist in the build
     static_dirs = ['static', 'public']  # common React build directories
@@ -119,6 +148,7 @@ if os.path.isdir(frontend_path):
         """
         SPA fallback for React Router: always return index.html for non-API routes.
         This should be the last route defined.
+        Note: The root "/" path is handled by the dedicated health endpoint defined above.
         """
         # Skip API routes explicitly
         if full_path.startswith("api/"):

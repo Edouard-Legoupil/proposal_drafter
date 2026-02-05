@@ -32,6 +32,17 @@ def test_engine():
     with engine.connect() as connection:
         # Use transaction to ensure DDL is committed
         with connection.begin():
+            connection.execute(text("DROP TABLE IF EXISTS knowledge_card_reviews"))
+            connection.execute(text("DROP TABLE IF EXISTS users"))
+            connection.execute(text("DROP TABLE IF EXISTS teams"))
+            connection.execute(text("DROP TABLE IF EXISTS proposal_peer_reviews"))
+            connection.execute(text("DROP TABLE IF EXISTS proposal_status_history"))
+            connection.execute(text("DROP TABLE IF EXISTS proposals"))
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS teams (
+                    id TEXT PRIMARY KEY, name TEXT UNIQUE NOT NULL
+                )
+            """))
             connection.execute(text("""
                 CREATE TABLE IF NOT EXISTS users (
                     id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, password TEXT NOT NULL,
@@ -43,14 +54,44 @@ def test_engine():
                 CREATE TABLE IF NOT EXISTS proposals (
                     id TEXT PRIMARY KEY, user_id TEXT, form_data TEXT, project_description TEXT,
                     generated_sections TEXT, is_accepted BOOLEAN, template_name TEXT,
+                    status TEXT, contribution_id TEXT,
                     created_at DATETIME, updated_at DATETIME,
                     FOREIGN KEY (user_id) REFERENCES users(id)
                 )
             """))
             connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS proposal_status_history (
+                    id TEXT PRIMARY KEY, proposal_id TEXT, status TEXT,
+                    generated_sections_snapshot TEXT, created_at DATETIME,
+                    FOREIGN KEY (proposal_id) REFERENCES proposals(id)
+                )
+            """))
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS proposal_peer_reviews (
+                    id TEXT PRIMARY KEY, proposal_id TEXT, reviewer_id TEXT,
+                    proposal_status_history_id TEXT, section_name TEXT,
+                    rating TEXT, status TEXT, deadline DATETIME,
+                    review_text TEXT, author_response TEXT,
+                    type_of_comment TEXT, severity TEXT,
+                    created_at DATETIME, updated_at DATETIME,
+                    FOREIGN KEY (proposal_id) REFERENCES proposals(id),
+                    FOREIGN KEY (reviewer_id) REFERENCES users(id)
+                )
+            """))
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS knowledge_card_reviews (
+                    id TEXT PRIMARY KEY, knowledge_card_id TEXT, reviewer_id TEXT,
+                    section_name TEXT, rating TEXT, review_text TEXT,
+                    type_of_comment TEXT, severity TEXT,
+                    author_response TEXT, status TEXT,
+                    created_at DATETIME, updated_at DATETIME,
+                    FOREIGN KEY (knowledge_card_id) REFERENCES knowledge_cards(id),
+                    FOREIGN KEY (reviewer_id) REFERENCES users(id)
+                )
+            """))
+            connection.execute(text("""
                 CREATE TABLE IF NOT EXISTS knowledge_cards (
                     id TEXT PRIMARY KEY,
-                    title TEXT,
                     summary TEXT,
                     template_name TEXT,
                     status TEXT,
@@ -163,7 +204,12 @@ def authenticated_client(client, db_session):
     )
 
     def get_current_user_override():
-        return {"user_id": user_id, "email": user_email, "name": "Test User"}
+        return {
+            "user_id": user_id,
+            "email": user_email,
+            "name": "Test User",
+            "roles": ["knowledge manager donors", "knowledge manager outcome", "knowledge manager field context", "proposal writer", "project reviewer"]
+        }
 
     app.dependency_overrides[get_current_user] = get_current_user_override
 
