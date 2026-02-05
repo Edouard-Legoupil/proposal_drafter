@@ -55,7 +55,7 @@
             "section_parent": "2. Project data overview by country",
             "format_type": "text",
             "mandatory": true,
-            "instructions": "List all countries and specific regions where the action will be implemented. For each location, confirm it falls within the geographic scope of the relevant ECHO Humanitarian Implementation Plan (HIP) or financing decision. Specify administrative levels (country, region/state, district) as applicable. If operating in multiple countries, clearly delineate activities per country. Reference any maps or geographic annexes that provide visual representation of intervention areas."
+            "instructions": "Select only the country/countries covered by the action. No narrative."
         },
         {
             "section_name": "Places of intervention",
@@ -63,7 +63,30 @@
             "section_parent": "2. Project data overview by country",
             "format_type": "table",
             "mandatory": true,
-            "instructions": "For each location: name, province/region (or N/A if >10 countries), district (or N/A), urban/rural/both."
+            "columns": [
+                {
+                    "name": "Location/site",
+                    "format_type": "text"
+                },
+                {
+                    "name": "Admin1 (Province/Region)",
+                    "format_type": "text"
+                },
+                {
+                    "name": "Admin2 (Department/District)",
+                    "format_type": "text"
+                },
+                {
+                    "name": "Setting",
+                    "format_type": "select",
+                    "options": [
+                        "Urban",
+                        "Rural",
+                        "Both"
+                    ]
+                }
+            ],
+            "instructions": "Table only. Use the country-appropriate names for Admin1/Admin2; no narrative below."
         },
         {
             "section_name": "Information on beneficiaries",
@@ -75,25 +98,68 @@
         },
         {
             "section_name": "Unique beneficiaries",
-            "section_label": "2.3. Information on beneficiaries",
+            "section_label": "2.3. Information on beneficiaries - header",
             "section_parent": "2. Project data overview by country",
             "format_type": "number",
             "mandatory": true,
-            "instructions": "Total direct unique individual beneficiaries (not households, no double counting)."
+            "instructions": "Total direct unique individual beneficiaries (not households, no double counting). No narrative here."
         },
         {
             "section_name": "Beneficiaries by sex and age",
-            "section_label": "2.3. Information on beneficiaries",
+            "section_label": "2.3. Information on beneficiaries (by sex and age)",
             "section_parent": "2. Project data overview by country",
             "format_type": "table",
+            "columns": [
+                {
+                    "name": "Age group",
+                    "format_type": "fixed_options",
+                    "options": [
+                        "0-4",
+                        "5-11",
+                        "12-17",
+                        "18-59",
+                        "60+"
+                    ]
+                },
+                {
+                    "name": "Female",
+                    "format_type": "number"
+                },
+                {
+                    "name": "Male",
+                    "format_type": "number"
+                },
+                {
+                    "name": "Other",
+                    "format_type": "number"
+                },
+                {
+                    "name": "Total",
+                    "format_type": "number"
+                }
+            ],
             "mandatory": true,
             "instructions": "Provide complete disaggregation of all direct beneficiaries by sex (Female/Male/Other) and age groups. Use standard age categories: 0-4 years, 5-17 years, 18-59 years, 60+ years. Present data in table format with totals for each category. Ensure the sum equals the total unique beneficiaries reported in section 2.3.1. If exact data is unavailable, use demographic estimates from assessments and clearly note this."
         },
         {
             "section_name": "Beneficiaries with disabilities",
             "section_label": "2.3. Information on beneficiaries",
-            "format_type": "number",
+            "format_type": "tabler",
             "mandatory": true,
+            "columns": [
+                {
+                    "name": "Total with disabilities",
+                    "format_type": "number"
+                },
+                {
+                    "name": "Female",
+                    "format_type": "number"
+                },
+                {
+                    "name": "Male",
+                    "format_type": "number"
+                }
+            ],
             "instructions": "Subset of 2.3.1: unique beneficiaries with disabilities, disaggregate by sex if possible."
         },
         {
@@ -101,6 +167,16 @@
             "section_label": "2.3. Information on beneficiaries",
             "section_parent": "2. Project data overview by country",
             "format_type": "table",
+            "columns": [
+                {
+                    "name": "Profile",
+                    "format_type": "text"
+                },
+                {
+                    "name": "Number of unique beneficiaries",
+                    "format_type": "number"
+                }
+            ],
             "mandatory": true,
             "instructions": "Categorize all beneficiaries by population profile using the following categories: (1) Local/host population, (2) Internally Displaced Persons (IDPs), (3) Refugees, (4) Asylum seekers, (5) Returnees (IDPs or refugees), (6) Persons on the move/in transit, (7) In-camp or camp-like settings. Provide numbers for each applicable category. Specify if beneficiaries fall into multiple categories and explain how double-counting is avoided. Present in table format."
         },
@@ -248,7 +324,7 @@
             "format_type": "text",
             "char_limit": 800,
             "mandatory": "true",
-            "instructions": "State the overall long-term IMPACT to which this action contributes. The principal objective must: (1) Match the relevant ECHO Humanitarian Implementation Plan (HIP) or financing decision; (2) Be formulated as a single statement starting with an infinitive verb; (3) Represent a broader goal that CANNOT be achieved by this action alone, but to which it contributes; (4) Be measurable through impact indicators. There should be only ONE principal objective per action. Example: 'To improve the protection environment for refugees and internally displaced persons in Chad.' This is the highest level of the results chain."
+            "instructions": "State the overall long-term IMPACT to which this action contributes. The principal objective must: (1) Match the relevant ECHO Humanitarian Implementation Plan (HIP) or financing decision; (2) Be formulated as a single statement starting with an infinitive verb; (3) Represent a broader goal that CANNOT be achieved by this action alone, but to which it contributes; (4) Be measurable through impact indicators. There should be only ONE principal objective per action. Example: 'To improve the protection environment for refugees and internally displaced persons in Chad.' This is the highest level of the results chain. It should be one concise, title-like impact statement (infinitive verb)."
         },
         {
             "section_name": "Specific objective description",
@@ -310,7 +386,33 @@
             "section_parent": "7. Logic of intervention",
             "format_type": "table",
             "mandatory": "true",
-            "instructions": "Define 1-5 distinct RESULTS (outputs/services) that will be delivered to achieve the specific objective. Each result should: (1) Be formulated as an affirmative sentence (not an infinitive); (2) Represent a tangible output or service delivered; (3) Correspond to sectors identified in section 2.4; (4) Include Key Result Indicators (KRI) with baseline, target, and measurement method; (5) Have an estimated direct cost allocation. Maximum 5 results total. For regional actions, specify the country for each result. Consider using UNHCR outcomes/outputs from your country operational plan. Examples: 'The Government of Chad adopts a national asylum law' or 'A national refugee status determination system is established and operational in Chad.' For each result, provide: result title, expected outputs, indicators (compulsory/standard/custom KRIs), estimated budget, baseline/target/method."
+            "columns": [
+                {
+                    "name": "Result title",
+                    "format_type": "text"
+                },
+                {
+                    "name": "Sub-sector",
+                    "format_type": "text"
+                },
+                {
+                    "name": "Activities (short)",
+                    "format_type": "text"
+                },
+                {
+                    "name": "Activities (detailed)",
+                    "format_type": "text"
+                },
+                {
+                    "name": "KRIs (pick from catalog)",
+                    "format_type": "text"
+                },
+                {
+                    "name": "Estimated direct cost",
+                    "format_type": "number"
+                }
+            ],
+            "instructions": "Define 1-5 distinct RESULTS (outputs/services) that will be delivered to achieve the specific objective. Subsectors should be selected from the list of ECHO subsectors: Protection/CP,Education/EiE,WASH,Health,Shelter,Nutrition,MPCA,DRR/DP,Mine action. Each result should: (1) Be formulated as an affirmative sentence (not an infinitive); (2) Represent a tangible output or service delivered; (3) Correspond to sectors identified in section 2.4; (4) Include Key Result Indicators (KRI) with baseline, target, and measurement method; (5) Have an estimated direct cost allocation. Maximum 5 results total. For regional actions, specify the country for each result. Consider using UNHCR outcomes/outputs from your country operational plan. Examples: 'The Government of Chad adopts a national asylum law' or 'A national refugee status determination system is established and operational in Chad.' For each result, provide: result title, expected outputs, indicators (compulsory/standard/custom KRIs), estimated budget, baseline/target/method."
         },
         {
             "section_name": "Pre-conditions",
@@ -325,8 +427,17 @@
             "section_name": "Assumptions and risks, including risk of fraudulent activities and environmental risk",
             "section_label": "7.5. Assumptions and risks, including risk of fraudulent activities and environmental risk",
             "section_parent": "7. Logic of intervention",
-            "format_type": "text",
-            "char_limit": 3500,
+            "format_type": "table",
+            "columns": [
+                {
+                    "name": "Assumption",
+                    "format_type": "text"
+                },
+                {
+                    "name": "Linked risk if assumption fails",
+                    "format_type": "text"
+                }
+            ],
             "mandatory": "true",
             "instructions": "Clearly distinguish and list both ASSUMPTIONS and RISKS. Format as bullet points with clear labeling. ASSUMPTIONS = POSITIVE factors OUTSIDE UNHCR's control that must hold true DURING implementation for success. Examples: (1) Government maintains open-border policy; (2) Security situation remains stable in neighboring countries; (3) Supply chains remain functional. RISKS = NEGATIVE factors OUTSIDE UNHCR's control that could jeopardize implementation if they materialize DURING the action. List ALL foreseeable risks including: fraud/corruption risks, environmental risks, conflict/security risks, climate-related risks, and other operational risks. Examples: (1) Escalation of violence preventing humanitarian access; (2) Diversion of assistance through corruption; (3) Natural disasters disrupting operations. Comprehensive risk identification helps justify under-implementation and can prevent reimbursement issues."
         },
