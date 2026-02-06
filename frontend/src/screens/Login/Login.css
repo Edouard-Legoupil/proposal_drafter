@@ -1,19 +1,18 @@
-.Login_divider
-{
+.Login_divider {
         display: flex;
         align-items: center;
         text-align: center;
         margin: 20px 0;
 }
-.Login_divider hr
-{
+
+.Login_divider hr {
         flex: 1;
         border: none;
         height: 1px;
         background-color: #CCC;
 }
-.Login_divider span
-{
+
+.Login_divider span {
         padding: 0 10px;
         color: #888;
 }
@@ -87,8 +86,10 @@
 .Login-form {
         /* margin-top: -10px; Negate top margin of first label */
 
-        width: 100%; /* Trigger it to grow in width */
-        max-width: 390px; /* Then stop it at our required limit, thus making it responsive */
+        width: 100%;
+        /* Trigger it to grow in width */
+        max-width: 390px;
+        /* Then stop it at our required limit, thus making it responsive */
         padding: 0 50px;
         margin-top: 24px;
 
@@ -117,8 +118,8 @@
         /* color: #414141; */
 }
 
-.Login-form > input,
-.Login-form > select {
+.Login-form>input,
+.Login-form>select {
         border: 1px solid #D4D7E3;
         border-radius: 5px;
 
@@ -142,16 +143,18 @@ input.Login_inputPassword {
         padding-right: 47.5px;
 }
 
-.Login-form > select {
+.Login-form>select {
         outline: 1px solid #D4D7E3;
         border: none;
         border-right: 15px solid transparent;
         cursor: pointer;
 }
-.Login-form > select > option:disabled {
+
+.Login-form>select>option:disabled {
         color: rgb(117, 117, 117);
 }
-.Login-form > select > option {
+
+.Login-form>select>option {
         color: #000;
 }
 
@@ -223,19 +226,30 @@ input.Login_inputPassword {
 
 @keyframes rotation {
         0% {
-            transform: rotate(0deg);
+                transform: rotate(0deg);
         }
+
         100% {
-            transform: rotate(360deg);
+                transform: rotate(360deg);
         }
+}
+
+.Login-submit:hover {
+        background: hsl(222, 100%, 40%);
+}
+
+.Login-ssoButton {
+        background: #198754 !important;
+        /* Green color */
+        box-shadow: 0px 5px 10px 0px rgba(25, 135, 84, 0.2) !important;
+}
+
+.Login-ssoButton:hover {
+        background: #157347 !important;
 }
 
 .Login-submit:disabled {
         cursor: not-allowed;
-
-        /* background: hsl(222, 100%, 90%); */
-
-        /* box-shadow: none; */
 }
 
 .Login-errorNotice {
@@ -269,7 +283,7 @@ input.Login_inputPassword {
         text-align: center;
 }
 
-.Login-register > a {
+.Login-register>a {
         color: #1E4AE9;
         cursor: pointer;
         text-decoration: none;

@@ -12,7 +12,7 @@ import Base from '../../components/Base/Base'
 import CommonButton from '../../components/CommonButton/CommonButton'
 import Modal from '../../components/Modal/Modal'
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
 
 export default function Review() {
     const navigate = useNavigate()

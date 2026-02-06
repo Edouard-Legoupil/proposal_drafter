@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
 import './UserAdminModal.css';
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api";
 
 export default function UserAdminModal({ show, onClose }) {
     const [users, setUsers] = useState([]);
@@ -120,6 +120,13 @@ export default function UserAdminModal({ show, onClose }) {
                         />
                     </div>
 
+                    {users.some(u => u.requested_role_id) && (
+                        <div className="admin-notification">
+                            <i className="fa-solid fa-bell"></i>
+                            <strong>Pending Requests:</strong> {users.filter(u => u.requested_role_id).length} users are requesting elevated access.
+                        </div>
+                    )}
+
                     {loading ? (
                         <div className="admin-loading">Loading users...</div>
                     ) : error ? (
@@ -138,10 +145,17 @@ export default function UserAdminModal({ show, onClose }) {
                                 </thead>
                                 <tbody>
                                     {filteredUsers.map(user => (
-                                        <tr key={user.id}>
+                                        <tr key={user.id} className={user.requested_role_id ? 'row-highlight' : ''}>
                                             <td>
                                                 <div className="user-info">
-                                                    <span className="user-name">{user.name}</span>
+                                                    <span className="user-name">
+                                                        {user.name}
+                                                        {user.requested_role_id && (
+                                                            <span className="request-badge" title={`Requested: ${user.requested_role_name}`}>
+                                                                Pending: {user.requested_role_name}
+                                                            </span>
+                                                        )}
+                                                    </span>
                                                     <span className="user-email">{user.email}</span>
                                                     <span className="user-team">{user.team_name || 'No Team'}</span>
                                                 </div>
@@ -152,7 +166,7 @@ export default function UserAdminModal({ show, onClose }) {
                                                     options={options.roles}
                                                     value={(user.roles || []).map(r => ({ value: r.id, label: r.name }))}
                                                     onChange={(selected) => handleSettingChange(user.id, 'roles', selected)}
-                                                    className="admin-select"
+                                                    className={`admin-select ${user.requested_role_id ? 'select-highlight' : ''}`}
                                                     placeholder="Roles..."
                                                 />
                                             </td>

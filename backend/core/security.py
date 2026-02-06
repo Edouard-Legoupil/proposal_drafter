@@ -16,6 +16,7 @@ from backend.core.config import (
     ENTRA_TENANT_ID,
     ENTRA_CLIENT_ID,
     ENTRA_CLIENT_SECRET,
+    ENTRA_REDIRECT_URI,
 )
 from backend.core.db import get_engine
 
@@ -60,7 +61,7 @@ def get_current_user(request: Request) -> dict:
         # Fetch the user from the database.
         with get_engine().connect() as connection:
             result = connection.execute(
-                text("SELECT id, name, email FROM users WHERE email = :email"),
+                text("SELECT id, name, email, password, requested_role_id FROM users WHERE email = :email"),
                 {"email": email}
             )
             user = result.fetchone()
@@ -69,6 +70,7 @@ def get_current_user(request: Request) -> dict:
                 raise HTTPException(status_code=404, detail="User not found.")
 
             user_id = str(user[0])
+            is_sso = user[3] == "SSO_USER_NO_PASSWORD"
 
             # Try to fetch roles, donor_groups, and outcomes, but handle empty results gracefully.
             # We use nested transactions (savepoints) to ensure that if one query fails, 
@@ -82,13 +84,14 @@ def get_current_user(request: Request) -> dict:
             except Exception as e:
                 logger.warning(f"Failed to fetch roles for user {user_id}: {e}")
 
-            # Return user data as a dictionary.
             return {
                 "user_id": user_id,
                 "name": user[1],
                 "email": user[2],
                 "roles": roles,
-                "is_admin": "system admin" in roles
+                "is_admin": "system admin" in roles,
+                "is_sso": is_sso,
+                "requested_role_id": user[4]
             }
 
     except jwt.ExpiredSignatureError:
@@ -161,4 +164,5 @@ __all__ = [
     "ENTRA_TENANT_ID",
     "ENTRA_CLIENT_ID",
     "ENTRA_CLIENT_SECRET",
+    "ENTRA_REDIRECT_URI",
 ]

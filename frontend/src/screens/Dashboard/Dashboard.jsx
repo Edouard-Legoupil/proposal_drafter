@@ -9,7 +9,7 @@ import KnowledgeCard from './components/KnowledgeCard/KnowledgeCard'
 import MetricsDashboard from './components/MetricsDashboard/MetricsDashboard'
 import SingleSelectUserModal from '../../components/SingleSelectUserModal/SingleSelectUserModal'
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
 
 export default function Dashboard() {
         const navigate = useNavigate()

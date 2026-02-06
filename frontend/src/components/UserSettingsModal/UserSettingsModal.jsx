@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Select from 'react-select';
 import './UserSettingsModal.css';
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api";
 
 export default function UserSettingsModal({ show, onClose }) {
     const [options, setOptions] = useState({

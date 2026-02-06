@@ -79,6 +79,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "your_default_dev_secret")
 ENTRA_TENANT_ID = os.getenv("ENTRA_TENANT_ID")
 ENTRA_CLIENT_ID = os.getenv("ENTRA_CLIENT_ID")
 ENTRA_CLIENT_SECRET = os.getenv("ENTRA_CLIENT_SECRET")
+ENTRA_REDIRECT_URI = os.getenv("ENTRA_REDIRECT_URI")
 
 # --- Database Configuration ---
 

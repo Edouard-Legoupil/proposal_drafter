@@ -24,9 +24,10 @@ async def get_admin_users(admin: dict = Depends(is_system_admin)):
         with get_engine().connect() as connection:
             # Fetch all users
             users_query = text("""
-                SELECT u.id, u.name, u.email, t.name as team_name
+                SELECT u.id, u.name, u.email, t.name as team_name, u.requested_role_id, r.name as requested_role_name
                 FROM users u
                 LEFT JOIN teams t ON u.team_id = t.id
+                LEFT JOIN roles r ON u.requested_role_id = r.id
                 ORDER BY u.name
             """)
             users_result = connection.execute(users_query).mappings().all()
@@ -91,6 +92,9 @@ async def update_admin_user_settings(user_id: str, settings: dict, admin: dict =
                 connection.execute(text("DELETE FROM user_donor_groups WHERE user_id = :user_id"), {"user_id": user_id})
                 connection.execute(text("DELETE FROM user_outcomes WHERE user_id = :user_id"), {"user_id": user_id})
                 connection.execute(text("DELETE FROM user_field_contexts WHERE user_id = :user_id"), {"user_id": user_id})
+                
+                # Clear pending role request
+                connection.execute(text("UPDATE users SET requested_role_id = NULL WHERE id = :user_id"), {"user_id": user_id})
                 
                 # Insert new roles
                 if role_ids:

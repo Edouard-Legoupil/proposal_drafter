@@ -454,9 +454,16 @@ async def get_reference_issue_metrics(
     date_start: Optional[str] = Query(None),
     date_end: Optional[str] = Query(None),
 ):
-    # knowledge_card_reference_errors table is not currently in the schema
-    # Returning empty result to maintain endpoint availability
-    return {"error_types": [], "counts": []}
+    q = "SELECT error_type, COUNT(id) as count FROM knowledge_card_reference_errors GROUP BY error_type"
+    return robust_query(
+        q,
+        {},
+        {"error_types": [], "counts": []},
+        lambda rows: {
+            "error_types": [row["error_type"] for row in rows if "error_type" in row],
+            "counts": [row["count"] for row in rows if "count" in row],
+        },
+    )
 
 
 @router.get("/metrics/card-edit-frequency",
@@ -499,9 +506,18 @@ async def get_card_impact_score(
     date_start: Optional[str] = Query(None),
     date_end: Optional[str] = Query(None),
 ):
-    # knowledge_card_usage table is not currently in the schema
-    # Returning empty result to maintain endpoint availability
-    return {"card_ids": [], "impact_scores": []}
+    q = "SELECT knowledge_card_id as card_id, COUNT(id) as impact_score FROM knowledge_card_usage GROUP BY knowledge_card_id"
+    return robust_query(
+        q,
+        {},
+        {"card_ids": [], "impact_scores": []},
+        lambda rows: {
+            "card_ids": [str(row["card_id"]) for row in rows if "card_id" in row],
+            "impact_scores": [
+                row["impact_score"] for row in rows if "impact_score" in row
+            ],
+        },
+    )
 
 
 @router.get("/metrics/knowledge-silos",

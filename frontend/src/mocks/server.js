@@ -1,7 +1,7 @@
 import { setupServer } from 'msw/node'
 import { http, HttpResponse } from 'msw'
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
 
 export const server = setupServer(
         http.get(`${API_BASE_URL}/profile`, () =>
@@ -16,15 +16,13 @@ export const server = setupServer(
         http.post(`${API_BASE_URL}/login`, async ({ request }) => {
                 const { email, password } = await request.json()
 
-                if (email === 'edouard.legoupil@gmail.com' && password === 'edouard123')
-                {
+                if (email === 'edouard.legoupil@gmail.com' && password === 'edouard123') {
                         return new HttpResponse(null, {
                                 status: 200,
                                 headers: { 'Set-Cookie': 'token=fake-token HttpOnly Path=/ Secure' }
                         })
                 }
-                else
-                {
+                else {
                         return new HttpResponse(
                                 JSON.stringify({ message: 'Invalid credentials' }),
                                 { status: 401, headers: { 'Content-Type': 'application/json' } }
@@ -38,8 +36,10 @@ export const server = setupServer(
                         return HttpResponse.json({ question: "What's your pet's name?" })
                 }
                 return new HttpResponse(JSON.stringify({ error: 'Email not found' }), {
-                        status: 404, headers: { 'Content-Type': 'application/json'
-                }})
+                        status: 404, headers: {
+                                'Content-Type': 'application/json'
+                        }
+                })
         }),
 
         http.post(`${API_BASE_URL}/verify-security-answer`, async ({ request }) => {
@@ -48,8 +48,10 @@ export const server = setupServer(
                         return new HttpResponse(null, { status: 200 })
                 }
                 return new HttpResponse(JSON.stringify({ error: 'Incorrect answer' }), {
-                        status: 401, headers: { 'Content-Type': 'application/json'
-                }})
+                        status: 401, headers: {
+                                'Content-Type': 'application/json'
+                        }
+                })
         }),
 
         http.post(`${API_BASE_URL}/update-password`, async ({ request }) => {
@@ -61,8 +63,10 @@ export const server = setupServer(
                         })
                 }
                 return new HttpResponse(JSON.stringify({ error: 'Reset failed' }), {
-                        status: 400, headers: { 'Content-Type': 'application/json'
-                }})
+                        status: 400, headers: {
+                                'Content-Type': 'application/json'
+                        }
+                })
         }),
 
         http.get(`${API_BASE_URL}/list-drafts`, () =>
@@ -142,7 +146,7 @@ export const server = setupServer(
 
                 const generated_sections = Object.fromEntries(
                         proposalTemplate.sections.map(s => [s.section_name, ""])
-                      )
+                )
 
                 return HttpResponse.json({
                         proposal_id: 'fake-proposal-id',
@@ -150,16 +154,16 @@ export const server = setupServer(
                         project_description: '',
                         form_data: Object.fromEntries(
                                 Object.entries({
-                                'Project title': '',
-                                'Project type': '',
-                                'Secondary project type': '',
-                                'Geographical Coverage': '',
-                                'Executing agency': '',
-                                'Beneficiaries': '',
-                                'Partner(s)': '',
-                                'Management site': '',
-                                'Duration': '',
-                                'Budget': ''
+                                        'Project title': '',
+                                        'Project type': '',
+                                        'Secondary project type': '',
+                                        'Geographical Coverage': '',
+                                        'Executing agency': '',
+                                        'Beneficiaries': '',
+                                        'Partner(s)': '',
+                                        'Management site': '',
+                                        'Duration': '',
+                                        'Budget': ''
                                 }).map(([k]) => [k, ''])
                         ),
                         generated_sections,

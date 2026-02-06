@@ -197,3 +197,30 @@
         overflow-y: auto;
         position: relative;
 }
+
+.Header_pendingRequest {
+        background: #f59e0b;
+        color: white;
+        padding: 5px 12px;
+        border-radius: 4px;
+        font-size: 13px;
+        font-weight: 500;
+        margin-right: 20px;
+}
+
+.Header_requestButton {
+        background: #10b981;
+        color: white;
+        border: none;
+        padding: 6px 14px;
+        border-radius: 4px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        margin-right: 20px;
+        transition: background 0.2s;
+}
+
+.Header_requestButton:hover {
+        background: #059669;
+}

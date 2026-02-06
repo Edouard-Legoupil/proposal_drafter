@@ -11,7 +11,7 @@ import CommonButton from '../../components/CommonButton/CommonButton'
 import ResponsiveIllustration from '../../components/ResponsiveIllustration/ResponsiveIllustration'
 import OSSFooter from '../../components/OSSFooter/OSSFooter'
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
 
 import logo from "../../assets/images/App_logo.svg"
 import show from "../../assets/images/login_showPassword.svg"
@@ -243,6 +243,21 @@ export default function Login(props) {
                                                         :
                                                         ""
                                                 }
+                                                {!props?.register && ssoEnabled && (
+                                                        <>
+                                                                <CommonButton
+                                                                        label="LOG IN USING UNHCR SSO"
+                                                                        onClick={() => window.location.href = `${API_BASE_URL}/sso-login`}
+                                                                        className="Login-ssoButton"
+                                                                        style={{ marginTop: "10px" }}
+                                                                />
+                                                                <div className='Login_divider' style={{ margin: "24px 0" }}>
+                                                                        <hr />
+                                                                        <span>OR</span>
+                                                                        <hr />
+                                                                </div>
+                                                        </>
+                                                )}
                                                 <label className='Login-label' htmlFor='Login_identifierInput'>Username or Email</label>
                                                 <input
                                                         type="text"
@@ -362,7 +377,7 @@ export default function Login(props) {
                                                         disabled={(props?.register && !username) || (props?.register ? !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) : !email) || email.length >= 255 || password.length < 8 || (props?.register && !securityAnswer) || (props?.register && !acknowledged)}
                                                         label={submitButtonText}
                                                         loading={loading}
-                                                        style={{ marginTop: "20px" }}
+                                                        style={{ marginTop: "10px" }}
                                                         data-testid="submit-button"
                                                 />
                                                 <div className='Login-register'>
@@ -373,20 +388,6 @@ export default function Login(props) {
                                                                 </>
                                                                 :
                                                                 <>
-                                                                        {ssoEnabled && (
-                                                                                <>
-                                                                                        <CommonButton
-                                                                                                label="LOGIN WITH MICROSOFT"
-                                                                                                onClick={() => window.location.href = `${API_BASE_URL}/sso-login`}
-                                                                                                style={{ marginTop: "20px", backgroundColor: "#2F2F2F" }}
-                                                                                        />
-                                                                                        <div className='Login-divider'>
-                                                                                                <hr />
-                                                                                                <span>OR</span>
-                                                                                                <hr />
-                                                                                        </div>
-                                                                                </>
-                                                                        )}
                                                                         Don't have an account?
                                                                         <a href="/register" data-testid="register-link"> Sign up</a>
                                                                 </>

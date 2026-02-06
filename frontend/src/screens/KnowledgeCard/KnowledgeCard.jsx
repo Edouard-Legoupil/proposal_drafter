@@ -18,7 +18,7 @@ import rehypeSanitize from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
 import word_icon from '../../assets/images/word.svg';
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api";
 
 export default function KnowledgeCard() {
     const navigate = useNavigate();

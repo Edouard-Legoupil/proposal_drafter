@@ -187,3 +187,53 @@
         opacity: 1;
     }
 }
+
+.admin-notification {
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    color: #92400e;
+    padding: 12px 20px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.9375rem;
+    animation: slideDown 0.3s ease-out;
+}
+
+.admin-notification i {
+    color: #f59e0b;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-10px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.row-highlight {
+    background-color: #fffbeb !important;
+}
+
+.request-badge {
+    display: inline-block;
+    background: #f59e0b;
+    color: white;
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin-left: 8px;
+    font-weight: 500;
+}
+
+.select-highlight {
+    box-shadow: 0 0 0 2px #f59e0b;
+    border-radius: 4px;
+}

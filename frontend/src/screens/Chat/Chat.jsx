@@ -16,7 +16,7 @@ import ProgressModal from '../../components/ProgressModal/ProgressModal';
 import Select from 'react-select';
 import CreatableSelect from 'react-select/creatable';
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
 
 import fileIcon from "../../assets/images/chat-titleIcon.svg"
 import arrow from "../../assets/images/expanderArrow.svg"

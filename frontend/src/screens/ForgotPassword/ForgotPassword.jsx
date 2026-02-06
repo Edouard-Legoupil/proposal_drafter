@@ -3,50 +3,43 @@ import './ForgotPassword.css'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
 
 import downarrow from "../../assets/images/downarrow.svg"
 import show from "../../assets/images/login_showPassword.svg"
 import hide from "../../assets/images/login_hidePassword.svg"
 
-export default function ForgotPassword (props)
-{
+export default function ForgotPassword(props) {
         const navigate = useNavigate()
 
         const [email, setEmail] = useState("")
 
-        async function handleEmailSubmitClick ()
-        {
+        async function handleEmailSubmitClick() {
                 setLoading(true)
 
-                try
-                {
+                try {
                         const response = await fetch(`${API_BASE_URL}/get-security-question`, {
                                 method: "POST",
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ email }),
                         })
 
-                        if(response.ok)
-                        {
+                        if (response.ok) {
                                 const data = await response.json()
                                 setSecurityQuestion(data.question)
                         }
-                        else
-                        {
+                        else {
                                 const data = await response.json()
 
                                 props?.setErrorText(data.error || "Submit failed. Try again.")
                                 props?.errorPopoverRef.current.showPopover()
                         }
                 }
-                catch(error)
-                {
+                catch (error) {
                         props?.setErrorText("Error occured. Try again.")
                         props?.errorPopoverRef.current.showPopover()
                 }
-                finally
-                {
+                finally {
                         setLoading(false)
                 }
         }
@@ -55,8 +48,7 @@ export default function ForgotPassword (props)
         const [securityAnswer, setSecurityAnswer] = useState("")
 
         const [isVerified, setIsVerified] = useState(false)
-        async function handleVerifyClick ()
-        {
+        async function handleVerifyClick() {
                 setLoading(true)
 
                 const response = await fetch(`${API_BASE_URL}/verify-security-answer`, {
@@ -69,12 +61,10 @@ export default function ForgotPassword (props)
                         })
                 })
 
-                if(response.ok)
-                {
+                if (response.ok) {
                         setIsVerified(true)
                 }
-                else
-                {
+                else {
                         const data = await response.json()
 
                         props?.setErrorText(data.error || "Verification failed. Try again.")
@@ -91,8 +81,7 @@ export default function ForgotPassword (props)
 
         const [password, setPassword] = useState("")
         const [showPassword, setShowPassword] = useState(false)
-        async function handleResetPasswordSubmit ()
-        {
+        async function handleResetPasswordSubmit() {
                 setLoading(true)
 
                 const response = await fetch(`${API_BASE_URL}/update-password`, {
@@ -107,23 +96,21 @@ export default function ForgotPassword (props)
                         credentials: 'include'
                 })
 
-                if(response.ok)
-                {
+                if (response.ok) {
                         navigate("/login")
                 }
         }
 
-        function handleBackClick ()
-        {
-                if(!securityQuestion)
+        function handleBackClick() {
+                if (!securityQuestion)
                         navigate("/login")
-                if(securityQuestion && !isVerified)
+                if (securityQuestion && !isVerified)
                         navigate("/forgotpassword")
-                if(securityQuestion && isVerified)
+                if (securityQuestion && isVerified)
                         navigate("/login")
         }
 
-        return  <form className='Login-form'>
+        return <form className='Login-form'>
                 <button className="ForgotPassword_back" onClick={handleBackClick} data-testid="back-button">
                         <img src={downarrow} alt="Back" />
                         Back
@@ -198,7 +185,7 @@ export default function ForgotPassword (props)
                                         data-testid="password-input"
                                 />
                                 {password ? <div className="Login_showPasswordToggleContainer">
-                                        <img className='Login_passwordShowToggle' src={showPassword ? hide : show} onClick={() => setShowPassword(p => !p)} data-testid="show-password-toggle"/>
+                                        <img className='Login_passwordShowToggle' src={showPassword ? hide : show} onClick={() => setShowPassword(p => !p)} data-testid="show-password-toggle" />
                                 </div> : ""}
 
                                 <button
