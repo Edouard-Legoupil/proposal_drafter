@@ -9,6 +9,7 @@ param resourcePrefix string = 'proposalgen'
 @description('The Docker image for the backend app.')
 param backendImage string = 'backend:latest'
 
+
 @description('The size of the environment to deploy.')
 @allowed([
   'Testing'
@@ -36,15 +37,6 @@ param cfAccessClientId string
 param cfAccessClientSecret string
 
 // Shared Resources
-module acr 'modules/acr.bicep' = {
-  name: 'acrDeployment'
-  params: {
-    location: location
-    prefix: resourcePrefix
-    environmentSize: environmentSize
-  }
-}
-
 module postgres 'modules/postgres.bicep' = {
   name: 'postgresDeployment'
   params: {
@@ -71,22 +63,13 @@ module openAi 'modules/openai.bicep' = {
   }
 }
 
-// Container App Environment
-module containerEnv 'modules/container_env.bicep' = {
-  name: 'containerEnvDeployment'
+// App Service
+module appService 'modules/app_service.bicep' = {
+  name: 'appServiceDeployment'
   params: {
     location: location
     prefix: resourcePrefix
-  }
-}
-
-// Container Apps
-module containerApps 'modules/container_apps.bicep' = {
-  name: 'containerAppsDeployment'
-  params: {
-    location: location
-    prefix: resourcePrefix
-    containerRegistry: acr.outputs.name
+    environmentSize: environmentSize
     postgresServerName: postgres.outputs.serverName
     postgresDatabaseName: postgres.outputs.databaseName
     postgresAdminUser: postgres.outputs.adminUser
@@ -94,8 +77,6 @@ module containerApps 'modules/container_apps.bicep' = {
     redisHost: redis.outputs.hostName
     redisPort: redis.outputs.port
     redisPassword: redis.outputs.password
-    backendImage: backendImage
-    environmentId: containerEnv.outputs.id
     openAiEndpoint: openAi.outputs.endpoint
     openAiApiKey: openAi.outputs.apiKey
     serperApiKey: serperApiKey
@@ -109,6 +90,5 @@ module containerApps 'modules/container_apps.bicep' = {
 }
 
 // Outputs
-output acrName string = acr.outputs.name
 output postgresServerName string = postgres.outputs.serverName
-output containerAppUrl string = containerApps.outputs.appUrl
+output appUrl string = appService.outputs.appUrl
