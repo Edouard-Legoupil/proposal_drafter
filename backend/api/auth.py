@@ -67,7 +67,7 @@ async def sso_login(request: Request):
     logging.info(f"SSO Login - redirect_uri: {redirect_uri}")
     
     auth_url = msal_app.get_authorization_request_url(
-        scopes=["User.Read", "GroupMember.Read.All"],
+        scopes=["User.Read"],
         redirect_uri=redirect_uri,
     )
     logging.info(f"SSO Login - auth_url: {auth_url}")
@@ -88,7 +88,7 @@ async def callback(request: Request, code: str):
 
     result = msal_app.acquire_token_by_authorization_code(
         code,
-        scopes=["User.Read", "GroupMember.Read.All"],
+        scopes=["User.Read"],
         redirect_uri=redirect_uri,
     )
 
@@ -108,17 +108,9 @@ async def callback(request: Request, code: str):
             )
             user_response.raise_for_status()
             user_data = user_response.json()
-
-            # Fetch groups
-            groups_response = await client.get(
-                "https://graph.microsoft.com/v1.0/me/memberOf",
-                headers={"Authorization": f"Bearer {access_token}"},
-            )
-            groups_response.raise_for_status()
-            groups_data = groups_response.json()
         except httpx.HTTPStatusError as e:
             logging.error(f"Graph API Error: {e.response.text}")
-            return JSONResponse(status_code=400, content={"error": "Failed to fetch user or group data"})
+            return JSONResponse(status_code=400, content={"error": "Failed to fetch user data"})
 
     email = user_data.get("userPrincipalName") or user_data.get("mail")
     name = user_data.get("displayName")
