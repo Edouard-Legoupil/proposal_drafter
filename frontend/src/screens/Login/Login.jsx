@@ -251,7 +251,10 @@ export default function Login(props) {
                                                                         className="Login-ssoButton"
                                                                         style={{ marginTop: "10px" }}
                                                                 />
-                                                                <div className='Login_divider' style={{ margin: "24px 0" }}>
+                                                                <div style={{ fontSize: '12px', color: '#666', textAlign: 'center', marginTop: '16px', marginBottom: '8px' }}>
+                                                                        Having trouble accessing SSO? <a href="mailto:legoupil@unhcr.org?subject=Access%20Proposal%20Gen" style={{ color: '#0072BC', textDecoration: 'underline' }}>Request access</a>
+                                                                </div>
+                                                                <div className='Login_divider' style={{ margin: "16px 0" }}>
                                                                         <hr />
                                                                         <span>OR</span>
                                                                         <hr />
