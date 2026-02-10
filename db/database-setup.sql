@@ -28,7 +28,8 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     geographic_coverage_type TEXT,
     geographic_coverage_region TEXT,
-    geographic_coverage_country TEXT
+    geographic_coverage_country TEXT,
+    requested_role_id INTEGER REFERENCES roles(id)
 );
 
 -- Create Roles table
@@ -56,6 +57,13 @@ CREATE TABLE IF NOT EXISTS user_outcomes (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     outcome_id UUID NOT NULL REFERENCES outcomes(id) ON DELETE CASCADE,
     PRIMARY KEY (user_id, outcome_id)
+);
+
+-- Create User Field Contexts table
+CREATE TABLE IF NOT EXISTS user_field_contexts (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    field_context_id UUID NOT NULL REFERENCES field_contexts(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, field_context_id)
 );
 
 
@@ -86,6 +94,7 @@ CREATE TABLE IF NOT EXISTS field_contexts (
     name TEXT UNIQUE NOT NULL,
     category TEXT NOT NULL,
     geographic_coverage TEXT,
+    unhcr_region TEXT,
     created_by UUID REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -159,6 +168,7 @@ CREATE TABLE IF NOT EXISTS proposal_peer_reviews (
 CREATE TABLE IF NOT EXISTS knowledge_cards (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     template_name TEXT,
+    type TEXT,
     summary TEXT NOT NULL,
     generated_sections JSONB,
     is_accepted BOOLEAN DEFAULT FALSE,
@@ -194,6 +204,8 @@ CREATE TABLE IF NOT EXISTS knowledge_card_reviews (
     rating VARCHAR(10),
     review_text TEXT,
     author_response TEXT,
+    type_of_comment TEXT,
+    severity VARCHAR(20),
     status VARCHAR(50) DEFAULT 'pending',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -236,6 +248,25 @@ CREATE TABLE IF NOT EXISTS rag_evaluation_logs (
     query TEXT NOT NULL,
     retrieved_context TEXT NOT NULL,
     generated_answer TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create Knowledge Card Usage Tracking table
+CREATE TABLE IF NOT EXISTS knowledge_card_usage (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    knowledge_card_id UUID NOT NULL REFERENCES knowledge_cards(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id),
+    action TEXT NOT NULL, -- e.g., 'view', 'citation', 'generation'
+    proposal_id UUID REFERENCES proposals(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create Knowledge Card Reference Errors table
+CREATE TABLE IF NOT EXISTS knowledge_card_reference_errors (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    reference_id UUID NOT NULL REFERENCES knowledge_card_references(id) ON DELETE CASCADE,
+    error_type TEXT NOT NULL, -- e.g., 'broken_link', 'timeout', 'parsing_error'
+    error_message TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 

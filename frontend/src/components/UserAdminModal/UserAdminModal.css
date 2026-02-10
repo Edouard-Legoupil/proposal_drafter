@@ -237,3 +237,68 @@
     box-shadow: 0 0 0 2px #f59e0b;
     border-radius: 4px;
 }
+
+.admin-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.admin-controls .search-bar {
+    margin-bottom: 0;
+    flex: 1;
+}
+
+.create-team-container {
+    display: flex;
+    gap: 12px;
+}
+
+.create-team-input {
+    padding: 10px 16px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    font-size: 0.9rem;
+    min-width: 200px;
+}
+
+.primary-button.small {
+    padding: 8px 16px;
+    font-size: 0.875rem;
+}
+
+.primary-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.icon-button {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    transition: all 0.2s;
+    color: #94a3b8;
+}
+
+.icon-button:hover {
+    background: #f1f5f9;
+    color: #ef4444;
+}
+
+.delete-button {
+    color: #ef4444;
+    opacity: 0.7;
+}
+
+.delete-button:hover {
+    opacity: 1;
+    background: #fee2e2;
+}
+
+.team-select {
+    min-width: 180px;
+}
