@@ -176,3 +176,10 @@ class AuthorResponseRequest(BaseModel):
 
 class SaveContributionIdRequest(BaseModel):
     contribution_id: str
+
+class CreateTeamRequest(BaseModel):
+    name: str
+
+class UpdateUserTeamRequest(BaseModel):
+    team_id: uuid.UUID
+
