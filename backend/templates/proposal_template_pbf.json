@@ -1,277 +1,664 @@
 {
     "template_type": "Proposal",
     "donors": [
-        "UN Peacebuilding Fund - Gender and Youth Promotion Initiative",
         "UN Peacebuilding Fund - Immediate Response Facility",
-        "UN Peacebuilding Fund - Peacebuilding and Recovery Facility",
-        "UN Peacebuilding Fund - Chad",
-        "UN Peacebuilding Fund - DRC",
-        "UN Peacebuilding Fund - Mauritania",
-        "UN Peacebuilding Fund - Sudan",
-        "UN Peacebuilding Fund - Burkina Faso"
+        "UN Peacebuilding Fund - Peacebuilding and Recovery Facility"
     ],
     "special_requirements": {
         "instructions": [
-            "Show UNHCR's unique capacity and access",
-            "Strictly base all content on the provided inputs and knowledge base.",
-            "Do not invent or hallucinate facts, figures, or dates.",
-            "If information is missing, explicitly state that it is not available in the context.",
-            "Ensure tone, style, and formatting match a professional humanitarian proposal.",
-            "For internal controls, audits, and procurement, strictly use standard UNHCR provisions. Do not invent new policies.",
-            "when referencing donor, use donor name and never  donor_id",
-            "when referencing outcomes, use outcome name and never  outcome_id",
-            "when referencing, field context, use field_context name and never field context_id"
+            "Strictly base all content on provided contextual inputs; do not infer or assume missing data.",
+            "Do not invent or hallucinate facts, figures, dates, organizations, geographies, or policies.",
+            "If any required information is unavailable, insert a brief statement: 'Information not provided in the context.'",
+            "Use a formal, objective, and analytical tone. Avoid casual, emotional, or advocacy-oriented language. Present information factually and neutrally, focusing on clarity, precision, and concise explanation of context, needs, risks, implementation, monitoring, and results. Avoid exaggeration, unsupported claims, value judgments, and political statements. Use diplomatic and respectful wording and consistent technical terminology appropriate for peacebuilding, conflict analysis, implementation, risk management, monitoring and evaluation, and results reporting.",
+            "Use donor names, never donor IDs.",
+            "Use outcome names, never outcome IDs.",
+            "Use field_context names, never field_context IDs.",
+            "For internal controls, audits, procurement, and financial reporting, apply only standard UN policies and provisions that are explicitly supplied in the inputs; do not create new policies or clauses.",
+            "For short administrative fields, provide a very short factual statement (maximum 50 words).",
+            "For numeric fields, provide numbers only without units unless specified.",
+            "For tables, produce valid GitHub-Flavored Markdown tables; do not add narrative outside table cells.",
+            "PBF Focus Area must be exactly one of: 1.1 Security Sector Reform (SSR); 1.2 Rule of Law; 1.3 Disarmament, Demobilization and Reintegration (DDR); 1.4 Political Dialogue; 2.1 National Reconciliation; 2.2 Democratic Governance; 2.3 Conflict Prevention/Management; 3.1 Employment; 3.2 Equitable Access to Social Services; 4.1 Strengthening of Essential National State Capacity; 4.2 Extension of State Authority/Local Administration; 4.3 Governance of Peacebuilding Resources (including PBF Secretariats)."
         ]
     },
     "sections": [
         {
-            "section_name": "Project Information",
-            "section_label": "Project Information",
+            "section_name": "Administrative Information",
+            "section_label": "I. Administrative Information",
             "format_type": "table",
             "mandatory": true,
-            "instructions": "Fill the table strictly using the provided project information. Do not infer or invent data.",
+            "instructions": "Populate each administrative field with a concise, factual value based strictly on provided inputs. Do not add interpretation. Use a maximum of 50 words in the 'Value' cell. Where a Yes/No is requested, output only 'Yes' or 'No'.",
             "columns": [
                 {
                     "name": "Field",
                     "format_type": "text",
-                    "instructions": "Field Name"
+                    "instructions": "The exact name of the administrative field."
                 },
                 {
                     "name": "Value",
                     "format_type": "text",
-                    "instructions": "Enter the value for this field."
+                    "instructions": "Concise factual value for the field. Maximum 50 words for text. For numeric fields, provide numbers only."
                 }
             ],
             "rows": [
                 {
+                    "row_title": "Country(ies)",
+                    "instructions": "Name the country or countries of implementation. Max 50 words."
+                },
+                {
                     "row_title": "Project Title",
-                    "instructions": "Project Title"
+                    "instructions": "Official project title. Max 50 words."
                 },
                 {
-                    "row_title": "Country",
-                    "instructions": "Country"
+                    "row_title": "Project Number (MPTF-O Gateway)",
+                    "instructions": "Provide existing number if applicable; otherwise state 'N/A'."
                 },
                 {
-                    "row_title": "Funding Window",
-                    "instructions": "PBF Funding Window (IRF/PRF/YPI/GPI)"
+                    "row_title": "PBF Project Modality",
+                    "instructions": "One of: IRF (Immediate Response Facility) or PRF (Peacebuilding and Recovery Facility)."
+                },
+                {
+                    "row_title": "Funding Disbursed into Trust Fund",
+                    "instructions": "Country Trust Fund or Regional Trust Fund; if none, state 'No' or 'N/A'."
+                },
+                {
+                    "row_title": "Name of Recipient Fund",
+                    "instructions": "Provide name if applicable; otherwise 'N/A'."
+                },
+                {
+                    "row_title": "Direct Recipient Organizations (RUNOs)",
+                    "instructions": "List direct recipient organizations, starting with the Convening Agency; include type (UN, CSO). Max 50 words."
+                },
+                {
+                    "row_title": "Additional Implementing Partners",
+                    "instructions": "List additional implementing partners and type (Government, INGO, local CSO). Max 50 words."
                 },
                 {
                     "row_title": "Project Duration (months)",
-                    "instructions": "Project Duration (months)"
+                    "instructions": "Provide total duration in months. IRF ≤ 24 months (36 for cross-border/regional); PRF ≤ 36 months. Provide numeric value only."
                 },
                 {
-                    "row_title": "Total Budget (USD)",
-                    "instructions": "Total Budget (USD)"
+                    "row_title": "Geographic Zones",
+                    "instructions": "Identify geographic zones within the country. Max 50 words."
                 },
                 {
-                    "row_title": "1st tranche (70%) \u2013 amount (USD)",
-                    "instructions": "PBF 1st tranche (70%) \u2013 amount (USD)"
+                    "row_title": "Priority Window: Gender Promotion Initiative (GPI)",
+                    "instructions": "Yes/No. Select 'Yes' only if approved under a GPI window."
                 },
                 {
-                    "row_title": "2nd tranche (30%) \u2013 amount (USD)",
-                    "instructions": "PBF 2nd tranche (30%) \u2013 amount (USD)"
+                    "row_title": "Priority Window: Youth Promotion Initiative (YPI)",
+                    "instructions": "Yes/No. Select 'Yes' only if approved under a YPI window (if applicable)."
                 },
                 {
-                    "row_title": "3rd tranche (if applicable) \u2013 amount (USD)",
-                    "instructions": "PBF 3rd tranche (if applicable) \u2013 amount (USD)"
+                    "row_title": "Priority Window: Transition from UN/Regional Mission",
+                    "instructions": "Yes/No."
                 },
                 {
-                    "row_title": "Recipient UN Organizations (RUNOs)",
-                    "instructions": "Recipient UN Organizations (RUNOs)"
+                    "row_title": "Priority Window: Cross-border/Regional Project",
+                    "instructions": "Yes/No."
                 },
                 {
-                    "row_title": "Convening/Coordinating Agency",
-                    "instructions": "Convening/Coordinating Agency"
+                    "row_title": "Brief Project Description",
+                    "instructions": "One or two sentences describing the main project goal; do not list outcomes or outputs. Max 50 words."
                 },
                 {
-                    "row_title": "Gender Marker score (1/2/3)",
-                    "instructions": "PBF Gender Marker score (1/2/3)"
+                    "row_title": "Summary of In-country Consultations",
+                    "instructions": "Concise summary of consultations with PBF Steering Committee, civil society (including women/youth organizations) and community stakeholders. Max 50 words."
                 },
                 {
-                    "row_title": "Budget allocated to GEWE (USD)",
-                    "instructions": "Budget allocated to GEWE (USD)"
+                    "row_title": "Piloting New Approaches",
+                    "instructions": "Yes/No. If Yes, describe in <= 50 words."
                 },
                 {
-                    "row_title": "% of total budget for GEWE",
-                    "instructions": "% of total budget for GEWE"
+                    "row_title": "Climate, Peace and Security Considerations",
+                    "instructions": "Yes/No. If Yes, describe in <= 50 words."
+                },
+                {
+                    "row_title": "PBF Focus Area",
+                    "instructions": "Select exactly one: 1.1 Security Sector Reform (SSR); 1.2 Rule of Law; 1.3 Disarmament, Demobilization and Reintegration (DDR); 1.4 Political Dialogue; 2.1 National Reconciliation; 2.2 Democratic Governance; 2.3 Conflict Prevention/Management; 3.1 Employment; 3.2 Equitable Access to Social Services; 4.1 Strengthening of Essential National State Capacity; 4.2 Extension of State Authority/Local Administration; 4.3 Governance of Peacebuilding Resources (including PBF Secretariats). Max 50 words."
+                },
+                {
+                    "row_title": "UNSDCF Outcome(s)",
+                    "instructions": "State relevant outcome(s). Max 50 words."
+                },
+                {
+                    "row_title": "Sustainable Development Goal(s) and Target(s)",
+                    "instructions": "List relevant SDGs and targets. Max 50 words."
+                },
+                {
+                    "row_title": "Type of Submission",
+                    "instructions": "Select one: New project / Project amendment."
+                },
+                {
+                    "row_title": "Amendment: Extension of Duration (months and new end date)",
+                    "instructions": "If amendment, specify additional months and new end date; otherwise 'N/A'."
+                },
+                {
+                    "row_title": "Amendment: Change of Outcome/Scope",
+                    "instructions": "If amendment, describe change briefly; otherwise 'N/A'."
+                },
+                {
+                    "row_title": "Amendment: Budget Reallocation >15%",
+                    "instructions": "If amendment, describe change briefly; otherwise 'N/A'."
+                },
+                {
+                    "row_title": "Amendment: Additional PBF Budget (by recipient organization)",
+                    "instructions": "If amendment, state additional amount(s); otherwise 'N/A'."
+                },
+                {
+                    "row_title": "Amendment: Brief Justification",
+                    "instructions": "Provide a concise justification; otherwise 'N/A'."
                 }
-            ]
+            ],
+            "section_parent": "I. Project Information"
         },
         {
-            "section_name": "Context Rationale",
-            "section_label": "I. Peacebuilding Context and Rationale for PBF support",
+            "section_name": "Budget - Total Budget by Recipient",
+            "section_label": "II.A Budget – Total Approved PBF Project Budget (by Recipient Organization)",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Provide a high-level budget summary by recipient organization. Do not include narrative outside the table. Use USD only; numbers should not include thousands separators.",
+            "columns": [
+                {
+                    "name": "Recipient Organization",
+                    "format_type": "text",
+                    "instructions": "Exact recipient organization name (e.g., UNHCR, UNDP, CSO name)."
+                },
+                {
+                    "name": "Approved Amount (USD)",
+                    "format_type": "number",
+                    "instructions": "Approved PBF amount in USD."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Recipient 1",
+                    "instructions": "Enter first recipient organization and its approved budget."
+                },
+                {
+                    "row_title": "Recipient 2",
+                    "instructions": "Enter second recipient organization and its approved budget."
+                },
+                {
+                    "row_title": "Recipient 3",
+                    "instructions": "Enter third recipient organization and its approved budget."
+                },
+                {
+                    "row_title": "Total",
+                    "instructions": "Provide the total across all recipients in USD."
+                }
+            ],
+            "section_parent": "II. Budget"
+        },
+        {
+            "section_name": "Budget - Tranche 1",
+            "section_label": "II.B Budget – PBF 1st Tranche (percentage and amounts)",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Detail first tranche percentage and allocation by recipient. Use USD and numeric percentages only.",
+            "columns": [
+                {
+                    "name": "Recipient Organization",
+                    "format_type": "text",
+                    "instructions": "Recipient organization name."
+                },
+                {
+                    "name": "Percentage of Total Tranche (%)",
+                    "format_type": "number",
+                    "instructions": "Percentage of the first tranche assigned to this recipient."
+                },
+                {
+                    "name": "Amount (USD)",
+                    "format_type": "number",
+                    "instructions": "Dollar amount allocated in the first tranche."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Recipient 1",
+                    "instructions": "Enter percentage and amount for recipient 1."
+                },
+                {
+                    "row_title": "Recipient 2",
+                    "instructions": "Enter percentage and amount for recipient 2."
+                },
+                {
+                    "row_title": "Recipient 3",
+                    "instructions": "Enter percentage and amount for recipient 3."
+                },
+                {
+                    "row_title": "Total",
+                    "instructions": "Enter the tranche total (should equal tranche percentage × total budget)."
+                }
+            ],
+            "section_parent": "II. Budget"
+        },
+        {
+            "section_name": "Budget - Tranche 2",
+            "section_label": "II.C Budget – PBF 2nd Tranche (percentage and amounts)",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Detail second tranche percentage and allocation by recipient. Use USD and numeric percentages only.",
+            "columns": [
+                {
+                    "name": "Recipient Organization",
+                    "format_type": "text",
+                    "instructions": "Recipient organization name."
+                },
+                {
+                    "name": "Percentage of Total Tranche (%)",
+                    "format_type": "number",
+                    "instructions": "Percentage of the second tranche assigned to this recipient."
+                },
+                {
+                    "name": "Amount (USD)",
+                    "format_type": "number",
+                    "instructions": "Dollar amount allocated in the second tranche."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Recipient 1",
+                    "instructions": "Enter percentage and amount for recipient 1."
+                },
+                {
+                    "row_title": "Recipient 2",
+                    "instructions": "Enter percentage and amount for recipient 2."
+                },
+                {
+                    "row_title": "Recipient 3",
+                    "instructions": "Enter percentage and amount for recipient 3."
+                },
+                {
+                    "row_title": "Total",
+                    "instructions": "Enter the tranche total."
+                }
+            ],
+            "section_parent": "II. Budget"
+        },
+        {
+            "section_name": "Budget - Tranche 3",
+            "section_label": "II.D Budget – PBF 3rd Tranche (percentage and amounts, if applicable)",
+            "format_type": "table",
+            "mandatory": false,
+            "instructions": "Populate only if a third tranche applies. Use USD and numeric percentages only.",
+            "columns": [
+                {
+                    "name": "Recipient Organization",
+                    "format_type": "text",
+                    "instructions": "Recipient organization name."
+                },
+                {
+                    "name": "Percentage of Total Tranche (%)",
+                    "format_type": "number",
+                    "instructions": "Percentage of the third tranche assigned to this recipient."
+                },
+                {
+                    "name": "Amount (USD)",
+                    "format_type": "number",
+                    "instructions": "Dollar amount allocated in the third tranche."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Recipient 1",
+                    "instructions": "Enter percentage and amount for recipient 1."
+                },
+                {
+                    "row_title": "Recipient 2",
+                    "instructions": "Enter percentage and amount for recipient 2."
+                },
+                {
+                    "row_title": "Recipient 3",
+                    "instructions": "Enter percentage and amount for recipient 3."
+                },
+                {
+                    "row_title": "Total",
+                    "instructions": "Enter the tranche total."
+                }
+            ],
+            "section_parent": "II. Budget"
+        },
+        {
+            "section_name": "Budget - Other Funding Sources",
+            "section_label": "II.E Budget – Other Existing Funding (amount and source)",
+            "format_type": "table",
+            "mandatory": false,
+            "instructions": "List any other existing funding sources for the project. Use USD only.",
+            "columns": [
+                {
+                    "name": "Donor/Source",
+                    "format_type": "text",
+                    "instructions": "Funding source or donor name."
+                },
+                {
+                    "name": "Amount (USD)",
+                    "format_type": "number",
+                    "instructions": "Amount in USD from this source."
+                },
+                {
+                    "name": "Notes",
+                    "format_type": "text",
+                    "instructions": "Short note if necessary (e.g., conditionality). Max 50 words."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Source 1",
+                    "instructions": "Enter first additional source."
+                },
+                {
+                    "row_title": "Source 2",
+                    "instructions": "Enter second additional source."
+                }
+            ],
+            "section_parent": "II. Budget"
+        },
+        {
+            "section_name": "Gender Marker",
+            "section_label": "III.A Gender Marker and GEWE Allocation",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Complete all four rows. For 'Score', enter 1, 2, or 3. For '%' and 'USD', provide numeric values. For 'Explanation', provide a concise statement.",
+            "columns": [
+                {
+                    "name": "Item",
+                    "format_type": "text",
+                    "instructions": "Gender Marker element."
+                },
+                {
+                    "name": "Value",
+                    "format_type": "text",
+                    "instructions": "Provide the exact value (number for Score/%/USD; short text for Explanation)."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Gender Marker Score (1/2/3)",
+                    "instructions": "Enter 1, 2, or 3 according to the project design."
+                },
+                {
+                    "row_title": "% allocated to GEWE",
+                    "instructions": "Numeric percentage of total project budget dedicated to GEWE."
+                },
+                {
+                    "row_title": "USD allocated to GEWE",
+                    "instructions": "Dollar amount dedicated to GEWE."
+                },
+                {
+                    "row_title": "Explanation of GEWE Contribution",
+                    "instructions": "Concise narrative of how activities contribute to gender equality and women’s empowerment. Max 50 words."
+                }
+            ],
+            "section_parent": "III. Cross-Cutting Markers"
+        },
+        {
+            "section_name": "Risk Marker",
+            "section_label": "III.B Project Risk Marker",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Provide a concise rating and rationale. For 'Risk Marker Score', enter 0 (low), 1 (medium), or 2 (high).",
+            "columns": [
+                {
+                    "name": "Risk Marker Score",
+                    "format_type": "text",
+                    "instructions": "Enter 0, 1, or 2."
+                },
+                {
+                    "name": "Rationale",
+                    "format_type": "text",
+                    "instructions": "Concise reason for the rating. Max 50 words."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Score and Rationale",
+                    "instructions": "Populate both columns for the project-level risk marker."
+                }
+            ],
+            "section_parent": "III. Cross-Cutting Markers"
+        },
+        {
+            "section_name": "Peacebuilding Context and Rationale",
+            "section_label": "IV. Peacebuilding Context and Rationale for Support",
             "format_type": "text",
             "mandatory": true,
-            "word_limit": 1200,
-            "instructions": "Describe conflict risks, social cohesion challenges, inequalities, institutional capacity gaps using ONLY provided context; provide disaggregated data (women, youth, migrants) if available. Justify PBF catalytic support based on the plan."
+            "word_limit": 2000,
+            "instructions": "Provide a structured conflict analysis covering root causes, drivers, triggers, risks, and key stakeholders; explain how these elements generate the specific peacebuilding needs addressed by the project; summarize alignment with national and UN strategic frameworks; and briefly describe complementary interventions and strategic gaps. Use evidence-based, gender- and age-responsive analysis and reference consultations and available data. Do not include outputs or activities here.",
+            "section_parent": "IV. Project Narrative"
         },
         {
             "section_name": "Project Focus and Approach",
-            "section_label": "II.a Project focus and approach",
+            "section_label": "V.A Project Focus and Approach",
             "format_type": "text",
             "mandatory": true,
-            "word_limit": 800,
-            "instructions": "Summarize the strategic approach, actors involved, and how interventions strengthen social cohesion and governance strictly as described in the project design."
+            "word_limit": 1000,
+            "instructions": "Summarize the project’s overarching goal and implementation strategy, explain how the approach addresses identified conflict factors, describe the comparative advantages of involved actors, and note key sequencing or localization considerations. Keep concise and analytical.",
+            "section_parent": "IV. Project Narrative"
         },
         {
             "section_name": "Theory of Change",
-            "section_label": "Project-level Theory of Change",
-            "format_type": "text",
-            "mandatory": true,
-            "word_limit": 400,
-            "instructions": "Use the formulation: 'If we do X, then we expect Y, because Z' to link activities to peacebuilding outcomes based on the provided Theory of Change. Do not invent links."
-        },
-        {
-            "section_name": "Key Outcomes, Outputs and Activities",
-            "section_label": "Key Outcomes, Outputs and Activities",
-            "format_type": "table",
-            "mandatory": true,
-            "instructions": "List outcomes with political/social change; map outputs and core activities under each outcome from the logframe.",
-            "columns": [
-                {
-                    "name": "Outcome",
-                    "format_type": "text",
-                    "instructions": "Peacebuilding change statement (e.g., reduced hate speech; improved coexistence via governance)."
-                },
-                {
-                    "name": "Output",
-                    "format_type": "text",
-                    "instructions": "Concrete deliverable enabling the outcome."
-                },
-                {
-                    "name": "Activities",
-                    "format_type": "text",
-                    "instructions": "Brief list of key activities (dialogues, training, protocols, community projects)."
-                }
-            ],
-            "rows": [
-                {
-                    "row_title": "Outcome 1",
-                    "instructions": "e.g., Reduce hate speech/xenophobia for peaceful coexistence."
-                },
-                {
-                    "row_title": "Outcome 2",
-                    "instructions": "e.g., Increase peaceful coexistence through better democratic governance."
-                }
-            ]
-        },
-        {
-            "section_name": "Targeting",
-            "section_label": "Targeting (youth & other stakeholders)",
-            "format_type": "text",
-            "mandatory": true,
-            "word_limit": 600,
-            "instructions": "Define geographic scope, youth age ranges, criteria and selection mechanisms; include women and marginalized populations; outline engagement with institutions, media, CSOs. Ensure do-no-harm and incentives for participation."
-        },
-        {
-            "section_name": "Risk Management",
-            "section_label": "Risk management (with Do No Harm)",
-            "format_type": "table",
-            "mandatory": true,
-            "instructions": "Identify project-specific risks, levels, mitigation strategies, including barriers to women/youth participation, health, politics, data protection, misinformation.",
-            "columns": [
-                {
-                    "name": "Risk description",
-                    "format_type": "text",
-                    "instructions": "Concise statement of the risk."
-                },
-                {
-                    "name": "Risk level",
-                    "format_type": "text",
-                    "instructions": "Low/Medium/High."
-                },
-                {
-                    "name": "Mitigation strategy",
-                    "format_type": "text",
-                    "instructions": "Actions incl. do-no-harm measures."
-                }
-            ],
-            "rows": [
-                {
-                    "row_title": "Risk 1",
-                    "instructions": "Political priorities shift / stakeholder support wanes."
-                },
-                {
-                    "row_title": "Risk 2",
-                    "instructions": "Rapid influx of persons in transit diverts resources."
-                },
-                {
-                    "row_title": "Risk 3",
-                    "instructions": "Barriers to women/youth participation persist."
-                },
-                {
-                    "row_title": "Risk 4",
-                    "instructions": "Data privacy concerns about early warning system."
-                }
-            ]
-        },
-        {
-            "section_name": "Monitoring Evaluation",
-            "section_label": "Monitoring & Evaluation (RBM, learning, adaptive)",
-            "format_type": "text",
-            "mandatory": true,
-            "word_limit": 600,
-            "instructions": "Describe baseline, indicator tracking, frequency, roles; alignment with UNSDCF, SDGs; knowledge management; evaluation per PBF policy; budget share for M&E."
-        },
-        {
-            "section_name": "Administrative Arrangements",
-            "section_label": "Administrative arrangements (RUNOs & AA/MPTF)",
+            "section_label": "V.B Project-level Theory of Change",
             "format_type": "text",
             "mandatory": true,
             "word_limit": 500,
-            "instructions": "Outline Administrative Agent (MPTF Office) roles, RUNO accountability, reporting schedule (semi-annual, annual, final), closure, audit, terrorism financing provisions, and public disclosure."
+            "instructions": "Express the causal logic using clear IF–THEN statements linking interventions to anticipated outcomes and the overarching peace result. State key assumptions and contextual conditions that must hold for change to occur. Do not introduce activities not present in the design.",
+            "section_parent": "IV. Project Narrative"
         },
         {
-            "section_name": "Budget Overview",
-            "section_label": "IV. Project budget overview",
+            "section_name": "Project Components",
+            "section_label": "V.C Key Project Components (Outcomes and Outputs)",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 2000,
+            "instructions": "Provide a narrative description of the project’s outcomes and outputs, highlighting intended institutional and behavioral changes, gender and age considerations, and critical sequencing. Avoid duplicating tables; keep this as a succinct overview tied to the conflict analysis and theory of change.",
+            "section_parent": "IV. Project Narrative"
+        },
+        {
+            "section_name": "Targeting",
+            "section_label": "V.D Targeting (Geography and Stakeholders)",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 1000,
+            "instructions": "Define geographic scope and selection criteria; describe stakeholders and beneficiary groups with sex- and age-disaggregated targets where available; include marginalized groups; and outline engagement modalities for institutions, media, and civil society. Address Do No Harm and incentives for participation.",
+            "section_parent": "IV. Project Narrative"
+        },
+        {
+            "section_name": "Project Management and Coordination",
+            "section_label": "VI.A Project Management and Coordination",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 2000,
+            "instructions": "Describe the implementation team (positions, roles, funding share), coordination and oversight arrangements, and mechanisms to ensure adequate gender or youth expertise. Reference convening/coordination functions and readiness to commence implementation.",
+            "section_parent": "IV. Project Narrative"
+        },
+        {
+            "section_name": "Risk Management Narrative",
+            "section_label": "VI.B Risk Management (Narrative)",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 500,
+            "instructions": "Provide a concise narrative on contextual, operational, fiduciary, safeguarding, and political risks; describe how risks will be monitored and mitigated using conflict sensitivity and Do No Harm principles; and note any triggers requiring adaptive management.",
+            "section_parent": "IV. Project Narrative"
+        },
+        {
+            "section_name": "Monitoring and Evaluation",
+            "section_label": "VI.C Monitoring and Evaluation",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 1000,
+            "instructions": "Describe baseline, data sources, indicator tracking (including sex- and age-disaggregation), roles and frequency, feedback mechanisms, learning and adaptive management, and evaluation plans. Allocate 5–7% of the project budget to M&E and include provision for independent evaluation if applicable.",
+            "section_parent": "IV. Project Narrative"
+        },
+        {
+            "section_name": "Exit Strategy and Sustainability",
+            "section_label": "VI.D Project Exit Strategy and Sustainability",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 500,
+            "instructions": "Explain how results will be sustained after project completion, including institutionalization, capacity strengthening, handover plans, and any follow-on financing pathways. Keep specific and actionable.",
+            "section_parent": "IV. Project Narrative"
+        },
+        {
+            "section_name": "Budget Narrative",
+            "section_label": "VII. Budget Narrative",
             "format_type": "text",
             "mandatory": true,
             "word_limit": 600,
-            "instructions": "Summarize staffing, consultancies, grants for community projects, materials/equipment share (<15%), vehicles if any (justification), and GEWE allocation (% and USD)."
+            "instructions": "Summarize rationale for major cost categories (staffing, travel, consultancies, grants, materials/equipment ≤15% unless justified, vehicles if any), and indicate the proportion and justification for GEWE allocations.",
+            "section_parent": "IV. Project Narrative"
         },
         {
-            "section_name": "Annex: NUNO Eligibility",
-            "section_label": "Annex: NUNO eligibility (if CSOs receive PBF funds directly)",
+            "section_name": "Administrative Arrangements (Standard Wording Placeholder)",
+            "section_label": "Annex B. Administrative Arrangements for RUNOs and NUNOs",
+            "format_type": "fixed_text",
+            "mandatory": true,
+            "fixed_text": "This section uses standard PBF wording for Administrative Agent (MPTF-O) functions, accountability, reporting timelines, financial closure, ownership of equipment, public disclosure, and (for NUNOs) audit and counter-terrorism clauses. Insert the official standard text at finalization. Do not generate alternative language.",
+            "section_parent": "VIII. Annexes"
+        },
+        {
+            "section_name": "Annex A1 - Implementation Readiness Checklist",
+            "section_label": "Annex A.1: Project Implementation Readiness",
             "format_type": "table",
             "mandatory": false,
-            "instructions": "Capture eligibility checklist for Non-UN Recipient Organizations (registration, audits, budget thresholds, experience, legal structure).",
+            "instructions": "Complete readiness questions with Yes/No and a concise comment. Keep comments ≤50 words.",
             "columns": [
                 {
-                    "name": "Criterion",
+                    "name": "Question",
                     "format_type": "text",
-                    "instructions": "Eligibility requirement."
+                    "instructions": "Readiness item."
                 },
                 {
-                    "name": "Evidence",
+                    "name": "Yes/No",
                     "format_type": "text",
-                    "instructions": "Document/reference."
+                    "instructions": "Enter 'Yes' or 'No'."
+                },
+                {
+                    "name": "Comment",
+                    "format_type": "text",
+                    "instructions": "Concise comment if applicable. Max 50 words."
                 }
             ],
             "rows": [
                 {
-                    "row_title": "Registration (HQ & country)",
-                    "instructions": "Valid non-profit, tax-exempt registration."
+                    "row_title": "Partners Identified",
+                    "instructions": "Have all implementing partners been identified?"
                 },
                 {
-                    "row_title": "Audited financial statements (2 years)",
-                    "instructions": "Include auditor opinion letter."
+                    "row_title": "Key TORs Finalized",
+                    "instructions": "Have TORs for key staff been finalized?"
                 },
                 {
-                    "row_title": "Annual budget threshold",
-                    "instructions": "\u2265 2\u00d7 annualized PBF budget in-country."
+                    "row_title": "Sites Identified",
+                    "instructions": "Have project sites been identified?"
                 },
                 {
-                    "row_title": "Experience",
-                    "instructions": "\u2265 3 years in country."
+                    "row_title": "Community/Government Consulted",
+                    "instructions": "Have stakeholders been sensitized on the project?"
+                },
+                {
+                    "row_title": "Preliminary Analysis Done",
+                    "instructions": "Have lessons learned/current activities been reviewed?"
+                },
+                {
+                    "row_title": "Beneficiary Criteria Defined",
+                    "instructions": "Have beneficiary criteria been identified?"
+                },
+                {
+                    "row_title": "Government Agreements",
+                    "instructions": "Have relevant agreements with Government been made?"
+                },
+                {
+                    "row_title": "RUNO Implementing Arrangements",
+                    "instructions": "Are arrangements agreed between recipient organizations?"
+                },
+                {
+                    "row_title": "Other Preparatory Activities",
+                    "instructions": "List any additional prerequisites and timelines."
+                },
+                {
+                    "row_title": "Gender Expertise Involved",
+                    "instructions": "Has gender expertise informed design?"
+                },
+                {
+                    "row_title": "Women/Youth Consulted",
+                    "instructions": "Were women/youth organizations consulted?"
+                },
+                {
+                    "row_title": "SADD Indicators",
+                    "instructions": "Are indicators sex- and age-disaggregated?"
+                },
+                {
+                    "row_title": "GEWE Allocations in Budget",
+                    "instructions": "Does the budget include GEWE allocations for all activities?"
                 }
-            ]
+            ],
+            "section_parent": "VIII. Annexes"
         },
         {
-            "section_name": "Results Framework Matrix",
-            "section_label": "Annex A: Programme Results Framework",
+            "section_name": "Annex A2 - Value for Money Checklist",
+            "section_label": "Annex A.2: Value for Money Checklist",
+            "format_type": "table",
+            "mandatory": false,
+            "instructions": "Complete each value for money item with Yes/No and a concise project comment.",
+            "columns": [
+                {
+                    "name": "Question",
+                    "format_type": "text",
+                    "instructions": "Value for money criterion."
+                },
+                {
+                    "name": "Yes/No",
+                    "format_type": "text",
+                    "instructions": "Enter 'Yes' or 'No'."
+                },
+                {
+                    "name": "Project Comment",
+                    "format_type": "text",
+                    "instructions": "Concise justification. Max 50 words."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Budget Narrative Provided",
+                    "instructions": "Does the proposal justify major budget choices?"
+                },
+                {
+                    "row_title": "Comparable Unit Costs",
+                    "instructions": "Are unit costs comparable to similar contexts?"
+                },
+                {
+                    "row_title": "Budget Proportionate to Scope",
+                    "instructions": "Is the budget proportionate to outcomes and scope?"
+                },
+                {
+                    "row_title": "Staffing/Operational Costs Reasonable",
+                    "instructions": "Are staffing/operational shares reasonable?"
+                },
+                {
+                    "row_title": "Local Expertise Prioritized",
+                    "instructions": "Are local staff/expertise prioritized where possible?"
+                },
+                {
+                    "row_title": "Materials/Infrastructure ≤15% or Justified",
+                    "instructions": "If >15%, provide justification and sustainability."
+                },
+                {
+                    "row_title": "Vehicle Purchase Justified",
+                    "instructions": "If vehicles included, provide necessity justification."
+                },
+                {
+                    "row_title": "Co-funding/In-kind Support",
+                    "instructions": "Are there additional resources leveraged?"
+                }
+            ],
+            "section_parent": "VIII. Annexes"
+        },
+        {
+            "section_name": "Annex C - Results Framework",
+            "section_label": "Annex C: Programme Results Framework",
             "format_type": "table",
             "mandatory": true,
-            "instructions": "Define socio-political outcomes and linked outputs with SMART, conflict- and gender-sensitive indicators. Include perception indicators where relevant, and map each result to PBF priority areas.",
+            "instructions": "Define outcomes and outputs with SMART, conflict- and gender-sensitive indicators. Include baselines, targets (sex/age disaggregated), means of verification, frequency, responsible, and assumptions/risks.",
             "columns": [
                 {
                     "name": "Result Level",
@@ -281,42 +668,42 @@
                 {
                     "name": "Statement",
                     "format_type": "text",
-                    "instructions": "Exact outcome/output statement aligned to conflict analysis and theory of change."
+                    "instructions": "Exact result statement aligned to analysis and ToC."
                 },
                 {
                     "name": "PBF Priority Area",
                     "format_type": "text",
-                    "instructions": "1–4 as per PBF priority areas (e.g., Political dialogue; Social cohesion; Economic integration)."
+                    "instructions": "One of Areas 1–4 and sub-areas where relevant."
                 },
                 {
                     "name": "Indicator",
                     "format_type": "text",
-                    "instructions": "SMART indicator capturing socio-political change; specify if perception-based."
+                    "instructions": "Specific indicator; note if perception-based."
                 },
                 {
                     "name": "Baseline (value/date/source)",
                     "format_type": "text",
-                    "instructions": "Starting value with source and date."
+                    "instructions": "Baseline value with date and source."
                 },
                 {
                     "name": "Target (Female/Male; Age bands)",
                     "format_type": "text",
-                    "instructions": "Numeric targets by sex and age (e.g., 15–17; 18–24; 25–29)."
+                    "instructions": "Targets disaggregated by sex and age (e.g., 15–17; 18–24; 25–29)."
                 },
                 {
                     "name": "Disability & Vulnerability",
                     "format_type": "text",
-                    "instructions": "Target and approach for marginalized youth (e.g., ex-combatants, displaced)."
+                    "instructions": "Targets/approach for marginalized groups."
                 },
                 {
                     "name": "Means of Verification",
                     "format_type": "text",
-                    "instructions": "Surveys, administrative data, partner reports; ensure do-no-harm."
+                    "instructions": "Surveys, admin data, partner reports, etc."
                 },
                 {
                     "name": "Frequency",
                     "format_type": "text",
-                    "instructions": "Monthly/Quarterly/Biannual."
+                    "instructions": "Monthly/Quarterly/Biannual/Annual/Endline."
                 },
                 {
                     "name": "Responsible",
@@ -326,31 +713,48 @@
                 {
                     "name": "Assumptions/Risks",
                     "format_type": "text",
-                    "instructions": "Key assumptions underpinning the theory of change and linked risks."
+                    "instructions": "Assumptions underpinning ToC and risks."
                 }
             ],
             "rows": [
                 {
                     "row_title": "Outcome 1",
-                    "instructions": "Articulate intended socio-political change (e.g., youth inclusion in local decision-making)."
+                    "instructions": "Enter first outcome and associated indicators."
                 },
                 {
                     "row_title": "Output 1.1",
-                    "instructions": "Concrete deliverable leading to Outcome 1 (e.g., youth dialogue platforms established)."
+                    "instructions": "Enter output leading to Outcome 1."
+                },
+                {
+                    "row_title": "Output 1.2",
+                    "instructions": "Enter output leading to Outcome 1."
+                },
+                {
+                    "row_title": "Outcome 2",
+                    "instructions": "Enter second outcome and associated indicators."
+                },
+                {
+                    "row_title": "Output 2.1",
+                    "instructions": "Enter output leading to Outcome 2."
+                },
+                {
+                    "row_title": "Output 2.2",
+                    "instructions": "Enter output leading to Outcome 2."
                 }
-            ]
+            ],
+            "section_parent": "VIII. Annexes"
         },
         {
-            "section_name": "Workplan",
-            "section_label": "Annex B: Detailed Workplan",
+            "section_name": "Annex D - Workplan",
+            "section_label": "Annex D: Detailed Workplan",
             "format_type": "table",
             "mandatory": true,
-            "instructions": "Schedule and manage activities that lead to outputs and outcomes; ensure sequencing reflects conflict-sensitivity and meaningful youth participation.",
+            "instructions": "Schedule activities that deliver outputs and outcomes. Ensure sequencing reflects conflict sensitivity and meaningful youth/women participation.",
             "columns": [
                 {
                     "name": "Output / Activity",
                     "format_type": "text",
-                    "instructions": "Reference result (e.g., Output 1.1 – Youth councils formed)."
+                    "instructions": "Reference result (e.g., Output 1.1 – Activity A)."
                 },
                 {
                     "name": "Start Date",
@@ -365,7 +769,7 @@
                 {
                     "name": "Location",
                     "format_type": "text",
-                    "instructions": "Admin level(s) and site."
+                    "instructions": "Administrative level(s) and site."
                 },
                 {
                     "name": "Dependencies / Pre-conditions",
@@ -380,12 +784,12 @@
                 {
                     "name": "Milestones & Deliverables",
                     "format_type": "text",
-                    "instructions": "Key milestone dates and tangible outputs."
+                    "instructions": "Key milestones and tangible outputs."
                 },
                 {
                     "name": "Budget Line Ref.",
                     "format_type": "text",
-                    "instructions": "Link to Annex Budget details."
+                    "instructions": "Link to budget annex line code."
                 },
                 {
                     "name": "Status",
@@ -396,20 +800,21 @@
             "rows": [
                 {
                     "row_title": "Output 1.1 – Activity A",
-                    "instructions": "First scheduled activity."
+                    "instructions": "First scheduled activity under Output 1.1."
                 },
                 {
                     "row_title": "Output 1.1 – Activity B",
-                    "instructions": "Second scheduled activity."
+                    "instructions": "Second scheduled activity under Output 1.1."
                 }
-            ]
+            ],
+            "section_parent": "VIII. Annexes"
         },
         {
-            "section_name": "Risk Log",
-            "section_label": "Annex C: Programme Risk Log",
+            "section_name": "Annex E - Programme Risk Log",
+            "section_label": "Annex E: Programme Risk Log",
             "format_type": "table",
             "mandatory": true,
-            "instructions": "Identify, rate and mitigate contextual, operational, fiduciary, safeguarding and political risks with a do-no-harm lens.",
+            "instructions": "Identify, rate and mitigate contextual, operational, fiduciary, safeguarding and political risks using a Do No Harm lens.",
             "columns": [
                 {
                     "name": "Risk Category",
@@ -419,7 +824,7 @@
                 {
                     "name": "Risk Description",
                     "format_type": "text",
-                    "instructions": "Concise statement explaining the risk and linkage to conflict dynamics."
+                    "instructions": "Concise statement linked to conflict dynamics."
                 },
                 {
                     "name": "Likelihood",
@@ -444,7 +849,7 @@
                 {
                     "name": "Mitigation / Controls",
                     "format_type": "text",
-                    "instructions": "Specific, time-bound measures (incl. safeguarding protections for young peacebuilders)."
+                    "instructions": "Specific, time-bound measures including safeguarding."
                 },
                 {
                     "name": "Owner",
@@ -465,25 +870,26 @@
             "rows": [
                 {
                     "row_title": "Contextual Risk 1",
-                    "instructions": "E.g., electoral tensions affecting youth participation."
+                    "instructions": "Enter first contextual risk."
                 },
                 {
                     "row_title": "Safeguarding Risk 1",
-                    "instructions": "E.g., intimidation of youth human-rights defenders."
+                    "instructions": "Enter safeguarding risk related to participation/GBV/SEA."
                 }
-            ]
+            ],
+            "section_parent": "VIII. Annexes"
         },
         {
-            "section_name": "M&E Plan",
-            "section_label": "Annex D: Monitoring & Evaluation Plan",
+            "section_name": "Annex G - Monitoring & Evaluation Plan",
+            "section_label": "Annex G: Monitoring & Evaluation Plan",
             "format_type": "table",
             "mandatory": true,
-            "instructions": "Operationalize measurement for each indicator with sources, methods, disaggregation, ethical safeguards and youth participation in M&E.",
+            "instructions": "Operationalize measurement for each indicator with sources, methods, disaggregation, ethical safeguards, and use of findings.",
             "columns": [
                 {
                     "name": "Indicator",
                     "format_type": "text",
-                    "instructions": "Copy from Results Framework."
+                    "instructions": "Copy exact indicator from Results Framework."
                 },
                 {
                     "name": "Definition & Calculation",
@@ -493,12 +899,12 @@
                 {
                     "name": "Data Source",
                     "format_type": "text",
-                    "instructions": "Surveys, administrative records, perception instruments."
+                    "instructions": "Surveys, administrative records, perception instruments, etc."
                 },
                 {
                     "name": "Collection Method",
                     "format_type": "text",
-                    "instructions": "FGDs, KIIs, perception surveys; note conflict-sensitivity."
+                    "instructions": "FGDs, KIIs, surveys; note conflict sensitivity."
                 },
                 {
                     "name": "Disaggregation",
@@ -513,12 +919,12 @@
                 {
                     "name": "Responsible",
                     "format_type": "text",
-                    "instructions": "Agency/unit/partners."
+                    "instructions": "Agency/unit/partner responsible."
                 },
                 {
                     "name": "Quality Assurance",
                     "format_type": "text",
-                    "instructions": "Validation checks; enumerator training."
+                    "instructions": "Validation checks and enumerator training."
                 },
                 {
                     "name": "Ethical & Do-No-Harm Safeguards",
@@ -534,20 +940,21 @@
             "rows": [
                 {
                     "row_title": "Indicator 1",
-                    "instructions": "Details for first indicator."
+                    "instructions": "First indicator plan."
                 },
                 {
                     "row_title": "Indicator 2",
-                    "instructions": "Details for second indicator."
+                    "instructions": "Second indicator plan."
                 }
-            ]
+            ],
+            "section_parent": "VIII. Annexes"
         },
         {
-            "section_name": "Steering & Technical Committee ToR",
-            "section_label": "Annex E: Governance ToR",
+            "section_name": "Annex F - Governance Terms of Reference",
+            "section_label": "Annex F: Governance Terms of Reference",
             "format_type": "table",
             "mandatory": true,
-            "instructions": "Capture governance arrangements ensuring youth representation, inclusivity and decision-making protocols.",
+            "instructions": "Capture governance arrangements ensuring inclusivity and clear decision-making protocols.",
             "columns": [
                 {
                     "name": "Committee",
@@ -557,44 +964,87 @@
                 {
                     "name": "Mandate",
                     "format_type": "text",
-                    "instructions": "Purpose and scope linked to peacebuilding outcomes."
+                    "instructions": "Purpose and scope linked to peace outcomes."
                 },
                 {
                     "name": "Membership & Representation",
                     "format_type": "text",
-                    "instructions": "Organizations, roles; include youth-led CSO representation."
+                    "instructions": "Organizations and roles; include youth/women representation."
                 },
                 {
                     "name": "Roles & Responsibilities",
                     "format_type": "text",
-                    "instructions": "Key functions (oversight, technical guidance, safeguards)."
+                    "instructions": "Oversight, technical guidance, safeguards."
                 },
                 {
                     "name": "Meeting Cadence & Quorum",
                     "format_type": "text",
-                    "instructions": "Frequency, quorum rules."
+                    "instructions": "Frequency and quorum rules."
                 },
                 {
                     "name": "Decision-making & Escalation",
                     "format_type": "text",
-                    "instructions": "Consensus/majority; conflict-sensitive escalation."
+                    "instructions": "Consensus/majority; escalation pathways."
                 },
                 {
                     "name": "Accountability & Safeguards",
                     "format_type": "text",
-                    "instructions": "Do-no-harm, protection of youth participants."
+                    "instructions": "Do No Harm, protection protocols."
                 }
             ],
             "rows": [
                 {
                     "row_title": "Steering Committee",
-                    "instructions": "Complete governance elements."
+                    "instructions": "Complete all governance elements."
                 },
                 {
                     "row_title": "Technical Committee",
-                    "instructions": "Complete governance elements."
+                    "instructions": "Complete all governance elements."
                 }
-            ]
+            ],
+            "section_parent": "VIII. Annexes"
+        },
+        {
+            "section_name": "Annex H - NUNO Eligibility",
+            "section_label": "Annex H: Non-UN Recipient Organization (NUNO) Eligibility",
+            "format_type": "table",
+            "mandatory": false,
+            "instructions": "Capture eligibility criteria and evidence for any Non-UN recipient seeking direct PBF funding.",
+            "columns": [
+                {
+                    "name": "Criterion",
+                    "format_type": "text",
+                    "instructions": "Eligibility requirement."
+                },
+                {
+                    "name": "Evidence",
+                    "format_type": "text",
+                    "instructions": "Document or reference proving compliance."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Registration (HQ & Country)",
+                    "instructions": "Valid non-profit, tax-exempt registration in HQ and project country."
+                },
+                {
+                    "row_title": "Audited Financial Statements (2 years)",
+                    "instructions": "Include auditor opinion letter."
+                },
+                {
+                    "row_title": "Annual Budget Threshold",
+                    "instructions": "≥ 2× annualized PBF budget in-country."
+                },
+                {
+                    "row_title": "Experience",
+                    "instructions": "≥ 3 years in-country."
+                },
+                {
+                    "row_title": "Legal Structure",
+                    "instructions": "Entity that will enter into the agreement and oversee activities."
+                }
+            ],
+            "section_parent": "VIII. Annexes"
         }
     ]
 }
