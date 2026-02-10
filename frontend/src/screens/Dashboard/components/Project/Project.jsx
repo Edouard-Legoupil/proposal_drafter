@@ -85,12 +85,12 @@ export default function Project({ project, date, onClick, isReview = false, proj
                                                 )}
                                         </div>
                                 </div>
-                                <h2>Author: {project.author_name || 'N/A'}</h2>
-                                {project.review_status === 'completed' ? (
-                                        <p><strong>Completed on:</strong> <time dateTime={project.review_completed_at}>{new Date(project.review_completed_at).toLocaleDateString()}</time></p>
-                                ) : (
-                                        project.deadline && <p><strong>Deadline:</strong> <time dateTime={project.deadline}>{new Date(project.deadline).toLocaleDateString()}</time></p>
-                                )}
+                                <h2>Requester: {project.requester_name || project.created_by_name || 'N/A'}</h2>
+{(project.status === 'completed' || project.review_completed_at) ? (
+    <p><strong>Completed on:</strong> <time dateTime={project.review_completed_at}>{project.review_completed_at ? new Date(project.review_completed_at).toLocaleDateString() : '-'}</time></p>
+) : (
+    project.deadline && <p><strong>Deadline:</strong> <time dateTime={project.deadline}>{new Date(project.deadline).toLocaleDateString()}</time></p>
+)}
                                 <p>
                                         <i className="fa-solid fa-earth-americas field-context" aria-hidden="true"></i> {project.country || 'N/A'} -
                                         <i className="fa-solid fa-money-bill-wave donor" aria-hidden="true"></i> {project.donor || 'N/A'} -

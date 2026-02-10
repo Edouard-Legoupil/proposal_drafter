@@ -82,8 +82,16 @@ def authorize_knowledge_manager(current_user: dict = Depends(get_current_user)):
         "knowledge manager outcome",
         "knowledge manager field context",
     ]
-    user_roles = current_user.get("roles", [])
-    if not any(role in knowledge_manager_roles for role in user_roles):
+    # Normalize roles for resilient comparison
+    user_roles = [
+        r.lower().replace("_", " ").strip()
+        for r in current_user.get("roles", [])
+    ]
+    normalized_required = [
+        r.lower().replace("_", " ").strip()
+        for r in knowledge_manager_roles
+    ]
+    if not any(role in user_roles for role in normalized_required):
         raise HTTPException(
             status_code=403,
             detail="You do not have permission to perform this action. This action is restricted to users with a 'Knowledge Manager' role."
@@ -1836,7 +1844,7 @@ async def save_knowledge_card_author_response(review_id: uuid.UUID, request: Aut
         logger.error(f"[SAVE KC AUTHOR RESPONSE ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to save author response.")
 
-@router.get("/knowledge-cards/{card_id}/all-reviews")
+@router.get("/knowledge-cards/{card_id}/all-reviews", dependencies=[Depends(authorize_knowledge_manager)])
 async def get_all_knowledge_card_reviews(card_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
     """
     Fetches all reviews for a given knowledge card.
@@ -1844,22 +1852,6 @@ async def get_all_knowledge_card_reviews(card_id: uuid.UUID, current_user: dict 
     user_id = current_user["user_id"]
     try:
         with get_engine().connect() as connection:
-            # Verify access: owner or someone who reviewed it
-            card_owner = connection.execute(
-                text("SELECT created_by FROM knowledge_cards WHERE id = :cid"),
-                {"cid": str(card_id)}
-            ).scalar()
-
-            is_reviewer = connection.execute(
-                text("SELECT 1 FROM knowledge_card_reviews WHERE knowledge_card_id = :cid AND reviewer_id = :rid"),
-                {"cid": str(card_id), "rid": str(user_id)}
-            ).scalar()
-
-            if not card_owner:
-                raise HTTPException(status_code=404, detail="Knowledge card not found.")
-
-            if str(card_owner) != str(user_id) and not is_reviewer:
-                raise HTTPException(status_code=403, detail="You do not have permission to view this card's reviews.")
 
             query = text("""
                 SELECT

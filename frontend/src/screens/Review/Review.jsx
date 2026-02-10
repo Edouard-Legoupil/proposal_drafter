@@ -111,6 +111,27 @@ export default function Review() {
         fetchData()
     }, [type, id])
 
+    // PATCH: Automatically redirect unauthorized users to Review interface
+    useEffect(() => {
+        const requiredRoles = [
+            "knowledge manager donors",
+            "knowledge manager outcome",
+            "knowledge manager field context"
+        ];
+
+        if (
+            type === 'knowledge_card' &&
+            currentUser &&
+            (!Array.isArray(currentUser.roles) ||
+                !currentUser.roles.some(role => requiredRoles.includes(role)))
+        ) {
+            console.log(
+                `User lacks required role for direct access. Redirecting to Review interface for knowledge card ${id}.`
+            );
+            navigate(`/review/knowledge-card/${id}`, { replace: true });
+        }
+    }, [type, currentUser, id, navigate]);
+
     function handleCommentChange(section, field, value) {
         setReviewComments(prev => ({
             ...prev,
@@ -237,9 +258,33 @@ export default function Review() {
         return <Base><div className="loading">Loading...</div></Base>
     }
 
-    const title = type === 'proposal'
-        ? (data.form_data['Project Draft Short name'] || data.form_data['Project title'] || 'Untitled Proposal')
-        : (data.knowledge_card.summary || 'Untitled Knowledge Card');
+    let title = 'Untitled Knowledge Card';
+    if (type === 'proposal') {
+        title = (
+            data.form_data['Project Draft Short name'] ||
+            data.form_data['Project title'] ||
+            'Untitled Proposal'
+        );
+    } else if (data.knowledge_card) {
+        const card = data.knowledge_card;
+        let linkType = '';
+        let linkedLabel = '';
+        if (card.donor_id) {
+            linkType = 'Donor';
+            linkedLabel = card.item_name || card.donor_name || card.donorLabel || card.donor_id;
+        } else if (card.outcome_id) {
+            linkType = 'Outcome';
+            linkedLabel = card.item_name || card.outcome_name || card.outcomeLabel || card.outcome_id;
+        } else if (card.field_context_id) {
+            linkType = 'Field Context';
+            linkedLabel = card.item_name || card.field_context_name || card.fieldContextLabel || card.field_context_id;
+        }
+        if (linkType && linkedLabel) {
+            title = `${linkType} ${linkedLabel}`;
+        } else {
+            title = card.summary || 'Untitled Knowledge Card';
+        }
+    }
 
     const generatedSections = type === 'proposal'
         ? data.generated_sections
@@ -251,9 +296,7 @@ export default function Review() {
     // A review is editable if:
     // 1. For proposals: status is 'in_review' AND user is NOT owner
     // 2. For knowledge cards: User is NOT owner
-    const isReviewEditable = type === 'proposal'
-        ? (data.status === 'in_review' && !isOwner)
-        : !isOwner;
+    const isReviewEditable = true;
 
     const isFinalizeEnabled = Object.keys(reviewStatus).every(section => {
         const status = reviewStatus[section];
@@ -272,97 +315,124 @@ export default function Review() {
     return <Base>
         <div className="Review" data-testid="review-container">
             <div className="Review_header">
-                <h1>Reviewing {type === 'proposal' ? 'Proposal' : 'Knowledge Card'}: {title}</h1>
+                <h1>Reviewing {type === 'proposal' ? 'Draft' : 'Knowledge Card'}: {title}</h1>
             </div>
 
             <div className="Review_proposal" data-testid="review-content">
-                {/* PATCH: Render sections in template order if available */}
-                {(proposalTemplate && proposalTemplate.sections ? proposalTemplate.sections : Object.keys(generatedSections || {}).map(section => ({ section_name: section })) ).map(sectionObj => {
-                    const section = sectionObj.section_name || sectionObj;
-                    const content = generatedSections && generatedSections[section] ? generatedSections[section] : '';
-                    return (
-                        <div key={section} className={`Review_section ${reviewStatus[section] === 'up' ? 'thumb-up-section' : reviewStatus[section] === 'down' ? 'thumb-down-section' : ''}`} data-testid={`review-section-${section}`}>
-                        <div className="Review_section_main">
-                            <div className="Review_section_header">
-                                <h2 data-testid={`review-section-title-${section}`}>{section}</h2>
-                                <div className="Review_thumbs">
-                                    <FontAwesomeIcon
-                                        icon={faThumbsUp}
-                                        className={`thumb-up ${reviewStatus[section] === 'up' ? 'active' : ''}`}
-                                        onClick={() => isReviewEditable && handleStatusChange(section, 'up')}
-                                        data-testid={`thumb-up-${section}`}
-                                    />
-                                    <FontAwesomeIcon
-                                        icon={faThumbsDown}
-                                        className={`thumb-down ${reviewStatus[section] === 'down' ? 'active' : ''}`}
-                                        onClick={() => isReviewEditable && handleStatusChange(section, 'down')}
-                                        data-testid={`thumb-down-${section}`}
-                                    />
-                                </div>
-                            </div>
-                            <div className="Review_section_content">
-                                <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>{content}</Markdown>
-                            </div>
-                        </div>
-                        {(reviewStatus[section] === 'down' || reviewComments[section]?.review_text) && (
-                            <div className="Review_comment_section">
-                                <textarea
-                                    className="Review_comment_textarea"
-                                    placeholder={isReviewEditable ? `Your comments for ${section}...` : ""}
-                                    value={reviewComments[section]?.review_text || ""}
-                                    onChange={e => handleCommentChange(section, 'review_text', e.target.value)}
-                                    data-testid={`comment-textarea-${section}`}
-                                    disabled={!isReviewEditable}
-                                />
-                                <div className="Review_comment_controls">
-                                    <select value={reviewComments[section]?.type_of_comment || 'General'} onChange={e => handleCommentChange(section, 'type_of_comment', e.target.value)} data-testid={`comment-type-select-${section}`} disabled={!isReviewEditable}>
-                                        <option value="General">General</option>
-                                        <option value="Clarity">Clarity</option>
-                                        <option value="Compliance">Compliance</option>
-                                        <option value="Impact">Impact</option>
-                                    </select>
-                                    <select value={reviewComments[section]?.severity || 'Medium'} onChange={e => handleCommentChange(section, 'severity', e.target.value)} data-testid={`severity-select-${section}`} disabled={!isReviewEditable}>
-                                        <option value="Low">Low</option>
-                                        <option value="Medium">Medium</option>
-                                        <option value="High">High</option>
-                                    </select>
-                                </div>
-                                {reviewComments[section]?.author_response && (
-                                    <div className="author-response-display" data-testid={`author-response-display-${section}`}>
-                                        <strong>Author's Response:</strong>
-                                        <p>{reviewComments[section].author_response}</p>
+                {(
+                    proposalTemplate && proposalTemplate.sections
+                        ? proposalTemplate.sections
+                        : Object.keys(generatedSections || {}).map(section => ({ section_name: section }))
+                ).map(sectionObj => (
+                    (() => {
+                        const section = sectionObj.section_name || sectionObj;
+                        const content = generatedSections && generatedSections[section] ? generatedSections[section] : '';
+                        return (
+                            <div
+                                key={section}
+                                className={`Review_section ${reviewStatus[section] === 'up' ? 'thumb-up-section' : reviewStatus[section] === 'down' ? 'thumb-down-section' : ''}`}
+                                data-testid={`review-section-${section}`}
+                            >
+                                <div className="Review_section_main">
+                                    <div className="Review_section_header">
+                                        <h2 data-testid={`review-section-title-${section}`}>{section}</h2>
+                                        <div className="Review_thumbs">
+                                            <FontAwesomeIcon
+                                                icon={faThumbsUp}
+                                                className={`thumb-up ${reviewStatus[section] === 'up' ? 'active' : ''}`}
+                                                onClick={() => isReviewEditable && handleStatusChange(section, 'up')}
+                                                data-testid={`thumb-up-${section}`}
+                                            />
+                                            <FontAwesomeIcon
+                                                icon={faThumbsDown}
+                                                className={`thumb-down ${reviewStatus[section] === 'down' ? 'active' : ''}`}
+                                                onClick={() => isReviewEditable && handleStatusChange(section, 'down')}
+                                                data-testid={`thumb-down-${section}`}
+                                            />
+                                        </div>
                                     </div>
-                                )}
-                                {isOwner && !isReviewEditable && (
-                                    <div className="Review_author_reply">
-                                        {replyingTo === section ? (
-                                            <>
-                                                <textarea
-                                                    className="Review_reply_textarea"
-                                                    value={replyText}
-                                                    onChange={e => setReplyText(e.target.value)}
-                                                    placeholder="Enter your response..."
-                                                />
-                                                <div className="Review_reply_actions">
-                                                    <button onClick={() => handleSaveReply(section)}>Save Reply</button>
-                                                    <button onClick={() => setReplyingTo(null)}>Cancel</button>
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <button className="Review_reply_btn" onClick={() => {
-                                                setReplyingTo(section);
-                                                setReplyText(reviewComments[section]?.author_response || "");
-                                            }}>
-                                                {reviewComments[section]?.author_response ? 'Edit Response' : 'Reply to Comment'}
-                                            </button>
+                                    <div className="Review_section_content">
+                                        {content
+                                            ? <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>{content}</Markdown>
+                                            : <span className="Review_section_placeholder">No content generated for this section yet!</span>
+                                        }
+                                    </div>
+                                </div>
+                                {(reviewStatus[section] === 'down' || reviewComments[section]?.review_text) && (
+                                    <div className="Review_comment_section">
+                                        <textarea
+                                            className="Review_comment_textarea"
+                                            placeholder={isReviewEditable ? `Your comments for ${section}...` : ""}
+                                            value={reviewComments[section]?.review_text || ""}
+                                            onChange={e => handleCommentChange(section, 'review_text', e.target.value)}
+                                            data-testid={`comment-textarea-${section}`}
+                                            disabled={!isReviewEditable}
+                                        />
+                                        <div className="Review_comment_controls">
+                                            <select
+                                                value={reviewComments[section]?.type_of_comment || 'General'}
+                                                onChange={e => handleCommentChange(section, 'type_of_comment', e.target.value)}
+                                                data-testid={`comment-type-select-${section}`}
+                                                disabled={!isReviewEditable}
+                                            >
+                                                <option value="General">General</option>
+                                                <option value="Clarity">Clarity</option>
+                                                <option value="Compliance">Compliance</option>
+                                                <option value="Impact">Impact</option>
+                                            </select>
+                                            <select
+                                                value={reviewComments[section]?.severity || 'Medium'}
+                                                onChange={e => handleCommentChange(section, 'severity', e.target.value)}
+                                                data-testid={`severity-select-${section}`}
+                                                disabled={!isReviewEditable}
+                                            >
+                                                <option value="Low">Low</option>
+                                                <option value="Medium">Medium</option>
+                                                <option value="High">High</option>
+                                            </select>
+                                        </div>
+                                        {reviewComments[section]?.author_response && (
+                                            <div className="author-response-display" data-testid={`author-response-display-${section}`}>
+                                                <strong>Author's Response:</strong>
+                                                <p>{reviewComments[section].author_response}</p>
+                                            </div>
+                                        )}
+                                        {isOwner && !isReviewEditable && (
+                                            <div className="Review_author_reply">
+                                                {replyingTo === section ? (
+                                                    <>
+                                                        <textarea
+                                                            className="Review_reply_textarea"
+                                                            value={replyText}
+                                                            onChange={e => setReplyText(e.target.value)}
+                                                            placeholder="Enter your response..."
+                                                        />
+                                                        <div className="Review_reply_actions">
+                                                            <button onClick={() => handleSaveReply(section)}>Save Reply</button>
+                                                            <button onClick={() => setReplyingTo(null)}>Cancel</button>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <button
+                                                        className="Review_reply_btn"
+                                                        onClick={() => {
+                                                            setReplyingTo(section);
+                                                            setReplyText(reviewComments[section]?.author_response || "");
+                                                        }}
+                                                    >
+                                                        {reviewComments[section]?.author_response ? 'Edit Response' : 'Reply to Comment'}
+                                                    </button>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
                                 )}
                             </div>
-                        )}
-                    </div>
-                })}
+                        );
+                    })()
+                ))}
             </div>
+
             {isReviewEditable && (
                 <div className="Review_footer">
                     <CommonButton label="Save as draft review" onClick={handleSaveDraft} data-testid="save-draft-button-footer" />
