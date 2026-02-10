@@ -62,8 +62,17 @@ async def sso_login(request: Request):
 
     msal_app = _get_msal_app()
     # Dynamically determine redirect URI if not explicitly configured
-    redirect_uri = ENTRA_REDIRECT_URI or f"{str(request.base_url).rstrip('/')}/api/callback"
+    if ENTRA_REDIRECT_URI:
+        redirect_uri = ENTRA_REDIRECT_URI
+    else:
+        base_url = str(request.base_url).rstrip('/')
+        forwarded_proto = request.headers.get("x-forwarded-proto", "").lower()
+        if forwarded_proto == "https" and base_url.startswith("http://"):
+             base_url = base_url.replace("http://", "https://", 1)
+        redirect_uri = f"{base_url}/api/callback"
+    
     logging.info(f"SSO Login - request.base_url: {request.base_url}")
+    logging.info(f"SSO Login - X-Forwarded-Proto: {request.headers.get('x-forwarded-proto')}")
     logging.info(f"SSO Login - redirect_uri: {redirect_uri}")
     
     auth_url = msal_app.get_authorization_request_url(
@@ -84,7 +93,14 @@ async def callback(request: Request, code: str):
 
     msal_app = _get_msal_app()
     # Use the same dynamic redirect URI logic as in sso-login
-    redirect_uri = ENTRA_REDIRECT_URI or f"{str(request.base_url).rstrip('/')}/api/callback"
+    if ENTRA_REDIRECT_URI:
+        redirect_uri = ENTRA_REDIRECT_URI
+    else:
+        base_url = str(request.base_url).rstrip('/')
+        forwarded_proto = request.headers.get("x-forwarded-proto", "").lower()
+        if forwarded_proto == "https" and base_url.startswith("http://"):
+             base_url = base_url.replace("http://", "https://", 1)
+        redirect_uri = f"{base_url}/api/callback"
 
     result = msal_app.acquire_token_by_authorization_code(
         code,
