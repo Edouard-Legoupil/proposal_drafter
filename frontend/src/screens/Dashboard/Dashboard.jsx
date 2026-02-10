@@ -129,7 +129,7 @@ export default function Dashboard() {
 
                 if (response.ok) {
                         const data = await response.json()
-                        setUsers((data || []).map(user => ({ id: user.id, name: user.name })))
+                        setUsers((data.users || []).map(user => ({ id: user.id, name: user.name })))
                 }
         }
 

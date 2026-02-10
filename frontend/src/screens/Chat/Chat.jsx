@@ -66,6 +66,8 @@ export default function Chat(props) {
         const [users, setUsers] = useState([])
         const [selectedUsers, setSelectedUsers] = useState([])
         const [associatedKnowledgeCards, setAssociatedKnowledgeCards] = useState([]);
+        const [validationMissingFields, setValidationMissingFields] = useState([]);
+        const [isValidationModalOpen, setIsValidationModalOpen] = useState(false);
 
         const [donors, setDonors] = useState([]);
         const [outcomes, setOutcomes] = useState([]);
@@ -124,7 +126,7 @@ export default function Chat(props) {
 
                 if (response.ok) {
                         const data = await response.json()
-                        setUsers(data.map(user => ({ id: user.id, name: user.name, team: user.team_name || 'Unassigned' })))
+                        setUsers((data.users || []).map(user => ({ id: user.id, name: user.name, team: user.team_name || 'Unassigned' })))
                 }
         }
 
@@ -200,25 +202,25 @@ export default function Chat(props) {
 
         const [buttonEnable, setButtonEnable] = useState(false)
         useEffect(() => {
-                if (userPrompt) {
-                        setButtonEnable(true)
+                const missing = getMissingFields();
+                setButtonEnable(missing.length === 0);
+        }, [userPrompt, formData])
 
-                        for (const property in formData) {
-                                const field = formData[property];
-                                if (field.mandatory) {
-                                        if (Array.isArray(field.value) && field.value.length === 0) {
-                                                setButtonEnable(false);
-                                                return;
-                                        } else if (!field.value) {
-                                                setButtonEnable(false);
-                                                return;
-                                        }
+        const getMissingFields = () => {
+                const missing = [];
+                if (!userPrompt.trim()) missing.push("Proposal Prompt Details");
+                for (const label in formData) {
+                        const field = formData[label];
+                        if (field.mandatory) {
+                                if (Array.isArray(field.value) && field.value.length === 0) {
+                                        missing.push(label);
+                                } else if (!field.value || (typeof field.value === 'string' && !field.value.trim())) {
+                                        missing.push(label);
                                 }
                         }
                 }
-                else
-                        setButtonEnable(false)
-        }, [userPrompt, formData])
+                return missing;
+        };
 
         const toKebabCase = (str) => {
                 return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -502,6 +504,12 @@ export default function Chat(props) {
         }
 
         async function handleGenerateClick() {
+                const missing = getMissingFields();
+                if (missing.length > 0) {
+                        setValidationMissingFields(missing);
+                        setIsValidationModalOpen(true);
+                        return;
+                }
                 setGenerateLoading(true);
                 setFormExpanded(false);
                 sessionStorage.removeItem("proposal_id"); // Clear old ID to prevent polling it
@@ -1079,6 +1087,25 @@ export default function Chat(props) {
                                 onClose={() => setIsPdfUploadModalOpen(false)}
                                 onConfirm={handlePdfUpload}
                         />
+
+                        {/* Validation Modal */}
+                        <dialog open={isValidationModalOpen} className="Chat_regenerate" style={{ height: 'auto', maxHeight: '80vh', top: '10%' }}>
+                                <header className="Chat_regenerate_header">
+                                        Data Missing
+                                        <img src={regenerateClose} alt="" onClick={() => setIsValidationModalOpen(false)} style={{ cursor: 'pointer' }} />
+                                </header>
+                                <main className="Chat_right" style={{ padding: '20px' }}>
+                                        <p style={{ marginBottom: '15px' }}>The following mandatory parameters are missing:</p>
+                                        <ul style={{ listStyleType: 'disc', paddingLeft: '20px', marginBottom: '20px', color: '#141419' }}>
+                                                {validationMissingFields.map((field, index) => (
+                                                        <li key={index} style={{ marginBottom: '5px' }}>{field}</li>
+                                                ))}
+                                        </ul>
+                                        <div className="Chat_inputArea_buttonContainer">
+                                                <CommonButton onClick={() => setIsValidationModalOpen(false)} label="Close" />
+                                        </div>
+                                </main>
+                        </dialog>
                         {((!isMobile && sidebarOpen) || (isMobile && isMobileMenuOpen)) && <aside>
                                 <ul className='Chat_sidebar' data-testid="chat-sidebar">
                                         <li
@@ -1190,7 +1217,22 @@ export default function Chat(props) {
 
                                                         <div className="Chat_inputArea_buttonContainer">
                                                                 <div style={{ position: 'relative' }}>
-                                                                        <CommonButton onClick={() => setIsAssociateKnowledgeModalOpen(true)} label="Manage Knowledge" disabled={proposalStatus !== 'draft'} icon={knowIcon} data-testid="manage-knowledge-button" />
+                                                                        <CommonButton
+                                                                                onClick={() => {
+                                                                                        const missing = getMissingFields();
+                                                                                        if (missing.length > 0) {
+                                                                                                setValidationMissingFields(missing);
+                                                                                                setIsValidationModalOpen(true);
+                                                                                        } else {
+                                                                                                setIsAssociateKnowledgeModalOpen(true);
+                                                                                        }
+                                                                                }}
+                                                                                label="Manage Knowledge"
+                                                                                disabled={proposalStatus !== 'draft' || !buttonEnable}
+                                                                                className={!buttonEnable ? "inactive" : ""}
+                                                                                icon={knowIcon}
+                                                                                data-testid="manage-knowledge-button"
+                                                                        />
                                                                         {associatedKnowledgeCards.length > 0 && (
                                                                                 <div className="associated-knowledge-display" data-testid="associated-knowledge-cards">
                                                                                         <h4>Associated Knowledge Cards:</h4>
@@ -1216,7 +1258,16 @@ export default function Chat(props) {
                                                                 </div>
 
                                                                 <div style={{ marginLeft: 'auto' }}>
-                                                                        <CommonButton onClick={handleGenerateClick} icon={generateIcon} label={generateLabel} loading={generateLoading} loadingLabel={generateLabel === "Generate" ? "Generating (~ 2 mins of patience...) " : "Regenerating (~ 2 mins of patience...)"} disabled={!buttonEnable || proposalStatus !== 'draft'} data-testid="generate-button" />
+                                                                        <CommonButton
+                                                                                onClick={handleGenerateClick}
+                                                                                icon={generateIcon}
+                                                                                label={generateLabel}
+                                                                                loading={generateLoading}
+                                                                                loadingLabel={generateLabel === "Generate" ? "Generating (~ 2 mins of patience...) " : "Regenerating (~ 2 mins of patience...)"}
+                                                                                disabled={proposalStatus !== 'draft' || !buttonEnable}
+                                                                                className={!buttonEnable ? "inactive" : ""}
+                                                                                data-testid="generate-button"
+                                                                        />
                                                                 </div>
                                                         </div>
                                                 </div>
