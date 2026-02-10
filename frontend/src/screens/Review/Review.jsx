@@ -15,6 +15,7 @@ import Modal from '../../components/Modal/Modal'
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
 
 export default function Review() {
+    const [proposalTemplate, setProposalTemplate] = useState(null);
     const navigate = useNavigate()
     const { type, id } = useParams()
 
@@ -73,6 +74,31 @@ export default function Review() {
             })
             setReviewComments(initialComments)
             setReviewStatus(initialStatus)
+
+            // === PATCH: Fetch template for section order ===
+            if (type !== 'proposal' && result.knowledge_card) {
+                let templateType = null;
+                const card = result.knowledge_card;
+                if (card.donor_id) templateType = 'donor';
+                else if (card.outcome_id) templateType = 'outcome';
+                else if (card.field_context_id) templateType = 'field_context';
+                if (templateType) {
+                    const templateName = `knowledge_card_${templateType}_template.json`;
+                    try {
+                        const templateRes = await fetch(`${API_BASE_URL}/templates/${templateName}`, { credentials: 'include' });
+                        if (templateRes.ok) {
+                            const templateData = await templateRes.json();
+                            setProposalTemplate(templateData);
+                        } else {
+                            setProposalTemplate(null);
+                        }
+                    } catch (err) {
+                        setProposalTemplate(null);
+                    }
+                } else {
+                    setProposalTemplate(null);
+                }
+            }
         }
         else if (response.status === 401) {
             sessionStorage.setItem("session_expired", "Session expired. Please login again.")
@@ -250,8 +276,12 @@ export default function Review() {
             </div>
 
             <div className="Review_proposal" data-testid="review-content">
-                {Object.entries(generatedSections || {}).map(([section, content]) => (
-                    <div key={section} className={`Review_section ${reviewStatus[section] === 'up' ? 'thumb-up-section' : reviewStatus[section] === 'down' ? 'thumb-down-section' : ''}`} data-testid={`review-section-${section}`}>
+                {/* PATCH: Render sections in template order if available */}
+                {(proposalTemplate && proposalTemplate.sections ? proposalTemplate.sections : Object.keys(generatedSections || {}).map(section => ({ section_name: section })) ).map(sectionObj => {
+                    const section = sectionObj.section_name || sectionObj;
+                    const content = generatedSections && generatedSections[section] ? generatedSections[section] : '';
+                    return (
+                        <div key={section} className={`Review_section ${reviewStatus[section] === 'up' ? 'thumb-up-section' : reviewStatus[section] === 'down' ? 'thumb-down-section' : ''}`} data-testid={`review-section-${section}`}>
                         <div className="Review_section_main">
                             <div className="Review_section_header">
                                 <h2 data-testid={`review-section-title-${section}`}>{section}</h2>
@@ -331,7 +361,7 @@ export default function Review() {
                             </div>
                         )}
                     </div>
-                ))}
+                })}
             </div>
             {isReviewEditable && (
                 <div className="Review_footer">
