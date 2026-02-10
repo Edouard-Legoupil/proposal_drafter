@@ -18,41 +18,6 @@ By streamlining proposal development, this tool accelerates funding opportunitie
 
 - __Seamless Export__: Generate, refine, and export proposals in Word/Excel with validation tracking.
 
-## 🚀 Overview
-
-The landing page is the first thing you'll see. From here, you can navigate to all the key features.
-
-![Landing Page](playwright/test-results/1_landing.png)
-
-To get started, you'll need to register for an account. Click on the "Register" button on the landing page to go to the registration form.
-
-Fill in your details in the __registration form__ as shown below.
-
-![Registration Page Before Submit](playwright/test-results/2_register_page_before_submit.png)
-
-Once you've filled in all the required fields, click the "Submit" button. You should see a confirmation that your registration was successful.
-
-![Registration Page After Submit](playwright/test-results/3_register_page_after_submit.png)
-
-Once you are logged in, you can __generate a new proposal__. Navigate to the "Generate Proposal" page.
-
-![Generate Proposal](playwright/test-results/4_generate_proposal.png)
-
-After you have filled out the necessary information, click "Generate". You will see a confirmation that your proposal has been created.
-
-![Proposal Created](playwright/test-results/5_proposal_created.png)
-
-After a proposal is created, it can be sent for __peer review__. The peer review page allows you to view the proposal and provide feedback.
-
-![Peer Review](playwright/test-results/6_peer_review.png)
-
-__Knowledge cards__ are a way to represent information in a concise and easy-to-digest format.
-
-![Knowledge Card](playwright/test-results/9_knowledge_card.png)
-
-You can create new knowledge cards from the "Create Knowledge Card" page.
-
-![Create Knowledge Card](playwright/test-results/10_knowledge_card_create.png)
 
 ### 🌍 Key Features:
 
