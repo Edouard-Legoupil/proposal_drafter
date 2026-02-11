@@ -131,8 +131,14 @@ export default function Chat(props) {
                 })
 
                 if (response.ok) {
-                        const data = await response.json()
-                        setUsers((data.users || []).map(user => ({ id: user.id, name: user.name, team: user.team_name || 'Unassigned' })))
+                        const data = await response.json();
+                        // Handle both flat list and dictionary structure
+                        const userList = Array.isArray(data) ? data : (data.users || []);
+                        setUsers(userList.map(user => ({
+                                id: user.id,
+                                name: user.name,
+                                team: user.team_name || 'Unassigned'
+                        })));
                 }
         }
 

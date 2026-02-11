@@ -9,6 +9,7 @@
             "Strictly base all content on provided contextual inputs.",
             "Do not invent or hallucinate facts, figures, dates, or actors.",
             "If data is unavailable, explicitly state that it is not provided.",
+            "If there is no mention in the context of the targeted population size for the project, asssume the project target the entire population of interest for the designated field context.",
             "Use a formal, objective, and analytical tone. Avoid casual, emotional, or advocacy-oriented language. Present information factually and neutrally, focusing on clarity, precision, and concise explanation of context, needs, risks, and expected results. Avoid exaggeration, unsupported claims, value judgments, and political statements. Use diplomatic and respectful wording, and maintain consistent technical terminology appropriate for peacebuilding, conflict analysis, implementation, and results reporting.",
             "Use donor names, never IDs.",
             "Use outcome names, never outcome IDs.",
@@ -41,20 +42,18 @@
     ],
     "sections": [
         {
-            "section_name": "Country",
-            "section_label": "Country",
+            "section_name": "Summary",
+            "word_limit": 400,
             "format_type": "text",
-            "mandatory": true,
-            "word_limit": 50,
-            "instructions": "Provide a very short, factual statement naming the country where the project will be implemented. Maximum 50 words."
+            "instructions": "Briefly summarize the crisis/emergency context, humanitarian needs, target population, and key proposed activities. Focus on the core value proposition of the project.",
+            "mandatory": true
         },
         {
-            "section_name": "Project Title",
-            "section_label": "Project Title",
+            "section_name": "Rationale",
+            "word_limit": 600,
             "format_type": "text",
-            "mandatory": true,
-            "word_limit": 50,
-            "instructions": "Provide the official project title in a very short, factual form. Maximum 50 words."
+            "instructions": "Justify the project within the field context: What is the emergency? Why is this response necessary now? What is the gap being addressed?",
+            "mandatory": true
         },
         {
             "section_name": "PBF Project Modality",

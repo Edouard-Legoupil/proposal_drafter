@@ -27,16 +27,16 @@
     "sections": [
         {
             "section_name": "Summary",
-            "word_limit": 500,
+            "word_limit": 400,
             "format_type": "text",
             "instructions": "Briefly summarize the crisis/emergency context, humanitarian needs, target population, and key proposed activities. Focus on the core value proposition of the project.",
             "mandatory": true
         },
         {
             "section_name": "Rationale",
-            "word_limit": 300,
+            "word_limit": 600,
             "format_type": "text",
-            "instructions": "Justify the project: What is the emergency? Why is this response necessary now? What is the gap being addressed?",
+            "instructions": "Justify the project within the field context: What is the emergency? Why is this response necessary now? What is the gap being addressed?",
             "mandatory": true
         },
         {

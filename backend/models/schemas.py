@@ -43,6 +43,7 @@ class User(BaseModel):
     email: str
     name: Optional[str] = None
     team_id: Optional[uuid.UUID] = None
+    team_name: Optional[str] = None
     geographic_coverage_type: Optional[str] = None
     geographic_coverage_region: Optional[str] = None
     geographic_coverage_country: Optional[str] = None

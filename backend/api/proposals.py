@@ -38,7 +38,7 @@ from backend.models.schemas import (
     AuthorResponseRequest,
     SaveContributionIdRequest
 )
-from backend.utils.proposal_logic import regenerate_section_logic
+from backend.utils.proposal_logic import regenerate_section_logic, resolve_form_data_labels
 from backend.utils.crew_proposal  import ProposalCrew
 from backend.api.knowledge import _save_knowledge_card_content_to_file
 
@@ -227,6 +227,11 @@ def generate_all_sections_background(session_id: str, proposal_id: str, user_id:
             raise Exception("Proposal template or sections not found in session.")
 
         form_data = session_data["form_data"]
+        
+        # Resolve labels for form_data before sending to CrewAI
+        with get_engine().connect() as connection:
+            form_data = resolve_form_data_labels(form_data, connection)
+
         project_description = session_data["project_description"]
         associated_knowledge_cards = session_data.get("associated_knowledge_cards")
         all_sections = {}
@@ -451,6 +456,11 @@ async def process_section(session_id: str, request: SectionRequest, current_user
             raise HTTPException(status_code=403, detail="This proposal is finalized and cannot be modified.")
 
     form_data = session_data["form_data"]
+    
+    # Resolve labels for form_data before sending to CrewAI
+    with get_engine().connect() as connection:
+        form_data = resolve_form_data_labels(form_data, connection)
+
     project_description = session_data["project_description"]
 
     #  Get proposal template from session data
@@ -556,13 +566,14 @@ async def regenerate_section(proposal_id: str, request: RegenerateRequest, curre
 
     proposal_template = load_proposal_template(template_name)
 
-    session_data = {
-        "user_id": current_user["user_id"],
-        "proposal_id": proposal_id,
-        "form_data": request.form_data,
-        "project_description": request.project_description,
-        "proposal_template": proposal_template,
-    }
+    with get_engine().connect() as connection:
+        session_data = {
+            "user_id": current_user["user_id"],
+            "proposal_id": proposal_id,
+            "form_data": resolve_form_data_labels(request.form_data, connection),
+            "project_description": request.project_description,
+            "proposal_template": proposal_template,
+        }
     redis_client.setex(session_id, 3600, json.dumps(session_data, default=str))
 
     generated_text = regenerate_section_logic(
@@ -600,7 +611,7 @@ async def update_section_content(request: UpdateSectionRequest, current_user: di
                     SET generated_sections = jsonb_set(
                         generated_sections::jsonb,
                         ARRAY[:section],
-                        to_jsonb(:content::text)
+                        to_jsonb(CAST(:content AS TEXT))
                     ),
                     updated_at = CURRENT_TIMESTAMP
                     WHERE id = :id
