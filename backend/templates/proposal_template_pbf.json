@@ -9,6 +9,7 @@
             "Strictly base all content on provided contextual inputs; do not infer or assume missing data.",
             "Do not invent or hallucinate facts, figures, dates, organizations, geographies, or policies.",
             "If any required information is unavailable, insert a brief statement: 'Information not provided in the context.'",
+            "If there is no mention in the context of the targeted population size for the project, asssume the project target the entire population of interest for the designated field context.",
             "Use a formal, objective, and analytical tone. Avoid casual, emotional, or advocacy-oriented language. Present information factually and neutrally, focusing on clarity, precision, and concise explanation of context, needs, risks, implementation, monitoring, and results. Avoid exaggeration, unsupported claims, value judgments, and political statements. Use diplomatic and respectful wording and consistent technical terminology appropriate for peacebuilding, conflict analysis, implementation, risk management, monitoring and evaluation, and results reporting.",
             "Use donor names, never donor IDs.",
             "Use outcome names, never outcome IDs.",
