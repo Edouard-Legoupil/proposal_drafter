@@ -1,6 +1,7 @@
 .Review {
     padding: 2rem;
-    height: calc(100vh - 65px); /* Full height minus header */
+    height: calc(100vh - 65px);
+    /* Full height minus header */
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -25,14 +26,17 @@
     border: 1px solid #ccc;
     padding: 1rem;
     border-radius: 8px;
+    background-color: #f9f9f9;
 }
 
 .Review_section_main {
-    flex: 3; /* Takes up 3/4 of the space */
+    flex: 3;
+    /* Takes up 3/4 of the space */
 }
 
 .Review_comment_section {
-    flex: 1; /* Takes up 1/4 of the space */
+    flex: 1;
+    /* Takes up 1/4 of the space */
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -51,7 +55,8 @@
     font-size: 1.5rem;
 }
 
-.thumb-up, .thumb-down {
+.thumb-up,
+.thumb-down {
     cursor: pointer;
     color: #ccc;
 }
