@@ -141,17 +141,12 @@ def check_user_group_access(current_user: dict, donor_id: Optional[Any] = None, 
                 detail="Access denied. You do not have the 'knowledge manager outcome' role required to edit outcome cards."
             )
 
-    # Field context check (with ownership)
+    # Field context check (role-based)
     if field_context_id:
         if "knowledge manager field context" not in user_roles:
             raise HTTPException(
                 status_code=403,
-                detail="Access denied. You do not have the 'knowledge manager field context' role."
-            )
-        if owner_id and str(owner_id) != str(user_id):
-            raise HTTPException(
-                status_code=403,
-                detail="Access denied. You can only edit field context cards that you created (ownership required)."
+                detail="Access denied. You do not have the 'knowledge manager field context' role required to edit field context cards."
             )
 
 # Exposing functions for use in other parts of the application.

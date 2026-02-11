@@ -8,7 +8,7 @@ content_generation_task:
     - **Special Requirements:** {special_requirements}
     - **Instructions:** {instructions}
     IMPORTANT: The response must not exceed {limit_value} {limit_term}s. If the output exceeds the limit, you MUST truncate or summarize so the final output fits the limit. Failure to comply will require regeneration.
-    Respond with a raw JSON object, no Markdown formatting, no triple backticks.
+    Respond with a raw JSON object, no triple backticks.
   expected_output: |
     Return a JSON with the following format:
       {
@@ -58,8 +58,8 @@ regeneration_task:
     - **Instructions:** {instructions}
 
     Ensure that the response integrates the user’s input while remaining structured, coherent, and within {limit_value} {limit_term}s.
-    If the output exceeds the limit, rephrase or summarize to fit within the given limit.
-    Respond with a raw JSON object, no Markdown formatting, no triple backticks.
+    IMPORTANT: If the output exceeds the limit, rephrase or summarize to fit within the given limit.
+    Respond with a raw JSON object, no triple backticks.
 
   expected_output: >
     Return a JSON with the following format:

@@ -12,6 +12,8 @@ from backend.utils.crew_proposal import ProposalCrew
 from backend.core.redis import redis_client
 from backend.core.db import engine
 
+FALLBACK_GENERATION_MESSAGE = "Generation issue: No content was generated for this section. You can try regenerating it or edit it manually."
+
 # This module contains the core logic for generating and regenerating proposal sections
 # using the 'crew' of AI agents.
 
@@ -127,9 +129,7 @@ def regenerate_section_logic(
         )
 
     if not generated_text:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to regenerate content for {section}"
-        )
+        generated_text = FALLBACK_GENERATION_MESSAGE
 
     # Update the section in the session data.
     session_data.setdefault("generated_sections", {})[section] = generated_text

@@ -78,13 +78,15 @@ export default function Chat(props) {
         const [newFieldContexts, setNewFieldContexts] = useState([]);
         const [newBudgetRanges, setNewBudgetRanges] = useState([]);
         const [newDurations, setNewDurations] = useState([]);
+        const [geographicCoverages, setGeographicCoverages] = useState([]);
 
         async function fetchData() {
                 try {
-                        const [donorsRes, outcomesRes, fieldContextsRes] = await Promise.all([
+                        const [donorsRes, outcomesRes, fieldContextsRes, geoCoveragesRes] = await Promise.all([
                                 fetch(`${API_BASE_URL}/donors`, { credentials: 'include' }),
                                 fetch(`${API_BASE_URL}/outcomes`, { credentials: 'include' }),
-                                fetch(`${API_BASE_URL}/field-contexts`, { credentials: 'include' })
+                                fetch(`${API_BASE_URL}/field-contexts`, { credentials: 'include' }),
+                                fetch(`${API_BASE_URL}/geographic-coverages`, { credentials: 'include' })
                         ]);
 
                         if (donorsRes.ok) {
@@ -100,6 +102,10 @@ export default function Chat(props) {
                                 const sortedFieldContexts = data.field_contexts.sort((a, b) => a.name.localeCompare(b.name));
                                 setFieldContexts(sortedFieldContexts);
                                 setFilteredFieldContexts(sortedFieldContexts);
+                        }
+                        if (geoCoveragesRes.ok) {
+                                const data = await geoCoveragesRes.json();
+                                setGeographicCoverages(data.geographic_coverages || []);
                         }
                 } catch (error) {
                         console.error("Error fetching form data:", error);
@@ -241,7 +247,7 @@ export default function Chat(props) {
                                 case "Country / Location(s)":
                                         return [...filteredFieldContexts, ...newFieldContexts].map(fc => ({ value: fc.id, label: fc.name }));
                                 case "Geographical Scope":
-                                        return ["One Country Operation", "Multiple Country", "One Region", "Route-Based-Approach", "Area-Based-Approach", "Global Coverage"].map(gc => ({ value: gc, label: gc }));
+                                        return geographicCoverages.map(gc => ({ value: gc, label: gc }));
                                 case "Duration":
                                         const durationOptions = ["1 month", "3 months", "6 months", "12 months", "18 months", "24 months", "30 months", "36 months"];
                                         return [...durationOptions.map(d => ({ value: d, label: d })), ...newDurations.map(d => ({ value: d.id, label: d.name }))];

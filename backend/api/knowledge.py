@@ -1858,6 +1858,9 @@ async def get_all_knowledge_card_reviews(card_id: uuid.UUID, current_user: dict 
                     kcr.id,
                     kcr.section_name,
                     kcr.review_text,
+                    kcr.type_of_comment,
+                    kcr.severity,
+                    kcr.created_at,
                     kcr.author_response,
                     kcr.rating,
                     u.name as reviewer_name
@@ -1867,6 +1870,8 @@ async def get_all_knowledge_card_reviews(card_id: uuid.UUID, current_user: dict 
                     users u ON kcr.reviewer_id = u.id
                 WHERE
                     kcr.knowledge_card_id = :cid
+                    AND kcr.review_text IS NOT NULL
+                    AND kcr.review_text != ''
             """)
             result = connection.execute(query, {"cid": str(card_id)})
             reviews = [
@@ -1874,6 +1879,9 @@ async def get_all_knowledge_card_reviews(card_id: uuid.UUID, current_user: dict 
                     "id": row.id,
                     "section_name": row.section_name,
                     "review_text": row.review_text,
+                    "type_of_comment": row.type_of_comment,
+                    "severity": row.severity,
+                    "created_at": row.created_at,
                     "author_response": row.author_response,
                     "rating": row.rating,
                     "reviewer_name": row.reviewer_name

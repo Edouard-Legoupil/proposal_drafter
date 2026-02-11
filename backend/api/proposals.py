@@ -49,6 +49,8 @@ router = APIRouter()
 # Configure logging
 logger = logging.getLogger(__name__)
 
+FALLBACK_GENERATION_MESSAGE = "Generation issue: No content was generated for this section. You can try regenerating it or edit it manually."
+
 
 
 
@@ -356,6 +358,10 @@ def generate_all_sections_background(session_id: str, proposal_id: str, user_id:
             elif format_type == "table":
                 generated_text = handle_table_format(section_config, crew_instance, form_data, project_description, special_requirements=special_requirements_str)
 
+            if not generated_text:
+                logger.warning(f"Generation failed for section '{section_name}' in proposal {proposal_id}. Using fallback message.")
+                generated_text = FALLBACK_GENERATION_MESSAGE
+
             all_sections[section_name] = generated_text
 
              # --- PARTIAL SAVE: Update DB after each section ---
@@ -476,6 +482,10 @@ async def process_section(session_id: str, request: SectionRequest, current_user
         generated_text = handle_number_format(section_config, crew_instance, form_data, project_description, special_requirements=special_requirements_str)
     elif format_type == "table":
         generated_text = handle_table_format(section_config, crew_instance, form_data, project_description, special_requirements=special_requirements_str)
+
+    if not generated_text:
+        logger.warning(f"Generation failed for section '{request.section}' in proposal {request.proposal_id}. Using fallback message.")
+        generated_text = FALLBACK_GENERATION_MESSAGE
 
     message = f"Content generated for {request.section}"
 
@@ -1677,6 +1687,22 @@ async def get_field_contexts(geographic_coverage: Optional[str] = None):
     except Exception as e:
         logger.error(f"[GET FIELD CONTEXTS ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch field contexts.")
+
+
+@router.get("/geographic-coverages")
+async def get_geographic_coverages():
+    """
+    Fetches unique geographic coverage values from the field_contexts table.
+    """
+    try:
+        with get_engine().connect() as connection:
+            query = text("SELECT DISTINCT geographic_coverage FROM field_contexts WHERE geographic_coverage IS NOT NULL AND geographic_coverage != '' ORDER BY geographic_coverage")
+            result = connection.execute(query)
+            coverages = [row[0] for row in result.fetchall()]
+        return {"geographic_coverages": coverages}
+    except Exception as e:
+        logger.error(f"[GET GEOGRAPHIC COVERAGES ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch geographic coverages.")
 
 
 @router.post("/donors", status_code=201)

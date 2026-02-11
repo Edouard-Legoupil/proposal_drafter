@@ -522,22 +522,22 @@ export default function Dashboard() {
                                                                 key={card.id}
                                                                 card={card}
                                                                 date={cleanedDate(card.updated_at)}
-onClick={() => {
-    const requiredRoles = [
-        "knowledge manager donors",
-        "knowledge manager outcome",
-        "knowledge manager field context"
-    ];
-    const normalize = r => r.replace(/_/g, ' ').replace(/\s+/g, ' ').toLowerCase().trim();
-    const userRoles = Array.isArray(currentUser?.roles) ? currentUser.roles.map(normalize) : [];
-    const normalizedRequired = requiredRoles.map(normalize);
-    const hasManagerRole = userRoles.some(role => normalizedRequired.includes(role));
-    if (hasManagerRole) {
-        navigate(`/knowledge-card/${card.id}`);
-    } else {
-        navigate(`/review/knowledge-card/${card.id}`);
-    }
-}}
+                                                                onClick={() => {
+                                                                        const requiredRoles = [
+                                                                                "knowledge manager donors",
+                                                                                "knowledge manager outcome",
+                                                                                "knowledge manager field context"
+                                                                        ];
+                                                                        const normalize = r => r.replace(/_/g, ' ').replace(/\s+/g, ' ').toLowerCase().trim();
+                                                                        const userRoles = Array.isArray(currentUser?.roles) ? currentUser.roles.map(normalize) : [];
+                                                                        const normalizedRequired = requiredRoles.map(normalize);
+                                                                        const hasManagerRole = userRoles.some(role => normalizedRequired.includes(role));
+                                                                        if (hasManagerRole) {
+                                                                                navigate(`/knowledge-card/${card.id}`);
+                                                                        } else {
+                                                                                navigate(`/review/knowledge-card/${card.id}`);
+                                                                        }
+                                                                }}
                                                                 isDuplicate={duplicateCardIds.has(card.id)}
                                                                 onDelete={() => handleDeleteKnowledgeCard(card.id)}
                                                         />
@@ -559,36 +559,36 @@ onClick={() => {
                                                         </thead>
                                                         <tbody>
                                                                 {sortedKnowledgeCards.map((card) => {
-const requiredRoles = [
-    "knowledge manager donors",
-    "knowledge manager outcome",
-    "knowledge manager field context"
-];
-const normalize = r => r.replace(/_/g, ' ').replace(/\s+/g, ' ').toLowerCase().trim();
-const userRoles = Array.isArray(currentUser?.roles) ? currentUser.roles.map(normalize) : [];
-const normalizedRequired = requiredRoles.map(normalize);
-const hasManagerRole = userRoles.some(role => normalizedRequired.includes(role));
-const canEditKC = hasManagerRole;
+                                                                        const requiredRoles = [
+                                                                                "knowledge manager donors",
+                                                                                "knowledge manager outcome",
+                                                                                "knowledge manager field context"
+                                                                        ];
+                                                                        const normalize = r => r.replace(/_/g, ' ').replace(/\s+/g, ' ').toLowerCase().trim();
+                                                                        const userRoles = Array.isArray(currentUser?.roles) ? currentUser.roles.map(normalize) : [];
+                                                                        const normalizedRequired = requiredRoles.map(normalize);
+                                                                        const hasManagerRole = userRoles.some(role => normalizedRequired.includes(role));
+                                                                        const canEditKC = hasManagerRole;
                                                                         const cardType = card.donor_name ? 'Donor' : card.outcome_name ? 'Outcome' : 'Field Context';
                                                                         const cardName = card.donor_name || card.outcome_name || card.field_context_name || 'N/A';
 
                                                                         return (
                                                                                 <tr key={card.id} onClick={() => {
-    const requiredRoles = [
-        "knowledge manager donors",
-        "knowledge manager outcome",
-        "knowledge manager field context"
-    ];
-    const normalize = r => r.replace(/_/g, ' ').replace(/\s+/g, ' ').toLowerCase().trim();
-    const userRoles = Array.isArray(currentUser?.roles) ? currentUser.roles.map(normalize) : [];
-    const normalizedRequired = requiredRoles.map(normalize);
-    const hasManagerRole = userRoles.some(role => normalizedRequired.includes(role));
-    if (hasManagerRole) {
-        navigate(`/knowledge-card/${card.id}`)
-    } else {
-        navigate(`/review/knowledge-card/${card.id}`)
-    }
-}} style={{ cursor: 'pointer' }}>
+                                                                                        const requiredRoles = [
+                                                                                                "knowledge manager donors",
+                                                                                                "knowledge manager outcome",
+                                                                                                "knowledge manager field context"
+                                                                                        ];
+                                                                                        const normalize = r => r.replace(/_/g, ' ').replace(/\s+/g, ' ').toLowerCase().trim();
+                                                                                        const userRoles = Array.isArray(currentUser?.roles) ? currentUser.roles.map(normalize) : [];
+                                                                                        const normalizedRequired = requiredRoles.map(normalize);
+                                                                                        const hasManagerRole = userRoles.some(role => normalizedRequired.includes(role));
+                                                                                        if (hasManagerRole) {
+                                                                                                navigate(`/knowledge-card/${card.id}`)
+                                                                                        } else {
+                                                                                                navigate(`/review/knowledge-card/${card.id}`)
+                                                                                        }
+                                                                                }} style={{ cursor: 'pointer' }}>
                                                                                         <td>
                                                                                                 {card.donor_name && <i className="fa-solid fa-money-bill-wave donor"></i>}
                                                                                                 {card.outcome_name && <i className="fa-solid fa-bullseye outcome"></i>}
@@ -665,6 +665,8 @@ const canEditKC = hasManagerRole;
                                                                 handleDeleteProject={handleDeleteProject}
                                                                 handleRestoreProject={handleRestoreProject}
                                                                 handleTransferOwnership={handleTransferOwnership}
+                                                                requesterLabel="Author"
+                                                                authorName={review.author_name}
                                                         />
                                                 )}
                                         </div>

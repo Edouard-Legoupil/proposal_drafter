@@ -60,7 +60,7 @@ export default function KnowledgeCard() {
     const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
     const [alertModalMessage, setAlertModalMessage] = useState('');
     const [currentUser, setCurrentUser] = useState(null);
-const [sectionReviews, setSectionReviews] = useState({});
+    const [sectionReviews, setSectionReviews] = useState({});
 
     // Use refs to track current state without stale closures
     const summaryRef = useRef(summary);
@@ -140,32 +140,33 @@ const [sectionReviews, setSectionReviews] = useState({});
                     const data = await cardRes.json();
                     const card = data.knowledge_card;
 
-if (!curUser || !card) {
-    // Defensive: Only redirect when both are loaded
-    return;
-}
-const requiredRoles = [
-    "knowledge manager donors",
-    "knowledge manager outcome",
-    "knowledge manager field context"
-];
-const normalize = r => r.replace(/_/g, ' ').replace(/\s+/g, ' ').toLowerCase().trim();
-const userRoles = Array.isArray(curUser.roles) ? curUser.roles.map(normalize) : [];
-const normalizedRequired = requiredRoles.map(normalize);
-const hasRequiredRole = userRoles.some(role => normalizedRequired.includes(role));
-console.log('Role Debug:', {
-    currentUser: curUser,
-    card,
-    userRoles,
-    normalizedRequired,
-    hasRequiredRole,
-    redirectCondition: !hasRequiredRole
-});
-if (!hasRequiredRole) {
-    console.log(`Redirecting user (roles do not match) to /review/knowledge-card/${id}`);
-    navigate(`/review/knowledge-card/${id}`, { replace: true });
-    return;
-}
+                    if (!curUser || !card) {
+                        // Defensive: Only redirect when both are loaded
+                        return;
+                    }
+                    const normalize = r => r.replace(/_/g, ' ').replace(/\s+/g, ' ').toLowerCase().trim();
+                    const userRoles = Array.isArray(curUser.roles) ? curUser.roles.map(normalize) : [];
+
+                    let specificRequiredRole = "";
+                    if (card.donor_id) specificRequiredRole = "knowledge manager donors";
+                    else if (card.outcome_id) specificRequiredRole = "knowledge manager outcome";
+                    else if (card.field_context_id) specificRequiredRole = "knowledge manager field context";
+
+                    const hasSpecificRole = userRoles.includes(normalize(specificRequiredRole));
+
+                    console.log('Role Debug (Granular):', {
+                        currentUser: curUser,
+                        card,
+                        userRoles,
+                        specificRequiredRole,
+                        hasSpecificRole
+                    });
+
+                    if (!hasSpecificRole) {
+                        console.log(`Redirecting user (missing specific role: ${specificRequiredRole}) to /review/knowledge-card/${id}`);
+                        navigate(`/review/knowledge-card/${id}`, { replace: true });
+                        return;
+                    }
 
                     setSummary(card.summary || '');
                     let determinedLinkType = '';
@@ -190,23 +191,23 @@ if (!hasRequiredRole) {
                         const sections = card.generated_sections;
                         if (Object.keys(sections).length > 0) {
                             setGeneratedSections(sections);
-// --- Fetch reviews for each section ---
-try {
-    const reviewsRes = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${id}/all-reviews`, { credentials: 'include' });
-    if (reviewsRes.ok) {
-        const { reviews } = await reviewsRes.json();
-        const bySection = {};
-        for (const review of reviews) {
-            if (review.section_name) {
-                if (!bySection[review.section_name]) bySection[review.section_name] = [];
-                bySection[review.section_name].push(review);
-            }
-        }
-        setSectionReviews(bySection);
-    }
-} catch (err) {
-    console.error('Failed to load knowledge card section reviews', err);
-}
+                            // --- Fetch reviews for each section ---
+                            try {
+                                const reviewsRes = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${id}/all-reviews`, { credentials: 'include' });
+                                if (reviewsRes.ok) {
+                                    const { reviews } = await reviewsRes.json();
+                                    const bySection = {};
+                                    for (const review of reviews) {
+                                        if (review.section_name) {
+                                            if (!bySection[review.section_name]) bySection[review.section_name] = [];
+                                            bySection[review.section_name].push(review);
+                                        }
+                                    }
+                                    setSectionReviews(bySection);
+                                }
+                            } catch (err) {
+                                console.error('Failed to load knowledge card section reviews', err);
+                            }
                         } else {
                             setGeneratedSections(null);
                         }
@@ -1213,12 +1214,12 @@ try {
                                                 <div className="kc-review-comment" key={idx} style={{
                                                     background: '#f8f9fb', borderRadius: 4, margin: '12px 0 0 0', padding: '10px 14px', border: '1px solid #e6e9ef'
                                                 }}>
-                                                    <div style={{fontSize: 13, color: '#888', marginBottom: 2, letterSpacing: '0.01em'}}>
+                                                    <div style={{ fontSize: 13, color: '#888', marginBottom: 2, letterSpacing: '0.01em' }}>
                                                         Comment by {comment.reviewer_name || "Reviewer"}
                                                         {comment.created_at && <> – {new Date(comment.created_at).toLocaleString()}</>}
                                                     </div>
-                                                    <div style={{fontWeight: 500, margin: '4px 0'}}>{comment.review_text}</div>
-                                                    <div style={{fontSize: 12, color: '#777'}}>Type: {comment.type_of_comment} | Severity: {comment.severity}</div>
+                                                    <div style={{ fontWeight: 500, margin: '4px 0' }}>{comment.review_text}</div>
+                                                    <div style={{ fontSize: 12, color: '#777' }}>Type: {comment.type_of_comment} | Severity: {comment.severity}</div>
                                                 </div>
                                             ))}
                                         </div>

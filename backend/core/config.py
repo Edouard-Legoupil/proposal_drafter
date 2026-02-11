@@ -172,7 +172,7 @@ def get_available_templates():
                     continue
 
                 donors = data.get("donors", [])
-                if isinstance(donors, list):
+                if isinstance(donors, list) and not filename.startswith("concept_note_"):
                     for donor_name in donors:
                         templates_map[donor_name] = filename
 
