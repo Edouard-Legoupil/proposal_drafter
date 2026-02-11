@@ -16,6 +16,20 @@
             "when referencing, field context, use field_context name and never field context_id"
         ]
     },
+    "section_sequence": [
+        "Background",
+        "Operational Context",
+        "UNHCR Achievements",
+        "Implementation Areas",
+        "Project Activity",
+        "Justification for Support",
+        "Beneficiaries Table",
+        "Implementation and Monitoring",
+        "Donor Visibility",
+        "Budget Table",
+        "Cover Page",
+        "Project Information"
+    ],
     "sections": [
         {
             "section_name": "Project Information",
@@ -55,14 +69,14 @@
             ]
         },
         {
-            "section_name": "cover_page",
+            "section_name": "Cover Page",
             "section_label": "Cover Page",
             "format_type": "fixed_text",
             "fixed_text": "Proposal to the Government of the Republic of Korea\nUNHCR",
             "mandatory": true
         },
         {
-            "section_name": "background",
+            "section_name": "Background",
             "section_label": "Background",
             "section_parent": "Operational Context",
             "format_type": "text",
@@ -71,7 +85,7 @@
             "mandatory": true
         },
         {
-            "section_name": "operational_context",
+            "section_name": "Operational Context",
             "section_label": "Operational Context",
             "section_parent": "Operational Context",
             "format_type": "text",
@@ -80,7 +94,7 @@
             "mandatory": true
         },
         {
-            "section_name": "achievement",
+            "section_name": "UNHCR Achievements",
             "section_label": "UNHCR Achievements",
             "format_type": "text",
             "word_limit": 250,
@@ -88,7 +102,7 @@
             "mandatory": true
         },
         {
-            "section_name": "implementation_areas",
+            "section_name": "Implementation Areas",
             "section_label": "Implementation Areas",
             "format_type": "text",
             "word_limit": 150,
@@ -96,7 +110,7 @@
             "mandatory": true
         },
         {
-            "section_name": "project_activity",
+            "section_name": "Project Activity",
             "section_label": "Project Activity",
             "format_type": "text",
             "word_limit": 400,
@@ -104,7 +118,7 @@
             "mandatory": true
         },
         {
-            "section_name": "justification_for_support",
+            "section_name": "Justification for Support",
             "section_label": "Justification for Support from the Republic of Korea",
             "format_type": "text",
             "word_limit": 250,
@@ -112,7 +126,7 @@
             "mandatory": true
         },
         {
-            "section_name": "beneficiaries_table",
+            "section_name": "Beneficiaries Table",
             "section_label": "Beneficiaries",
             "format_type": "table",
             "instructions": "For each key activity, estimate the number of direct and indirect beneficiaries using provided data. Do not invent numbers.",
@@ -145,7 +159,7 @@
             "mandatory": true
         },
         {
-            "section_name": "implementation_and_monitoring",
+            "section_name": "Implementation and Monitoring",
             "section_label": "Implementation and Monitoring",
             "format_type": "text",
             "word_limit": 300,
@@ -153,7 +167,7 @@
             "mandatory": true
         },
         {
-            "section_name": "donor_visibility",
+            "section_name": "Donor Visibility",
             "section_label": "Donor Visibility",
             "format_type": "text",
             "word_limit": 150,
@@ -161,7 +175,7 @@
             "mandatory": true
         },
         {
-            "section_name": "budget_table",
+            "section_name": "Budget Table",
             "section_label": "Budget",
             "format_type": "table",
             "instructions": "Provide a budget table in USD covering outcome areas/activities, beneficiaries, unit costs, requested support based strictly on the financial plan; include subtotal, ISC 6.5%, and total.",

@@ -1,7 +1,6 @@
 {
     "template_type": "Proposal",
     "donors": [
-        "Education Cannot Wait",
         "Education Cannot Wait - Accelerated Facility Window",
         "Education Cannot Wait - First Emergency Window",
         "Education Cannot Wait - Multiyear Resilience Programme"
@@ -18,6 +17,22 @@
             "when referencing, field context, use field_context name and never field context_id"
         ]
     },
+    "section_sequence": [
+        "Education Response: Needs Overview",
+        "Intervention Strategy",
+        "Gender, Disability Inclusion & Intersecting Inequalities Approach",
+        "Education Sector Coordination Mechanisms",
+        "Grant Application Development Process",
+        "Grantee Selection Process",
+        "Joint Monitoring and Reporting",
+        "Grantee Details",
+        "Annex A: Map of ECW Grantee interventions",
+        "Annex B: Collective Results Framework",
+        "Annex B: Headcount",
+        "Annex C: Budgets",
+        "Annex D: Risk Matrix",
+        "Project Information"
+    ],
     "sections": [
         {
             "section_name": "Grantee Details",

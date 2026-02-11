@@ -16,6 +16,49 @@
             "when referencing, field context, use field_context name and never field context_id"
         ]
     },
+    "section_sequence": [
+        "Project Background",
+        "Necessity Requirements",
+        "Necessity Conformity",
+        "Objectives SDGs",
+        "Objectives Specific",
+        "Expected Outputs",
+        "Conditions Prep Work",
+        "Conditions Required",
+        "Similar Projects Table",
+        "Capabilities Applicant",
+        "Management Structure and Division of Labor",
+        "Management Team Table",
+        "Internal Control System",
+        "Anti-corruption",
+        "Procurement System",
+        "Control Partner Selection",
+        "Risk Assessment/Management",
+        "Environmental & Social Impact Systems",
+        "Emergency Management System",
+        "Asset Management",
+        "Monitoring/Evaluation System",
+        "Implementation Adopted Standards",
+        "Implementation Plan",
+        "Procurement_Plan",
+        "Implementation Progress",
+        "Budget Calculation Basis",
+        "Budget Items Table",
+        "Budget Reporting Staff Table",
+        "Project Budget Overall",
+        "Budget Parameters ISC",
+        "Project Financing Usage",
+        "Financial Analysis",
+        "Project Risk Analysis Table",
+        "Project Comprehensive Impact Analysis",
+        "Attachments List",
+        "Bank Details",
+        "Legal Declaration",
+        "China Aid Logo Communication Plan",
+        "Intellectual Property Administration Plan",
+        "Maintenance Support Plan",
+        "Project Information"
+    ],
     "sections": [
         {
             "section_name": "Project Background",
@@ -251,6 +294,7 @@
             "section_parent": "6. Capabilities of Project Implementation and Management",
             "format_type": "text",
             "mandatory": true,
+            "word_limit": 350,
             "instructions": "Provide standard narratives for internal control and oversight; subsections below detail specific systems."
         },
         {
@@ -429,7 +473,8 @@
             "section_label": "8. Project Implementation Progress (Gantt)",
             "format_type": "text",
             "mandatory": false,
-            "instructions": "Linked to Attachment 2 Gantt Chart; provide timeline across Y1\u2013Y2 (M1\u2013M12) and responsible parties."
+            "word_limit": 200,
+            "instructions": "Linked to Attachment 2 Gantt Chart; provide timeline across Y1–Y2 (M1–M12) and responsible parties."
         },
         {
             "section_name": "Budget Calculation Basis",
@@ -534,6 +579,7 @@
             "section_parent": "9. Project Budget",
             "format_type": "text",
             "mandatory": false,
+            "word_limit": 150,
             "instructions": "To be prepared based on itemized budget (Attachment 3)."
         },
         {
@@ -542,6 +588,7 @@
             "section_parent": "9. Project Budget",
             "format_type": "text",
             "mandatory": false,
+            "word_limit": 200,
             "instructions": "If any other funding exists, provide financing plan and usage plan (linked to Attachments 2 & 3)."
         },
         {

@@ -138,3 +138,12 @@ python3 backend/scripts/4-find-references.py --card-type donor --user-id <your_u
 *   `field_context`
 *   `donor`
 *   `all`
+
+
+# Validate All Templates
+
+A comprehensive validation script that ensures all proposal and concept note templates are correctly configured and consistent.
+
+```bash
+python3 backend/scripts/validate_templates.py
+```

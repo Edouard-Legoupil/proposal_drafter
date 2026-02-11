@@ -1,7 +1,6 @@
 {
     "template_type": "Concept Note",
     "donors": [
-        "Education Cannot Wait",
         "Education Cannot Wait - Accelerated Facility Window",
         "Education Cannot Wait - First Emergency Window",
         "Education Cannot Wait - Multiyear Resilience Programme"
@@ -17,6 +16,13 @@
             "when referencing, field context, use field_context name and never field context_id"
         ]
     },
+    "section_sequence": [
+        "Rationale",
+        "Project Description",
+        "Implementation and Coordination Arrangements",
+        "Budget Estimate",
+        "Summary"
+    ],
     "sections": [
         {
             "section_name": "Summary",

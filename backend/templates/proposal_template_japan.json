@@ -31,6 +31,29 @@
             "when referencing, field context, use field_context name and never field context_id"
         ]
     },
+    "section_sequence": [
+        "1. Summary of the Project and Background",
+        "2.1 Overall Impact",
+        "2.2 Outcome",
+        "2.3 Output",
+        "2.4 Indicator",
+        "3. Project Justification",
+        "3.1. Urgency",
+        "3.2. Unpredictability",
+        "3.3. Necessity",
+        "3.4. Un-substitutability",
+        "4. Linkage with National, Regional and International Frameworks",
+        "5.1 Japanese Actors",
+        "5.2 Other Actors",
+        "6. Promoting Priority Areas",
+        "7. Visibility",
+        "8. Monitoring, Audit and Reporting",
+        "10. Budget",
+        "9. UNHCR Office",
+        "Summary",
+        "Project Information",
+        "Header Information"
+    ],
     "sections": [
         {
             "section_name": "Summary",
@@ -134,42 +157,40 @@
             "mandatory": true
         },
         {
-            "section_name": "2. Impact and Expected Outcomes",
-            "format_type": "text",
-            "instructions": "Develop results framework based strictly on the logframe: 1) Overall impact statement capturing project essence 2) For each outcome, write one paragraph describing activities and results with beneficiary numbers 3) For each outcome, specify 1-2 outputs with clear deliverables 4) For each output, create SMART indicators (Specific, Measurable, Achievable, Relevant, Time-bound)",
-            "mandatory": true
-        },
-        {
-            "section_name": "2. Impact and Expected Outcomes_overall_impact",
-            "section_label": "2. Impact and Expected Outcomes - Overall Impact",
+            "section_name": "2.1 Overall Impact",
+            "section_label": "2.1 Overall Impact",
             "section_parent": "2. Impact and Expected Outcomes",
             "format_type": "text",
+            "word_limit": 2000,
             "mandatory": true,
             "instructions": "Craft a powerful impact statement summarizing the transformative change expected from the project"
         },
         {
-            "section_name": "2. Impact and Expected Outcomes_outcome",
-            "section_label": "2. Impact and Expected Outcomes - Outcome",
+            "section_name": "2.2 Outcome",
+            "section_label": "2.2 Outcome",
             "section_parent": "2. Impact and Expected Outcomes",
             "format_type": "text",
+            "word_limit": 2000,
             "mandatory": true,
-            "instructions": "For each outcome area, describe activities and expected results with precise beneficiary numbers, following theory of change principles"
+            "instructions": "Develop results framework based strictly on the logframe: For each outcome area, describe activities and expected results with precise beneficiary numbers, following theory of change principles"
         },
         {
-            "section_name": "2. Impact and Expected Outcomes_output",
-            "section_label": "2. Impact and Expected Outcomes - Output",
+            "section_name": "2.3 Output",
+            "section_label": "2.3 Output",
             "section_parent": "2. Impact and Expected Outcomes",
             "format_type": "text",
+            "word_limit": 2000,
             "mandatory": true,
             "instructions": "Define concrete deliverables for each outcome using action-oriented language"
         },
         {
-            "section_name": "2. Impact and Expected Outcomes_indicator",
-            "section_label": "2. Impact and Expected Outcomes - Indicator",
+            "section_name": "2.4 Indicator",
+            "section_label": "2.4 Indicator",
             "section_parent": "2. Impact and Expected Outcomes",
             "format_type": "text",
+            "word_limit": 2000,
             "mandatory": true,
-            "instructions": "Create SMART indicators for each output that are specific, measurable, achievable, relevant and time-bound"
+            "instructions": "Develop results framework based strictly on the logframeCreate SMART indicators for each output that are specific, measurable, achievable, relevant and time-bound"
         },
         {
             "section_name": "3. Project Justification",
@@ -179,34 +200,38 @@
             "mandatory": true
         },
         {
-            "section_name": "3. Project Justification_31_urgency",
-            "section_label": "3. Project Justification - 3.1. Urgency",
+            "section_name": "3.1. Urgency",
+            "section_label": "3.1. Urgency",
             "section_parent": "3. Project Justification",
             "format_type": "text",
+            "word_limit": 400,
             "mandatory": true,
             "instructions": "Demonstrate urgent need using specific data from inputs: 1) Recent events/changes in humanitarian situation 2) Data-supported scale and severity 3) Direct impact on population 4) Consequences of inaction 5) Why activities cannot wait for next fiscal year core contributions"
         },
         {
-            "section_name": "3. Project Justification_32_unpredictability",
-            "section_label": "3. Project Justification - 3.2. Unpredictability",
+            "section_name": "3.2. Unpredictability",
+            "section_label": "3.2. Unpredictability",
             "section_parent": "3. Project Justification",
             "format_type": "text",
+            "word_limit": 400,
             "mandatory": true,
             "instructions": "Prove unpredictability: 1) Unforeseen incidents since April 2025 2) Why waiting until April 2026 is not feasible 3) Complex/volatile situation analysis 4) Recent exacerbating developments 5) Future risks and instability factors 6) Need for flexible funding"
         },
         {
-            "section_name": "3. Project Justification_33_necessity",
-            "section_label": "3. Project Justification - 3.3. Necessity",
+            "section_name": "3.3. Necessity",
+            "section_label": "3.3. Necessity",
             "section_parent": "3. Project Justification",
             "format_type": "text",
+            "word_limit": 400,
             "mandatory": true,
             "instructions": "Align with Japanese priorities: 1) How project advances Japan's {{policy_priorities}} 2) Linkage to Humanitarian-Development Nexus 3) Focus on contributing to Japan's efforts rather than just alignment"
         },
         {
-            "section_name": "3. Project Justification_34_un-substitutability",
-            "section_label": "3. Project Justification - 3.4. Un-substitutability",
+            "section_name": "3.4. Un-substitutability",
+            "section_label": "3.4. Un-substitutability",
             "section_parent": "3. Project Justification",
             "format_type": "text",
+            "word_limit": 400,
             "mandatory": true,
             "instructions": "Prove UNHCR's unique role: 1) Why Japanese funding is irreplaceable 2) UNHCR's government relationships 3) Specialized know-how and capacity 4) Security/access advantages 5) Comparative advantage over other actors"
         },
@@ -218,25 +243,20 @@
             "mandatory": true
         },
         {
-            "section_name": "5. Cooperation with Japanese and Other Actors",
-            "format_type": "text",
-            "word_limit": 300,
-            "instructions": "Detail partnerships: 1) Japanese collaboration (JICA, Japanese staff, NGO, company) 2) Other partnerships (government, local authorities, NGOs, UN agencies) 3) Coordination mechanisms 4) Value-added of each partnership",
-            "mandatory": true
-        },
-        {
-            "section_name": "5. Cooperation with Japanese and Other Actors_japanese_actors",
-            "section_label": "5. Cooperation with Japanese and Other Actors - Japanese Actors",
+            "section_name": "5.1 Japanese Actors",
+            "section_label": "5.1 Japanese Actors",
             "section_parent": "5. Cooperation with Japanese and Other Actors",
             "format_type": "text",
+            "word_limit": 400,
             "mandatory": true,
             "instructions": "Focus on Japanese engagement: JICA collaboration, Japanese staff employment, NGO partnerships, and procurement from Japanese companies"
         },
         {
-            "section_name": "5. Cooperation with Japanese and Other Actors_other_actors",
-            "section_label": "5. Cooperation with Japanese and Other Actors - Other Actors",
+            "section_name": "5.2 Other Actors",
+            "section_label": "5.2 Other Actors",
             "section_parent": "5. Cooperation with Japanese and Other Actors",
             "format_type": "text",
+            "word_limit": 400,
             "mandatory": true,
             "instructions": "Describe broader partnership ecosystem with governments, local authorities, and international organizations"
         },

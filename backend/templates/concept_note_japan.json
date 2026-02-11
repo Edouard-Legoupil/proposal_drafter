@@ -1,4 +1,5 @@
 {
+    "template_type": "Concept Note",
     "donors": [
         "Japan - Ministry of Foreign Affairs HAD",
         "Japan - Ministry of Foreign Affairs EGA",
@@ -18,6 +19,13 @@
             "when referencing, field context, use field_context name and never field context_id"
         ]
     },
+    "section_sequence": [
+        "Rationale",
+        "Project Description",
+        "Implementation and Coordination Arrangements",
+        "Budget Estimate",
+        "Summary"
+    ],
     "sections": [
         {
             "section_name": "Summary",

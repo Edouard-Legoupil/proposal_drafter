@@ -325,8 +325,24 @@ def generate_all_sections_background(session_id: str, proposal_id: str, user_id:
         # Format as a string (bulleted list)
         special_requirements_str = "\n".join([f"- {req}" for req in special_requirements_list]) if special_requirements_list else "None"
 
-        for section_config in proposal_template["sections"]:
-            section_name = section_config["section_name"]
+        # Use section_sequence for generation order if available, otherwise fall back to sections array order
+        # This allows optimal generation order (memory/dependency) while sections array maintains output order
+        section_sequence = proposal_template.get("section_sequence", [])
+        if not section_sequence:
+            # Fallback: use sections array order if section_sequence is missing
+            section_sequence = [s["section_name"] for s in proposal_template["sections"]]
+            logger.warning(f"No section_sequence found in template, using sections array order for generation")
+
+        # Create a lookup dictionary for section configs by name
+        sections_by_name = {s["section_name"]: s for s in proposal_template["sections"]}
+
+        for section_name in section_sequence:
+            # Find the section config by name
+            section_config = sections_by_name.get(section_name)
+            if not section_config:
+                logger.warning(f"Section '{section_name}' in section_sequence not found in sections array, skipping")
+                continue
+            
             format_type = section_config.get("format_type", "text")
             logger.info(f"Generating section: {section_name} with format_type: {format_type} for proposal {proposal_id}")
 

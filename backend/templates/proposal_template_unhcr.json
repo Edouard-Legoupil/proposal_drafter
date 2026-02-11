@@ -14,6 +14,19 @@
             "when referencing, field context, use field_context name and never field context_id"
         ]
     },
+    "section_sequence": [
+        "Project Information",
+        "Summary",
+        "Rationale",
+        "Project Description",
+        "Results Matrix",
+        "Implementation and Coordination Arrangements",
+        "Work Plan",
+        "Budget",
+        "Monitoring",
+        "Evaluation",
+        "Annex 1. Risk Assessment Plan"
+    ],
     "sections": [
         {
             "section_name": "Summary",

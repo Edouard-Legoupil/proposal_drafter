@@ -27,7 +27,9 @@ evaluation_task:
   description: >
     Review the generated content for the "{section}" and verify it against the JSON instructions: {instructions}.
     Ensure that the content does NOT exceed {limit_value} {limit_term}s.
-    
+    Ensure that the content is consistent with all previously generated sections available within the memory. 
+    Identify any contradictions or inconsistencies in  Beneficiary numbers, Activity descriptions, Timelines, Budget figures.
+    For instance, Beneficiary counts in "Beneficiaries" should match those in "KPIs" and Budget line items should reference defined activities
     If the content meets the requirements, approve it.
     If the content is too long, provide feedback asking for a shorter version within the limit.
     Respond with a raw JSON object, no Markdown formatting, no triple backticks.

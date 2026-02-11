@@ -15,6 +15,30 @@
             "Use field_context names, never field_context IDs."
         ]
     },
+    "section_sequence": [
+        "Country",
+        "Project Title",
+        "PBF Project Modality",
+        "Geographic Zones",
+        "Project Duration Months",
+        "PBF Focus Area",
+        "UNSDCF Outcomes",
+        "Project Rationale",
+        "Stakeholders Consulted",
+        "Expected Project Risk Marker",
+        "Gender Equality Contribution",
+        "Youth Peace Security Contribution",
+        "Vulnerable Groups Contribution",
+        "Implementation Approach",
+        "Proposed Interventions",
+        "SDG Contribution",
+        "Ownership",
+        "Complementarity",
+        "Funding Disbursed into a Trust Fund",
+        "Direct Recipient Organizations",
+        "Total Budget by Recipient",
+        "Budget Estimate"
+    ],
     "sections": [
         {
             "section_name": "Country",

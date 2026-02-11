@@ -17,6 +17,18 @@
             "when referencing, field context, use field_context name and never field context_id"
         ]
     },
+    "section_sequence": [
+        "Operational Context",
+        "UNHCR Response",
+        "Shelter Assistance Details",
+        "Core Relief Items Details",
+        "Peaceful Coexistence Details",
+        "Beneficiaries Table",
+        "Beneficiaries Summary (Households)",
+        "Outcomes Expected",
+        "Activities and Budget Breakdown",
+        "Project Information"
+    ],
     "sections": [
         {
             "section_name": "Project Information",
