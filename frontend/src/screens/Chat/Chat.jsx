@@ -15,6 +15,7 @@ import PdfUploadModal from '../../components/PdfUploadModal/PdfUploadModal'
 import ProgressModal from '../../components/ProgressModal/ProgressModal';
 import Select from 'react-select';
 import CreatableSelect from 'react-select/creatable';
+import SingleSelectUserModal from '../../components/SingleSelectUserModal/SingleSelectUserModal'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
 
@@ -68,6 +69,8 @@ export default function Chat(props) {
         const [associatedKnowledgeCards, setAssociatedKnowledgeCards] = useState([]);
         const [validationMissingFields, setValidationMissingFields] = useState([]);
         const [isValidationModalOpen, setIsValidationModalOpen] = useState(false);
+        const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+        const [transferUsers, setTransferUsers] = useState([]);
 
         const [donors, setDonors] = useState([]);
         const [outcomes, setOutcomes] = useState([]);
@@ -142,8 +145,29 @@ export default function Chat(props) {
                 }
         }
 
+        async function getTransferUsers() {
+                const response = await fetch(`${API_BASE_URL}/users?role=proposal%20drafter`, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include'
+                })
+
+                if (response.ok) {
+                        const data = await response.json();
+                        const userList = Array.isArray(data) ? data : (data.users || []);
+                        setTransferUsers(userList.map(user => ({
+                                id: user.id,
+                                name: user.name,
+                                team: user.team_name || 'Unassigned'
+                        })));
+                } else {
+                        console.error("Failed to fetch transfer users", response.status);
+                }
+        }
+
         useEffect(() => {
                 getUsers()
+                getTransferUsers()
         }, [])
 
         const [form_expanded, setFormExpanded] = useState(true)
@@ -1051,6 +1075,27 @@ export default function Chat(props) {
                 }
         }
 
+        async function confirmTransfer(new_owner_id) {
+                const proposalId = sessionStorage.getItem("proposal_id");
+                if (!proposalId) return;
+
+                const response = await fetch(`${API_BASE_URL}/proposals/${proposalId}/transfer`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ new_owner_id }),
+                        credentials: 'include'
+                })
+
+                if (response.ok) {
+                        setNotif({ open: true, message: 'Proposal ownership transferred successfully!', severity: 'success' });
+                        setIsTransferModalOpen(false);
+                        // Redirect to dashboard or refresh profile check
+                        navigate('/dashboard');
+                } else {
+                        setNotif({ open: true, message: 'Failed to transfer proposal ownership.', severity: 'error' });
+                }
+        }
+
         function handleAssociateKnowledgeConfirm(selectedCards) {
                 setAssociatedKnowledgeCards(selectedCards);
         }
@@ -1084,6 +1129,13 @@ export default function Chat(props) {
                                 onConfirm={handleSubmitForPeerReview}
                                 title="Select Users for Peer Review"
                                 showDeadline={true}
+                        />
+                        <SingleSelectUserModal
+                                isOpen={isTransferModalOpen}
+                                onClose={() => setIsTransferModalOpen(false)}
+                                options={transferUsers}
+                                title="Transfer Proposal Ownership to another Focal Point"
+                                onConfirm={confirmTransfer}
                         />
                         <AssociateKnowledgeModal
                                 isOpen={isAssociateKnowledgeModalOpen}
@@ -1304,6 +1356,9 @@ export default function Chat(props) {
                                                         <button type="button" onClick={() => handleExportTables()} data-testid="export-excel-button">
                                                                 <img src={excel_icon} alt="" />
                                                                 Download Tables
+                                                        </button>
+                                                        <button type="button" onClick={() => setIsTransferModalOpen(true)} data-testid="transfer-ownership-button" style={{ marginLeft: '10px', background: '#f5f5f5', color: '#333' }}>
+                                                                Transfer Ownership
                                                         </button>
                                                         <div className="Chat_workflow_status_container">
                                                                 <div className="workflow-stage-box">

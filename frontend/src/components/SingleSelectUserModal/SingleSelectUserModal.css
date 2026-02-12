@@ -13,16 +13,33 @@
 
 .modal-content {
   background: white;
+  font-family: "Noto", sans-serif;
   padding: 20px;
   border-radius: 8px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   width: 90%;
   max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-search {
+  margin-top: 15px;
+  width: 100%;
+}
+
+.modal-search input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-family: inherit;
 }
 
 .modal-options {
-  max-height: 300px;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   margin-top: 20px;
   margin-bottom: 20px;
 }
@@ -30,11 +47,24 @@
 .modal-option {
   display: flex;
   align-items: center;
-  padding: 10px;
+  padding: 5px 10px;
+  gap: 10px;
 }
 
 .modal-option input[type="radio"] {
-  margin-right: 10px;
+  margin: 0;
+}
+
+.team-group {
+  margin-bottom: 15px;
+}
+
+.team-header {
+  margin: 10px 0 5px 0;
+  color: #666;
+  font-size: 0.9em;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 2px;
 }
 
 .modal-actions {
@@ -44,14 +74,17 @@
   margin-top: 20px;
 }
 
-.modal-actions button {
+.modal-content button {
+  font-family: "Noto", sans-serif;
   padding: 10px 20px;
   border: none;
-  border-radius: 4px;
+  background-color: #0072bc;
+  color: white;
+  border-radius: 5px;
   cursor: pointer;
 }
 
-.modal-actions button:disabled {
+.modal-content button:disabled {
   background-color: #ccc;
   cursor: not-allowed;
 }

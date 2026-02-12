@@ -121,7 +121,7 @@ export default function Dashboard() {
         }
 
         async function getUsers() {
-                const response = await fetch(`${API_BASE_URL}/users`, {
+                const response = await fetch(`${API_BASE_URL}/users?role=proposal%20drafter`, {
                         method: 'GET',
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include'
@@ -129,7 +129,14 @@ export default function Dashboard() {
 
                 if (response.ok) {
                         const data = await response.json()
-                        setUsers((data.users || []).map(user => ({ id: user.id, name: user.name })))
+                        const userList = Array.isArray(data) ? data : (data.users || []);
+                        setUsers(userList.map(user => ({
+                                id: user.id,
+                                name: user.name,
+                                team: user.team_name || 'Unassigned'
+                        })))
+                } else {
+                        console.error("Failed to fetch users", response.status);
                 }
         }
 

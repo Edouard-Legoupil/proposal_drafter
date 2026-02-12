@@ -35,26 +35,54 @@ async def get_teams():
 
 
 @router.get("/users", response_model=List[User])
-async def get_users(current_user: dict = Depends(get_current_user)):
+async def get_users(role: str = None, current_user: dict = Depends(get_current_user)):
     """
-    Returns a list of all users in the system.
-    This is used to populate the peer review selection modal.
+    Returns a list of users in the system.
+    If 'role' is provided, filters by that role.
+    Otherwise, returns reviewers (for peer review selection).
     """
     try:
         with get_engine().connect() as connection:
-            query = text("""
-                SELECT DISTINCT u.id, u.name, u.email, t.name as team_name
-                FROM users u
-                LEFT JOIN teams t ON u.team_id = t.id
-                JOIN user_roles ur ON u.id = ur.user_id
-                JOIN roles r ON ur.role_id = r.id
-                WHERE LOWER(r.name) IN ('project reviewer', 'proposal reviewer')
-                ORDER BY t.name, u.name
-            """)
-            result = connection.execute(query)
+            if role:
+                # Handle potential naming mismatch between 'drafter' and 'writer'
+                role_names = [role.lower()]
+                if 'drafter' in role.lower():
+                    role_names.append(role.lower().replace('drafter', 'writer'))
+                elif 'writer' in role.lower():
+                    role_names.append(role.lower().replace('writer', 'drafter'))
+
+                logger.info(f"[GET USERS] Filtering by roles: {role_names}")
+                query = text("""
+                    SELECT DISTINCT u.id, u.name, u.email, t.name as team_name
+                    FROM users u
+                    LEFT JOIN teams t ON u.team_id = t.id
+                    JOIN user_roles ur ON u.id = ur.user_id
+                    JOIN roles r ON ur.role_id = r.id
+                    WHERE LOWER(r.name) IN :role_names
+                    ORDER BY t.name, u.name
+                """)
+                result = connection.execute(query, {"role_names": tuple(role_names)})
+            else:
+                logger.info("[GET USERS] Fetching reviewers")
+                query = text("""
+                    SELECT DISTINCT u.id, u.name, u.email, t.name as team_name
+                    FROM users u
+                    LEFT JOIN teams t ON u.team_id = t.id
+                    JOIN user_roles ur ON u.id = ur.user_id
+                    JOIN roles r ON ur.role_id = r.id
+                    WHERE LOWER(r.name) IN ('project reviewer', 'proposal reviewer')
+                    ORDER BY t.name, u.name
+                """)
+                result = connection.execute(query)
+            
             users = [User(**row) for row in result.mappings()]
-            # Exclude the current user from the list of potential reviewers
-            users = [user for user in users if user.id != current_user["user_id"]]
+            logger.info(f"[GET USERS] Found {len(users)} users total")
+            
+            # Exclude the current user from the list
+            current_user_id = str(current_user["user_id"])
+            users = [user for user in users if str(user.id) != current_user_id]
+            logger.info(f"[GET USERS] Returning {len(users)} users after filtering current user")
+            
             return users
     except Exception as e:
         logger.error(f"[GET USERS ERROR] {e}", exc_info=True)
