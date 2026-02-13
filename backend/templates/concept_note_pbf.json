@@ -17,6 +17,8 @@
         ]
     },
     "section_sequence": [
+        "Summary",
+        "Rationale",
         "Country",
         "Project Title",
         "PBF Project Modality",
@@ -41,6 +43,22 @@
         "Budget Estimate"
     ],
     "sections": [
+        {
+            "section_name": "Country",
+            "section_label": "Country",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 50,
+            "instructions": "State the country name. Provide a very short factual statement, maximum 50 words."
+        },
+        {
+            "section_name": "Project Title",
+            "section_label": "Project Title",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 100,
+            "instructions": "Provide the official project title."
+        },
         {
             "section_name": "Summary",
             "word_limit": 400,

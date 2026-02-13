@@ -1,0 +1,832 @@
+{
+  "template_type": "Proposal",
+  "donors": [
+    "Qatar - Qatar Fund For Development"
+  ],
+  "special_requirements": {
+    "instructions": [
+      "Strictly base all content on provided inputs; do not invent or infer missing data. If unavailable, write: 'Information not provided in the context.'",
+      "Use a formal, objective, analytical tone. Avoid advocacy language. Keep entries concise and evidence-based.",
+      "Use organization names and outcome names, never internal IDs. Use field_context names, never IDs.",
+      "Currency: Provide budgets in QAR or USD as instructed. Specify exchange rates in the budget narrative when applicable.",
+      "Administration fee: 7% on total direct + support costs; borne by principal partner. Sub-partner admin costs are not applicable. The principal partner shares this fee with downstream partners from its own portion.",
+      "Support costs: ≤15% of Total Direct Costs (DC). Total support costs plus all staff costs (programme + support) ≤30% of DC. Maintain 70% DC / 30% support ceiling overall.",
+      "M&E costing: Budget M&E as a separate output; reference value about 5% (case-by-case). Ensure the LogFrame outcome indicators and M&E plan align with QFFD’s Managing for Results (MfR) approach.",
+      "Budget hygiene: No lump sums. Each budget line must include: unit type, quantity, unit cost, duration/recurrence, % charged to QFFD, and a budget narrative linking to activities and outcomes. Flag each line as Direct (D) or Support (S).",
+      "BoQ rule: Any unit or total cost line ≥ 4,000 USD requires a detailed Bill of Quantities (BoQ) in a single workbook (sheets named by budget line, totals matching the template).",
+      "Budget discipline: Budget changes >5% at any cost component require prior approval and a revised budget. No adding/deleting lines post-signature without approval. Up to 120% reporting against a head requires written justification and prior approval. Unspent funds are deducted from next instalment; final-year unspent must be returned. Carry-forward requires prior notification/approval.",
+      "Financial reporting: Submit quarterly/semi-annual/annual as requested; QFFD reviews before releasing instalments. Maintain complete supporting documentation for audits (petty cash, cash/voucher assistance, loans/grants to beneficiaries, HR/payroll/timesheets, procurement and payments, travel, rentals, office costs, shared costs, agreements, reviews).",
+      "Risk & compliance: Maintain a risk register, track likelihood/impact, define mitigation/contingencies, and report regularly. Adhere to legal/regulatory requirements and PPA terms; provide compliance and progress reports as specified.",
+      "MfR lifecycle framing (analysis → planning → monitoring → evaluation → reporting) governs the entire template:",
+      "• Step 1 — Initial Situation Analysis: Conduct problem analysis (e.g., problem tree), stakeholder analysis (interests, influence), and prioritize stakeholders. Output: succinct statements feeding Context and Relevance.",
+      "• Step 2 — Assessment & Prioritization of Approaches: Convert problem tree to objective tree; evaluate alternative approaches (chances for success, sustainability, social compatibility, coherence, capacities, cost-benefit, political acceptance).",
+      "• Step 3 — Result Chain: Articulate IF/AND/THEN hypotheses from outputs → outcomes → impacts; list external assumptions (risks outside project control) separately from programmatic risks (inside project control).",
+      "• Step 4 — Project Strategy & LogFrame: Build the LogFrame (hierarchy of objectives, indicators, MoV, assumptions). Indicators must be SMART with baselines and targets.",
+      "• Step 5 — Project Organization: Define strategic/operational arrangements, roles and responsibilities (HQ/field), steering and decision-making, supervision/control, MEL, reporting, and communications.",
+      "Indicators: Select as few as possible and as many as necessary. Include baselines (initial values), time-bound targets, and clear MoV. Prefer mixed-methods where appropriate and use standard/SDG indicators if suitable.",
+      "Baselines & reference points: If baseline data are missing at submission, specify the plan to generate baselines (method, timing, responsibilities). Benchmarks/comparison groups improve interpretability; only counterfactual designs support strong attribution claims.",
+      "Monitoring system: Define what, when, who, and how data are collected, analyzed, interpreted, and used for steering. Ensure timeliness, quality, appropriate methods, sufficiency, and reasonable costs.",
+      "Outcome-focused steering: Use monitoring findings for adaptive management (compare targets, baselines, trends; analyze context; revise activities/resources accordingly).",
+      "Evaluation: Preplan independent mid-term/final evaluations where relevant; use OECD-DAC criteria (relevance, coherence, effectiveness, efficiency, impact, sustainability) as applicable.",
+      "Results reporting: Shift from activity/output listings to results (outcomes), context changes/risks, challenges and solutions, and learning. Provide concise reports aligned with QFFD templates.",
+      "Executive Summary Arabic requirement: Provide a short Arabic paragraph covering project name, total budget, duration, total beneficiaries, objectives, and expected results."
+    ]
+  },
+  "section_sequence": [
+    "Administrative Information",
+    "Initial Situation Analysis (MfR Step 1)",
+    "Context and Current Situation",
+    "Relevance of Intervention",
+    "Assessment & Prioritization of Approaches (MfR Step 2)",
+    "Beneficiaries Table",
+    "Beneficiaries and Outreach",
+    "Result Chain (MfR Step 3)",
+    "Objectives",
+    "Alignment with QFFD Corporate Results",
+    "Intervention Approach",
+    "Project Strategy (MfR Step 4)",
+    "Project Organization (MfR Step 5)",
+    "LogFrame",
+    "M&E, Accountability and Learning",
+    "M&E Plan",
+    "Evaluation Plan",
+    "Results Reporting Structure",
+    "GANTT Chart",
+    "Critical Risk Assessment (Narrative)",
+    "Risk Assessment",
+    "Sustainability of Intervention",
+    "Organizational Qualifications",
+    "Sub-grantees and Partnerships",
+    "Asset Register",
+    "Media, Communication and Advocacy",
+    "Visibility Workplan",
+    "Detailed Budget",
+    "Budget Summary & Narrative",
+    "Executive Summary",
+    "Executive Summary (Arabic Paragraph)"
+  ],
+  "sections": [
+    {
+      "section_name": "Administrative Information",
+      "section_label": "I. Basic Information",
+      "format_type": "table",
+      "mandatory": true,
+      "section_parent": "0. Administrative",
+      "instructions": "Provide concise factual values. Max 50 words per text cell. Use YYYY-MM-DD dates and numerals.",
+      "columns": [
+        {
+          "name": "Field",
+          "format_type": "text",
+          "instructions": "Exact field name."
+        },
+        {
+          "name": "Value",
+          "format_type": "text",
+          "instructions": "Concise value; max 50 words for text."
+        }
+      ],
+      "rows": [
+        {
+          "row_title": "Date of Submission",
+          "instructions": "YYYY-MM-DD."
+        },
+        {
+          "row_title": "Name of Project",
+          "instructions": "Official title."
+        },
+        {
+          "row_title": "Name of Organization",
+          "instructions": "Principal partner."
+        },
+        {
+          "row_title": "Organization’s Focal Point (name, function, email, phone)",
+          "instructions": "Single point of contact."
+        },
+        {
+          "row_title": "Country/Region",
+          "instructions": "Primary geographic scope."
+        },
+        {
+          "row_title": "Theme(s)",
+          "instructions": "Select from QFFD list in guidance."
+        },
+        {
+          "row_title": "Total requested QFFD funding (USD)",
+          "instructions": "Numeric only."
+        },
+        {
+          "row_title": "Type of finance requested from QFFD",
+          "instructions": "Grant / Concessional loan / Other (specify)."
+        },
+        {
+          "row_title": "Co-funding (USD) and co-funder(s)",
+          "instructions": "Amounts and entities."
+        },
+        {
+          "row_title": "Total project budget (USD)",
+          "instructions": "Numeric only."
+        },
+        {
+          "row_title": "Start of Project",
+          "instructions": "YYYY-MM-DD."
+        },
+        {
+          "row_title": "Expected End of Project",
+          "instructions": "YYYY-MM-DD."
+        },
+        {
+          "row_title": "Expected Project Duration",
+          "instructions": "Months."
+        },
+        {
+          "row_title": "Corresponding UN Project Codes (if available)",
+          "instructions": "If applicable; else 'N/A'."
+        }
+      ]
+    },
+    {
+      "section_name": "Executive Summary",
+      "section_label": "II. Executive Summary",
+      "format_type": "text",
+      "mandatory": true,
+      "section_parent": "2. Planning (MfR)",
+      "instructions": "Short persuasive summary: rationale, expected outcomes, alignment with QFFD strategies, core intervention, target groups, partners.",
+      "word_limit": 300
+    },
+    {
+      "section_name": "Executive Summary (Arabic Paragraph)",
+      "section_label": "II.a موجز تنفيذي (فقرة عربية)",
+      "format_type": "text",
+      "mandatory": true,
+      "section_parent": "2. Planning (MfR)",
+      "instructions": "اكتب فقرة موجزة بالعربية تشمل: اسم المشروع، الميزانية الإجمالية، مدة التنفيذ، إجمالي عدد المستفيدين، الأهداف والنتائج المتوقعة.",
+      "word_limit": 150
+    },
+    {
+      "section_name": "Initial Situation Analysis (MfR Step 1)",
+      "section_label": "III. Initial Situation Analysis (Problem & Stakeholders)",
+      "format_type": "text",
+      "mandatory": true,
+      "section_parent": "1. Analysis (MfR)",
+      "instructions": "Provide a concise problem analysis (problem tree: core problem, direct causes/effects) and a stakeholder analysis (interests, influence; prioritize stakeholders). Focus only on aspects relevant to the project.",
+      "word_limit": 800
+    },
+    {
+      "section_name": "Context and Current Situation",
+      "section_label": "III.a Context and Current Situation",
+      "format_type": "text",
+      "mandatory": true,
+      "section_parent": "1. Analysis (MfR)",
+      "instructions": "Evidence-based description of current situation in target areas; include relevant statistics, indicators, assessments, or research.",
+      "word_limit": 1000
+    },
+    {
+      "section_name": "Relevance of Intervention",
+      "section_label": "III.b Relevance of Intervention",
+      "format_type": "text",
+      "mandatory": true,
+      "section_parent": "1. Analysis (MfR)",
+      "instructions": "Why this project is appropriate for the identified challenges; alignment with national/sector frameworks and QFFD strategies; coordination with other actors; lessons learned.",
+      "word_limit": 800
+    },
+    {
+      "section_name": "Assessment & Prioritization of Approaches (MfR Step 2)",
+      "section_label": "IV. Assessment & Prioritization of Approaches",
+      "format_type": "text",
+      "mandatory": true,
+      "section_parent": "2. Planning (MfR)",
+      "instructions": "Convert problem tree to objective tree. Compare feasible approaches (success prospects, sustainability, social compatibility, coherence with partner priorities, agency capacities, cost-benefit, political acceptance). Justify chosen approach.",
+      "word_limit": 700
+    },
+    {
+      "section_name": "Result Chain (MfR Step 3)",
+      "section_label": "V. Result Chain (IF/AND/THEN) & Assumptions",
+      "format_type": "text",
+      "mandatory": true,
+      "section_parent": "2. Planning (MfR)",
+      "instructions": "Describe the causal chain from outputs → outcomes → impacts using IF/AND/THEN statements. Separate external assumptions (outside project control) from programmatic risks (inside control, to be managed in design).",
+      "word_limit": 600
+    },
+    {
+      "section_name": "Objectives",
+      "section_label": "VI. Objectives (Impact and Outcomes)",
+      "format_type": "text",
+      "mandatory": true,
+      "section_parent": "2. Planning (MfR)",
+      "instructions": "Define intended changes at population (beneficiaries), systems/institutional and/or policy levels. Ensure consistency with LogFrame impact/outcomes.",
+      "word_limit": 600
+    },
+    {
+      "section_name": "Alignment with QFFD Corporate Results",
+      "section_label": "VII. Alignment with QFFD Corporate Results (SDG-Aligned)",
+      "format_type": "text",
+      "mandatory": true,
+      "section_parent": "2. Planning (MfR)",
+      "instructions": "Select relevant QFFD corporate indicators (economic development, health, education, humanitarian, climate) and ensure LogFrame outcome indicators align. If humanitarian outside current CRF scope, state alignment not mandatory.",
+      "word_limit": 400
+    },
+    {
+      "section_name": "Intervention Approach",
+      "section_label": "VIII. Intervention Approach (Theory of Change)",
+      "format_type": "text",
+      "mandatory": true,
+      "section_parent": "2. Planning (MfR)",
+      "instructions": "Describe implementation approach and project-level ToC; justify via evidence, good practice, cost-benefit, risk/opportunity, scalability, sustainability, complementarity.",
+      "word_limit": 800
+    },
+    {
+      "section_name": "Project Strategy (MfR Step 4)",
+      "section_label": "IX. Project Strategy (LogFrame Backbone)",
+      "format_type": "text",
+      "mandatory": true,
+      "section_parent": "2. Planning (MfR)",
+      "instructions": "Summarize how the Result Chain is operationalized in the LogFrame (hierarchy of objectives, SMART indicators with baselines & targets, MoV, external assumptions).",
+      "word_limit": 500
+    },
+    {
+      "section_name": "Project Organization (MfR Step 5)",
+      "section_label": "X. Project Organization (Strategic & Operational)",
+      "format_type": "text",
+      "mandatory": true,
+      "section_parent": "2. Planning (MfR)",
+      "instructions": "Define governance and coordination (strategic/political level) and operational arrangements (HQ/field roles, staffing, steering & decision-making, supervision/control, MEL responsibilities, donor reporting & communications).",
+      "word_limit": 700
+    },
+    {
+      "section_name": "Beneficiaries and Outreach",
+      "section_label": "XI. Beneficiaries and Outreach",
+      "format_type": "text",
+      "mandatory": true,
+      "section_parent": "2. Planning (MfR)",
+      "instructions": "Define direct/indirect beneficiaries with targets and disaggregation (age, sex, relevant vulnerabilities). Explain inclusion of hard-to-reach groups, stakeholder roles (incl. government).",
+      "word_limit": 600
+    },
+    {
+      "section_name": "LogFrame",
+      "section_label": "Annex PDS-1a: LogFrame",
+      "format_type": "table",
+      "mandatory": true,
+      "section_parent": "7. Results & MEL",
+      "instructions": "Complete impact, outcomes, outputs, indicators (baselines/targets), MoV, assumptions. Ensure outcome indicators align with any selected QFFD corporate indicators.",
+      "columns": [
+        {
+          "name": "Level",
+          "format_type": "text",
+          "instructions": "Impact/Outcome/Output."
+        },
+        {
+          "name": "Statement",
+          "format_type": "text",
+          "instructions": "Result statement."
+        },
+        {
+          "name": "Indicator",
+          "format_type": "text",
+          "instructions": "SMART indicator; note if perception-based."
+        },
+        {
+          "name": "Baseline (value/date/source)",
+          "format_type": "text",
+          "instructions": "Baseline with date/source."
+        },
+        {
+          "name": "Target",
+          "format_type": "text",
+          "instructions": "Numeric + disaggregation where relevant."
+        },
+        {
+          "name": "Means of Verification",
+          "format_type": "text",
+          "instructions": "Survey/admin/partner data, etc."
+        },
+        {
+          "name": "Assumptions",
+          "format_type": "text",
+          "instructions": "External assumptions only."
+        }
+      ],
+      "rows": [
+        {
+          "row_title": "Outcome 1",
+          "instructions": "Primary outcome."
+        },
+        {
+          "row_title": "Output 1.1",
+          "instructions": "First output for Outcome 1."
+        }
+      ]
+    },
+    {
+      "section_name": "M&E, Accountability and Learning",
+      "section_label": "XII. Monitoring, Evaluation, Accountability and Learning",
+      "format_type": "text",
+      "mandatory": true,
+      "section_parent": "3. Monitoring (MfR)",
+      "instructions": "Define the monitoring system: indicators, MoV, timing, responsibilities, QA, ethics, data use for adaptive management; describe accountability to affected people and learning loops.",
+      "word_limit": 800
+    },
+    {
+      "section_name": "M&E Plan",
+      "section_label": "Annex SPP-1b: M&E Plan",
+      "format_type": "table",
+      "mandatory": true,
+      "section_parent": "3. Monitoring (MfR)",
+      "instructions": "Provide indicator-level schedules: baselines, annual targets/actuals, disaggregation, MoV, timing, responsibility, comments/QA/ethics.",
+      "columns": [
+        {
+          "name": "Result Level",
+          "format_type": "text",
+          "instructions": "Impact/Outcome/Output."
+        },
+        {
+          "name": "Indicator",
+          "format_type": "text",
+          "instructions": "Exact indicator."
+        },
+        {
+          "name": "Baseline",
+          "format_type": "text",
+          "instructions": "Value/date/source."
+        },
+        {
+          "name": "Targets by Year",
+          "format_type": "text",
+          "instructions": "Y1..Yx targets."
+        },
+        {
+          "name": "Actuals by Year",
+          "format_type": "text",
+          "instructions": "Y1..Yx actuals."
+        },
+        {
+          "name": "Disaggregation",
+          "format_type": "text",
+          "instructions": "Sex/age/vulnerability."
+        },
+        {
+          "name": "MoV",
+          "format_type": "text",
+          "instructions": "Source(s)/methods."
+        },
+        {
+          "name": "Timing",
+          "format_type": "text",
+          "instructions": "Frequency."
+        },
+        {
+          "name": "Responsibility",
+          "format_type": "text",
+          "instructions": "Data owner(s)."
+        },
+        {
+          "name": "Comments",
+          "format_type": "text",
+          "instructions": "Notes/QA/Ethics."
+        }
+      ],
+      "rows": [
+        {
+          "row_title": "Indicator 1.1",
+          "instructions": "Reference first indicator."
+        }
+      ]
+    },
+    {
+      "section_name": "Evaluation Plan",
+      "section_label": "XIII. Evaluation Plan",
+      "format_type": "text",
+      "mandatory": true,
+      "section_parent": "4. Evaluation (MfR)",
+      "instructions": "Describe planned independent mid-term/final evaluations (scope, timing, resources) and criteria to be used (e.g., OECD-DAC). Indicate data needs and links to the M&E plan.",
+      "word_limit": 400
+    },
+    {
+      "section_name": "Results Reporting Structure",
+      "section_label": "XIV. Reporting on Results",
+      "format_type": "text",
+      "mandatory": true,
+      "section_parent": "5. Reporting (MfR)",
+      "instructions": "Explain reporting cadence (semi-annual/annual/final), results-focused structure, use of monitoring findings, context/risks updates, challenges and solutions, and learning.",
+      "word_limit": 400
+    },
+    {
+      "section_name": "Beneficiaries Table",
+      "section_label": "Annex SPP-1c: Beneficiaries",
+      "format_type": "table",
+      "mandatory": true,
+      "section_parent": "7. Results & MEL",
+      "instructions": "Summarize direct and indirect beneficiaries with disaggregation; include only relevant categories.",
+      "columns": [
+        {
+          "name": "Category",
+          "format_type": "text",
+          "instructions": "Direct/Indirect; subgroup."
+        },
+        {
+          "name": "Female",
+          "format_type": "number",
+          "instructions": "Numeric."
+        },
+        {
+          "name": "Male",
+          "format_type": "number",
+          "instructions": "Numeric."
+        },
+        {
+          "name": "Adults (25+)",
+          "format_type": "number",
+          "instructions": "Numeric."
+        },
+        {
+          "name": "Youth (15-24)",
+          "format_type": "number",
+          "instructions": "Numeric."
+        },
+        {
+          "name": "Children (5-14)",
+          "format_type": "number",
+          "instructions": "Numeric."
+        },
+        {
+          "name": "Infants (0-4)",
+          "format_type": "number",
+          "instructions": "Numeric."
+        },
+        {
+          "name": "Vulnerability (notes/%/#)",
+          "format_type": "text",
+          "instructions": "Disability, poverty, unemployed, fragility/conflict/disaster, minorities, migrants/refugees/IDPs, host community, etc."
+        },
+        {
+          "name": "Comments",
+          "format_type": "text",
+          "instructions": "Clarifications."
+        }
+      ],
+      "rows": [
+        {
+          "row_title": "Direct Beneficiaries",
+          "instructions": "Total direct."
+        },
+        {
+          "row_title": "Indirect Beneficiaries",
+          "instructions": "Total indirect."
+        }
+      ]
+    },
+    {
+      "section_name": "GANTT Chart",
+      "section_label": "Annex PDS-1d: GANTT Chart",
+      "format_type": "table",
+      "mandatory": true,
+      "section_parent": "8. Workplan",
+      "instructions": "Provide the activity schedule aligned to LogFrame outputs/activities with start/end dates, dependencies, milestones, and percent complete.",
+      "columns": [
+        {
+          "name": "WBS",
+          "format_type": "text",
+          "instructions": "1, 1.1, 1.1.1 etc."
+        },
+        {
+          "name": "Task/Activity",
+          "format_type": "text",
+          "instructions": "As per LogFrame."
+        },
+        {
+          "name": "Lead",
+          "format_type": "text",
+          "instructions": "Responsible unit."
+        },
+        {
+          "name": "Predecessor",
+          "format_type": "text",
+          "instructions": "If applicable."
+        },
+        {
+          "name": "Start",
+          "format_type": "text",
+          "instructions": "YYYY-MM-DD."
+        },
+        {
+          "name": "End",
+          "format_type": "text",
+          "instructions": "YYYY-MM-DD."
+        },
+        {
+          "name": "Duration (days)",
+          "format_type": "number",
+          "instructions": "Computed or entered."
+        },
+        {
+          "name": "% Done",
+          "format_type": "number",
+          "instructions": "0-100."
+        }
+      ],
+      "rows": [
+        {
+          "row_title": "Activity 1.1.1",
+          "instructions": "First scheduled activity."
+        }
+      ]
+    },
+    {
+      "section_name": "Critical Risk Assessment (Narrative)",
+      "section_label": "XV. Critical Risk Assessment (Summary)",
+      "format_type": "text",
+      "mandatory": true,
+      "section_parent": "9. Risk & Compliance",
+      "instructions": "Summarize major internal/external risks, likelihood/impact, and mitigation. Complete detailed matrix in Annex R&C-1a.",
+      "word_limit": 600
+    },
+    {
+      "section_name": "Risk Assessment",
+      "section_label": "Annex R&C-1a: Risk Assessment",
+      "format_type": "table",
+      "mandatory": true,
+      "section_parent": "9. Risk & Compliance",
+      "instructions": "List each risk with likelihood, impact, mitigation/actions, responsible party, timeline. High/significant risks require explicit mitigation plans.",
+      "columns": [
+        {
+          "name": "Risk #",
+          "format_type": "text",
+          "instructions": "Identifier."
+        },
+        {
+          "name": "Description of Risk",
+          "format_type": "text",
+          "instructions": "Concise statement."
+        },
+        {
+          "name": "Likelihood",
+          "format_type": "text",
+          "instructions": "Very unlikely/Unlikely/Possible/Likely/Very likely."
+        },
+        {
+          "name": "Impact",
+          "format_type": "text",
+          "instructions": "Negligible/Minor/Moderate/Significant/Severe."
+        },
+        {
+          "name": "Mitigation Strategy / Action Plan",
+          "format_type": "text",
+          "instructions": "Specific measures and triggers."
+        },
+        {
+          "name": "Responsible Party",
+          "format_type": "text",
+          "instructions": "Owner."
+        },
+        {
+          "name": "Timeline",
+          "format_type": "text",
+          "instructions": "When actions occur."
+        }
+      ],
+      "rows": [
+        {
+          "row_title": "Risk 1",
+          "instructions": "First critical risk."
+        }
+      ]
+    },
+    {
+      "section_name": "Media, Communication and Advocacy",
+      "section_label": "XVI. Media, Communication and Advocacy",
+      "format_type": "text",
+      "mandatory": true,
+      "section_parent": "10. Communications & Visibility",
+      "instructions": "Describe QFFD visibility, joint advocacy, and co-messaging. Complete the PR-1d Visibility Workplan annex.",
+      "word_limit": 400
+    },
+    {
+      "section_name": "Visibility Workplan",
+      "section_label": "Annex PR-1d: Visibility Workplan",
+      "format_type": "table",
+      "mandatory": true,
+      "section_parent": "10. Communications & Visibility",
+      "instructions": "Provide deliverables per tool (web, press, TV, social, collateral, photos, video, paid ads, infographics/media kit, international days, joint advocacy). Include KPIs, planned/actual dates, audience.",
+      "columns": [
+        {
+          "name": "Tool/Channel",
+          "format_type": "text",
+          "instructions": "e.g., Website, Press Release, TV, Social Media."
+        },
+        {
+          "name": "Deliverable",
+          "format_type": "text",
+          "instructions": "Specific output."
+        },
+        {
+          "name": "Target Audience",
+          "format_type": "text",
+          "instructions": "Primary audience."
+        },
+        {
+          "name": "KPIs",
+          "format_type": "text",
+          "instructions": "Count, frequency, reach, engagement, etc."
+        },
+        {
+          "name": "Planned Date",
+          "format_type": "text",
+          "instructions": "YYYY-MM-DD."
+        },
+        {
+          "name": "Actual Date",
+          "format_type": "text",
+          "instructions": "YYYY-MM-DD."
+        },
+        {
+          "name": "Year/Quarter",
+          "format_type": "text",
+          "instructions": "Year 1-3, Q1-Q4."
+        },
+        {
+          "name": "Comments",
+          "format_type": "text",
+          "instructions": "Notes/links/approvals."
+        }
+      ],
+      "rows": [
+        {
+          "row_title": "Social Media Campaign",
+          "instructions": "Primary visibility activity."
+        }
+      ]
+    },
+    {
+      "section_name": "Budget Summary & Narrative",
+      "section_label": "XVII. Budget Summary & Narrative (PDS-2b)",
+      "format_type": "text",
+      "mandatory": true,
+      "section_parent": "6. Budget & Finance",
+      "instructions": "Provide high-level budget breakdown and narrative: currencies/exchange rates, cost categories, co-funding, M&E allocation (~5%), administration fee (7%), support vs direct split (≤15% support of DC; support+staff ≤30% of DC). Reference Detailed Budget (PDS-2a).",
+      "word_limit": 800
+    },
+    {
+      "section_name": "Detailed Budget",
+      "section_label": "Annex PDS-2a: Detailed Budget",
+      "format_type": "table",
+      "mandatory": true,
+      "section_parent": "6. Budget & Finance",
+      "instructions": "Populate per QFFD categories. Each line: D/S, unit type, quantity, unit cost, duration/recurrence, % charged to QFFD, total, and a budget narrative linking to outputs/activities. BoQs required for any line ≥ USD 4,000.",
+      "columns": [
+        {
+          "name": "Code",
+          "format_type": "text",
+          "instructions": "Budget line code."
+        },
+        {
+          "name": "Budget line Description",
+          "format_type": "text",
+          "instructions": "Specific cost name; avoid lump sums."
+        },
+        {
+          "name": "Direct/Support (D/S)",
+          "format_type": "text",
+          "instructions": "D or S."
+        },
+        {
+          "name": "Unit Type",
+          "format_type": "text",
+          "instructions": "e.g., month/day/hour/lumpsum."
+        },
+        {
+          "name": "Quantity",
+          "format_type": "number",
+          "instructions": "Numeric."
+        },
+        {
+          "name": "Unit Cost",
+          "format_type": "number",
+          "instructions": "Numeric; currency as per template."
+        },
+        {
+          "name": "Duration/Recurrence",
+          "format_type": "text",
+          "instructions": "e.g., 12 months; 4 trips."
+        },
+        {
+          "name": "% charged to QFFD",
+          "format_type": "number",
+          "instructions": "Numeric percent."
+        },
+        {
+          "name": "Total Budget",
+          "format_type": "number",
+          "instructions": "Computed."
+        },
+        {
+          "name": "Budget Narrative",
+          "format_type": "text",
+          "instructions": "Explain link to activities/outcomes; reference LogFrame."
+        }
+      ],
+      "rows": [
+        {
+          "row_title": "Direct Cost 1.1",
+          "instructions": "First major direct cost."
+        }
+      ]
+    },
+    {
+      "section_name": "Asset Register",
+      "section_label": "Annex PDS-2c: Asset Register (Planned)",
+      "format_type": "table",
+      "mandatory": true,
+      "section_parent": "6. Budget & Finance",
+      "instructions": "List planned assets; include disposal plan. For renewed funding, list pre-existing QFFD-funded assets.",
+      "columns": [
+        {
+          "name": "Asset Type",
+          "format_type": "text",
+          "instructions": "Category."
+        },
+        {
+          "name": "Asset Description",
+          "format_type": "text",
+          "instructions": "Make/model/specs."
+        },
+        {
+          "name": "Planned Date of Purchase",
+          "format_type": "text",
+          "instructions": "YYYY-MM-DD."
+        },
+        {
+          "name": "Serial No.",
+          "format_type": "text",
+          "instructions": "If applicable."
+        },
+        {
+          "name": "Location",
+          "format_type": "text",
+          "instructions": "Intended location."
+        },
+        {
+          "name": "Cost (Local)",
+          "format_type": "number",
+          "instructions": "Numeric."
+        },
+        {
+          "name": "Exchange Rate",
+          "format_type": "number",
+          "instructions": "If budgeting in USD from local."
+        },
+        {
+          "name": "Cost (USD)",
+          "format_type": "number",
+          "instructions": "Numeric."
+        },
+        {
+          "name": "Guarantee Expiry",
+          "format_type": "text",
+          "instructions": "YYYY-MM-DD or 'N/A'."
+        },
+        {
+          "name": "Planned Disposal Date",
+          "format_type": "text",
+          "instructions": "YYYY-MM-DD."
+        },
+        {
+          "name": "Disposal Plan",
+          "format_type": "text",
+          "instructions": "Brief plan at end of project."
+        }
+      ],
+      "rows": [
+        {
+          "row_title": "Vehicle",
+          "instructions": "Primary asset."
+        }
+      ]
+    },
+    {
+      "section_name": "Sustainability of Intervention",
+      "section_label": "XVIII. Sustainability & Exit/Scale Strategy (incl. Rio Markers)",
+      "format_type": "text",
+      "mandatory": true,
+      "section_parent": "2. Planning (MfR)",
+      "instructions": "Explain sustainability of outcomes, exit/scale strategy, capacity strengthening, asset disposition. Describe environmental/climate implications and assign Rio Marker scores (0/1/2) with justification.",
+      "word_limit": 600
+    },
+    {
+      "section_name": "Organizational Qualifications",
+      "section_label": "XIX. Organizational Qualifications and Capacity",
+      "format_type": "text",
+      "mandatory": true,
+      "section_parent": "2. Planning (MfR)",
+      "instructions": "Explain suitability (track record, sector/context expertise, scale). Describe HQ/field setup, key personnel (number/qualifications/roles), and arrangements for steering, supervision, MEL, reporting, communications.",
+      "word_limit": 600
+    },
+    {
+      "section_name": "Sub-grantees and Partnerships",
+      "section_label": "XX. Sub-grantees and/or Partnerships",
+      "format_type": "text",
+      "mandatory": true,
+      "section_parent": "2. Planning (MfR)",
+      "instructions": "List partners or selection criteria; provide roles/responsibilities and risk assessments (governance, operational, financial, political, reputational).",
+      "word_limit": 600
+    }
+  ]
+}
