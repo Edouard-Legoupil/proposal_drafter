@@ -10,10 +10,69 @@ from sqlalchemy import text
 #  Internal Modules
 from backend.utils.crew_proposal import ProposalCrew
 from backend.core.redis import redis_client
-from backend.core.db import engine
+from backend.core.db import get_engine
+
+FALLBACK_GENERATION_MESSAGE = "Generation issue: No content was generated for this section. You can try regenerating it or edit it manually."
 
 # This module contains the core logic for generating and regenerating proposal sections
 # using the 'crew' of AI agents.
+
+
+def resolve_form_data_labels(form_data: dict, connection) -> dict:
+    """
+    Replaces UUIDs in form_data with their corresponding labels from the database.
+    This ensures that the LLM receives human-readable information.
+    """
+    if not form_data:
+        return {}
+
+    resolved_data = form_data.copy()
+
+    # 1. Targeted Donor
+    donor_id = resolved_data.get("Targeted Donor")
+    if donor_id and isinstance(donor_id, str) and len(donor_id) == 36:
+        try:
+            name = connection.execute(
+                text("SELECT name FROM donors WHERE id = :id"),
+                {"id": donor_id}
+            ).scalar()
+            if name:
+                resolved_data["Targeted Donor"] = name
+        except Exception:
+            pass
+
+    # 2. Main Outcome (List)
+    outcome_ids = resolved_data.get("Main Outcome")
+    if outcome_ids and isinstance(outcome_ids, list):
+        resolved_outcomes = []
+        for oid in outcome_ids:
+            if oid and isinstance(oid, str) and len(oid) == 36:
+                try:
+                    name = connection.execute(
+                        text("SELECT name FROM outcomes WHERE id = :id"),
+                        {"id": oid}
+                    ).scalar()
+                    resolved_outcomes.append(name if name else oid)
+                except Exception:
+                    resolved_outcomes.append(oid)
+            else:
+                resolved_outcomes.append(oid)
+        resolved_data["Main Outcome"] = resolved_outcomes
+
+    # 3. Country / Location(s)
+    country_id = resolved_data.get("Country / Location(s)")
+    if country_id and isinstance(country_id, str) and len(country_id) == 36:
+        try:
+            name = connection.execute(
+                text("SELECT name FROM field_contexts WHERE id = :id"),
+                {"id": country_id}
+            ).scalar()
+            if name:
+                resolved_data["Country / Location(s)"] = name
+        except Exception:
+            pass
+
+    return resolved_data
 
 
 def regenerate_section_logic(
@@ -48,6 +107,11 @@ def regenerate_section_logic(
     form_data = session_data.get("form_data", {})
     project_description = session_data.get("project_description", "")
 
+    # Resolve labels for form_data before sending to CrewAI
+    # Resolve labels for form_data before sending to CrewAI
+    with get_engine().connect() as connection:
+        form_data = resolve_form_data_labels(form_data, connection)
+
     # Get proposal template from session data
     proposal_template = session_data.get("proposal_template")
     if not proposal_template:
@@ -78,18 +142,29 @@ def regenerate_section_logic(
     else:
         limit_type = "word"
         limit_value = 350
+    instructions = section_config.get("instructions", "")
     limit_instruction = f"Do not exceed {limit_value} {'character' if limit_type == 'char' else 'word'}s."
     instructions += " " + limit_instruction
 
     proposal_crew = ProposalCrew()
     crew_instance = proposal_crew.regenerate_proposal_crew()
 
+    # Extract special_requirements from the template
+    special_requirements_obj = proposal_template.get("special_requirements", {})
+    special_requirements_list = special_requirements_obj.get("instructions", [])
+    special_requirements_str = (
+        "\n".join([f"- {req}" for req in special_requirements_list])
+        if special_requirements_list
+        else "None"
+    )
+
     section_input = {
         "section": section,
         "form_data": form_data,
         "project_description": project_description,
+        "special_requirements": special_requirements_str,
         "instructions": instructions,
-        "limit_type": limit_type,
+        "limit_term": limit_type,
         "limit_value": limit_value,
         "concise_input": concise_input,
     }
@@ -127,9 +202,7 @@ def regenerate_section_logic(
         )
 
     if not generated_text:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to regenerate content for {section}"
-        )
+        generated_text = FALLBACK_GENERATION_MESSAGE
 
     # Update the section in the session data.
     session_data.setdefault("generated_sections", {})[section] = generated_text

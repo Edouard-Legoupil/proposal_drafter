@@ -38,7 +38,7 @@ from backend.models.schemas import (
     AuthorResponseRequest,
     SaveContributionIdRequest
 )
-from backend.utils.proposal_logic import regenerate_section_logic
+from backend.utils.proposal_logic import regenerate_section_logic, resolve_form_data_labels
 from backend.utils.crew_proposal  import ProposalCrew
 from backend.api.knowledge import _save_knowledge_card_content_to_file
 
@@ -48,6 +48,8 @@ router = APIRouter()
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+FALLBACK_GENERATION_MESSAGE = "Generation issue: No content was generated for this section. You can try regenerating it or edit it manually."
 
 
 
@@ -225,6 +227,11 @@ def generate_all_sections_background(session_id: str, proposal_id: str, user_id:
             raise Exception("Proposal template or sections not found in session.")
 
         form_data = session_data["form_data"]
+        
+        # Resolve labels for form_data before sending to CrewAI
+        with get_engine().connect() as connection:
+            form_data = resolve_form_data_labels(form_data, connection)
+
         project_description = session_data["project_description"]
         associated_knowledge_cards = session_data.get("associated_knowledge_cards")
         all_sections = {}
@@ -325,8 +332,24 @@ def generate_all_sections_background(session_id: str, proposal_id: str, user_id:
         # Format as a string (bulleted list)
         special_requirements_str = "\n".join([f"- {req}" for req in special_requirements_list]) if special_requirements_list else "None"
 
-        for section_config in proposal_template["sections"]:
-            section_name = section_config["section_name"]
+        # Use section_sequence for generation order if available, otherwise fall back to sections array order
+        # This allows optimal generation order (memory/dependency) while sections array maintains output order
+        section_sequence = proposal_template.get("section_sequence", [])
+        if not section_sequence:
+            # Fallback: use sections array order if section_sequence is missing
+            section_sequence = [s["section_name"] for s in proposal_template["sections"]]
+            logger.warning(f"No section_sequence found in template, using sections array order for generation")
+
+        # Create a lookup dictionary for section configs by name
+        sections_by_name = {s["section_name"]: s for s in proposal_template["sections"]}
+
+        for section_name in section_sequence:
+            # Find the section config by name
+            section_config = sections_by_name.get(section_name)
+            if not section_config:
+                logger.warning(f"Section '{section_name}' in section_sequence not found in sections array, skipping")
+                continue
+            
             format_type = section_config.get("format_type", "text")
             logger.info(f"Generating section: {section_name} with format_type: {format_type} for proposal {proposal_id}")
 
@@ -339,6 +362,10 @@ def generate_all_sections_background(session_id: str, proposal_id: str, user_id:
                 generated_text = handle_number_format(section_config, crew_instance, form_data, project_description, special_requirements=special_requirements_str)
             elif format_type == "table":
                 generated_text = handle_table_format(section_config, crew_instance, form_data, project_description, special_requirements=special_requirements_str)
+
+            if not generated_text:
+                logger.warning(f"Generation failed for section '{section_name}' in proposal {proposal_id}. Using fallback message.")
+                generated_text = FALLBACK_GENERATION_MESSAGE
 
             all_sections[section_name] = generated_text
 
@@ -429,6 +456,11 @@ async def process_section(session_id: str, request: SectionRequest, current_user
             raise HTTPException(status_code=403, detail="This proposal is finalized and cannot be modified.")
 
     form_data = session_data["form_data"]
+    
+    # Resolve labels for form_data before sending to CrewAI
+    with get_engine().connect() as connection:
+        form_data = resolve_form_data_labels(form_data, connection)
+
     project_description = session_data["project_description"]
 
     #  Get proposal template from session data
@@ -460,6 +492,10 @@ async def process_section(session_id: str, request: SectionRequest, current_user
         generated_text = handle_number_format(section_config, crew_instance, form_data, project_description, special_requirements=special_requirements_str)
     elif format_type == "table":
         generated_text = handle_table_format(section_config, crew_instance, form_data, project_description, special_requirements=special_requirements_str)
+
+    if not generated_text:
+        logger.warning(f"Generation failed for section '{request.section}' in proposal {request.proposal_id}. Using fallback message.")
+        generated_text = FALLBACK_GENERATION_MESSAGE
 
     message = f"Content generated for {request.section}"
 
@@ -530,13 +566,14 @@ async def regenerate_section(proposal_id: str, request: RegenerateRequest, curre
 
     proposal_template = load_proposal_template(template_name)
 
-    session_data = {
-        "user_id": current_user["user_id"],
-        "proposal_id": proposal_id,
-        "form_data": request.form_data,
-        "project_description": request.project_description,
-        "proposal_template": proposal_template,
-    }
+    with get_engine().connect() as connection:
+        session_data = {
+            "user_id": current_user["user_id"],
+            "proposal_id": proposal_id,
+            "form_data": resolve_form_data_labels(request.form_data, connection),
+            "project_description": request.project_description,
+            "proposal_template": proposal_template,
+        }
     redis_client.setex(session_id, 3600, json.dumps(session_data, default=str))
 
     generated_text = regenerate_section_logic(
@@ -574,7 +611,7 @@ async def update_section_content(request: UpdateSectionRequest, current_user: di
                     SET generated_sections = jsonb_set(
                         generated_sections::jsonb,
                         ARRAY[:section],
-                        to_jsonb(:content::text)
+                        to_jsonb(CAST(:content AS TEXT))
                     ),
                     updated_at = CURRENT_TIMESTAMP
                     WHERE id = :id
@@ -1661,6 +1698,22 @@ async def get_field_contexts(geographic_coverage: Optional[str] = None):
     except Exception as e:
         logger.error(f"[GET FIELD CONTEXTS ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch field contexts.")
+
+
+@router.get("/geographic-coverages")
+async def get_geographic_coverages():
+    """
+    Fetches unique geographic coverage values from the field_contexts table.
+    """
+    try:
+        with get_engine().connect() as connection:
+            query = text("SELECT DISTINCT geographic_coverage FROM field_contexts WHERE geographic_coverage IS NOT NULL AND geographic_coverage != '' ORDER BY geographic_coverage")
+            result = connection.execute(query)
+            coverages = [row[0] for row in result.fetchall()]
+        return {"geographic_coverages": coverages}
+    except Exception as e:
+        logger.error(f"[GET GEOGRAPHIC COVERAGES ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch geographic coverages.")
 
 
 @router.post("/donors", status_code=201)

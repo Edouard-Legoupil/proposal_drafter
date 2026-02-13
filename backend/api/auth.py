@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 
 #  Third-Party Libraries
 import httpx
+import msal
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import text
@@ -26,6 +27,7 @@ from backend.core.security import (
     ENTRA_TENANT_ID,
     ENTRA_CLIENT_ID,
     ENTRA_CLIENT_SECRET,
+    ENTRA_REDIRECT_URI
 )
 from backend.models.schemas import UserSettings
 
@@ -42,23 +44,43 @@ async def sso_status():
     return {"enabled": all([ENTRA_TENANT_ID, ENTRA_CLIENT_ID, ENTRA_CLIENT_SECRET])}
 
 
+def _get_msal_app():
+    return msal.ConfidentialClientApplication(
+        ENTRA_CLIENT_ID,
+        authority=f"https://login.microsoftonline.com/{ENTRA_TENANT_ID}",
+        client_credential=ENTRA_CLIENT_SECRET,
+    )
+
+
 @router.get("/sso-login")
-async def sso_login():
+async def sso_login(request: Request):
     """
     Redirects the user to the Microsoft identity platform for authentication.
     """
     if not all([ENTRA_TENANT_ID, ENTRA_CLIENT_ID, ENTRA_CLIENT_SECRET]):
         return JSONResponse(status_code=404, content={"error": "SSO not configured"})
-    redirect_uri = os.getenv("VITE_BACKEND_URL", "http://localhost:8000") + "/callback"
-    url = (
-        f"https://login.microsoftonline.com/{ENTRA_TENANT_ID}/oauth2/v2.0/authorize"
-        f"?client_id={ENTRA_CLIENT_ID}"
-        f"&response_type=code"
-        f"&redirect_uri={redirect_uri}"
-        f"&response_mode=query"
-        f"&scope=User.Read"
+
+    msal_app = _get_msal_app()
+    # Dynamically determine redirect URI if not explicitly configured
+    if ENTRA_REDIRECT_URI:
+        redirect_uri = ENTRA_REDIRECT_URI
+    else:
+        base_url = str(request.base_url).rstrip('/')
+        forwarded_proto = request.headers.get("x-forwarded-proto", "").lower()
+        if forwarded_proto == "https" and base_url.startswith("http://"):
+             base_url = base_url.replace("http://", "https://", 1)
+        redirect_uri = f"{base_url}/api/callback"
+    
+    logging.info(f"SSO Login - request.base_url: {request.base_url}")
+    logging.info(f"SSO Login - X-Forwarded-Proto: {request.headers.get('x-forwarded-proto')}")
+    logging.info(f"SSO Login - redirect_uri: {redirect_uri}")
+    
+    auth_url = msal_app.get_authorization_request_url(
+        scopes=["User.Read"],
+        redirect_uri=redirect_uri,
     )
-    return RedirectResponse(url=url)
+    logging.info(f"SSO Login - auth_url: {auth_url}")
+    return RedirectResponse(url=auth_url)
 
 
 @router.get("/callback")
@@ -68,62 +90,68 @@ async def callback(request: Request, code: str):
     """
     if not all([ENTRA_TENANT_ID, ENTRA_CLIENT_ID, ENTRA_CLIENT_SECRET]):
         return JSONResponse(status_code=404, content={"error": "SSO not configured"})
-    redirect_uri = os.getenv("VITE_BACKEND_URL", "http://localhost:8000") + "/callback"
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(
-                f"https://login.microsoftonline.com/{ENTRA_TENANT_ID}/oauth2/v2.0/token",
-                data={
-                    "client_id": ENTRA_CLIENT_ID,
-                    "scope": "User.Read",
-                    "code": code,
-                    "redirect_uri": redirect_uri,
-                    "grant_type": "authorization_code",
-                    "client_secret": ENTRA_CLIENT_SECRET,
-                },
-            )
-            response.raise_for_status()
-        except httpx.HTTPStatusError as e:
-            logging.error(f"Failed to get token: {e.response.text}")
-            return JSONResponse(
-                status_code=400, content={"error": "Failed to get token"}
-            )
 
-    access_token = response.json()["access_token"]
+    msal_app = _get_msal_app()
+    # Use the same dynamic redirect URI logic as in sso-login
+    if ENTRA_REDIRECT_URI:
+        redirect_uri = ENTRA_REDIRECT_URI
+    else:
+        base_url = str(request.base_url).rstrip('/')
+        forwarded_proto = request.headers.get("x-forwarded-proto", "").lower()
+        if forwarded_proto == "https" and base_url.startswith("http://"):
+             base_url = base_url.replace("http://", "https://", 1)
+        redirect_uri = f"{base_url}/api/callback"
+
+    result = msal_app.acquire_token_by_authorization_code(
+        code,
+        scopes=["User.Read"],
+        redirect_uri=redirect_uri,
+    )
+
+    if "error" in result:
+        logging.error(f"MSAL Error: {result.get('error_description')}")
+        return JSONResponse(status_code=400, content={"error": result.get("error_description")})
+
+    access_token = result.get("access_token")
+    id_token_claims = result.get("id_token_claims")
+
+    # Fetch user info from Graph API
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.get(
+            user_response = await client.get(
                 "https://graph.microsoft.com/v1.0/me",
                 headers={"Authorization": f"Bearer {access_token}"},
             )
-            response.raise_for_status()
+            user_response.raise_for_status()
+            user_data = user_response.json()
         except httpx.HTTPStatusError as e:
-            logging.error(f"Failed to get user data: {e.response.text}")
-            return JSONResponse(
-                status_code=400, content={"error": "Failed to get user data"}
-            )
+            logging.error(f"Graph API Error: {e.response.text}")
+            return JSONResponse(status_code=400, content={"error": "Failed to fetch user data"})
 
-    user_data = response.json()
     email = user_data.get("userPrincipalName") or user_data.get("mail")
     name = user_data.get("displayName")
     if not email:
-        return JSONResponse(
-            status_code=400, content={"error": "Could not get user email"}
-        )
+        return JSONResponse(status_code=400, content={"error": "Could not get user email"})
 
+    # Get 'proposal writer' role ID
     with get_engine().connect() as connection:
+        result = connection.execute(text("SELECT id FROM roles WHERE name = 'proposal writer'")).fetchone()
+        default_role_id = result[0] if result else 1  # Fallback to 1 if not found
+
+    with get_engine().begin() as connection:
+        # Check if user exists
         result = connection.execute(
-            text("SELECT id, email, name FROM users WHERE email = :email"),
+            text("SELECT id FROM users WHERE email = :email"),
             {"email": email},
         )
         user = result.fetchone()
 
-    if not user:
-        with get_engine().begin() as connection:
-            result = connection.execute(
+        if not user:
+            # Create SSO Users team if not exists
+            team_result = connection.execute(
                 text("SELECT id FROM teams WHERE name = :name"), {"name": "SSO Users"}
             )
-            team = result.fetchone()
+            team = team_result.fetchone()
             if not team:
                 team_id = str(uuid.uuid4())
                 connection.execute(
@@ -136,12 +164,17 @@ async def callback(request: Request, code: str):
             user_id = str(uuid.uuid4())
             connection.execute(
                 text(
-                    "INSERT INTO users (id, email, name, team_id) VALUES (:id, :email, :name, :team_id)"
+                    "INSERT INTO users (id, email, name, team_id, password) VALUES (:id, :email, :name, :team_id, :password)"
                 ),
-                {"id": user_id, "email": email, "name": name, "team_id": team_id},
+                {"id": user_id, "email": email, "name": name, "team_id": team_id, "password": "SSO_USER_NO_PASSWORD"},
             )
-    else:
-        user_id = user[0]
+            # Assign default 'proposal writer' role
+            connection.execute(
+                text("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, :role_id)"),
+                {"user_id": user_id, "role_id": default_role_id}
+            )
+        else:
+            user_id = user[0]
 
     token = jwt.encode(
         {"email": email, "exp": datetime.utcnow() + timedelta(minutes=480)},
@@ -151,10 +184,7 @@ async def callback(request: Request, code: str):
     try:
         redis_client.setex(f"user_session:{user_id}", 28800, token)
     except RedisError as redis_error:
-        logging.error(
-            f"Redis error setting session for user ID {user_id}: {redis_error}"
-        )
-        pass
+        logging.error(f"Redis error setting session for user ID {user_id}: {redis_error}")
 
     response = RedirectResponse(url="/dashboard")
     cookie_settings = get_cookie_settings(request)
@@ -363,12 +393,53 @@ async def profile(current_user: dict = Depends(get_current_user)):
                 "name": current_user["name"],
                 "email": current_user["email"],
                 "roles": current_user.get("roles", []),
-                "is_admin": current_user.get("is_admin", False)
+                "is_admin": current_user.get("is_admin", False),
+                "is_sso": current_user.get("is_sso", False),
+                "requested_role_id": current_user.get("requested_role_id")
             },
         }
     except Exception as e:
         logger.error(f"Error in profile endpoint: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch profile")
+
+
+@router.post("/request-role")
+async def request_role(request: Request, current_user: dict = Depends(get_current_user)):
+    """
+    Allows a user to request a specific role.
+    """
+    data = await request.json()
+    role_id = data.get("role_id")
+    if not role_id:
+        return JSONResponse(status_code=400, content={"error": "Role ID is required."})
+
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().begin() as connection:
+            connection.execute(
+                text("UPDATE users SET requested_role_id = :role_id WHERE id = :user_id"),
+                {"role_id": role_id, "user_id": user_id}
+            )
+        return JSONResponse(status_code=200, content={"message": "Role request submitted successfully."})
+    except Exception as e:
+        logging.error(f"[REQUEST ROLE ERROR] {e}")
+        return JSONResponse(status_code=500, content={"error": "Failed to submit role request."})
+
+
+@router.get("/sso-logout")
+async def sso_logout(request: Request):
+    """
+    Redirects to Microsoft logout endpoint.
+    """
+    frontend_url = os.getenv("VITE_FRONTEND_URL") or str(request.base_url).rstrip('/')
+    post_logout_redirect_uri = f"{frontend_url}/login"
+    url = (
+        f"https://login.microsoftonline.com/{ENTRA_TENANT_ID}/oauth2/v2.0/logout"
+        f"?post_logout_redirect_uri={post_logout_redirect_uri}"
+    )
+    response = RedirectResponse(url=url)
+    response.delete_cookie(key="auth_token")
+    return response
 
 
 @router.post("/logout")

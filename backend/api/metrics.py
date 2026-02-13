@@ -9,29 +9,64 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-def _get_filter_clauses(current_user, filter_by, status_filter=None):
-    user_id = current_user["user_id"]
+def _get_filter_clauses(
+    current_user,
+    filter_by=None,
+    status=None,
+    date_start=None,
+    date_end=None,
+    author_id=None,
+    team_id=None,
+    donor_id=None,
+    donor_group=None,
+    template_name=None,
+):
     where_clauses = []
     params = {}
+
+    # Basic filter_by logic
     if filter_by == "user":
-        where_clauses.append("p.user_id = :user_id")
-        params["user_id"] = user_id
+        where_clauses.append("p.user_id = :current_user_id")
+        params["current_user_id"] = current_user["user_id"]
     elif filter_by == "team":
+        user_team_id = None
         with get_engine().connect() as connection:
-            team_id = connection.execute(
-                text("SELECT team_id FROM users WHERE id = :user_id"),
-                {"user_id": user_id},
+            user_team_id = connection.execute(
+                text("SELECT team_id FROM users WHERE id = :uid"),
+                {"uid": current_user["user_id"]},
             ).scalar()
-        if team_id:
+        if user_team_id:
             where_clauses.append(
-                "p.user_id IN (SELECT id FROM users WHERE team_id = :team_id)"
+                "p.user_id IN (SELECT id FROM users WHERE team_id = :user_team_id)"
             )
-            params["team_id"] = team_id
-        else:
-            where_clauses.append("p.user_id = :user_id")
-            params["user_id"] = user_id
-    if status_filter == "approved":
-        where_clauses.append("p.status = 'approved'")
+            params["user_team_id"] = user_team_id
+
+    # Rich filtering
+    if status and status != "all":
+        where_clauses.append("p.status = :status")
+        params["status"] = status
+    if date_start:
+        where_clauses.append("p.created_at >= :date_start")
+        params["date_start"] = date_start
+    if date_end:
+        where_clauses.append("p.created_at <= :date_end")
+        params["date_end"] = date_end
+    if author_id:
+        where_clauses.append("p.user_id = :author_id")
+        params["author_id"] = author_id
+    if team_id:
+        where_clauses.append("p.user_id IN (SELECT id FROM users WHERE team_id = :team_id)")
+        params["team_id"] = team_id
+    if donor_id:
+        where_clauses.append("p.id IN (SELECT proposal_id FROM proposal_donors WHERE donor_id = :donor_id)")
+        params["donor_id"] = donor_id
+    if donor_group:
+        where_clauses.append("p.id IN (SELECT pd.proposal_id FROM proposal_donors pd JOIN donors d ON pd.donor_id = d.id WHERE d.donor_group = :donor_group)")
+        params["donor_group"] = donor_group
+    if template_name:
+        where_clauses.append("p.template_name = :template_name")
+        params["template_name"] = template_name
+
     if where_clauses:
         return "WHERE " + " AND ".join(where_clauses), params
     return "", params
@@ -56,6 +91,377 @@ def robust_singleval(query, params, key):
     except Exception as e:
         logger.error(f"[METRIC ERROR] {e}", exc_info=True)
         return {key: 0}
+
+
+@router.get(
+    "/metrics/pipeline-kpis",
+    summary="Consolidated Pipeline KPIs",
+    description="Returns all main KPIs for the pipeline overview.",
+)
+async def get_pipeline_kpis(
+    current_user: dict = Depends(get_current_user),
+    filter_by: Optional[str] = Query("all"),
+    status: Optional[str] = Query(None),
+    date_start: Optional[str] = Query(None),
+    date_end: Optional[str] = Query(None),
+    author_id: Optional[str] = Query(None),
+    team_id: Optional[str] = Query(None),
+    donor_id: Optional[str] = Query(None),
+    donor_group: Optional[str] = Query(None),
+    template_name: Optional[str] = Query(None),
+):
+    where_clause, params = _get_filter_clauses(
+        current_user,
+        filter_by=filter_by,
+        status=status,
+        date_start=date_start,
+        date_end=date_end,
+        author_id=author_id,
+        team_id=team_id,
+        donor_id=donor_id,
+        donor_group=donor_group,
+        template_name=template_name,
+    )
+
+    # Add exclusion for deleted unless explicitly requested
+    if "status =" not in where_clause:
+        if where_clause:
+            where_clause += " AND p.status != 'deleted'"
+        else:
+            where_clause = "WHERE p.status != 'deleted'"
+
+    budget_sql = """
+        CASE 
+            WHEN p.form_data->>'Budget Range' ~* 'k' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000)
+            WHEN p.form_data->>'Budget Range' ~* 'M' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000000)
+            ELSE NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric
+        END
+    """
+
+    q = f"""
+    WITH filtered_proposals AS (
+        SELECT p.*, {budget_sql} as budget_value
+        FROM proposals p
+        {where_clause}
+    ),
+    cycle_times AS (
+        SELECT 
+            p.id,
+            EXTRACT(EPOCH FROM (
+                SELECT MIN(created_at) FROM proposal_status_history WHERE proposal_id = p.id AND status = 'submitted'
+            ) - p.created_at) as seconds_to_submit
+        FROM filtered_proposals p
+    ),
+    counts AS (
+        SELECT 
+            COALESCE(SUM(budget_value), 0) as total_funding,
+            COUNT(*) as total_proposals,
+            COUNT(DISTINCT (SELECT donor_id FROM proposal_donors WHERE proposal_id = p.id LIMIT 1)) as total_donors,
+            COUNT(DISTINCT p.user_id) as total_users,
+            COUNT(*) FILTER (WHERE status = 'in_review') as count_under_review,
+            COUNT(*) FILTER (WHERE status = 'submitted') as count_submitted,
+            COUNT(*) FILTER (WHERE status = 'deleted') as count_deleted
+        FROM filtered_proposals p
+    )
+    SELECT 
+        total_funding,
+        total_proposals,
+        CASE WHEN total_proposals > 0 THEN total_funding / total_proposals ELSE 0 END as avg_value,
+        total_donors,
+        (SELECT COUNT(*) FROM teams) as total_teams, -- Global count as requested
+        total_users,
+        CASE WHEN total_proposals > 0 THEN (count_under_review::float / total_proposals) * 100 ELSE 0 END as pct_under_review,
+        CASE WHEN total_proposals > 0 THEN (count_submitted::float / total_proposals) * 100 ELSE 0 END as pct_submitted,
+        CASE WHEN total_proposals > 0 THEN (count_deleted::float / total_proposals) * 100 ELSE 0 END as pct_deleted,
+        COALESCE((SELECT AVG(seconds_to_submit) FROM cycle_times WHERE seconds_to_submit IS NOT NULL), 0) as avg_cycle_time
+    FROM counts
+    """
+    
+    return robust_query(
+        q, 
+        params, 
+        {
+            "total_funding": 0, "total_proposals": 0, "avg_value": 0, 
+            "total_donors": 0, "total_teams": 0, "total_users": 0,
+            "pct_under_review": 0, "pct_submitted": 0, "pct_deleted": 0,
+            "avg_cycle_time": 0
+        },
+        lambda rows: rows[0]
+    )
+
+
+@router.get(
+    "/metrics/proposals-by-donor",
+    summary="Proposals by Donor",
+    description="Total value and counts per donor. Excludes deleted proposals.",
+)
+async def get_proposals_by_donor(
+    current_user: dict = Depends(get_current_user),
+    filter_by: Optional[str] = Query("all"),
+    status: Optional[str] = Query(None),
+    date_start: Optional[str] = Query(None),
+    date_end: Optional[str] = Query(None),
+    author_id: Optional[str] = Query(None),
+    team_id: Optional[str] = Query(None),
+    donor_id: Optional[str] = Query(None),
+    donor_group: Optional[str] = Query(None),
+    template_name: Optional[str] = Query(None),
+):
+    where_clause, params = _get_filter_clauses(
+        current_user, filter_by, status, date_start, date_end, author_id, team_id, donor_id, donor_group, template_name
+    )
+    
+    # Add exclusion for deleted unless explicitly requested
+    if "status =" not in where_clause:
+        if where_clause:
+            where_clause += " AND p.status != 'deleted'"
+        else:
+            where_clause = "WHERE p.status != 'deleted'"
+
+    budget_sql = """
+        CASE 
+            WHEN p.form_data->>'Budget Range' ~* 'k' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000)
+            WHEN p.form_data->>'Budget Range' ~* 'M' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000000)
+            ELSE NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric
+        END
+    """
+
+    q = f"""
+    SELECT 
+        d.name as donor,
+        SUM({budget_sql}) as total_value,
+        COUNT(p.id) as proposal_count,
+        COUNT(p.id) FILTER (WHERE p.status = 'submitted') as submitted_count
+    FROM proposals p
+    JOIN proposal_donors pd ON p.id = pd.proposal_id
+    JOIN donors d ON pd.donor_id = d.id
+    {where_clause}
+    GROUP BY d.name
+    ORDER BY total_value DESC
+    """
+    return robust_query(q, params, [], lambda rows: rows)
+
+
+@router.get(
+    "/metrics/proposals-by-outcome",
+    summary="Proposals by Outcome",
+    description="Heatmap data for outcomes per donor.",
+)
+async def get_proposals_by_outcome(
+    current_user: dict = Depends(get_current_user),
+    filter_by: Optional[str] = Query("all"),
+    status: Optional[str] = Query(None),
+    date_start: Optional[str] = Query(None),
+    date_end: Optional[str] = Query(None),
+    author_id: Optional[str] = Query(None),
+    team_id: Optional[str] = Query(None),
+    donor_id: Optional[str] = Query(None),
+    donor_group: Optional[str] = Query(None),
+    template_name: Optional[str] = Query(None),
+):
+    where_clause, params = _get_filter_clauses(
+        current_user, filter_by, status, date_start, date_end, author_id, team_id, donor_id, donor_group, template_name
+    )
+
+    # Add exclusion for deleted unless explicitly requested
+    if "status =" not in where_clause:
+        if where_clause:
+            where_clause += " AND p.status != 'deleted'"
+        else:
+            where_clause = "WHERE p.status != 'deleted'"
+
+    q = f"""
+    SELECT 
+        d.name as donor,
+        o.name as outcome,
+        COUNT(p.id) as count
+    FROM proposals p
+    JOIN proposal_donors pd ON p.id = pd.proposal_id
+    JOIN donors d ON pd.donor_id = d.id
+    JOIN proposal_outcomes po ON p.id = po.proposal_id
+    JOIN outcomes o ON po.outcome_id = o.id
+    {where_clause}
+    GROUP BY d.name, o.name
+    ORDER BY count DESC
+    """
+    return robust_query(q, params, [], lambda rows: rows)
+
+
+@router.get(
+    "/metrics/proposals-by-context",
+    summary="Proposals by Context",
+    description="Treemap data for field contexts grouped by region.",
+)
+async def get_proposals_by_context(
+    current_user: dict = Depends(get_current_user),
+    filter_by: Optional[str] = Query("all"),
+    status: Optional[str] = Query(None),
+    date_start: Optional[str] = Query(None),
+    date_end: Optional[str] = Query(None),
+    author_id: Optional[str] = Query(None),
+    team_id: Optional[str] = Query(None),
+    donor_id: Optional[str] = Query(None),
+    donor_group: Optional[str] = Query(None),
+    template_name: Optional[str] = Query(None),
+):
+    where_clause, params = _get_filter_clauses(
+        current_user, filter_by, status, date_start, date_end, author_id, team_id, donor_id, donor_group, template_name
+    )
+    
+    if "status =" not in where_clause:
+        if where_clause:
+            where_clause += " AND p.status != 'deleted'"
+        else:
+            where_clause = "WHERE p.status != 'deleted'"
+
+    budget_sql = """
+        CASE 
+            WHEN p.form_data->>'Budget Range' ~* 'k' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000)
+            WHEN p.form_data->>'Budget Range' ~* 'M' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000000)
+            ELSE NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric
+        END
+    """
+
+    q = f"""
+    SELECT 
+        COALESCE(fc.unhcr_region, 'Other') as region,
+        fc.name as context,
+        SUM({budget_sql}) as total_value,
+        COUNT(p.id) as proposal_count,
+        COUNT(p.id) FILTER (WHERE p.status = 'submitted') as submitted_count
+    FROM proposals p
+    JOIN proposal_field_contexts pfc ON p.id = pfc.proposal_id
+    JOIN field_contexts fc ON pfc.field_context_id = fc.id
+    {where_clause}
+    GROUP BY COALESCE(fc.unhcr_region, 'Other'), fc.name
+    ORDER BY total_value DESC
+    """
+    return robust_query(q, params, [], lambda rows: rows)
+
+
+@router.get(
+    "/metrics/proposals-by-team",
+    summary="Proposals by Team",
+    description="Stacked bar data showing proposal value per team by status. Excludes deleted.",
+)
+async def get_proposals_by_team(
+    current_user: dict = Depends(get_current_user),
+    filter_by: Optional[str] = Query("all"),
+    status: Optional[str] = Query(None),
+    date_start: Optional[str] = Query(None),
+    date_end: Optional[str] = Query(None),
+    author_id: Optional[str] = Query(None),
+    team_id: Optional[str] = Query(None),
+    donor_id: Optional[str] = Query(None),
+    donor_group: Optional[str] = Query(None),
+    template_name: Optional[str] = Query(None),
+):
+    where_clause, params = _get_filter_clauses(
+        current_user, filter_by, status, date_start, date_end, author_id, team_id, donor_id, donor_group, template_name
+    )
+    
+    if "status =" not in where_clause:
+        if where_clause:
+            where_clause += " AND p.status != 'deleted'"
+        else:
+            where_clause = "WHERE p.status != 'deleted'"
+
+    budget_sql = """
+        CASE 
+            WHEN p.form_data->>'Budget Range' ~* 'k' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000)
+            WHEN p.form_data->>'Budget Range' ~* 'M' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000000)
+            ELSE NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric
+        END
+    """
+
+    q = f"""
+    WITH base_data AS (
+        SELECT 
+            tm.name as team_name,
+            p.status,
+            {budget_sql} as budget_value,
+            p.id as proposal_id
+        FROM proposals p
+        JOIN users u ON p.user_id = u.id
+        JOIN teams tm ON u.team_id = tm.id
+        {where_clause}
+    ),
+    team_totals AS (
+        SELECT 
+            team_name,
+            COUNT(proposal_id) as total_proposals,
+            COALESCE(SUM(budget_value), 0) as total_team_value
+        FROM base_data
+        GROUP BY team_name
+    )
+    SELECT 
+        bd.team_name || ' (' || tt.total_proposals || ')' as team,
+        bd.status,
+        SUM(bd.budget_value) as value,
+        COUNT(bd.proposal_id) as count,
+        COUNT(bd.proposal_id) FILTER (WHERE bd.status = 'submitted') as submitted_count
+    FROM base_data bd
+    JOIN team_totals tt ON bd.team_name = tt.team_name
+    GROUP BY bd.team_name, tt.total_proposals, tt.total_team_value, bd.status
+    ORDER BY tt.total_team_value DESC, bd.team_name, value DESC
+    """
+    return robust_query(q, params, [], lambda rows: rows)
+
+
+@router.get(
+    "/metrics/proposals-by-time",
+    summary="Proposals over Time",
+    description="Stacked area data showing total value per status over time.",
+)
+async def get_proposals_by_time(
+    current_user: dict = Depends(get_current_user),
+    filter_by: Optional[str] = Query("all"),
+    status: Optional[str] = Query(None),
+    date_start: Optional[str] = Query(None),
+    date_end: Optional[str] = Query(None),
+    author_id: Optional[str] = Query(None),
+    team_id: Optional[str] = Query(None),
+    donor_id: Optional[str] = Query(None),
+    donor_group: Optional[str] = Query(None),
+    template_name: Optional[str] = Query(None),
+    period: Optional[str] = Query("month"),
+):
+    periods = {
+        "month": "TO_CHAR(p.created_at, 'YYYY-MM')",
+        "quarter": "TO_CHAR(p.created_at, 'YYYY') || '-Q' || EXTRACT(QUARTER FROM p.created_at)",
+        "year": "TO_CHAR(p.created_at, 'YYYY')",
+    }
+    period_expr = periods.get(period, periods["month"])
+    
+    where_clause, params = _get_filter_clauses(
+        current_user, filter_by, status, date_start, date_end, author_id, team_id, donor_id, donor_group, template_name
+    )
+    
+    if "status =" not in where_clause:
+        if where_clause:
+            where_clause += " AND p.status != 'deleted'"
+        else:
+            where_clause = "WHERE p.status != 'deleted'"
+
+    budget_sql = """
+        CASE 
+            WHEN p.form_data->>'Budget Range' ~* 'k' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000)
+            WHEN p.form_data->>'Budget Range' ~* 'M' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000000)
+            ELSE NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric
+        END
+    """
+
+    q = f"""
+    SELECT 
+        {period_expr} as period,
+        p.status,
+        SUM({budget_sql}) as value
+    FROM proposals p
+    {where_clause}
+    GROUP BY period, p.status
+    ORDER BY period ASC
+    """
+    return robust_query(q, params, [], lambda rows: rows)
 
 
 #######################################
@@ -302,22 +708,26 @@ async def get_edit_activity(
     date_end: Optional[str] = Query(None),
 ):
     q = """
-    SELECT p.id as proposal_id, COUNT(psh.id) as edit_count 
-    FROM proposal_status_history psh 
-    JOIN proposals p ON psh.proposal_id = p.id 
-    {where_clause} 
-    GROUP BY p.id 
-    ORDER BY edit_count DESC
+    SELECT edit_count, COUNT(proposal_id) as proposal_count
+    FROM (
+        SELECT psh.proposal_id, COUNT(psh.id) as edit_count 
+        FROM proposal_status_history psh 
+        JOIN proposals p ON psh.proposal_id = p.id 
+        {where_clause} 
+        GROUP BY psh.proposal_id 
+    ) t
+    GROUP BY edit_count
+    ORDER BY edit_count
     """
     where_clause, params = _get_filter_clauses(current_user, filter_by)
     query = q.format(where_clause=where_clause)
     return robust_query(
         query,
         params,
-        {"authors": [], "edit_counts": []},
+        {"labels": [], "data": []},
         lambda rows: {
-            "authors": [f"Proposal {str(row['proposal_id'])[:8]}" for row in rows if "proposal_id" in row],
-            "edit_counts": [row["edit_count"] for row in rows if "edit_count" in row],
+            "labels": [f"{row['edit_count']} Edits" for row in rows if "edit_count" in row],
+            "data": [row["proposal_count"] for row in rows if "proposal_count" in row],
         },
     )
 
@@ -336,16 +746,32 @@ async def get_reviewer_activity(
     date_start: Optional[str] = Query(None),
     date_end: Optional[str] = Query(None),
 ):
-    q = "SELECT r.name as reviewer, COUNT(pr.id) as reviews FROM proposal_peer_reviews pr JOIN users r ON pr.reviewer_id = r.id JOIN proposals p ON pr.proposal_id = p.id {where_clause} GROUP BY r.name ORDER BY reviews DESC"
+    q = """
+    SELECT review_count, COUNT(proposal_id) as proposal_count
+    FROM (
+        SELECT psh.proposal_id, COUNT(psh.id) as review_count 
+        FROM proposal_status_history psh 
+        JOIN proposals p ON psh.proposal_id = p.id 
+        {where_clause} 
+        GROUP BY psh.proposal_id 
+    ) t
+    GROUP BY review_count
+    ORDER BY review_count
+    """
     where_clause, params = _get_filter_clauses(current_user, filter_by)
+    if where_clause:
+        where_clause += " AND psh.status = 'in_review'"
+    else:
+        where_clause = "WHERE psh.status = 'in_review'"
+    
     query = q.format(where_clause=where_clause)
     return robust_query(
         query,
         params,
-        {"reviewers": [], "reviews": []},
+        {"labels": [], "data": []},
         lambda rows: {
-            "reviewers": [row["reviewer"] for row in rows if "reviewer" in row],
-            "reviews": [row["reviews"] for row in rows if "reviews" in row],
+            "labels": [f"{row['review_count']} Reviews" for row in rows if "review_count" in row],
+            "data": [row["proposal_count"] for row in rows if "proposal_count" in row],
         },
     )
 
@@ -364,14 +790,25 @@ async def get_knowledge_cards(
     date_start: Optional[str] = Query(None),
     date_end: Optional[str] = Query(None),
 ):
-    q = "SELECT kc.type, COUNT(kc.id) as count FROM knowledge_cards kc GROUP BY kc.type"
+    q = """
+    SELECT 
+        CASE 
+            WHEN donor_id IS NOT NULL THEN 'Donor'
+            WHEN outcome_id IS NOT NULL THEN 'Outcome'
+            WHEN field_context_id IS NOT NULL THEN 'Context'
+            ELSE 'General'
+        END as type, 
+        COUNT(id) as count 
+    FROM knowledge_cards 
+    GROUP BY type
+    """
     return robust_query(
         q,
         {},
         {"types": [], "counts": []},
         lambda rows: {
-            "types": [row["type"] for row in rows if "type" in row],
-            "counts": [row["count"] for row in rows if "count" in row],
+            "types": [row["type"] for row in rows],
+            "counts": [row["count"] for row in rows],
         },
     )
 
@@ -408,14 +845,27 @@ async def get_reference_metrics(
     date_start: Optional[str] = Query(None),
     date_end: Optional[str] = Query(None),
 ):
-    q = "SELECT kc.type, COUNT(kcr.id) as references FROM knowledge_card_references kcr JOIN knowledge_card_to_references kctr ON kcr.id = kctr.reference_id JOIN knowledge_cards kc ON kctr.knowledge_card_id = kc.id GROUP BY kc.type"
+    q = """
+    SELECT 
+        CASE 
+            WHEN kc.donor_id IS NOT NULL THEN 'Donor'
+            WHEN kc.outcome_id IS NOT NULL THEN 'Outcome'
+            WHEN kc.field_context_id IS NOT NULL THEN 'Context'
+            ELSE 'General'
+        END as type, 
+        COUNT(kcr.id) as references 
+    FROM knowledge_card_references kcr 
+    JOIN knowledge_card_to_references kctr ON kcr.id = kctr.reference_id 
+    JOIN knowledge_cards kc ON kctr.knowledge_card_id = kc.id 
+    GROUP BY type
+    """
     return robust_query(
         q,
         {},
         {"types": [], "references": []},
         lambda rows: {
-            "types": [row["type"] for row in rows if "type" in row],
-            "references": [row["references"] for row in rows if "references" in row],
+            "types": [row["type"] for row in rows],
+            "references": [row["references"] for row in rows],
         },
     )
 
@@ -446,7 +896,7 @@ async def get_reference_usage_metrics(
 
 @router.get("/metrics/reference-issue",
     summary="Reference Issues/Errors",
-    description="Shows number of references that are broken/missing/with errors by error type. Keys always present."
+    description="Shows number of references that are broken/missing/with errors by error type. Returns empty if table missing."
 )
 async def get_reference_issue_metrics(
     current_user: dict = Depends(get_current_user),
@@ -454,8 +904,7 @@ async def get_reference_issue_metrics(
     date_start: Optional[str] = Query(None),
     date_end: Optional[str] = Query(None),
 ):
-    # knowledge_card_reference_errors table is not currently in the schema
-    # Returning empty result to maintain endpoint availability
+    # knowledge_card_reference_errors table is missing in some environments
     return {"error_types": [], "counts": []}
 
 
@@ -491,7 +940,7 @@ async def get_card_edit_frequency(
 
 @router.get("/metrics/card-impact-score",
     summary="Knowledge Card Impact Score",
-    description="Shows aggregate usage/views/citations for each card. Keys always present."
+    description="Shows aggregate usage/views/citations for each card. Returns empty if table missing."
 )
 async def get_card_impact_score(
     current_user: dict = Depends(get_current_user),
@@ -499,8 +948,7 @@ async def get_card_impact_score(
     date_start: Optional[str] = Query(None),
     date_end: Optional[str] = Query(None),
 ):
-    # knowledge_card_usage table is not currently in the schema
-    # Returning empty result to maintain endpoint availability
+    # knowledge_card_usage table is missing in some environments
     return {"card_ids": [], "impact_scores": []}
 
 

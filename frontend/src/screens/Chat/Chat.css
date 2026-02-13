@@ -6,15 +6,15 @@
 }
 
 .Chat_menuButton {
-    display: none;
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    z-index: 1001;
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
+        display: none;
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        z-index: 1001;
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
 }
 
 .Chat_sidebar {
@@ -28,22 +28,22 @@
 }
 
 @media (max-width: 768px) {
-    .Chat_menuButton {
-        display: block;
-    }
+        .Chat_menuButton {
+                display: block;
+        }
 
-    .Chat_sidebar {
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        transform: translateX(-100%);
-        z-index: 1000;
-    }
+        .Chat_sidebar {
+                position: absolute;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                transform: translateX(-100%);
+                z-index: 1000;
+        }
 
-    .mobile-menu-open .Chat_sidebar {
-        transform: translateX(0);
-    }
+        .mobile-menu-open .Chat_sidebar {
+                transform: translateX(0);
+        }
 }
 
 .Chat_sidebarOption {
@@ -152,18 +152,18 @@
         cursor: pointer;
 }
 
-.Chat_inputArea_additionalDetails > img {
+.Chat_inputArea_additionalDetails>img {
         transform: scaleY(-1);
         max-width: 14px;
 }
 
-.Chat_inputArea_additionalDetails.expanded > img {
+.Chat_inputArea_additionalDetails.expanded>img {
         transform: scaleY(1);
 }
 
 .Chat_inputArea_additionalDetails.disabled {
-    color: #ccc;
-    cursor: not-allowed;
+        color: #ccc;
+        cursor: not-allowed;
 }
 
 .Chat_form {
@@ -196,46 +196,47 @@
 }
 
 .tooltip-container {
-  position: relative;
-  display: inline-block;
+        position: relative;
+        display: inline-block;
 }
 
 .tooltip-text {
-  visibility: hidden;
-  min-width: 280px;
-  background-color: #0072bc;
-  color: #fff;
-  font-family: "Noto";
-  font-size: 12px;
-  font-weight: 700;
-  text-align: left;
-  border-radius: 6px;
-  padding: 10px;
-  position: absolute;
-  z-index: 10;
-  top: 120%;
-  left: 50%;
-  transform: translateX(-50%);
-  opacity: 0;
-  transition: opacity 0.3s;
-  white-space: normal;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        visibility: hidden;
+        min-width: 280px;
+        background-color: #0072bc;
+        color: #fff;
+        font-family: "Noto";
+        font-size: 12px;
+        font-weight: 700;
+        text-align: left;
+        border-radius: 6px;
+        padding: 10px;
+        position: absolute;
+        z-index: 10;
+        top: 120%;
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0;
+        transition: opacity 0.3s;
+        white-space: normal;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 .tooltip-text::after {
-  content: " ";
-  position: absolute;
-  bottom: 100%;  /* At the top of the tooltip */
-  left: 50%;
-  margin-left: -5px;
-  border-width: 5px;
-  border-style: solid;
-  border-color: transparent transparent #333 transparent;
+        content: " ";
+        position: absolute;
+        bottom: 100%;
+        /* At the top of the tooltip */
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: transparent transparent #333 transparent;
 }
 
 .tooltip-container:hover .tooltip-text {
-  visibility: visible;
-  opacity: 1;
+        visibility: visible;
+        opacity: 1;
 }
 
 @media (max-width: 900px) {
@@ -287,12 +288,18 @@
         justify-content: flex-end;
 }
 
+.CommonButton.inactive {
+        background-color: #ACB8CB !important;
+        opacity: 0.7;
+        cursor: pointer;
+}
+
 .Chat_exportButtons {
         display: flex;
         gap: 15px;
 }
 
-.Chat_exportButtons > button {
+.Chat_exportButtons>button {
         height: 40px;
         box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.06) 0px 2px 4px -1px;
         border-radius: 20px;
@@ -313,11 +320,11 @@
         cursor: pointer;
 }
 
-.Chat_exportButtons > button:first-child > img {
+.Chat_exportButtons>button:first-child>img {
         filter: brightness(0) saturate(100%) invert(15%) sepia(45%) saturate(5296%) hue-rotate(217deg) brightness(94%) contrast(109%);
 }
 
-.Chat_exportButtons > button:nth-child(2) > img {
+.Chat_exportButtons>button:nth-child(2)>img {
         filter: brightness(0) saturate(100%) invert(14%) sepia(90%) saturate(3910%) hue-rotate(1deg) brightness(84%) contrast(124%);
 }
 
@@ -364,7 +371,7 @@
         margin-left: auto;
 }
 
-.Chat_sectionOptions > button {
+.Chat_sectionOptions>button {
         border: none;
         outline: none;
         background: #E6ECF5;
@@ -381,11 +388,11 @@
         position: relative;
 }
 
-.Chat_sectionOptions > button > span {
+.Chat_sectionOptions>button>span {
         display: none;
 }
 
-.Chat_sectionOptions > button:hover > span {
+.Chat_sectionOptions>button:hover>span {
         display: flex;
         position: absolute;
         top: -45px;
@@ -403,10 +410,11 @@
         padding: 8px 16px;
 }
 
-.Chat_sectionOptions > button:hover > span::after {
+.Chat_sectionOptions>button:hover>span::after {
         content: " ";
         position: absolute;
-        top: 100%; /* At the bottom of the tooltip */
+        top: 100%;
+        /* At the bottom of the tooltip */
         left: 50%;
         margin-left: -5px;
         border-width: 5px;
@@ -414,7 +422,7 @@
         border-color: black transparent transparent transparent;
 }
 
-.Chat_sectionOptions > button > img {
+.Chat_sectionOptions>button>img {
         max-height: 40px;
 }
 
@@ -442,7 +450,7 @@
         border-top: 1px solid hsla(205, 10%, 39%, 20%);
 }
 
-.Chat_sectionContent > textarea {
+.Chat_sectionContent>textarea {
         width: 100%;
         field-sizing: content;
         resize: none;
@@ -454,17 +462,19 @@
         outline: none;
 }
 
-.Chat_sectionContent > h2 {
+.Chat_sectionContent>h2 {
         margin-top: 10px;
 }
 
-.Chat_sectionContent > p {
+.Chat_sectionContent>p {
         margin-top: 10px;
 }
 
-.Chat_sectionContent > ul, .Chat_sectionContent > ol {
+.Chat_sectionContent>ul,
+.Chat_sectionContent>ol {
         margin-left: 30px;
-        margin-top: 5px;;
+        margin-top: 5px;
+        ;
 }
 
 .Chat_sectionContent_loading {
@@ -532,9 +542,9 @@
 .multi-select-container {
         position: relative;
         width: 100%;
-    }
-    
-    .multi-select-input {
+}
+
+.multi-select-input {
         width: 100%;
         border: 1px solid #ccc;
         border-radius: 4px;
@@ -544,9 +554,9 @@
         flex-wrap: wrap;
         gap: 5px;
         min-height: 36px;
-    }
-    
-    .multi-select-dropdown {
+}
+
+.multi-select-dropdown {
         position: absolute;
         top: 100%;
         left: 0;
@@ -558,18 +568,18 @@
         z-index: 1000;
         max-height: 200px;
         overflow-y: auto;
-    }
-    
-    .multi-select-option {
+}
+
+.multi-select-option {
         padding: 8px 12px;
         cursor: pointer;
-    }
-    
-    .multi-select-option:hover {
+}
+
+.multi-select-option:hover {
         background-color: #f0f0f0;
-    }
-    
-    .multi-select-tag {
+}
+
+.multi-select-tag {
         background-color: #007bff;
         color: white;
         border-radius: 3px;
@@ -577,209 +587,219 @@
         display: flex;
         align-items: center;
         gap: 5px;
-    }
+}
 
 .Chat_workflow_status_container {
-    display: flex;
-    gap: 10px;
-    align-items: center;
+        display: flex;
+        gap: 10px;
+        align-items: center;
 }
 
 .workflow-stage-box {
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    background-color: #f9f9f9;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        background-color: #f9f9f9;
 }
 
 .workflow-stage-label {
-    font-weight: bold;
-    font-size: 14px;
-    color: #333;
-    margin-bottom: 5px;
+        font-weight: bold;
+        font-size: 14px;
+        color: #333;
+        margin-bottom: 5px;
 }
 
 .workflow-badges {
-    display: flex;
-    gap: 5px;
-    align-items: center;
+        display: flex;
+        gap: 5px;
+        align-items: center;
 }
 
 .status-badge-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
 }
 
 .revert-btn {
-    background-color: #6c757d;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 2px 8px;
-    font-size: 10px;
-    cursor: pointer;
+        background-color: #6c757d;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 2px 8px;
+        font-size: 10px;
+        cursor: pointer;
 }
 
 .revert-btn:hover {
-    background-color: #5a6268;
+        background-color: #5a6268;
 }
 
 .reviews-container {
-    margin-top: 20px;
-    padding-top: 10px;
-    border-top: 1px solid #eee;
+        margin-top: 20px;
+        padding-top: 10px;
+        border-top: 1px solid #eee;
 }
 
 .review {
-    margin-bottom: 15px;
+        margin-bottom: 15px;
 }
 
 .review p {
-    margin: 0 0 5px 0;
+        margin: 0 0 5px 0;
 }
 
 .author-response textarea {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    resize: vertical;
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        resize: vertical;
 }
 
 .upload-approved-container {
-    margin-left: 20px;
+        margin-left: 20px;
 }
 
 .upload-label {
-    background-color: #28a745;
-    color: white;
-    padding: 10px 15px;
-    border-radius: 5px;
-    cursor: pointer;
-    display: inline-block;
+        background-color: #28a745;
+        color: white;
+        padding: 10px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        display: inline-block;
 }
 
 #approved-doc-upload {
-    display: none;
+        display: none;
 }
 
 .status-badge.inactive {
-    background-color: transparent !important;
-    color: #333 !important;
-    border: 1px solid #ccc;
-    opacity: 0.6;
+        background-color: transparent !important;
+        color: #333 !important;
+        border: 1px solid #ccc;
+        opacity: 0.6;
 }
 
 .status-badge:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
+        cursor: not-allowed;
+        opacity: 0.5;
 }
 
 .associated-knowledge-display {
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    padding: 10px;
-    margin-bottom: 15px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        padding: 10px;
+        margin-bottom: 15px;
 }
 
 .associated-knowledge-display h4 {
-    margin-top: 0;
-    margin-bottom: 10px;
+        margin-top: 0;
+        margin-bottom: 10px;
 }
 
 .associated-knowledge-display ul {
-    max-height: 150px;
-    overflow-y: auto;
-    list-style-type: none;
-    padding-left: 0;
-    margin-bottom: 0;
+        max-height: 150px;
+        overflow-y: auto;
+        list-style-type: none;
+        padding-left: 0;
+        margin-bottom: 0;
 }
 
 .associated-knowledge-display li {
-    background-color: #f0f0f0;
-    padding: 5px 10px;
-    border-radius: 3px;
-    margin-bottom: 5px;
+        background-color: #f0f0f0;
+        padding: 5px 10px;
+        border-radius: 3px;
+        margin-bottom: 5px;
 }
-    
-    .multi-select-tag-close {
+
+.multi-select-tag-close {
         cursor: pointer;
         font-weight: bold;
-    }
+}
 
 
 .status-draft {
-    background: #757575;
+        background: #757575;
 }
 
 .status-review {
-    background: #FF9800;
+        background: #FF9800;
 }
 
 .status-submission {
-    background: #0072BC;
+        background: #0072BC;
 }
 
 
-.status-pre-submission {background: #0072BC;}   /* blue */
+.status-pre-submission {
+        background: #0072BC;
+}
 
-/*.status-submitted {background: #6A1B9A;}   */   /* purple */
+/* blue */
 
-.status-submitted { background: #2E7D32; }      /* green */
+/*.status-submitted {background: #6A1B9A;}   */
+/* purple */
+
+.status-submitted {
+        background: #2E7D32;
+}
+
+/* green */
 
 .status-approved {
-    background: #2E7D32;
+        background: #2E7D32;
 }
 
 .Chat_proposalContainer table {
-  border-collapse: collapse;
-  width: 100%;
+        border-collapse: collapse;
+        width: 100%;
 }
 
-.Chat_proposalContainer th, .Chat_proposalContainer td {
-  border: 1px solid #ddd;
-  padding: 8px;
+.Chat_proposalContainer th,
+.Chat_proposalContainer td {
+        border: 1px solid #ddd;
+        padding: 8px;
 }
 
 .Chat_proposalContainer th {
-  background-color: #f2f2f2;
+        background-color: #f2f2f2;
 }
 
 .Chat_docTypeSwitcher {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
 }
 
 .Chat_docTypeButton {
-    padding: 8px 16px;
-    border-radius: 20px;
-    border: 1px solid #0072bc;
-    background: white;
-    color: #0072bc;
-    cursor: pointer;
-    font-family: "Noto";
-    font-size: 14px;
-    transition: all 0.3s ease;
+        padding: 8px 16px;
+        border-radius: 20px;
+        border: 1px solid #0072bc;
+        background: white;
+        color: #0072bc;
+        cursor: pointer;
+        font-family: "Noto";
+        font-size: 14px;
+        transition: all 0.3s ease;
 }
 
 .Chat_docTypeButton.active {
-    background: #0072bc;
-    color: white;
+        background: #0072bc;
+        color: white;
 }
 
 .Chat_docTypeButton:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    border-color: #ccc;
-    color: #ccc;
+        opacity: 0.5;
+        cursor: not-allowed;
+        border-color: #ccc;
+        color: #ccc;
 }
 
 .Chat_docTypeButton:not(.active):not(:disabled):hover {
-    background: #f0f7ff;
+        background: #f0f7ff;
 }

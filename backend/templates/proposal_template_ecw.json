@@ -1,7 +1,6 @@
 {
     "template_type": "Proposal",
     "donors": [
-        "Education Cannot Wait",
         "Education Cannot Wait - Accelerated Facility Window",
         "Education Cannot Wait - First Emergency Window",
         "Education Cannot Wait - Multiyear Resilience Programme"
@@ -12,12 +11,29 @@
             "Strictly base all content on the provided inputs and knowledge base.",
             "Do not invent or hallucinate facts, figures, or dates.",
             "If information is missing, explicitly state that it is not available in the context.",
+            "If there is no mention in the context of the targeted population size for the project, asssume the project target the entire population of interest for the designated field context.",
             "Ensure tone, style, and formatting match a professional humanitarian proposal.",
             "when referencing donor, use donor name and never  donor_id",
             "when referencing outcomes, use outcome name and never  outcome_id",
             "when referencing, field context, use field_context name and never field context_id"
         ]
     },
+    "section_sequence": [
+        "Education Response: Needs Overview",
+        "Intervention Strategy",
+        "Gender, Disability Inclusion & Intersecting Inequalities Approach",
+        "Education Sector Coordination Mechanisms",
+        "Grant Application Development Process",
+        "Grantee Selection Process",
+        "Joint Monitoring and Reporting",
+        "Grantee Details",
+        "Annex A: Map of ECW Grantee interventions",
+        "Annex B: Collective Results Framework",
+        "Annex B: Headcount",
+        "Annex C: Budgets",
+        "Annex D: Risk Matrix",
+        "Project Information"
+    ],
     "sections": [
         {
             "section_name": "Grantee Details",

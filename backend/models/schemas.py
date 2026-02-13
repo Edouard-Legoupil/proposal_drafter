@@ -43,6 +43,7 @@ class User(BaseModel):
     email: str
     name: Optional[str] = None
     team_id: Optional[uuid.UUID] = None
+    team_name: Optional[str] = None
     geographic_coverage_type: Optional[str] = None
     geographic_coverage_region: Optional[str] = None
     geographic_coverage_country: Optional[str] = None
@@ -176,3 +177,10 @@ class AuthorResponseRequest(BaseModel):
 
 class SaveContributionIdRequest(BaseModel):
     contribution_id: str
+
+class CreateTeamRequest(BaseModel):
+    name: str
+
+class UpdateUserTeamRequest(BaseModel):
+    team_id: uuid.UUID
+

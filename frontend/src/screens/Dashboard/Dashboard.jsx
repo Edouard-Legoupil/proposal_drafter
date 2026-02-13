@@ -9,7 +9,7 @@ import KnowledgeCard from './components/KnowledgeCard/KnowledgeCard'
 import MetricsDashboard from './components/MetricsDashboard/MetricsDashboard'
 import SingleSelectUserModal from '../../components/SingleSelectUserModal/SingleSelectUserModal'
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
 
 export default function Dashboard() {
         const navigate = useNavigate()
@@ -121,7 +121,7 @@ export default function Dashboard() {
         }
 
         async function getUsers() {
-                const response = await fetch(`${API_BASE_URL}/users`, {
+                const response = await fetch(`${API_BASE_URL}/users?role=proposal%20drafter`, {
                         method: 'GET',
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include'
@@ -129,7 +129,14 @@ export default function Dashboard() {
 
                 if (response.ok) {
                         const data = await response.json()
-                        setUsers((data || []).map(user => ({ id: user.id, name: user.name })))
+                        const userList = Array.isArray(data) ? data : (data.users || []);
+                        setUsers(userList.map(user => ({
+                                id: user.id,
+                                name: user.name,
+                                team: user.team_name || 'Unassigned'
+                        })))
+                } else {
+                        console.error("Failed to fetch users", response.status);
                 }
         }
 
@@ -522,7 +529,22 @@ export default function Dashboard() {
                                                                 key={card.id}
                                                                 card={card}
                                                                 date={cleanedDate(card.updated_at)}
-                                                                onClick={() => isKCOwner ? navigate(`/knowledge-card/${card.id}`) : navigate(`/review/knowledge-card/${card.id}`)}
+                                                                onClick={() => {
+                                                                        const requiredRoles = [
+                                                                                "knowledge manager donors",
+                                                                                "knowledge manager outcome",
+                                                                                "knowledge manager field context"
+                                                                        ];
+                                                                        const normalize = r => r.replace(/_/g, ' ').replace(/\s+/g, ' ').toLowerCase().trim();
+                                                                        const userRoles = Array.isArray(currentUser?.roles) ? currentUser.roles.map(normalize) : [];
+                                                                        const normalizedRequired = requiredRoles.map(normalize);
+                                                                        const hasManagerRole = userRoles.some(role => normalizedRequired.includes(role));
+                                                                        if (hasManagerRole) {
+                                                                                navigate(`/knowledge-card/${card.id}`);
+                                                                        } else {
+                                                                                navigate(`/review/knowledge-card/${card.id}`);
+                                                                        }
+                                                                }}
                                                                 isDuplicate={duplicateCardIds.has(card.id)}
                                                                 onDelete={() => handleDeleteKnowledgeCard(card.id)}
                                                         />
@@ -544,12 +566,36 @@ export default function Dashboard() {
                                                         </thead>
                                                         <tbody>
                                                                 {sortedKnowledgeCards.map((card) => {
-                                                                        const isKCOwner = currentUser && (currentUser.id === card.created_by || currentUser.user_id === card.created_by);
+                                                                        const requiredRoles = [
+                                                                                "knowledge manager donors",
+                                                                                "knowledge manager outcome",
+                                                                                "knowledge manager field context"
+                                                                        ];
+                                                                        const normalize = r => r.replace(/_/g, ' ').replace(/\s+/g, ' ').toLowerCase().trim();
+                                                                        const userRoles = Array.isArray(currentUser?.roles) ? currentUser.roles.map(normalize) : [];
+                                                                        const normalizedRequired = requiredRoles.map(normalize);
+                                                                        const hasManagerRole = userRoles.some(role => normalizedRequired.includes(role));
+                                                                        const canEditKC = hasManagerRole;
                                                                         const cardType = card.donor_name ? 'Donor' : card.outcome_name ? 'Outcome' : 'Field Context';
                                                                         const cardName = card.donor_name || card.outcome_name || card.field_context_name || 'N/A';
 
                                                                         return (
-                                                                                <tr key={card.id} onClick={() => isKCOwner ? navigate(`/knowledge-card/${card.id}`) : navigate(`/review/knowledge-card/${card.id}`)} style={{ cursor: 'pointer' }}>
+                                                                                <tr key={card.id} onClick={() => {
+                                                                                        const requiredRoles = [
+                                                                                                "knowledge manager donors",
+                                                                                                "knowledge manager outcome",
+                                                                                                "knowledge manager field context"
+                                                                                        ];
+                                                                                        const normalize = r => r.replace(/_/g, ' ').replace(/\s+/g, ' ').toLowerCase().trim();
+                                                                                        const userRoles = Array.isArray(currentUser?.roles) ? currentUser.roles.map(normalize) : [];
+                                                                                        const normalizedRequired = requiredRoles.map(normalize);
+                                                                                        const hasManagerRole = userRoles.some(role => normalizedRequired.includes(role));
+                                                                                        if (hasManagerRole) {
+                                                                                                navigate(`/knowledge-card/${card.id}`)
+                                                                                        } else {
+                                                                                                navigate(`/review/knowledge-card/${card.id}`)
+                                                                                        }
+                                                                                }} style={{ cursor: 'pointer' }}>
                                                                                         <td>
                                                                                                 {card.donor_name && <i className="fa-solid fa-money-bill-wave donor"></i>}
                                                                                                 {card.outcome_name && <i className="fa-solid fa-bullseye outcome"></i>}
@@ -598,8 +644,8 @@ export default function Dashboard() {
                                                                 {sortedProjects.map((review) => (
                                                                         <tr key={review.proposal_id} onClick={(e) => handleProjectClick(e, review.proposal_id, true)} style={{ cursor: 'pointer' }}>
                                                                                 <td>{review.project_title}</td>
-                                                                                <td>{review.requester_name || 'N/A'}</td>
-                                                                                <td>{review.deadline ? new Date(review.deadline).toLocaleDateString() : 'N/A'}</td>
+                                                                                <td>{review.requester_name || review.created_by_name || 'N/A'}</td>
+                                                                                <td>{review.review_completed_at ? new Date(review.review_completed_at).toLocaleDateString() : (review.deadline ? new Date(review.deadline).toLocaleDateString() : 'N/A')}</td>
                                                                                 <td>{cleanedDate(review.updated_at)}</td>
                                                                         </tr>
                                                                 ))}
@@ -626,6 +672,8 @@ export default function Dashboard() {
                                                                 handleDeleteProject={handleDeleteProject}
                                                                 handleRestoreProject={handleRestoreProject}
                                                                 handleTransferOwnership={handleTransferOwnership}
+                                                                requesterLabel="Author"
+                                                                authorName={review.author_name}
                                                         />
                                                 )}
                                         </div>

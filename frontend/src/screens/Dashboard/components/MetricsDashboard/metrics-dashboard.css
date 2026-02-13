@@ -1,45 +1,92 @@
-/* Add styles for compressed card layout and chart explanations */
-.metrics-dashboard .metric-desc {
-  font-size: 0.98rem;
-  color: #333;
-  margin: 0 0 8px 0;
-  padding: 0;
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Source+Sans+Pro:wght@400;700&display=swap');
+
+.metrics-dashboard {
+  font-family: 'Lato', 'Source Sans Pro', 'Arial', sans-serif;
+  background-color: #FFFFFF;
+  color: #222222;
+  padding: 32px;
 }
 
 .metrics-dashboard .metric-card {
   min-width: 0;
   width: 100%;
   max-width: 100%;
-  min-height: 135px;
-  margin-bottom: 0;
-  padding: 16px 14px 12px 14px;
+  min-height: 220px;
+  background-color: #FFFFFF;
+  border: 1px solid #E6E6E6;
+  /* Subtle grid-line color for definition */
+  border-radius: 4px;
+  /* Minimalist, clean */
+  padding: 24px;
   box-sizing: border-box;
-  border-radius: 7px;
   position: relative;
-  background: #f9fafd;
-  box-shadow: 0 2px 6px rgba(0, 25, 75, 0.08);
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+  box-shadow: none;
+  /* Removed heavy shadows for "calm" look */
+}
+
+.metrics-dashboard .metric-card:hover {
+  border-color: #4F9DD7;
+  box-shadow: 0 4px 12px rgba(0, 58, 143, 0.05);
+}
+
+.metrics-dashboard .metric-card h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #003A8F;
+  /* UNHCR Dark Blue */
+  margin: 0 0 20px 0;
+  text-align: left;
+  line-height: 1.2;
 }
 
 .metrics-dashboard .expand-btn {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  opacity: 0.6;
-  transition: opacity 0.2s;
+  top: 16px;
+  right: 16px;
+  color: #BDBDBD;
+  opacity: 0.8;
 }
 
 .metrics-dashboard .expand-btn:hover {
+  color: #0072BC;
   opacity: 1;
-  background: rgba(0, 0, 0, 0.05);
+  background-color: #D9E8F5;
 }
 
 .metrics-dashboard .chart-container {
-  min-height: 160px;
-  max-height: 185px;
-  height: 185px;
+  min-height: 240px;
+  height: 240px;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: #fff;
+  background-color: #FFFFFF;
+}
+
+.metrics-dashboard .section-title {
+  margin-top: 56px;
+  margin-bottom: 32px;
+  font-weight: 700;
+  font-size: 1.6rem;
+  color: #003A8F;
+  border-bottom: 2px solid #0072BC;
+  display: block;
+  padding-bottom: 8px;
+}
+
+.metrics-dashboard .metric-value {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.metrics-dashboard .metric-desc {
+  font-size: 0.85rem;
+  color: #555555;
+  margin-top: 12px;
+  text-align: center;
+  font-weight: 400;
 }

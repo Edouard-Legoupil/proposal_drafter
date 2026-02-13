@@ -1,82 +1,257 @@
 {
     "template_type": "Concept Note",
     "donors": [
-        "UN Peacebuilding Fund - Gender and Youth Promotion Initiative",
         "UN Peacebuilding Fund - Immediate Response Facility",
-        "UN Peacebuilding Fund - Peacebuilding and Recovery Facility",
-        "UN Peacebuilding Fund - Chad",
-        "UN Peacebuilding Fund - DRC",
-        "UN Peacebuilding Fund - Mauritania",
-        "UN Peacebuilding Fund - Sudan",
-        "UN Peacebuilding Fund - Burkina Faso"
+        "UN Peacebuilding Fund - Peacebuilding and Recovery Facility"
     ],
     "special_requirements": {
         "instructions": [
-            "Strictly base all content on the provided inputs and knowledge base.",
-            "Do not invent or hallucinate facts, figures, or dates.",
-            "If information is missing, explicitly state that it is not available in the context.",
-            "Ensure tone, style, and formatting match a professional humanitarian concept note.",
-            "when referencing donor, use donor name and never  donor_id",
-            "when referencing outcomes, use outcome name and never  outcome_id",
-            "when referencing, field context, use field_context name and never field context_id"
+            "Strictly base all content on provided contextual inputs.",
+            "Do not invent or hallucinate facts, figures, dates, or actors.",
+            "If data is unavailable, explicitly state that it is not provided.",
+            "If there is no mention in the context of the targeted population size for the project, asssume the project target the entire population of interest for the designated field context.",
+            "Use a formal, objective, and analytical tone. Avoid casual, emotional, or advocacy-oriented language. Present information factually and neutrally, focusing on clarity, precision, and concise explanation of context, needs, risks, and expected results. Avoid exaggeration, unsupported claims, value judgments, and political statements. Use diplomatic and respectful wording, and maintain consistent technical terminology appropriate for peacebuilding, conflict analysis, implementation, and results reporting.",
+            "Use donor names, never IDs.",
+            "Use outcome names, never outcome IDs.",
+            "Use field_context names, never field_context IDs."
         ]
     },
+    "section_sequence": [
+        "Summary",
+        "Rationale",
+        "Country",
+        "Project Title",
+        "PBF Project Modality",
+        "Geographic Zones",
+        "Project Duration Months",
+        "PBF Focus Area",
+        "UNSDCF Outcomes",
+        "Project Rationale",
+        "Stakeholders Consulted",
+        "Expected Project Risk Marker",
+        "Gender Equality Contribution",
+        "Youth Peace Security Contribution",
+        "Vulnerable Groups Contribution",
+        "Implementation Approach",
+        "Proposed Interventions",
+        "SDG Contribution",
+        "Ownership",
+        "Complementarity",
+        "Funding Disbursed into a Trust Fund",
+        "Direct Recipient Organizations",
+        "Total Budget by Recipient",
+        "Budget Estimate"
+    ],
     "sections": [
         {
+            "section_name": "Country",
+            "section_label": "Country",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 50,
+            "instructions": "State the country name. Provide a very short factual statement, maximum 50 words."
+        },
+        {
+            "section_name": "Project Title",
+            "section_label": "Project Title",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 100,
+            "instructions": "Provide the official project title."
+        },
+        {
             "section_name": "Summary",
-            "word_limit": 500,
+            "word_limit": 400,
             "format_type": "text",
             "instructions": "Briefly summarize the crisis/emergency context, humanitarian needs, target population, and key proposed activities. Focus on the core value proposition of the project.",
             "mandatory": true
         },
         {
             "section_name": "Rationale",
-            "word_limit": 300,
+            "word_limit": 600,
             "format_type": "text",
-            "instructions": "Justify the project: What is the emergency? Why is this response necessary now? What is the gap being addressed?",
+            "instructions": "Justify the project within the field context: What is the emergency? Why is this response necessary now? What is the gap being addressed?",
             "mandatory": true
         },
         {
-            "section_name": "Project Description",
+            "section_name": "PBF Project Modality",
+            "section_label": "PBF Project Modality",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 50,
+            "instructions": "State the project modality using one of the following: IRF (Immediate Response Facility) or PRF (Peacebuilding and Recovery Facility). Provide a very short factual statement, maximum 50 words."
+        },
+        {
+            "section_name": "Funding Disbursed into a Trust Fund",
+            "section_label": "Funding Disbursed into a Trust Fund",
+            "format_type": "text",
+            "mandatory": false,
+            "word_limit": 50,
+            "instructions": "Indicate whether funding will be disbursed into a Country Trust Fund or Regional Trust Fund. Specify the name of the recipient fund. Provide a very short factual statement, maximum 50 words."
+        },
+        {
+            "section_name": "Direct Recipient Organizations",
+            "section_label": "Direct Recipient Organizations",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 50,
+            "instructions": "List all direct project recipient organizations, beginning with the convening agency. Provide a very short factual statement, maximum 50 words."
+        },
+        {
+            "section_name": "Project Duration Months",
+            "section_label": "Project Duration (Months)",
+            "format_type": "number",
+            "mandatory": true,
+            "instructions": "State the proposed duration in months. IRF projects may not exceed 24 months; PRF projects may not exceed 36 months. Provide a numeric value only."
+        },
+        {
+            "section_name": "Geographic Zones",
+            "section_label": "Expected Geographic Zones",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 50,
+            "instructions": "Identify the geographic zones where project activities will occur. Provide a very short factual statement, maximum 50 words."
+        },
+        {
+            "section_name": "Total Budget by Recipient",
+            "section_label": "Total Proposed PBF Budget by Recipient",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 50,
+            "instructions": "Provide a short factual summary of the proposed budget distribution by recipient organization. Maximum 50 words."
+        },
+        {
+            "section_name": "Stakeholders Consulted",
+            "section_label": "Stakeholders Consulted",
+            "format_type": "text",
+            "mandatory": false,
+            "word_limit": 50,
+            "instructions": "Provide a concise list of stakeholders consulted during concept note preparation. Maximum 50 words."
+        },
+        {
+            "section_name": "Expected Project Risk Marker",
+            "section_label": "Expected Project Risk Marker",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 50,
+            "instructions": "State one of the following: Risk Marker 0 (low), Risk Marker 1 (medium), or Risk Marker 2 (high). Provide a very short factual statement, maximum 50 words."
+        },
+        {
+            "section_name": "Gender Equality Contribution",
+            "section_label": "Contribution to Women's Empowerment & Gender Equality",
+            "format_type": "text",
+            "mandatory": false,
+            "word_limit": 50,
+            "instructions": "State Yes or No. If Yes, describe contributions in no more than 50 words."
+        },
+        {
+            "section_name": "Youth Peace Security Contribution",
+            "section_label": "Contribution to Youth, Peace & Security",
+            "format_type": "text",
+            "mandatory": false,
+            "word_limit": 50,
+            "instructions": "State Yes or No. If Yes, describe contributions in no more than 50 words."
+        },
+        {
+            "section_name": "Vulnerable Groups Contribution",
+            "section_label": "Contribution to Vulnerable/Marginalized Groups",
+            "format_type": "text",
+            "mandatory": false,
+            "word_limit": 50,
+            "instructions": "Identify vulnerable or marginalized groups and describe relevant considerations. Provide a very short factual statement, maximum 50 words."
+        },
+        {
+            "section_name": "PBF Focus Area",
+            "section_label": "PBF Focus Area",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 50,
+            "instructions": "Select exactly one of the following PBF Focus Areas: 1.1 Security Sector Reform (SSR); 1.2 Rule of Law; 1.3 Disarmament, Demobilization and Reintegration (DDR); 1.4 Political Dialogue; 2.1 National Reconciliation; 2.2 Democratic Governance; 2.3 Conflict Prevention/Management; 3.1 Employment; 3.2 Equitable Access to Social Services; 4.1 Strengthening of Essential National State Capacity; 4.2 Extension of State Authority/Local Administration; 4.3 Governance of Peacebuilding Resources (including PBF Secretariats). Maximum 50 words."
+        },
+        {
+            "section_name": "UNSDCF Outcomes",
+            "section_label": "UNSDCF Outcomes",
+            "format_type": "text",
+            "mandatory": false,
+            "word_limit": 50,
+            "instructions": "State any relevant UNSDCF outcomes in a short factual form. Maximum 50 words."
+        },
+        {
+            "section_name": "SDG Contribution",
+            "section_label": "SDG Contribution",
+            "format_type": "text",
+            "mandatory": false,
+            "word_limit": 50,
+            "instructions": "Identify relevant Sustainable Development Goals in a short factual form. Maximum 50 words."
+        },
+        {
+            "section_name": "Project Rationale",
+            "section_label": "Project Rationale and Sustaining Peace Problem",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 750,
+            "instructions": "Describe the core grievance, conflict factor, or peacebuilding issue; how it manifests in project locations; differences affecting groups including gendered dynamics; time sensitivity; and evidence supporting the analysis. Provide a structured, factual analysis."
+        },
+        {
+            "section_name": "Complementarity",
+            "section_label": "Complementarity with Other Interventions",
+            "format_type": "text",
+            "mandatory": true,
             "word_limit": 500,
-            "format_type": "text",
-            "instructions": "Describe the main proposed interventions, expected outputs, and intended impact on the affected population.",
-            "mandatory": true
+            "instructions": "Describe past and current initiatives addressing the issue, achievements, remaining gaps, complementarities, and how the proposed project builds on or differs from previous interventions."
         },
         {
-            "section_name": "Implementation and Coordination Arrangements",
-            "word_limit": 300,
+            "section_name": "Ownership",
+            "section_label": "National Ownership and Sustainability",
             "format_type": "text",
-            "instructions": "Briefly describe coordination with government and other humanitarian actors, and the roles of key partners.",
-            "mandatory": true
+            "mandatory": true,
+            "word_limit": 500,
+            "instructions": "Describe relevance to national and local priorities, evidence of ownership, required changes from other actors, and how the project’s results will be sustained after completion."
+        },
+        {
+            "section_name": "Proposed Interventions",
+            "section_label": "Proposed Interventions",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 750,
+            "instructions": "Describe intended institutional and behavioral changes, target groups, proposed outcomes, and major interventions."
+        },
+        {
+            "section_name": "Implementation Approach",
+            "section_label": "Proposed Implementation Approach",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 500,
+            "instructions": "Describe geographic zones, target groups, comparative advantage of each recipient entity, involvement of CSOs, partnership arrangements, and key risks or Do No Harm considerations."
         },
         {
             "section_name": "Budget Estimate",
-            "instructions": "Provide a high-level budget breakdown by major category.",
+            "section_label": "Budget Estimate",
             "format_type": "table",
+            "mandatory": true,
+            "instructions": "Provide a high-level budget table summarizing major cost categories.",
             "columns": [
                 {
                     "name": "Category",
                     "format_type": "text",
-                    "instructions": "Major budget category (e.g., Staffing, Supplies, Grants)."
+                    "instructions": "Specify the major budget category."
                 },
                 {
                     "name": "Estimated Cost (USD)",
                     "format_type": "number",
-                    "instructions": "High-level estimate."
+                    "instructions": "Provide the estimated cost in USD."
                 }
             ],
             "rows": [
                 {
                     "row_title": "Total Direct Costs",
-                    "instructions": "Estimate total direct project costs."
+                    "instructions": "Provide the estimate for all direct project costs."
                 },
                 {
                     "row_title": "Support Costs",
-                    "instructions": "Estimate indirect/support costs."
+                    "instructions": "Provide the estimate for indirect or support costs."
                 }
-            ],
-            "mandatory": true
+            ]
         }
     ]
 }

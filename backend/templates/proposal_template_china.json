@@ -10,13 +10,178 @@
             "Strictly base all content on the provided inputs and knowledge base.",
             "Do not invent or hallucinate facts, figures, or dates.",
             "If information is missing, explicitly state that it is not available in the context.",
+            "If there is no mention in the context of the targeted population size for the project, asssume the project target the entire population of interest for the designated field context.",
             "Ensure tone, style, and formatting match a professional humanitarian proposal.",
             "when referencing donor, use donor name and never  donor_id",
             "when referencing outcomes, use outcome name and never  outcome_id",
             "when referencing, field context, use field_context name and never field context_id"
         ]
     },
+    "section_sequence": [
+        "Project Background",
+        "Necessity Requirements",
+        "Necessity Conformity",
+        "Objectives SDGs",
+        "Objectives Specific",
+        "Expected Outputs",
+        "Conditions Prep Work",
+        "Conditions Required",
+        "Similar Projects Table",
+        "Capabilities Applicant",
+        "Management Structure and Division of Labor",
+        "Management Team Table",
+        "Internal Control System",
+        "Anti-corruption",
+        "Procurement System",
+        "Control Partner Selection",
+        "Risk Assessment/Management",
+        "Environmental & Social Impact Systems",
+        "Emergency Management System",
+        "Asset Management",
+        "Monitoring/Evaluation System",
+        "Implementation Adopted Standards",
+        "Implementation Plan",
+        "Procurement_Plan",
+        "Implementation Progress",
+        "Budget Calculation Basis",
+        "Budget Items Table",
+        "Budget Reporting Staff Table",
+        "Project Budget Overall",
+        "Budget Parameters ISC",
+        "Project Financing Usage",
+        "Financial Analysis",
+        "Project Risk Analysis Table",
+        "Project Comprehensive Impact Analysis",
+        "Attachments List",
+        "Bank Details",
+        "Legal Declaration",
+        "China Aid Logo Communication Plan",
+        "Intellectual Property Administration Plan",
+        "Maintenance Support Plan",
+        "Project Information"
+    ],
     "sections": [
+        {
+            "section_name": "Project Information",
+            "section_label": "Project Information",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Fill the table strictly using the provided project information. Do not infer or invent data.",
+            "columns": [
+                {
+                    "name": "Field",
+                    "format_type": "text",
+                    "instructions": "Field Name"
+                },
+                {
+                    "name": "Value",
+                    "format_type": "text",
+                    "instructions": "Enter the value for this field."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Proposal ID",
+                    "instructions": "Proposal ID (Filled by GDF)"
+                },
+                {
+                    "row_title": "Project Name Full",
+                    "instructions": "Project Name \u2013 Full"
+                },
+                {
+                    "row_title": "Project Name Short",
+                    "instructions": "Project Name \u2013 Short (\u226415 words)"
+                },
+                {
+                    "row_title": "Concept Note ID",
+                    "instructions": "Concept Note ID"
+                },
+                {
+                    "row_title": "Applicant Name",
+                    "instructions": "Applicant"
+                },
+                {
+                    "row_title": "Applicant Contact",
+                    "instructions": "Applicant Contact (Representative)"
+                },
+                {
+                    "row_title": "Applicant Address",
+                    "instructions": "Applicant Address"
+                },
+                {
+                    "row_title": "Applicant Title",
+                    "instructions": "Applicant Title"
+                },
+                {
+                    "row_title": "Applicant Telephone",
+                    "instructions": "Applicant Telephone"
+                },
+                {
+                    "row_title": "Applicant Email",
+                    "instructions": "Applicant Email"
+                },
+                {
+                    "row_title": "Partners",
+                    "instructions": "Implementing Partners (list)"
+                },
+                {
+                    "row_title": "Country/Region of Project Implementation",
+                    "instructions": "Country/Region of Project Implementation"
+                },
+                {
+                    "row_title": "Area of Assistance",
+                    "instructions": "Area of Assistance"
+                },
+                {
+                    "row_title": "Brief Introduction",
+                    "instructions": "Brief Introduction (\u2264300 words)"
+                },
+                {
+                    "row_title": "SDGs Major",
+                    "instructions": "Major relevant SDGs (1\u20132 goals; \u22643 sub-goals each)"
+                },
+                {
+                    "row_title": "SDGs Other",
+                    "instructions": "Other relevant SDGs (\u22643)"
+                },
+                {
+                    "row_title": "Implementation Duration Months",
+                    "instructions": "Implementation Duration (Months)"
+                },
+                {
+                    "row_title": "Total Budget USD",
+                    "instructions": "Total Budget (USD)"
+                },
+                {
+                    "row_title": "GDF Applied Amount USD",
+                    "instructions": "Amount of Applied Fund from GDF (USD)"
+                },
+                {
+                    "row_title": "Other Funding USD",
+                    "instructions": "Other Funding (USD)"
+                },
+                {
+                    "row_title": "Beneficiaries Total",
+                    "instructions": "Total number of beneficiaries"
+                },
+                {
+                    "row_title": "Beneficiaries Direct",
+                    "instructions": "Number of direct beneficiaries"
+                },
+                {
+                    "row_title": "Beneficiaries Women",
+                    "instructions": "Women (if any)"
+                },
+                {
+                    "row_title": "Beneficiaries Children",
+                    "instructions": "Children (if any)"
+                },
+                {
+                    "row_title": "Beneficiaries Indirect",
+                    "instructions": "Number of indirect beneficiaries (if any)"
+                }
+            ]
+        },
         {
             "section_name": "Project Background",
             "section_label": "1. Project Background",
@@ -251,6 +416,7 @@
             "section_parent": "6. Capabilities of Project Implementation and Management",
             "format_type": "text",
             "mandatory": true,
+            "word_limit": 350,
             "instructions": "Provide standard narratives for internal control and oversight; subsections below detail specific systems."
         },
         {
@@ -429,7 +595,8 @@
             "section_label": "8. Project Implementation Progress (Gantt)",
             "format_type": "text",
             "mandatory": false,
-            "instructions": "Linked to Attachment 2 Gantt Chart; provide timeline across Y1\u2013Y2 (M1\u2013M12) and responsible parties."
+            "word_limit": 200,
+            "instructions": "Linked to Attachment 2 Gantt Chart; provide timeline across Y1–Y2 (M1–M12) and responsible parties."
         },
         {
             "section_name": "Budget Calculation Basis",
@@ -534,6 +701,7 @@
             "section_parent": "9. Project Budget",
             "format_type": "text",
             "mandatory": false,
+            "word_limit": 150,
             "instructions": "To be prepared based on itemized budget (Attachment 3)."
         },
         {
@@ -542,6 +710,7 @@
             "section_parent": "9. Project Budget",
             "format_type": "text",
             "mandatory": false,
+            "word_limit": 200,
             "instructions": "If any other funding exists, provide financing plan and usage plan (linked to Attachments 2 & 3)."
         },
         {
@@ -675,127 +844,6 @@
             "mandatory": true,
             "word_limit": 200,
             "instructions": "Insert declaration text and fields for name, seal, and date as per template; note system automation of partner acknowledgement."
-        },
-        {
-            "section_name": "Project Information",
-            "section_label": "Project Information",
-            "format_type": "table",
-            "mandatory": true,
-            "instructions": "Fill the table strictly using the provided project information. Do not infer or invent data.",
-            "columns": [
-                {
-                    "name": "Field",
-                    "format_type": "text",
-                    "instructions": "Field Name"
-                },
-                {
-                    "name": "Value",
-                    "format_type": "text",
-                    "instructions": "Enter the value for this field."
-                }
-            ],
-            "rows": [
-                {
-                    "row_title": "Proposal ID",
-                    "instructions": "Proposal ID (Filled by GDF)"
-                },
-                {
-                    "row_title": "Project Name Full",
-                    "instructions": "Project Name \u2013 Full"
-                },
-                {
-                    "row_title": "Project Name Short",
-                    "instructions": "Project Name \u2013 Short (\u226415 words)"
-                },
-                {
-                    "row_title": "Concept Note ID",
-                    "instructions": "Concept Note ID"
-                },
-                {
-                    "row_title": "Applicant Name",
-                    "instructions": "Applicant"
-                },
-                {
-                    "row_title": "Applicant Contact",
-                    "instructions": "Applicant Contact (Representative)"
-                },
-                {
-                    "row_title": "Applicant Address",
-                    "instructions": "Applicant Address"
-                },
-                {
-                    "row_title": "Applicant Title",
-                    "instructions": "Applicant Title"
-                },
-                {
-                    "row_title": "Applicant Telephone",
-                    "instructions": "Applicant Telephone"
-                },
-                {
-                    "row_title": "Applicant Email",
-                    "instructions": "Applicant Email"
-                },
-                {
-                    "row_title": "Partners",
-                    "instructions": "Implementing Partners (list)"
-                },
-                {
-                    "row_title": "Country/Region of Project Implementation",
-                    "instructions": "Country/Region of Project Implementation"
-                },
-                {
-                    "row_title": "Area of Assistance",
-                    "instructions": "Area of Assistance"
-                },
-                {
-                    "row_title": "Brief Introduction",
-                    "instructions": "Brief Introduction (\u2264300 words)"
-                },
-                {
-                    "row_title": "SDGs Major",
-                    "instructions": "Major relevant SDGs (1\u20132 goals; \u22643 sub-goals each)"
-                },
-                {
-                    "row_title": "SDGs Other",
-                    "instructions": "Other relevant SDGs (\u22643)"
-                },
-                {
-                    "row_title": "Implementation Duration Months",
-                    "instructions": "Implementation Duration (Months)"
-                },
-                {
-                    "row_title": "Total Budget USD",
-                    "instructions": "Total Budget (USD)"
-                },
-                {
-                    "row_title": "GDF Applied Amount USD",
-                    "instructions": "Amount of Applied Fund from GDF (USD)"
-                },
-                {
-                    "row_title": "Other Funding USD",
-                    "instructions": "Other Funding (USD)"
-                },
-                {
-                    "row_title": "Beneficiaries Total",
-                    "instructions": "Total number of beneficiaries"
-                },
-                {
-                    "row_title": "Beneficiaries Direct",
-                    "instructions": "Number of direct beneficiaries"
-                },
-                {
-                    "row_title": "Beneficiaries Women",
-                    "instructions": "Women (if any)"
-                },
-                {
-                    "row_title": "Beneficiaries Children",
-                    "instructions": "Children (if any)"
-                },
-                {
-                    "row_title": "Beneficiaries Indirect",
-                    "instructions": "Number of indirect beneficiaries (if any)"
-                }
-            ]
         }
     ]
 }

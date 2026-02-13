@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
 import './UserAdminModal.css';
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api";
 
 export default function UserAdminModal({ show, onClose }) {
     const [users, setUsers] = useState([]);
@@ -15,6 +15,8 @@ export default function UserAdminModal({ show, onClose }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+
+    const [newTeamName, setNewTeamName] = useState('');
 
     useEffect(() => {
         if (show) {
@@ -39,7 +41,8 @@ export default function UserAdminModal({ show, onClose }) {
                     roles: (optionsData.roles || []).map(r => ({ value: r.id, label: r.name })),
                     donor_groups: (optionsData.donor_groups || []).map(dg => ({ value: dg, label: dg })),
                     outcomes: (optionsData.outcomes || []).map(o => ({ value: o.id, label: o.name })),
-                    field_contexts: (optionsData.field_contexts || []).map(fc => ({ value: fc.id, label: fc.name }))
+                    field_contexts: (optionsData.field_contexts || []).map(fc => ({ value: fc.id, label: fc.name })),
+                    teams: (optionsData.teams || []).map(t => ({ value: t.id, label: t.name }))
                 });
             } else {
                 setError("Failed to fetch admin data. Are you sure you are an admin?");
@@ -49,6 +52,75 @@ export default function UserAdminModal({ show, onClose }) {
             console.error(err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleCreateTeam = async () => {
+        if (!newTeamName.trim()) return;
+        try {
+            const response = await fetch(`${API_BASE_URL}/admin/teams`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: newTeamName }),
+                credentials: 'include'
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setOptions(prev => ({
+                    ...prev,
+                    teams: [...prev.teams, { value: data.team.id, label: data.team.name }].sort((a, b) => a.label.localeCompare(b.label))
+                }));
+                setNewTeamName('');
+                alert("Team created successfully.");
+            } else {
+                const data = await response.json();
+                alert(data.detail || "Failed to create team.");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Error creating team.");
+        }
+    };
+
+    const handleUpdateUserTeam = async (userId, selectedOption) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/team`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ team_id: selectedOption.value }),
+                credentials: 'include'
+            });
+            if (response.ok) {
+                setUsers(users.map(u => {
+                    if (u.id === userId) {
+                        return { ...u, team_name: selectedOption.label, team_id: selectedOption.value };
+                    }
+                    return u;
+                }));
+            } else {
+                alert("Failed to update user team.");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Error updating user team.");
+        }
+    };
+
+    const handleDeleteUser = async (userId) => {
+        if (!window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) return;
+        try {
+            const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+            if (response.ok) {
+                setUsers(users.filter(u => u.id !== userId));
+            } else {
+                alert("Failed to delete user.");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Error deleting user.");
         }
     };
 
@@ -111,14 +183,35 @@ export default function UserAdminModal({ show, onClose }) {
                 </div>
 
                 <div className="admin-modal-body">
-                    <div className="search-bar">
-                        <input
-                            type="text"
-                            placeholder="Search users by name, email or team..."
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                        />
+                    <div className="admin-controls">
+                        <div className="search-bar">
+                            <input
+                                type="text"
+                                placeholder="Search users by name, email or team..."
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <div className="create-team-container">
+                            <input
+                                type="text"
+                                placeholder="New Team Name"
+                                value={newTeamName}
+                                onChange={e => setNewTeamName(e.target.value)}
+                                className="create-team-input"
+                            />
+                            <button className="primary-button small" onClick={handleCreateTeam} disabled={!newTeamName.trim()}>
+                                <i className="fa-solid fa-plus"></i> Create Team
+                            </button>
+                        </div>
                     </div>
+
+                    {users.some(u => u.requested_role_id) && (
+                        <div className="admin-notification">
+                            <i className="fa-solid fa-bell"></i>
+                            <strong>Pending Requests:</strong> {users.filter(u => u.requested_role_id).length} users are requesting elevated access.
+                        </div>
+                    )}
 
                     {loading ? (
                         <div className="admin-loading">Loading users...</div>
@@ -130,21 +223,39 @@ export default function UserAdminModal({ show, onClose }) {
                                 <thead>
                                     <tr>
                                         <th>User</th>
+                                        <th>Team</th>
                                         <th>Roles</th>
                                         <th>Donor Groups</th>
                                         <th>Outcomes</th>
                                         <th>Field Contexts</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {filteredUsers.map(user => (
-                                        <tr key={user.id}>
+                                        <tr key={user.id} className={user.requested_role_id ? 'row-highlight' : ''}>
                                             <td>
                                                 <div className="user-info">
-                                                    <span className="user-name">{user.name}</span>
+                                                    <span className="user-name">
+                                                        {user.name}
+                                                        {user.requested_role_id && (
+                                                            <span className="request-badge" title={`Requested: ${user.requested_role_name}`}>
+                                                                Pending: {user.requested_role_name}
+                                                            </span>
+                                                        )}
+                                                    </span>
                                                     <span className="user-email">{user.email}</span>
-                                                    <span className="user-team">{user.team_name || 'No Team'}</span>
                                                 </div>
+                                            </td>
+                                            <td>
+                                                <Select
+                                                    options={options.teams}
+                                                    value={options.teams.find(t => t.label === user.team_name) || { label: user.team_name || 'Select Team', value: user.team_id }}
+                                                    onChange={(selected) => handleUpdateUserTeam(user.id, selected)}
+                                                    className="admin-select team-select"
+                                                    placeholder="Team..."
+                                                    menuPortalTarget={document.body}
+                                                />
                                             </td>
                                             <td>
                                                 <Select
@@ -152,7 +263,7 @@ export default function UserAdminModal({ show, onClose }) {
                                                     options={options.roles}
                                                     value={(user.roles || []).map(r => ({ value: r.id, label: r.name }))}
                                                     onChange={(selected) => handleSettingChange(user.id, 'roles', selected)}
-                                                    className="admin-select"
+                                                    className={`admin-select ${user.requested_role_id ? 'select-highlight' : ''}`}
                                                     placeholder="Roles..."
                                                 />
                                             </td>
@@ -191,6 +302,11 @@ export default function UserAdminModal({ show, onClose }) {
                                                     className="admin-select"
                                                     placeholder="Field Contexts..."
                                                 />
+                                            </td>
+                                            <td>
+                                                <button className="icon-button delete-button" onClick={() => handleDeleteUser(user.id)} title="Delete User">
+                                                    <i className="fa-solid fa-trash-can"></i>
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}

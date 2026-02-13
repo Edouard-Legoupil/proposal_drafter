@@ -15,8 +15,9 @@ import PdfUploadModal from '../../components/PdfUploadModal/PdfUploadModal'
 import ProgressModal from '../../components/ProgressModal/ProgressModal';
 import Select from 'react-select';
 import CreatableSelect from 'react-select/creatable';
+import SingleSelectUserModal from '../../components/SingleSelectUserModal/SingleSelectUserModal'
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
 
 import fileIcon from "../../assets/images/chat-titleIcon.svg"
 import arrow from "../../assets/images/expanderArrow.svg"
@@ -66,6 +67,10 @@ export default function Chat(props) {
         const [users, setUsers] = useState([])
         const [selectedUsers, setSelectedUsers] = useState([])
         const [associatedKnowledgeCards, setAssociatedKnowledgeCards] = useState([]);
+        const [validationMissingFields, setValidationMissingFields] = useState([]);
+        const [isValidationModalOpen, setIsValidationModalOpen] = useState(false);
+        const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+        const [transferUsers, setTransferUsers] = useState([]);
 
         const [donors, setDonors] = useState([]);
         const [outcomes, setOutcomes] = useState([]);
@@ -76,13 +81,15 @@ export default function Chat(props) {
         const [newFieldContexts, setNewFieldContexts] = useState([]);
         const [newBudgetRanges, setNewBudgetRanges] = useState([]);
         const [newDurations, setNewDurations] = useState([]);
+        const [geographicCoverages, setGeographicCoverages] = useState([]);
 
         async function fetchData() {
                 try {
-                        const [donorsRes, outcomesRes, fieldContextsRes] = await Promise.all([
+                        const [donorsRes, outcomesRes, fieldContextsRes, geoCoveragesRes] = await Promise.all([
                                 fetch(`${API_BASE_URL}/donors`, { credentials: 'include' }),
                                 fetch(`${API_BASE_URL}/outcomes`, { credentials: 'include' }),
-                                fetch(`${API_BASE_URL}/field-contexts`, { credentials: 'include' })
+                                fetch(`${API_BASE_URL}/field-contexts`, { credentials: 'include' }),
+                                fetch(`${API_BASE_URL}/geographic-coverages`, { credentials: 'include' })
                         ]);
 
                         if (donorsRes.ok) {
@@ -98,6 +105,10 @@ export default function Chat(props) {
                                 const sortedFieldContexts = data.field_contexts.sort((a, b) => a.name.localeCompare(b.name));
                                 setFieldContexts(sortedFieldContexts);
                                 setFilteredFieldContexts(sortedFieldContexts);
+                        }
+                        if (geoCoveragesRes.ok) {
+                                const data = await geoCoveragesRes.json();
+                                setGeographicCoverages(data.geographic_coverages || []);
                         }
                 } catch (error) {
                         console.error("Error fetching form data:", error);
@@ -123,13 +134,40 @@ export default function Chat(props) {
                 })
 
                 if (response.ok) {
-                        const data = await response.json()
-                        setUsers(data.map(user => ({ id: user.id, name: user.name, team: user.team_name || 'Unassigned' })))
+                        const data = await response.json();
+                        // Handle both flat list and dictionary structure
+                        const userList = Array.isArray(data) ? data : (data.users || []);
+                        setUsers(userList.map(user => ({
+                                id: user.id,
+                                name: user.name,
+                                team: user.team_name || 'Unassigned'
+                        })));
+                }
+        }
+
+        async function getTransferUsers() {
+                const response = await fetch(`${API_BASE_URL}/users?role=proposal%20drafter`, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include'
+                })
+
+                if (response.ok) {
+                        const data = await response.json();
+                        const userList = Array.isArray(data) ? data : (data.users || []);
+                        setTransferUsers(userList.map(user => ({
+                                id: user.id,
+                                name: user.name,
+                                team: user.team_name || 'Unassigned'
+                        })));
+                } else {
+                        console.error("Failed to fetch transfer users", response.status);
                 }
         }
 
         useEffect(() => {
                 getUsers()
+                getTransferUsers()
         }, [])
 
         const [form_expanded, setFormExpanded] = useState(true)
@@ -200,25 +238,25 @@ export default function Chat(props) {
 
         const [buttonEnable, setButtonEnable] = useState(false)
         useEffect(() => {
-                if (userPrompt) {
-                        setButtonEnable(true)
+                const missing = getMissingFields();
+                setButtonEnable(missing.length === 0);
+        }, [userPrompt, formData])
 
-                        for (const property in formData) {
-                                const field = formData[property];
-                                if (field.mandatory) {
-                                        if (Array.isArray(field.value) && field.value.length === 0) {
-                                                setButtonEnable(false);
-                                                return;
-                                        } else if (!field.value) {
-                                                setButtonEnable(false);
-                                                return;
-                                        }
+        const getMissingFields = () => {
+                const missing = [];
+                if (!userPrompt.trim()) missing.push("Proposal Prompt Details");
+                for (const label in formData) {
+                        const field = formData[label];
+                        if (field.mandatory) {
+                                if (Array.isArray(field.value) && field.value.length === 0) {
+                                        missing.push(label);
+                                } else if (!field.value || (typeof field.value === 'string' && !field.value.trim())) {
+                                        missing.push(label);
                                 }
                         }
                 }
-                else
-                        setButtonEnable(false)
-        }, [userPrompt, formData])
+                return missing;
+        };
 
         const toKebabCase = (str) => {
                 return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -239,7 +277,7 @@ export default function Chat(props) {
                                 case "Country / Location(s)":
                                         return [...filteredFieldContexts, ...newFieldContexts].map(fc => ({ value: fc.id, label: fc.name }));
                                 case "Geographical Scope":
-                                        return ["One Country Operation", "Multiple Country", "One Region", "Route-Based-Approach", "Area-Based-Approach", "Global Coverage"].map(gc => ({ value: gc, label: gc }));
+                                        return geographicCoverages.map(gc => ({ value: gc, label: gc }));
                                 case "Duration":
                                         const durationOptions = ["1 month", "3 months", "6 months", "12 months", "18 months", "24 months", "30 months", "36 months"];
                                         return [...durationOptions.map(d => ({ value: d, label: d })), ...newDurations.map(d => ({ value: d.id, label: d.name }))];
@@ -502,6 +540,12 @@ export default function Chat(props) {
         }
 
         async function handleGenerateClick() {
+                const missing = getMissingFields();
+                if (missing.length > 0) {
+                        setValidationMissingFields(missing);
+                        setIsValidationModalOpen(true);
+                        return;
+                }
                 setGenerateLoading(true);
                 setFormExpanded(false);
                 sessionStorage.removeItem("proposal_id"); // Clear old ID to prevent polling it
@@ -1031,6 +1075,27 @@ export default function Chat(props) {
                 }
         }
 
+        async function confirmTransfer(new_owner_id) {
+                const proposalId = sessionStorage.getItem("proposal_id");
+                if (!proposalId) return;
+
+                const response = await fetch(`${API_BASE_URL}/proposals/${proposalId}/transfer`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ new_owner_id }),
+                        credentials: 'include'
+                })
+
+                if (response.ok) {
+                        setNotif({ open: true, message: 'Proposal ownership transferred successfully!', severity: 'success' });
+                        setIsTransferModalOpen(false);
+                        // Redirect to dashboard or refresh profile check
+                        navigate('/dashboard');
+                } else {
+                        setNotif({ open: true, message: 'Failed to transfer proposal ownership.', severity: 'error' });
+                }
+        }
+
         function handleAssociateKnowledgeConfirm(selectedCards) {
                 setAssociatedKnowledgeCards(selectedCards);
         }
@@ -1065,6 +1130,13 @@ export default function Chat(props) {
                                 title="Select Users for Peer Review"
                                 showDeadline={true}
                         />
+                        <SingleSelectUserModal
+                                isOpen={isTransferModalOpen}
+                                onClose={() => setIsTransferModalOpen(false)}
+                                options={transferUsers}
+                                title="Transfer Proposal Ownership to another Focal Point"
+                                onConfirm={confirmTransfer}
+                        />
                         <AssociateKnowledgeModal
                                 isOpen={isAssociateKnowledgeModalOpen}
                                 onClose={() => setIsAssociateKnowledgeModalOpen(false)}
@@ -1079,6 +1151,25 @@ export default function Chat(props) {
                                 onClose={() => setIsPdfUploadModalOpen(false)}
                                 onConfirm={handlePdfUpload}
                         />
+
+                        {/* Validation Modal */}
+                        <dialog open={isValidationModalOpen} className="Chat_regenerate" style={{ height: 'auto', maxHeight: '80vh', top: '10%' }}>
+                                <header className="Chat_regenerate_header">
+                                        Data Missing
+                                        <img src={regenerateClose} alt="" onClick={() => setIsValidationModalOpen(false)} style={{ cursor: 'pointer' }} />
+                                </header>
+                                <main className="Chat_right" style={{ padding: '20px' }}>
+                                        <p style={{ marginBottom: '15px' }}>The following mandatory parameters are missing:</p>
+                                        <ul style={{ listStyleType: 'disc', paddingLeft: '20px', marginBottom: '20px', color: '#141419' }}>
+                                                {validationMissingFields.map((field, index) => (
+                                                        <li key={index} style={{ marginBottom: '5px' }}>{field}</li>
+                                                ))}
+                                        </ul>
+                                        <div className="Chat_inputArea_buttonContainer">
+                                                <CommonButton onClick={() => setIsValidationModalOpen(false)} label="Close" />
+                                        </div>
+                                </main>
+                        </dialog>
                         {((!isMobile && sidebarOpen) || (isMobile && isMobileMenuOpen)) && <aside>
                                 <ul className='Chat_sidebar' data-testid="chat-sidebar">
                                         <li
@@ -1190,7 +1281,22 @@ export default function Chat(props) {
 
                                                         <div className="Chat_inputArea_buttonContainer">
                                                                 <div style={{ position: 'relative' }}>
-                                                                        <CommonButton onClick={() => setIsAssociateKnowledgeModalOpen(true)} label="Manage Knowledge" disabled={proposalStatus !== 'draft'} icon={knowIcon} data-testid="manage-knowledge-button" />
+                                                                        <CommonButton
+                                                                                onClick={() => {
+                                                                                        const missing = getMissingFields();
+                                                                                        if (missing.length > 0) {
+                                                                                                setValidationMissingFields(missing);
+                                                                                                setIsValidationModalOpen(true);
+                                                                                        } else {
+                                                                                                setIsAssociateKnowledgeModalOpen(true);
+                                                                                        }
+                                                                                }}
+                                                                                label="Manage Knowledge"
+                                                                                disabled={proposalStatus !== 'draft' || !buttonEnable}
+                                                                                className={!buttonEnable ? "inactive" : ""}
+                                                                                icon={knowIcon}
+                                                                                data-testid="manage-knowledge-button"
+                                                                        />
                                                                         {associatedKnowledgeCards.length > 0 && (
                                                                                 <div className="associated-knowledge-display" data-testid="associated-knowledge-cards">
                                                                                         <h4>Associated Knowledge Cards:</h4>
@@ -1216,7 +1322,16 @@ export default function Chat(props) {
                                                                 </div>
 
                                                                 <div style={{ marginLeft: 'auto' }}>
-                                                                        <CommonButton onClick={handleGenerateClick} icon={generateIcon} label={generateLabel} loading={generateLoading} loadingLabel={generateLabel === "Generate" ? "Generating (~ 2 mins of patience...) " : "Regenerating (~ 2 mins of patience...)"} disabled={!buttonEnable || proposalStatus !== 'draft'} data-testid="generate-button" />
+                                                                        <CommonButton
+                                                                                onClick={handleGenerateClick}
+                                                                                icon={generateIcon}
+                                                                                label={generateLabel}
+                                                                                loading={generateLoading}
+                                                                                loadingLabel={generateLabel === "Generate" ? "Generating (~ 2 mins of patience...) " : "Regenerating (~ 2 mins of patience...)"}
+                                                                                disabled={proposalStatus !== 'draft' || !buttonEnable}
+                                                                                className={!buttonEnable ? "inactive" : ""}
+                                                                                data-testid="generate-button"
+                                                                        />
                                                                 </div>
                                                         </div>
                                                 </div>
@@ -1241,6 +1356,9 @@ export default function Chat(props) {
                                                         <button type="button" onClick={() => handleExportTables()} data-testid="export-excel-button">
                                                                 <img src={excel_icon} alt="" />
                                                                 Download Tables
+                                                        </button>
+                                                        <button type="button" onClick={() => setIsTransferModalOpen(true)} data-testid="transfer-ownership-button" style={{ marginLeft: '10px', background: '#f5f5f5', color: '#333' }}>
+                                                                Transfer Ownership
                                                         </button>
                                                         <div className="Chat_workflow_status_container">
                                                                 <div className="workflow-stage-box">

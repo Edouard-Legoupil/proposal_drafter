@@ -9,12 +9,40 @@
             "Strictly base all content on the provided inputs and knowledge base.",
             "Do not invent or hallucinate facts, figures, or dates.",
             "If information is missing, explicitly state that it is not available in the context.",
+            "If there is no mention in the context of the targeted population size for the project, asssume the project target the entire population of interest for the designated field context.",
             "Ensure tone, style, and formatting match a professional humanitarian proposal.",
             "when referencing donor, use donor name and never  donor_id",
             "when referencing outcomes, use outcome name and never  outcome_id",
             "when referencing, field context, use field_context name and never field context_id"
         ]
     },
+    "section_sequence": [
+        "Project Information",
+        "Country Background",
+        "Sectoral Background",
+        "Needs Description Related to Activities",
+        "Beneficiaries",
+        "Activities Planned",
+        "KPIs (including targets)",
+        "Expected Impact on Beneficiaries",
+        "In-Kind Needs",
+        "Consequences of Underfunding",
+        "Country/area map",
+        "Why UNHCR is Best Placed",
+        "Past Implementation/Successes",
+        "Monitoring and Evaluation",
+        "Sustainability and/or Exit Strategy",
+        "Environmental Impact Improvement or Prevention",
+        "Risk Assessment",
+        "Human Interest Stories",
+        "Innovation",
+        "Budget Breakdown (RBM structure)",
+        "Price Points",
+        "Reporting Plans",
+        "Reporting Release Date",
+        "Bespoke Capacity",
+        "Bespoke Information Ready Date"
+    ],
     "sections": [
         {
             "section_name": "Project Information",
@@ -163,6 +191,7 @@
             "section_name": "Country/area map",
             "section_label": "Country/area map",
             "format_type": "text",
+            "word_limit": 250,
             "mandatory": false,
             "instructions": "Add a link or reference to a map image or annex."
         },
@@ -218,6 +247,7 @@
             "section_name": "Human Interest Stories",
             "section_label": "Available human-interest stories",
             "format_type": "text",
+            "word_limit": 250,
             "mandatory": false,
             "instructions": "Provide ideas of potential human interest stories to support the proposal."
         },
@@ -305,6 +335,7 @@
             "section_name": "Reporting Plans",
             "section_label": "Reporting on these activities already planned (Y/N)",
             "format_type": "text",
+            "word_limit": 250,
             "mandatory": true,
             "instructions": "Indicate if reporting is already planned (Y/N) and reference public resources if applicable."
         },
@@ -312,6 +343,7 @@
             "section_name": "Reporting Release Date",
             "section_label": "If Yes, expected date of release",
             "format_type": "text",
+            "word_limit": 250,
             "mandatory": true,
             "instructions": "Provide the expected publication date if reporting is planned."
         },
@@ -319,6 +351,7 @@
             "section_name": "Bespoke Capacity",
             "section_label": "Capacity to produce bespoke report (Y/N)",
             "format_type": "text",
+            "word_limit": 250,
             "mandatory": true,
             "instructions": "Indicate capacity to produce bespoke reporting (Y/N)."
         },
@@ -326,6 +359,7 @@
             "section_name": "Bespoke Information Ready Date",
             "section_label": "If yes, date when relevant information can be available",
             "format_type": "text",
+            "word_limit": 250,
             "mandatory": true,
             "instructions": "State when indicators, narrative, partner reports, visibility materials, etc., can be available."
         }

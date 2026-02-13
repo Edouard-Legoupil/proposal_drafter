@@ -9,12 +9,67 @@
             "Strictly base all content on the provided inputs and knowledge base.",
             "Do not invent or hallucinate facts, figures, or dates.",
             "If information is missing, explicitly state that it is not available in the context.",
+            "If there is no mention in the context of the targeted population size for the project, asssume the project target the entire population of interest for the designated field context.",
             "Ensure tone, style, and formatting match a professional humanitarian proposal.",
             "when referencing donor, use donor name and never  donor_id",
             "when referencing outcomes, use outcome name and never  outcome_id",
             "when referencing, field context, use field_context name and never field context_id"
         ]
     },
+    "section_sequence": [
+        "Project title",
+        "Duration",
+        "Objective",
+        "Humanitarian Access",
+        "Risk Management",
+        "Exit Strategy and Sustainability",
+        "Logical Framework",
+        "Workplan",
+        "People Directly Targeted",
+        "DIRECTLY TARGETED BY SECTOR/CLUSTER",
+        "Indirectly targeted",
+        "Description of people indirectly targeted",
+        "Localization",
+        "Protection Mainstreaming and Integration",
+        "Protection Budget Value",
+        "Protection Budget Estimation",
+        "GBV Programming Marker",
+        "Considerations - Gender-Based Violence",
+        "Gender-Based Violence (GBV) Budget",
+        "Gender-Based Violence Budget Estimation",
+        "Target GBV Funding for WLOs",
+        "Involvement in Women-Led Organizations",
+        "AAP  Participation and Inclusion",
+        "AAP Feedback and Complaints Mechanisms",
+        "Prevention of Sexual Exploitation and Abuse (PSEA)",
+        "Gender and Age Marker (GAM) reference",
+        "Gender equality programme focus",
+        "Considerations for gender equality",
+        "Gender Equality budget value",
+        "Gender equality budget value estimation approach",
+        "Disability marker",
+        "Considerations for disability inclusion",
+        "Organizations of Persons with Disabilities (OPDs)",
+        "Persons with Disabilities budget",
+        "Persons with Disabilities Budget Estimation",
+        "Cash and Voucher Assistance",
+        "Coordination Summary",
+        "Implementation Summary",
+        "Budget - Staff and Other Personnel Costs",
+        "Budget - Supplies, Commodities, Materials",
+        "Budget - Equipments",
+        "Budget - Contractual Services",
+        "Budget - Travel",
+        "Budget - Transfers and Grants to Counterparts",
+        "Budget - General Operating and Other Direct Costs",
+        "Budget by Sector/Cluster",
+        "Budget Value References",
+        "Funds Required for Organization Response",
+        "Funds received for organization's response",
+        "Funds Requested from CERF for this Proposal",
+        "Subgrants and sub-partners",
+        "Summary"
+    ],
     "sections": [
         {
             "section_name": "Project title",
@@ -205,6 +260,20 @@
                     "instructions": "Provide a target number for Total - aka equal the sum of previous columns"
                 }
             ],
+            "rows": [
+                {
+                    "row_title": "Refugees"
+                },
+                {
+                    "row_title": "IDPs"
+                },
+                {
+                    "row_title": "Returnees"
+                },
+                {
+                    "row_title": "Host Communities"
+                }
+            ],
             "mandatory": true
         },
         {
@@ -245,6 +314,20 @@
                     "instructions": "Provide a target number for Total - aka equal the sum of previous columns"
                 }
             ],
+            "rows": [
+                {
+                    "row_title": "Shelter"
+                },
+                {
+                    "row_title": "Protection"
+                },
+                {
+                    "row_title": "WASH"
+                },
+                {
+                    "row_title": "Food Security"
+                }
+            ],
             "mandatory": true
         },
         {
@@ -269,7 +352,7 @@
             "section_name": "Budget - Staff and Other Personnel Costs",
             "section_label": "A. Staff and Other Personnel Costs",
             "section_parent": "9. Proposal Budget",
-            "instructions": "Detail staffing requirements with: 1) Position titles and grades 2) Time allocations 3) Justification for each role 4) % charged to CERF. For <6% of direct costs, consolidate into one line item with rationale.",
+            "instructions": "Detail staffing requirements with: 1) Position titles and grades - add rows as required 2) Time allocations 3) Justification for each role 4) % charged to CERF. For <6% of direct costs, consolidate into one line item with rationale.",
             "mandatory": true,
             "format_type": "table",
             "columns": [
@@ -304,6 +387,14 @@
                 {
                     "name": "Total cost (USD)",
                     "format_type": "number"
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Project Manager"
+                },
+                {
+                    "row_title": "Social Worker"
                 }
             ]
         },
@@ -311,7 +402,7 @@
             "section_name": "Budget - Supplies, Commodities, Materials",
             "section_label": "B. Supplies, Commodities, Materials",
             "section_parent": "9. Proposal Budget",
-            "instructions": "List required supplies with: 1) Item specifications 2) Quantities 3) Unit costs 4) Procurement method. For CERF, assume 100% coverage (mark % as n/a). Group similar items where appropriate.",
+            "instructions": "List required supplies with: 1) Item specifications - add rows as required 2) Quantities 3) Unit costs 4) Procurement method. For CERF, assume 100% coverage (mark % as n/a). Group similar items where appropriate.",
             "mandatory": true,
             "format_type": "table",
             "columns": [
@@ -346,6 +437,14 @@
                 {
                     "name": "Total cost (USD)",
                     "format_type": "number"
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Blankets"
+                },
+                {
+                    "row_title": "NFIs"
                 }
             ]
         },
@@ -353,7 +452,7 @@
             "section_name": "Budget - Equipments",
             "section_label": "C. Equipments",
             "section_parent": "9. Proposal Budget",
-            "instructions": "Specify equipment needs with: 1) Item descriptions 2) Justification for each 3) Disposition plan post-project. For <2% of direct costs, consolidate into one line. Mark % as n/a for CERF.",
+            "instructions": "Specify equipment needs with: 1) Item descriptions - add rows as required 2) Justification for each 3) Disposition plan post-project. For <2% of direct costs, consolidate into one line. Mark % as n/a for CERF.",
             "mandatory": true,
             "format_type": "table",
             "columns": [
@@ -388,6 +487,14 @@
                 {
                     "name": "Total cost (USD)",
                     "format_type": "number"
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Computer"
+                },
+                {
+                    "row_title": "Generator"
                 }
             ]
         },
@@ -395,7 +502,7 @@
             "section_name": "Budget - Contractual Services",
             "section_label": "D. Contractual Services",
             "section_parent": "9. Proposal Budget",
-            "instructions": "Detail service contracts including: 1) Type of service 2) Provider qualifications 3) Deliverables 4) Payment schedule. Include cash transfer fees if applicable. Mark % as n/a for CERF.",
+            "instructions": "Detail service contracts including: 1) Type of service - add rows as required  2) Provider qualifications 3) Deliverables 4) Payment schedule. Include cash transfer fees if applicable. Mark % as n/a for CERF.",
             "mandatory": true,
             "format_type": "table",
             "columns": [
@@ -431,13 +538,21 @@
                     "name": "Total cost (USD)",
                     "format_type": "number"
                 }
+            ],
+            "rows": [
+                {
+                    "row_title": "Partner Service"
+                },
+                {
+                    "row_title": "Transport"
+                }
             ]
         },
         {
             "section_name": "Budget - Travel",
             "section_label": "E. Travel",
             "section_parent": "9. Proposal Budget",
-            "instructions": "Itemize travel costs with: 1) Purpose of each trip 2) Itineraries 3) Daily rates 4) Number of staff. For <1.5% of direct costs, consolidate. Mark % as n/a for CERF.",
+            "instructions": "Itemize travel costs with: 1) Purpose of each trip - add rows as required 2) Itineraries 3) Daily rates 4) Number of staff. For <1.5% of direct costs, consolidate. Mark % as n/a for CERF.",
             "mandatory": true,
             "format_type": "table",
             "columns": [
@@ -472,6 +587,14 @@
                 {
                     "name": "Total cost (USD)",
                     "format_type": "number"
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Field Visit"
+                },
+                {
+                    "row_title": "Monitoring Visit"
                 }
             ]
         },
@@ -479,7 +602,7 @@
             "section_name": "Budget - Transfers and Grants to Counterparts",
             "section_label": "F. Transfers and Grants to Counterparts",
             "section_parent": "9. Proposal Budget",
-            "instructions": "List partner transfers including: 1) Organization names 2) Type (NNGO/INGO/Govt) 3) Amounts 4) Expected deliverables. Include capacity building components if relevant. Mark % as n/a for CERF.",
+            "instructions": "List partner transfers including: 1) Organization names -add rows as required 2) Type (NNGO/INGO/Govt) 3) Amounts 4) Expected deliverables. Include capacity building components if relevant. Mark % as n/a for CERF.",
             "mandatory": true,
             "format_type": "table",
             "columns": [
@@ -514,6 +637,14 @@
                 {
                     "name": "Total cost (USD)",
                     "format_type": "number"
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "NNGO Transfer"
+                },
+                {
+                    "row_title": "INGO Grant"
                 }
             ]
         },
@@ -521,7 +652,7 @@
             "section_name": "Budget - General Operating and Other Direct Costs",
             "section_label": "G. General Operating and Other Direct Costs",
             "section_parent": "9. Proposal Budget",
-            "instructions": "Specify operational costs ensuring: 1) Total \u22646.5% of budget 2) Clear justification for each item 3) Cost-efficiency measures. For <1.5% of direct costs, consolidate. Mark % as n/a for CERF.",
+            "instructions": "Specify operational costs ensuring - add rows as required: 1) Total \u22646.5% of budget 2) Clear justification for each item 3) Cost-efficiency measures. For <1.5% of direct costs, consolidate. Mark % as n/a for CERF.",
             "mandatory": true,
             "format_type": "table",
             "columns": [
@@ -557,13 +688,21 @@
                     "name": "Total cost (USD)",
                     "format_type": "number"
                 }
+            ],
+            "rows": [
+                {
+                    "row_title": "Office Rent"
+                },
+                {
+                    "row_title": "Utilities"
+                }
             ]
         },
         {
             "section_name": "Budget by Sector/Cluster",
             "section_label": "10. Budget by Sector/Cluster",
             "section_parent": "",
-            "instructions": "Allocate the budget across sectors/clusters showing: 1) Percentage for each 2) Alignment with response priorities 3) Consistency with beneficiary targeting. Only complete for multi-sector projects.",
+            "instructions": "Allocate the budget across sectors/clusters showing - add rows as required: 1) Percentage for each 2) Alignment with response priorities 3) Consistency with beneficiary targeting. Only complete for multi-sector projects.",
             "mandatory": true,
             "format_type": "table",
             "columns": [
@@ -579,13 +718,21 @@
                     "name": "Budget Value",
                     "format_type": "text"
                 }
+            ],
+            "rows": [
+                {
+                    "row_title": "Protection"
+                },
+                {
+                    "row_title": "WASH"
+                }
             ]
         },
         {
             "section_name": "Budget Value References",
             "section_label": "11. Budget Value References",
             "section_parent": "",
-            "instructions": "Cross-reference budget allocations to key programming areas: 1) Protection 2) GBV 3) Gender 4) Disability 5) CVA. Ensure values match detailed budget sections.",
+            "instructions": "Cross-reference budget allocations to key programming areas - add rows as required: 1) Protection 2) GBV 3) Gender 4) Disability 5) CVA. Ensure values match detailed budget sections.",
             "mandatory": true,
             "format_type": "table",
             "columns": [
@@ -603,6 +750,14 @@
                 {
                     "name": "Value",
                     "format_type": "number"
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Programming - Protection"
+                },
+                {
+                    "row_title": "Programming - GBV"
                 }
             ]
         },
@@ -651,7 +806,15 @@
                     "format_type": "number"
                 }
             ],
-            "instructions": "Calculate protection-specific allocations by: 1) Sector 2) Percentage for targeted protection (exclude mainstreaming) 3) Dollar value 4) Beneficiary numbers. Enter 0 for sectors without targeted protection.",
+            "rows": [
+                {
+                    "row_title": "Child Protection"
+                },
+                {
+                    "row_title": "GBV"
+                }
+            ],
+            "instructions": "Calculate protection-specific allocations by: 1) Sector -add rows as required 2) Percentage for targeted protection (exclude mainstreaming) 3) Dollar value 4) Beneficiary numbers. Enter 0 for sectors without targeted protection.",
             "mandatory": true
         },
         {
@@ -708,7 +871,15 @@
                     "format_type": "number"
                 }
             ],
-            "instructions": "Complete only if GBV is included. Show: 1) Sector-specific GBV allocations 2) Percentage calculations 3) Dollar values 4) Target beneficiaries. Ensure consistency with protection budget above.",
+            "rows": [
+                {
+                    "row_title": "Clinical Services"
+                },
+                {
+                    "row_title": "Prevention"
+                }
+            ],
+            "instructions": "Complete only if GBV is included. Show: 1) Sector-specific GBV allocations - add rows as required 2) Percentage calculations 3) Dollar values 4) Target beneficiaries. Ensure consistency with protection budget above.",
             "mandatory": false
         },
         {
@@ -819,7 +990,15 @@
                     "format_type": "number"
                 }
             ],
-            "instructions": "Complete if gender equality is a component. Show: 1) Sector allocations 2) Percentage calculations 3) Dollar values 4) Target beneficiaries. Differentiate from GBV budgets if both exist.",
+            "rows": [
+                {
+                    "row_title": "Sector A"
+                },
+                {
+                    "row_title": "Sector B"
+                }
+            ],
+            "instructions": "Complete if gender equality is a component. Show: 1) Sector allocations - add rows as required 2) Percentage calculations 3) Dollar values 4) Target beneficiaries. Differentiate from GBV budgets if both exist.",
             "mandatory": false
         },
         {
@@ -880,7 +1059,15 @@
                     "format_type": "number"
                 }
             ],
-            "instructions": "Complete if disability component exists. Show: 1) Sector allocations 2) Percentage calculations 3) Dollar values. Differentiate between accessibility costs and targeted interventions.",
+            "rows": [
+                {
+                    "row_title": "Physical"
+                },
+                {
+                    "row_title": "Visual"
+                }
+            ],
+            "instructions": "Complete if disability component exists. Show: 1) Sector allocations - add rows as required 2) Percentage calculations 3) Dollar values. Differentiate between accessibility costs and targeted interventions.",
             "mandatory": false
         },
         {
@@ -996,6 +1183,14 @@
                     "name": "Activities",
                     "format_type": "text",
                     "instructions": "select from logframe (optional)"
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Partner A"
+                },
+                {
+                    "row_title": "Partner B"
                 }
             ],
             "instructions": "List all sub-partners with: 1) Organization details 2) Type (NNGO/INGO/etc.) 3) Budget allocation 4) Linked activities. Include capacity assessment information if available.",

@@ -8,7 +8,7 @@ content_generation_task:
     - **Special Requirements:** {special_requirements}
     - **Instructions:** {instructions}
     IMPORTANT: The response must not exceed {limit_value} {limit_term}s. If the output exceeds the limit, you MUST truncate or summarize so the final output fits the limit. Failure to comply will require regeneration.
-    Respond with a raw JSON object, no Markdown formatting, no triple backticks.
+    Respond with a raw JSON object, no triple backticks.
   expected_output: |
     Return a JSON with the following format:
       {
@@ -27,7 +27,9 @@ evaluation_task:
   description: >
     Review the generated content for the "{section}" and verify it against the JSON instructions: {instructions}.
     Ensure that the content does NOT exceed {limit_value} {limit_term}s.
-    
+    Ensure that the content is consistent with all previously generated sections available within the memory. 
+    Identify any contradictions or inconsistencies in  Beneficiary numbers, Activity descriptions, Timelines, Budget figures.
+    For instance, Beneficiary counts in "Beneficiaries" should match those in "KPIs" and Budget line items should reference defined activities
     If the content meets the requirements, approve it.
     If the content is too long, provide feedback asking for a shorter version within the limit.
     Respond with a raw JSON object, no Markdown formatting, no triple backticks.
@@ -56,8 +58,8 @@ regeneration_task:
     - **Instructions:** {instructions}
 
     Ensure that the response integrates the user’s input while remaining structured, coherent, and within {limit_value} {limit_term}s.
-    If the output exceeds the limit, rephrase or summarize to fit within the given limit.
-    Respond with a raw JSON object, no Markdown formatting, no triple backticks.
+    IMPORTANT: If the output exceeds the limit, rephrase or summarize to fit within the given limit.
+    Respond with a raw JSON object, no triple backticks.
 
   expected_output: >
     Return a JSON with the following format:

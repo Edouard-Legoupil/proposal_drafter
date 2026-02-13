@@ -1,10 +1,9 @@
 import './CommonButton.css'
 
-export default function CommonButton (props)
-{
-        return  <button
+export default function CommonButton(props) {
+        return <button
                 type={props?.type ?? "button"}
-                className={`CommonButton ${props?.loading ? "loading" : ""}`}
+                className={`CommonButton ${props?.loading ? "loading" : ""} ${props?.className ?? ""}`}
                 onClick={props?.onClick}
                 disabled={props?.disabled || props?.loading}
                 style={props?.style}

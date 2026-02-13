@@ -79,6 +79,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "your_default_dev_secret")
 ENTRA_TENANT_ID = os.getenv("ENTRA_TENANT_ID")
 ENTRA_CLIENT_ID = os.getenv("ENTRA_CLIENT_ID")
 ENTRA_CLIENT_SECRET = os.getenv("ENTRA_CLIENT_SECRET")
+ENTRA_REDIRECT_URI = os.getenv("ENTRA_REDIRECT_URI")
 
 # --- Database Configuration ---
 
@@ -171,7 +172,7 @@ def get_available_templates():
                     continue
 
                 donors = data.get("donors", [])
-                if isinstance(donors, list):
+                if isinstance(donors, list) and not filename.startswith("concept_note_"):
                     for donor_name in donors:
                         templates_map[donor_name] = filename
 

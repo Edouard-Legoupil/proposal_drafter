@@ -127,11 +127,12 @@ def handle_text_format(
     evaluation_status = parsed.get("evaluation_status", "")
     feedback = parsed.get("feedback", "")
 
-    # ENFORCE CHAR OR WORD LIMITS on text output
-    if limit_type == "char" and isinstance(generated_text, str):
-        generated_text = generated_text[:limit_value]
-    elif limit_type == "word" and isinstance(generated_text, str):
-        generated_text = " ".join(generated_text.split()[:limit_value])
+    # REMOVED AGGRESSIVE SANITISATION (LIMIT TRUNCATION) TO PRESERVE MARKDOWN
+    # We now trust the LLM to follow the length instructions in the prompt.
+    # if limit_type == "char" and isinstance(generated_text, str):
+    #     generated_text = generated_text[:limit_value]
+    # elif limit_type == "word" and isinstance(generated_text, str):
+    #     generated_text = " ".join(generated_text.split()[:limit_value])
 
     if evaluation_status.lower() == "flagged" and feedback:
         generated_text = regenerate_section_logic(
@@ -284,22 +285,39 @@ def handle_table_format(
         section_data = table_data.get(section_name, {})
         table_rows = section_data.get("table", [])
         notes = section_data.get("notes", "")
-        # ENFORCE CHAR OR WORD LIMIT ON NOTES
-        if (
-            "limit_type" in locals()
-            and "limit_value" in locals()
-            and isinstance(notes, str)
-        ):
-            if limit_type == "char":
-                notes = notes[:limit_value]
-            elif limit_type == "word":
-                notes = " ".join(notes.split()[:limit_value])
+        
+        # REMOVED AGGRESSIVE SANITISATION ON NOTES
+        # Use LLM compliance for length control
+        # if (
+        #     "limit_type" in locals()
+        #     and "limit_value" in locals()
+        #     and isinstance(notes, str)
+        # ):
+        #     if limit_type == "char":
+        #         notes = notes[:limit_value]
+        #     elif limit_type == "word":
+        #         notes = " ".join(notes.split()[:limit_value])
+
         if not table_rows:
-            # If table is empty, return original text content
+            # If table is empty, return original text content containing the error/message
             logger.warning(
                 f"No rows found in the table for section '{section_name}'. Returning original content."
             )
             return json.dumps(table_data) if table_data else ""
+
+        # --- VALIDATION STEP ---
+        if not isinstance(table_rows, list):
+             logger.error(f"Table data for section '{section_name}' is not a list. Skipping table formatting.")
+             return json.dumps(table_data)
+        
+        # Check for missing columns in the first row (and warn)
+        if table_rows and isinstance(table_rows[0], dict):
+             expected_columns = [col["name"] for col in columns]
+             actual_columns = table_rows[0].keys()
+             missing_cols = set(expected_columns) - set(actual_columns)
+             if missing_cols:
+                  logger.warning(f"Table for section '{section_name}' is missing columns: {missing_cols}. Proceeding with available data.")
+        # -----------------------
 
         # Use headers from the first row to maintain order
         headers = list(table_rows[0].keys())

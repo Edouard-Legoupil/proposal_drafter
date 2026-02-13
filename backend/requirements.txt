@@ -4,6 +4,7 @@ python-dotenv
 # ASGI web framework for building high-performance APIs with Python
 fastapi
 fastapi-sso
+msal
 
 # In-memory data structure store used as database, cache, and message broker
 redis

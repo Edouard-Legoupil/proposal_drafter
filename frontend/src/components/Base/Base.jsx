@@ -7,8 +7,9 @@ import OSSFooter from '../OSSFooter/OSSFooter'
 import UserSettingsModal from '../UserSettingsModal/UserSettingsModal'
 import Sidebar from '../Sidebar/Sidebar'
 import UserAdminModal from '../UserAdminModal/UserAdminModal'
+import RoleRequestModal from '../RoleRequestModal/RoleRequestModal'
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
 
 import masterlogo from '../../assets/images/App_invertedLogo.svg'
 import downarrow from "../../assets/images/downarrow.svg"
@@ -21,12 +22,14 @@ export default function Base(props) {
         const [userDetails, setUserDetails] = useState({
                 "name": "",
                 "email": "",
-                "is_admin": false
+                "is_admin": false,
+                "requested_role_id": null
         })
         const [userRoles, setUserRoles] = useState([])
         const [sidebarOpen, setSidebarOpen] = useState(true)
         const [showSettingsModal, setShowSettingsModal] = useState(false)
         const [showAdminModal, setShowAdminModal] = useState(false)
+        const [showRoleModal, setShowRoleModal] = useState(false)
 
         function handleLogoClick() {
                 navigate("/dashboard")
@@ -45,7 +48,8 @@ export default function Base(props) {
                                 setUserDetails({
                                         name: data.user.name,
                                         email: data.user.email,
-                                        is_admin: data.user.is_admin
+                                        is_admin: data.user.is_admin,
+                                        requested_role_id: data.user.requested_role_id
                                 })
                                 setUserRoles(data.user.roles || [])
                         }
@@ -61,6 +65,11 @@ export default function Base(props) {
         }, [navigate])
 
         async function handleLogoutClick() {
+                if (userDetails.is_sso) {
+                        window.location.href = `${API_BASE_URL}/sso-logout`
+                        return
+                }
+
                 try {
                         const response = await fetch(`${API_BASE_URL}/logout`, {
                                 method: "POST",
@@ -114,6 +123,17 @@ export default function Base(props) {
                                         Logout
                                 </div>
                         </div>
+                        {userDetails.requested_role_id ? (
+                                <div className="Header_pendingRequest">
+                                        Waiting for approval
+                                </div>
+                        ) : (
+                                !userDetails.is_admin && userRoles.length <= 1 && userRoles[0] === 'proposal writer' && (
+                                        <button className="Header_requestButton" onClick={() => setShowRoleModal(true)}>
+                                                Request Elevated Access
+                                        </button>
+                                )
+                        )}
                 </header>
 
                 <div className='Base_content'>
@@ -125,6 +145,14 @@ export default function Base(props) {
 
                 <UserSettingsModal show={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
                 <UserAdminModal show={showAdminModal} onClose={() => setShowAdminModal(false)} />
+                <RoleRequestModal
+                        show={showRoleModal}
+                        onClose={() => setShowRoleModal(false)}
+                        onSuccess={() => {
+                                // Refresh profile to show "Waiting for approval"
+                                window.location.reload();
+                        }}
+                />
 
                 <OSSFooter />
         </div>
