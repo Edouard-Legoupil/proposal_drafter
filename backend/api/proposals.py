@@ -106,20 +106,24 @@ async def create_session(request: CreateSessionRequest, current_user: dict = Dep
 
     try:
         templates_map = get_available_templates()
-        donor_id = request.form_data.get("Targeted Donor")
+        donor_input = request.form_data.get("Targeted Donor")
+        donor_ids = donor_input if isinstance(donor_input, list) else ([donor_input] if donor_input else [])
+        
         template_name = "proposal_template_unhcr.json"  # Default template
         document_type = request.document_type or "proposal"
-        
 
         with get_engine().begin() as connection:
-            if donor_id:
-                # Get donor name from ID to determine the template
-                donor_name_result = connection.execute(
-                    text("SELECT name FROM donors WHERE id = :id"),
-                    {"id": donor_id}
-                ).scalar()
-                if donor_name_result:
-                    template_name = templates_map.get(donor_name_result, "proposal_template_unhcr.json")
+            if len(donor_ids) == 1:
+                donor_id = donor_ids[0]
+                if donor_id:
+                    # Get donor name from ID to determine the template
+                    donor_name_result = connection.execute(
+                        text("SELECT name FROM donors WHERE id = :id"),
+                        {"id": donor_id}
+                    ).scalar()
+                    if donor_name_result:
+                        template_name = templates_map.get(donor_name_result, "proposal_template_unhcr.json")
+            # If multiple donors, we use default template (as specified in requirements)
 
             # If it's a concept note, try to use the concept note template.
             if document_type == "concept note":
@@ -150,14 +154,18 @@ async def create_session(request: CreateSessionRequest, current_user: dict = Dep
 
             # Insert into join tables
             outcome_ids = request.form_data.get("Main Outcome", [])
-            # The frontend might send an ID for "Geographical Scope" or "Country / Location(s)"
-            field_context_id = request.form_data.get("Country / Location(s)") or request.form_data.get("Geographical Scope")
+            
+            # Use "Country / Location(s)" if available, fallback to "Geographical Scope"
+            field_context_input = request.form_data.get("Country / Location(s)") or request.form_data.get("Geographical Scope")
+            field_context_ids = field_context_input if isinstance(field_context_input, list) else ([field_context_input] if field_context_input else [])
 
-            if donor_id:
-                connection.execute(
-                    text("INSERT INTO proposal_donors (proposal_id, donor_id) VALUES (:pid, :did)"),
-                    {"pid": proposal_id, "did": donor_id}
-                )
+            if donor_ids:
+                for donor_id in donor_ids:
+                    if donor_id:
+                        connection.execute(
+                            text("INSERT INTO proposal_donors (proposal_id, donor_id) VALUES (:pid, :did)"),
+                            {"pid": proposal_id, "did": donor_id}
+                        )
 
             if outcome_ids and isinstance(outcome_ids, list):
                 for outcome_id in outcome_ids:
@@ -167,11 +175,13 @@ async def create_session(request: CreateSessionRequest, current_user: dict = Dep
                             {"pid": proposal_id, "oid": outcome_id}
                         )
 
-            if field_context_id:
-                connection.execute(
-                    text("INSERT INTO proposal_field_contexts (proposal_id, field_context_id) VALUES (:pid, :fid)"),
-                    {"pid": proposal_id, "fid": field_context_id}
-                )
+            if field_context_ids:
+                for field_context_id in field_context_ids:
+                    if field_context_id:
+                        connection.execute(
+                            text("INSERT INTO proposal_field_contexts (proposal_id, field_context_id) VALUES (:pid, :fid)"),
+                            {"pid": proposal_id, "fid": field_context_id}
+                        )
 
         # Load the full proposal template.
         proposal_template = load_proposal_template(template_name)

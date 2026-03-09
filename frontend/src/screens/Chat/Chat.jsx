@@ -137,11 +137,12 @@ export default function Chat(props) {
                         const data = await response.json();
                         // Handle both flat list and dictionary structure
                         const userList = Array.isArray(data) ? data : (data.users || []);
-                        setUsers(userList.map(user => ({
+                        const formattedUsers = userList.map(user => ({
                                 id: user.id,
                                 name: user.name,
                                 team: user.team_name || 'Unassigned'
-                        })));
+                        }));
+                        setUsers(formattedUsers.sort((a, b) => a.name.localeCompare(b.name)));
                 }
         }
 
@@ -208,6 +209,14 @@ export default function Chat(props) {
                 "Targeted Donor": {
                         mandatory: true,
                         value: ""
+                },
+                "multiple countries": {
+                        mandatory: false,
+                        value: false
+                },
+                "multiple donors": {
+                        mandatory: false,
+                        value: false
                 }
         })
 
@@ -220,9 +229,16 @@ export default function Chat(props) {
 
                 const locationValue = formData['Country / Location(s)'].value;
                 if (locationValue) {
-                        const isLocationStillValid = filtered.some(fc => fc.id === locationValue);
-                        if (fieldContexts.length > 0 && !isLocationStillValid) {
-                                handleFormInput({ target: { value: "" } }, "Country / Location(s)");
+                        if (Array.isArray(locationValue)) {
+                                const validLocations = locationValue.filter(id => filtered.some(fc => fc.id === id));
+                                if (validLocations.length !== locationValue.length) {
+                                        handleFormInput({ target: { value: validLocations } }, "Country / Location(s)");
+                                }
+                        } else {
+                                const isLocationStillValid = filtered.some(fc => fc.id === locationValue);
+                                if (fieldContexts.length > 0 && !isLocationStillValid) {
+                                        handleFormInput({ target: { value: "" } }, "Country / Location(s)");
+                                }
                         }
                 }
         }, [formData['Geographical Scope'].value, fieldContexts]);
@@ -271,19 +287,21 @@ export default function Chat(props) {
                 const getOptions = (label) => {
                         switch (label) {
                                 case "Main Outcome":
-                                        return [...outcomes, ...newOutcomes].map(o => ({ value: o.id, label: o.name }));
+                                        return [...outcomes, ...newOutcomes].map(o => ({ value: o.id, label: o.name })).sort((a, b) => a.label.localeCompare(b.label));
                                 case "Targeted Donor":
-                                        return [...donors, ...newDonors].map(d => ({ value: d.id, label: d.name }));
+                                        return [...donors, ...newDonors].map(d => ({ value: d.id, label: d.name })).sort((a, b) => a.label.localeCompare(b.label));
                                 case "Country / Location(s)":
-                                        return [...filteredFieldContexts, ...newFieldContexts].map(fc => ({ value: fc.id, label: fc.name }));
+                                        return [...filteredFieldContexts, ...newFieldContexts].map(fc => ({ value: fc.id, label: fc.name })).sort((a, b) => a.label.localeCompare(b.label));
                                 case "Geographical Scope":
-                                        return geographicCoverages.map(gc => ({ value: gc, label: gc }));
-                                case "Duration":
+                                        return geographicCoverages.map(gc => ({ value: gc, label: gc })).sort((a, b) => a.label.localeCompare(b.label));
+                                case "Duration": {
                                         const durationOptions = ["1 month", "3 months", "6 months", "12 months", "18 months", "24 months", "30 months", "36 months"];
                                         return [...durationOptions.map(d => ({ value: d, label: d })), ...newDurations.map(d => ({ value: d.id, label: d.name }))];
-                                case "Budget Range":
+                                }
+                                case "Budget Range": {
                                         const budgetOptions = ["50k$", "100k$", "250k$", "500k$", "1M$", "2M$", "5M$", "10M$", "15M$", "25M$"];
                                         return [...budgetOptions.map(b => ({ value: b, label: b })), ...newBudgetRanges.map(b => ({ value: b.id, label: b.name }))];
+                                }
                                 default:
                                         return [];
                         }
@@ -305,7 +323,7 @@ export default function Chat(props) {
 
                 const isCreatableSelect = ["Duration", "Budget Range"].includes(label);
                 const isSelect = ["Targeted Donor", "Country / Location(s)"].includes(label);
-                const isMultiSelect = label === "Main Outcome";
+                const isMultiSelect = label === "Main Outcome" || (label === "Targeted Donor" && formData["multiple donors"].value) || (label === "Country / Location(s)" && formData["multiple countries"].value);
                 const isNormalSelect = label === "Geographical Scope";
 
                 return (
@@ -335,12 +353,21 @@ export default function Chat(props) {
                                 ) : isSelect ? (
                                         <div data-testid={`select-container-${toKebabCase(label)}`}>
                                                 <Select
+                                                        isMulti={isMultiSelect}
                                                         isClearable
                                                         aria-label={label}
                                                         classNamePrefix={toKebabCase(label)}
-                                                        onChange={option => handleFormInput({ target: { value: option ? option.value : "" } }, label)}
+                                                        onChange={option => {
+                                                                if (isMultiSelect) {
+                                                                        handleFormInput({ target: { value: option ? option.map(o => o.value) : [] } }, label)
+                                                                } else {
+                                                                        handleFormInput({ target: { value: option ? option.value : "" } }, label)
+                                                                }
+                                                        }}
                                                         options={getOptions(label)}
-                                                        value={getOptions(label).find(o => o.value === field.value)}
+                                                        value={isMultiSelect
+                                                                ? (Array.isArray(field.value) ? field.value.map(v => getOptions(label).find(o => o.value === v)).filter(Boolean) : [])
+                                                                : getOptions(label).find(o => o.value === field.value)}
                                                         isDisabled={disabled}
                                                         inputId={fieldId}
                                                 />
@@ -489,26 +516,34 @@ export default function Chat(props) {
                 if (associatedKnowledgeCards.length > 0) {
                         return associatedKnowledgeCards;
                 }
-                const donorId = formData["Targeted Donor"].value;
+                const donorIds = Array.isArray(formData["Targeted Donor"].value) ? formData["Targeted Donor"].value : (formData["Targeted Donor"].value ? [formData["Targeted Donor"].value] : []);
                 const outcomeIds = formData["Main Outcome"].value;
-                const fieldContextId = formData["Country / Location(s)"].value;
+                const fieldIconsIds = Array.isArray(formData["Country / Location(s)"].value) ? formData["Country / Location(s)"].value : (formData["Country / Location(s)"].value ? [formData["Country / Location(s)"].value] : []);
 
                 const fetchPromises = [];
 
-                if (donorId && !donorId.startsWith("new_")) {
-                        fetchPromises.push(
-                                fetch(`${API_BASE_URL}/knowledge-cards?donor_id=${donorId}`, { credentials: 'include' })
-                                        .then(res => res.ok ? res.json() : Promise.resolve({ knowledge_cards: [] }))
-                                        .then(data => data.knowledge_cards.length > 0 ? data.knowledge_cards[0] : null)
-                        );
+                if (donorIds.length > 0) {
+                        donorIds.forEach(donorId => {
+                                if (donorId && !donorId.startsWith("new_")) {
+                                        fetchPromises.push(
+                                                fetch(`${API_BASE_URL}/knowledge-cards?donor_id=${donorId}`, { credentials: 'include' })
+                                                        .then(res => res.ok ? res.json() : Promise.resolve({ knowledge_cards: [] }))
+                                                        .then(data => data.knowledge_cards.length > 0 ? data.knowledge_cards[0] : null)
+                                        );
+                                }
+                        });
                 }
 
-                if (fieldContextId && !fieldContextId.startsWith("new_")) {
-                        fetchPromises.push(
-                                fetch(`${API_BASE_URL}/knowledge-cards?field_context_id=${fieldContextId}`, { credentials: 'include' })
-                                        .then(res => res.ok ? res.json() : Promise.resolve({ knowledge_cards: [] }))
-                                        .then(data => data.knowledge_cards.length > 0 ? data.knowledge_cards[0] : null)
-                        );
+                if (fieldIconsIds.length > 0) {
+                        fieldIconsIds.forEach(fieldContextId => {
+                                if (fieldContextId && !fieldContextId.startsWith("new_")) {
+                                        fetchPromises.push(
+                                                fetch(`${API_BASE_URL}/knowledge-cards?field_context_id=${fieldContextId}`, { credentials: 'include' })
+                                                        .then(res => res.ok ? res.json() : Promise.resolve({ knowledge_cards: [] }))
+                                                        .then(data => data.knowledge_cards.length > 0 ? data.knowledge_cards[0] : null)
+                                        );
+                                }
+                        });
                 }
 
                 if (outcomeIds && outcomeIds.length > 0) {
@@ -1259,23 +1294,57 @@ export default function Chat(props) {
                                                                                 {renderFormField("Beneficiaries Profile", proposalStatus !== 'draft')}
                                                                                 {renderFormField("Potential Implementing Partner", proposalStatus !== 'draft')}
                                                                         </div>
-                                                                        <div className='Chat_form_group'>
-                                                                                <div className="tooltip-container">
-                                                                                        <h3 className='Chat_form_group_title'>Define Field Context</h3>
-                                                                                        <span className="tooltip-text">surface Situation Analysis and Needs Assessment</span>
+                                                                                <div className='Chat_form_group'>
+                                                                                        <div className="tooltip-container">
+                                                                                                <h3 className='Chat_form_group_title'>Define Field Context</h3>
+                                                                                                <span className="tooltip-text">surface Situation Analysis and Needs Assessment</span>
+                                                                                        </div>
+                                                                                        {renderFormField("Geographical Scope", proposalStatus !== 'draft')}
+                                                                                        <div className="Chat_form_inputContainer" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
+                                                                                                <input
+                                                                                                        type="checkbox"
+                                                                                                        id="multiple-countries"
+                                                                                                        checked={formData["multiple countries"].value}
+                                                                                                        onChange={e => {
+                                                                                                                const isChecked = e.target.checked;
+                                                                                                                setFormData(prev => ({
+                                                                                                                        ...prev,
+                                                                                                                        "multiple countries": { ...prev["multiple countries"], value: isChecked },
+                                                                                                                        "Country / Location(s)": { ...prev["Country / Location(s)"], value: isChecked ? [] : "" }
+                                                                                                                }));
+                                                                                                        }}
+                                                                                                        disabled={proposalStatus !== 'draft'}
+                                                                                                />
+                                                                                                <label htmlFor="multiple-countries" className="Chat_form_inputLabel" style={{ marginBottom: 0 }}>Multiple Countries</label>
+                                                                                        </div>
+                                                                                        {renderFormField("Country / Location(s)", proposalStatus !== 'draft')}
                                                                                 </div>
-                                                                                {renderFormField("Geographical Scope", proposalStatus !== 'draft')}
-                                                                                {renderFormField("Country / Location(s)", proposalStatus !== 'draft')}
-                                                                        </div>
-                                                                        <div className='Chat_form_group'>
-                                                                                <div className="tooltip-container">
-                                                                                        <h3 className='Chat_form_group_title'>Tailor Funding Request</h3>
-                                                                                        <span className="tooltip-text">surface Donor profile and apply Formal Requirement for Submission</span>
+                                                                                <div className='Chat_form_group'>
+                                                                                        <div className="tooltip-container">
+                                                                                                <h3 className='Chat_form_group_title'>Tailor Funding Request</h3>
+                                                                                                <span className="tooltip-text">surface Donor profile and apply Formal Requirement for Submission</span>
+                                                                                        </div>
+                                                                                        {renderFormField("Budget Range", proposalStatus !== 'draft')}
+                                                                                        {renderFormField("Duration", proposalStatus !== 'draft')}
+                                                                                        <div className="Chat_form_inputContainer" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
+                                                                                                <input
+                                                                                                        type="checkbox"
+                                                                                                        id="multiple-donors"
+                                                                                                        checked={formData["multiple donors"].value}
+                                                                                                        onChange={e => {
+                                                                                                                const isChecked = e.target.checked;
+                                                                                                                setFormData(prev => ({
+                                                                                                                        ...prev,
+                                                                                                                        "multiple donors": { ...prev["multiple donors"], value: isChecked },
+                                                                                                                        "Targeted Donor": { ...prev["Targeted Donor"], value: isChecked ? [] : "" }
+                                                                                                                }));
+                                                                                                        }}
+                                                                                                        disabled={proposalStatus !== 'draft'}
+                                                                                                />
+                                                                                                <label htmlFor="multiple-donors" className="Chat_form_inputLabel" style={{ marginBottom: 0 }}>Multiple Donors</label>
+                                                                                        </div>
+                                                                                        {renderFormField("Targeted Donor", proposalStatus !== 'draft')}
                                                                                 </div>
-                                                                                {renderFormField("Budget Range", proposalStatus !== 'draft')}
-                                                                                {renderFormField("Duration", proposalStatus !== 'draft')}
-                                                                                {renderFormField("Targeted Donor", proposalStatus !== 'draft')}
-                                                                        </div>
                                                                 </form> : ""
                                                         }
 

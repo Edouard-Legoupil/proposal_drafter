@@ -29,17 +29,33 @@ def resolve_form_data_labels(form_data: dict, connection) -> dict:
     resolved_data = form_data.copy()
 
     # 1. Targeted Donor
-    donor_id = resolved_data.get("Targeted Donor")
-    if donor_id and isinstance(donor_id, str) and len(donor_id) == 36:
-        try:
-            name = connection.execute(
-                text("SELECT name FROM donors WHERE id = :id"),
-                {"id": donor_id}
-            ).scalar()
-            if name:
-                resolved_data["Targeted Donor"] = name
-        except Exception:
-            pass
+    donor_input = resolved_data.get("Targeted Donor")
+    if donor_input:
+        if isinstance(donor_input, list):
+            resolved_donors = []
+            for did in donor_input:
+                if did and isinstance(did, str) and len(did) == 36:
+                    try:
+                        name = connection.execute(
+                            text("SELECT name FROM donors WHERE id = :id"),
+                            {"id": did}
+                        ).scalar()
+                        resolved_donors.append(name if name else did)
+                    except Exception:
+                        resolved_donors.append(did)
+                else:
+                    resolved_donors.append(did)
+            resolved_data["Targeted Donor"] = resolved_donors
+        elif isinstance(donor_input, str) and len(donor_input) == 36:
+            try:
+                name = connection.execute(
+                    text("SELECT name FROM donors WHERE id = :id"),
+                    {"id": donor_input}
+                ).scalar()
+                if name:
+                    resolved_data["Targeted Donor"] = name
+            except Exception:
+                pass
 
     # 2. Main Outcome (List)
     outcome_ids = resolved_data.get("Main Outcome")
@@ -60,17 +76,33 @@ def resolve_form_data_labels(form_data: dict, connection) -> dict:
         resolved_data["Main Outcome"] = resolved_outcomes
 
     # 3. Country / Location(s)
-    country_id = resolved_data.get("Country / Location(s)")
-    if country_id and isinstance(country_id, str) and len(country_id) == 36:
-        try:
-            name = connection.execute(
-                text("SELECT name FROM field_contexts WHERE id = :id"),
-                {"id": country_id}
-            ).scalar()
-            if name:
-                resolved_data["Country / Location(s)"] = name
-        except Exception:
-            pass
+    country_input = resolved_data.get("Country / Location(s)")
+    if country_input:
+        if isinstance(country_input, list):
+            resolved_countries = []
+            for cid in country_input:
+                if cid and isinstance(cid, str) and len(cid) == 36:
+                    try:
+                        name = connection.execute(
+                            text("SELECT name FROM field_contexts WHERE id = :id"),
+                            {"id": cid}
+                        ).scalar()
+                        resolved_countries.append(name if name else cid)
+                    except Exception:
+                        resolved_countries.append(cid)
+                else:
+                    resolved_countries.append(cid)
+            resolved_data["Country / Location(s)"] = resolved_countries
+        elif isinstance(country_input, str) and len(country_input) == 36:
+            try:
+                name = connection.execute(
+                    text("SELECT name FROM field_contexts WHERE id = :id"),
+                    {"id": country_input}
+                ).scalar()
+                if name:
+                    resolved_data["Country / Location(s)"] = name
+            except Exception:
+                pass
 
     return resolved_data
 
