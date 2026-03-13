@@ -1,0 +1,86 @@
+.donor-template-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 180px;
+    padding: 1.5rem;
+    transition: all 0.2s ease;
+    border: 1px solid #e0e0e0;
+}
+
+.donor-template-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    border-color: #0072bc;
+}
+
+.donor-template-card h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+.template-type-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 0.5rem;
+}
+
+.template-name {
+    font-weight: 600;
+    color: #0072bc;
+}
+
+.donor-template-card p {
+    margin: 0.25rem 0;
+    color: #555;
+}
+
+.card-footer {
+    margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 1rem;
+    border-top: 1px solid #f0f0f0;
+}
+
+.status-badge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-badge.pending {
+    background-color: #fff3e0;
+    color: #e65100;
+}
+
+.status-badge.approved {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+
+.status-badge.published {
+    background-color: #e3f2fd;
+    color: #1565c0;
+}
+
+.status-badge.rejected {
+    background-color: #ffebee;
+    color: #c62828;
+}
+
+.published-icon {
+    color: #1565c0;
+}
+
+.card-date {
+    font-size: 0.75rem;
+    color: #999;
+}

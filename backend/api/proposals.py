@@ -19,7 +19,7 @@ from slugify import slugify
 from backend.core.db import get_engine
 from backend.core.redis import redis_client
 from backend.core.security import get_current_user
-from backend.core.config import get_available_templates, load_proposal_template, TEMPLATES_DIR
+from backend.core.config import get_available_templates, load_proposal_template, TEMPLATES_DIR, _find_template_path
 from backend.utils.crew_actions import handle_text_format, handle_fixed_text_format, handle_number_format, handle_table_format
 from backend.models.schemas import (
     SectionRequest,
@@ -128,7 +128,7 @@ async def create_session(request: CreateSessionRequest, current_user: dict = Dep
             # If it's a concept note, try to use the concept note template.
             if document_type == "concept note":
                 concept_note_name = template_name.replace("proposal_template_", "concept_note_")
-                if os.path.isfile(os.path.join(TEMPLATES_DIR, concept_note_name)):
+                if _find_template_path(concept_note_name):
                     template_name = concept_note_name
 
             # Create the main proposal record

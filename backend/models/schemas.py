@@ -34,7 +34,9 @@ class UserSettings(BaseModel):
     geographic_coverage_region: Optional[str] = None
     geographic_coverage_country: Optional[str] = None
     roles: List[int]
+    requested_roles: Optional[List[int]] = []
     donor_groups: Optional[List[str]] = None
+    donor_ids: Optional[List[uuid.UUID]] = []
     outcomes: Optional[List[uuid.UUID]] = None
     field_contexts: Optional[List[uuid.UUID]] = None
 
@@ -50,6 +52,7 @@ class User(BaseModel):
     roles: List[Role] = []
     is_admin: bool = False
     donor_groups: List[str] = []
+    donor_ids: List[uuid.UUID] = []
     outcomes: List[uuid.UUID] = []
     field_contexts: List[uuid.UUID] = []
 
@@ -183,4 +186,19 @@ class CreateTeamRequest(BaseModel):
 
 class UpdateUserTeamRequest(BaseModel):
     team_id: uuid.UUID
+
+class DonorTemplateRequestCreate(BaseModel):
+    name: str
+    donor_id: Optional[uuid.UUID] = None
+    donor_ids: Optional[List[uuid.UUID]] = None
+    template_type: Optional[str] = "proposal"  # "proposal" or "concept_note"
+    configuration: Dict[str, Any]  # {"instructions": [...], "sections": [...]}
+
+class DonorTemplateCommentCreate(BaseModel):
+    comment_text: str
+    section_name: Optional[str] = None  # None = general comment; set for section-scoped
+    rating: Optional[str] = None # 'up' or 'down'
+
+class DonorTemplateStatusUpdate(BaseModel):
+    status: str  # pending, approved, rejected, published
 

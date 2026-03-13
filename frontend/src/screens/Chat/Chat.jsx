@@ -34,8 +34,6 @@ import regenerate from "../../assets/images/Chat_regenerate.svg"
 import regenerateClose from "../../assets/images/Chat_regenerateClose.svg"
 import word_icon from "../../assets/images/word.svg"
 import excel_icon from "../../assets/images/excel.svg"
-import pdf_icon from "../../assets/images/pdf.svg"
-import approved_icon from "../../assets/images/Chat_approved.svg"
 
 export default function Chat(props) {
         const navigate = useNavigate()
@@ -140,7 +138,10 @@ export default function Chat(props) {
                         const formattedUsers = userList.map(user => ({
                                 id: user.id,
                                 name: user.name,
-                                team: user.team_name || 'Unassigned'
+                                team: user.team_name || 'Unassigned',
+                                donor_ids: user.donor_ids || [],
+                                outcomes: user.outcomes || [],
+                                field_contexts: user.field_contexts || []
                         }));
                         setUsers(formattedUsers.sort((a, b) => a.name.localeCompare(b.name)));
                 }
@@ -166,10 +167,7 @@ export default function Chat(props) {
                 }
         }
 
-        useEffect(() => {
-                getUsers()
-                getTransferUsers()
-        }, [])
+
 
         const [form_expanded, setFormExpanded] = useState(true)
         const [formData, setFormData] = useState({
@@ -219,6 +217,30 @@ export default function Chat(props) {
                         value: false
                 }
         })
+
+        useEffect(() => {
+                if (isPeerReviewModalOpen && users.length > 0) {
+                        const proposalDonors = Array.isArray(formData["Targeted Donor"].value) ? formData["Targeted Donor"].value : (formData["Targeted Donor"].value ? [formData["Targeted Donor"].value] : []);
+                        const proposalOutcomes = formData["Main Outcome"].value || [];
+                        const proposalFieldContexts = Array.isArray(formData["Country / Location(s)"].value) ? formData["Country / Location(s)"].value : (formData["Country / Location(s)"].value ? [formData["Country / Location(s)"].value] : []);
+
+                        const matchedUsers = users.filter(user => {
+                                const donorMatch = (user.donor_ids || []).some(id => proposalDonors.includes(id));
+                                const outcomeMatch = (user.outcomes || []).some(id => proposalOutcomes.includes(id));
+                                const contextMatch = (user.field_contexts || []).some(id => proposalFieldContexts.includes(id));
+                                return donorMatch || outcomeMatch || contextMatch;
+                        });
+
+                        if (matchedUsers.length > 0) {
+                                setSelectedUsers(matchedUsers);
+                        }
+                }
+        }, [isPeerReviewModalOpen, users, formData]);
+
+        useEffect(() => {
+                getUsers()
+                getTransferUsers()
+        }, [])
 
         useEffect(() => {
                 const scope = formData['Geographical Scope'].value;

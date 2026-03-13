@@ -8,6 +8,7 @@ const Sidebar = ({ userRoles, isOpen }) => {
     const [expandedFolders, setExpandedFolders] = useState({
         proposals: true,
         knowledge: true,
+        templates: true,
         otherProposals: false
     });
 
@@ -109,6 +110,27 @@ const Sidebar = ({ userRoles, isOpen }) => {
                             </NavLink>
                             <NavLink to="/dashboard/knowledge/field_context" className="Sidebar_link" data-testid="sidebar-link-knowledge-field_context">
                                 <i className="fa-solid fa-earth-americas field-context"></i> Field Context
+                            </NavLink>
+                        </div>
+                    )}
+                </div>
+
+                <div className="Sidebar_folder">
+                    <div className="Sidebar_folderHeader" onClick={() => toggleFolder('templates')} data-testid="sidebar-templates-folder">
+                        <i className={`fa-solid ${expandedFolders.templates ? 'fa-folder-open' : 'fa-folder'}`}></i>
+                        <span>Donor Templates</span>
+                        <i className={`fa-solid fa-chevron-${expandedFolders.templates ? 'down' : 'right'} Sidebar_chevron`}></i>
+                    </div>
+                    {expandedFolders.templates && (
+                        <div className="Sidebar_subItems">
+                            <NavLink to="/dashboard/templates/all" className="Sidebar_link" data-testid="sidebar-link-templates-all">
+                                <i className="fa-solid fa-layer-group"></i> All
+                            </NavLink>
+                            <NavLink to="/dashboard/templates/proposal" className="Sidebar_link" data-testid="sidebar-link-templates-proposal">
+                                <i className="fa-solid fa-file-contract"></i> Proposal Templates
+                            </NavLink>
+                            <NavLink to="/dashboard/templates/concept_note" className="Sidebar_link" data-testid="sidebar-link-templates-concept-note">
+                                <i className="fa-solid fa-file-lines"></i> Concept Note Templates
                             </NavLink>
                         </div>
                     )}

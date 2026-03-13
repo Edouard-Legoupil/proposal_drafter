@@ -1,11 +1,12 @@
 import './Dashboard.css'
 
-import { useEffect, useState, useRef, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 import Base from '../../components/Base/Base'
 import Project from './components/Project/Project'
 import KnowledgeCard from './components/KnowledgeCard/KnowledgeCard'
+import DonorTemplate from './components/DonorTemplate/DonorTemplate'
 import MetricsDashboard from './components/MetricsDashboard/MetricsDashboard'
 import SingleSelectUserModal from '../../components/SingleSelectUserModal/SingleSelectUserModal'
 
@@ -32,9 +33,11 @@ export default function Dashboard() {
         const [duplicateCardIds, setDuplicateCardIds] = useState(new Set());
         const [viewMode, setViewMode] = useState('vignette')
         const [sortConfig, setSortConfig] = useState({ key: 'updated_at', direction: 'desc' });
+        const [donorTemplates, setDonorTemplates] = useState([])
+        const [dbTemplates, setDbTemplates] = useState([])
         const [teams, setTeams] = useState([]);
 
-        async function getProfile() {
+        const getProfile = useCallback(async () => {
                 try {
                         const response = await fetch(`${API_BASE_URL}/profile`, {
                                 method: 'GET',
@@ -50,9 +53,9 @@ export default function Dashboard() {
                 } catch (err) {
                         console.error("Profile fetch error", err);
                 }
-        }
+        }, []);
 
-        async function getProjects() {
+        const getProjects = useCallback(async () => {
                 const url = subfolder === 'deleted'
                         ? `${API_BASE_URL}/list-drafts?status=deleted`
                         : `${API_BASE_URL}/list-drafts`;
@@ -67,9 +70,9 @@ export default function Dashboard() {
                         const data = await response.json()
                         setProjects(data.drafts)
                 }
-        }
+        }, [subfolder]);
 
-        async function fetchTeams() {
+        const fetchTeams = useCallback(async () => {
                 try {
                         const response = await fetch(`${API_BASE_URL}/teams`);
                         const data = await response.json();
@@ -79,9 +82,9 @@ export default function Dashboard() {
                 } catch (error) {
                         console.error('Error fetching teams:', error);
                 }
-        }
+        }, []);
 
-        async function getReviews() {
+        const getReviews = useCallback(async () => {
                 const response = await fetch(`${API_BASE_URL}/proposals/reviews`, {
                         method: 'GET',
                         headers: { 'Content-Type': 'application/json' },
@@ -92,9 +95,9 @@ export default function Dashboard() {
                         const data = await response.json()
                         setReviews(data.reviews)
                 }
-        }
+        }, []);
 
-        async function getKnowledgeCards() {
+        const getKnowledgeCards = useCallback(async () => {
                 const response = await fetch(`${API_BASE_URL}/knowledge-cards`, {
                         method: 'GET',
                         headers: { 'Content-Type': 'application/json' },
@@ -105,9 +108,9 @@ export default function Dashboard() {
                         const data = await response.json()
                         setKnowledgeCards(data.knowledge_cards)
                 }
-        }
+        }, []);
 
-        async function getAllProposals() {
+        const getAllProposals = useCallback(async () => {
                 const response = await fetch(`${API_BASE_URL}/list-all-proposals`, {
                         method: 'GET',
                         headers: { 'Content-Type': 'application/json' },
@@ -118,9 +121,27 @@ export default function Dashboard() {
                         const data = await response.json()
                         setAllProposals(data.proposals)
                 }
-        }
+        }, []);
 
-        async function getUsers() {
+        const getDonorTemplates = useCallback(async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/templates/`, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include'
+                })
+
+                if (response.ok) {
+                    const data = await response.json()
+                    setDonorTemplates(data.published || [])
+                    setDbTemplates(data.requests || [])
+                }
+            } catch (err) {
+                console.error("Error fetching donor templates", err);
+            }
+        }, []);
+
+        const getUsers = useCallback(async () => {
                 const response = await fetch(`${API_BASE_URL}/users?role=proposal%20drafter`, {
                         method: 'GET',
                         headers: { 'Content-Type': 'application/json' },
@@ -138,7 +159,19 @@ export default function Dashboard() {
                 } else {
                         console.error("Failed to fetch users", response.status);
                 }
-        }
+        }, []);
+
+        const hasKnowledgeManagerRole = useMemo(() => {
+                const requiredRoles = [
+                        "knowledge manager donors",
+                        "knowledge manager outcome",
+                        "knowledge manager field context"
+                ];
+                const normalize = r => r.replace(/_/g, ' ').replace(/\s+/g, ' ').toLowerCase().trim();
+                const currentRoles = Array.isArray(currentUser?.roles) ? currentUser.roles.map(normalize) : [];
+                const normalizedRequired = requiredRoles.map(normalize);
+                return currentRoles.some(role => normalizedRequired.includes(role));
+        }, [currentUser]);
 
         useEffect(() => {
                 sessionStorage.removeItem("proposal_id")
@@ -149,13 +182,14 @@ export default function Dashboard() {
                 getUsers()
                 getAllProposals()
                 fetchTeams()
-        }, [])
+                getDonorTemplates()
+        }, [getProfile, getProjects, getReviews, getKnowledgeCards, getUsers, getAllProposals, fetchTeams, getDonorTemplates])
 
         useEffect(() => {
                 if (folder === 'proposals') {
                         getProjects();
                 }
-        }, [subfolder]);
+        }, [folder, getProjects]);
 
         useEffect(() => {
                 if (folder) {
@@ -524,26 +558,16 @@ export default function Dashboard() {
                                                         <button className="btn" type="button" aria-label="Start a new knowledge card" onClick={() => navigate("/knowledge-card/new")} data-testid="new-knowledge-card-button">Create New Knowledge Card</button>
                                                 </div>
                                                 {displayKnowledgeCards && displayKnowledgeCards.map((card) => {
-                                                        const isKCOwner = currentUser && (currentUser.id === card.created_by || currentUser.user_id === card.created_by);
                                                         return <KnowledgeCard
                                                                 key={card.id}
                                                                 card={card}
                                                                 date={cleanedDate(card.updated_at)}
                                                                 onClick={() => {
-                                                                        const requiredRoles = [
-                                                                                "knowledge manager donors",
-                                                                                "knowledge manager outcome",
-                                                                                "knowledge manager field context"
-                                                                        ];
-                                                                        const normalize = r => r.replace(/_/g, ' ').replace(/\s+/g, ' ').toLowerCase().trim();
-                                                                        const userRoles = Array.isArray(currentUser?.roles) ? currentUser.roles.map(normalize) : [];
-                                                                        const normalizedRequired = requiredRoles.map(normalize);
-                                                                        const hasManagerRole = userRoles.some(role => normalizedRequired.includes(role));
-                                                                        if (hasManagerRole) {
-                                                                                navigate(`/knowledge-card/${card.id}`);
-                                                                        } else {
-                                                                                navigate(`/review/knowledge-card/${card.id}`);
-                                                                        }
+                                                                         if (hasKnowledgeManagerRole) {
+                                                                                 navigate(`/knowledge-card/${card.id}`);
+                                                                         } else {
+                                                                                 navigate(`/review/knowledge-card/${card.id}`);
+                                                                         }
                                                                 }}
                                                                 isDuplicate={duplicateCardIds.has(card.id)}
                                                                 onDelete={() => handleDeleteKnowledgeCard(card.id)}
@@ -566,35 +590,16 @@ export default function Dashboard() {
                                                         </thead>
                                                         <tbody>
                                                                 {sortedKnowledgeCards.map((card) => {
-                                                                        const requiredRoles = [
-                                                                                "knowledge manager donors",
-                                                                                "knowledge manager outcome",
-                                                                                "knowledge manager field context"
-                                                                        ];
-                                                                        const normalize = r => r.replace(/_/g, ' ').replace(/\s+/g, ' ').toLowerCase().trim();
-                                                                        const userRoles = Array.isArray(currentUser?.roles) ? currentUser.roles.map(normalize) : [];
-                                                                        const normalizedRequired = requiredRoles.map(normalize);
-                                                                        const hasManagerRole = userRoles.some(role => normalizedRequired.includes(role));
-                                                                        const canEditKC = hasManagerRole;
-                                                                        const cardType = card.donor_name ? 'Donor' : card.outcome_name ? 'Outcome' : 'Field Context';
-                                                                        const cardName = card.donor_name || card.outcome_name || card.field_context_name || 'N/A';
+                                                                         const cardType = card.donor_name ? 'Donor' : card.outcome_name ? 'Outcome' : 'Field Context';
+                                                                         const cardName = card.donor_name || card.outcome_name || card.field_context_name || 'N/A';
 
                                                                         return (
                                                                                 <tr key={card.id} onClick={() => {
-                                                                                        const requiredRoles = [
-                                                                                                "knowledge manager donors",
-                                                                                                "knowledge manager outcome",
-                                                                                                "knowledge manager field context"
-                                                                                        ];
-                                                                                        const normalize = r => r.replace(/_/g, ' ').replace(/\s+/g, ' ').toLowerCase().trim();
-                                                                                        const userRoles = Array.isArray(currentUser?.roles) ? currentUser.roles.map(normalize) : [];
-                                                                                        const normalizedRequired = requiredRoles.map(normalize);
-                                                                                        const hasManagerRole = userRoles.some(role => normalizedRequired.includes(role));
-                                                                                        if (hasManagerRole) {
-                                                                                                navigate(`/knowledge-card/${card.id}`)
-                                                                                        } else {
-                                                                                                navigate(`/review/knowledge-card/${card.id}`)
-                                                                                        }
+                                                                                         if (hasKnowledgeManagerRole) {
+                                                                                                navigate(`/knowledge-card/${card.id}`);
+                                                                                         } else {
+                                                                                                navigate(`/review/knowledge-card/${card.id}`);
+                                                                                         }
                                                                                 }} style={{ cursor: 'pointer' }}>
                                                                                         <td>
                                                                                                 {card.donor_name && <i className="fa-solid fa-money-bill-wave donor"></i>}
@@ -709,6 +714,36 @@ export default function Dashboard() {
                                                 </table>
                                         </div>
                                 )}
+                        </section>
+
+                        <section id="templates-panel" role="tabpanel" className={`tab-panel ${selectedTab === 'templates' ? 'active' : ''}`} hidden={selectedTab !== 'templates'}>
+                                <div className="templates-dashboard">
+                                        <div className="collection-header">
+                                                <div className="card card--cta">
+                                                        <button className="btn" type="button" aria-label="Request a new donor template" onClick={() => navigate("/donor-templates/new")} data-testid="new-template-button">Request New Template</button>
+                                                </div>
+                                        </div>
+
+                                        <div className="Dashboard_projects">
+                                                {[...donorTemplates, ...dbTemplates]
+                                                        .filter(t => {
+                                                                if (!subfolder || subfolder === 'all') return true;
+                                                                const type = (t.template_type || 'proposal').toLowerCase();
+                                                                if (subfolder === 'proposal') return type.includes('proposal');
+                                                                if (subfolder === 'concept_note') return type.includes('concept_note') || type.includes('concept note');
+                                                                return true;
+                                                        })
+                                                        .map((template) => (
+                                                                <DonorTemplate
+                                                                        key={`${template.type}-${template.id}`}
+                                                                        template={template}
+                                                                        date={template.type === 'db' ? cleanedDate(template.created_at) : null}
+                                                                        creator={template.creator}
+                                                                        onClick={() => navigate(`/donor-templates/${template.id}?type=${template.type}`)}
+                                                                />
+                                                        ))}
+                                        </div>
+                                </div>
                         </section>
                 </div>
 
