@@ -218,6 +218,49 @@
     }
 }
 
+.admin-notification.alert {
+    background: #fff1f0;
+    border: 1px solid #ffccc7;
+    color: #a8071a;
+}
+
+.admin-notification.alert i {
+    color: #ff4d4f;
+}
+
+.admin-section {
+    margin-top: 32px;
+}
+
+.admin-section h3 {
+    margin-bottom: 16px;
+    font-size: 1.1rem;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.template-type-badge {
+    background: #f1f5f9;
+    color: #475569;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-badge {
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+}
+.status-badge.pending { background: #fff7e6; color: #fa8c16; }
+.status-badge.approved { background: #f6ffed; color: #52c41a; }
+.status-badge.rejected { background: #fff1f0; color: #f5222d; }
+
 .row-highlight {
     background-color: #fffbeb !important;
 }

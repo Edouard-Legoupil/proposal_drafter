@@ -10,7 +10,8 @@ export default function UserAdminModal({ show, onClose }) {
         roles: [],
         donor_groups: [],
         outcomes: [],
-        field_contexts: []
+        field_contexts: [],
+        template_requests: []
     });
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
@@ -28,9 +29,10 @@ export default function UserAdminModal({ show, onClose }) {
         setLoading(true);
         setError(null);
         try {
-            const [usersRes, optionsRes] = await Promise.all([
+            const [usersRes, optionsRes, requestsRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/admin/users`, { credentials: 'include' }),
-                fetch(`${API_BASE_URL}/admin/options`, { credentials: 'include' })
+                fetch(`${API_BASE_URL}/admin/options`, { credentials: 'include' }),
+                fetch(`${API_BASE_URL}/admin/template-requests`, { credentials: 'include' })
             ]);
 
             if (usersRes.ok && optionsRes.ok) {
@@ -42,7 +44,8 @@ export default function UserAdminModal({ show, onClose }) {
                     donor_groups: (optionsData.donor_groups || []).map(dg => ({ value: dg, label: dg })),
                     outcomes: (optionsData.outcomes || []).map(o => ({ value: o.id, label: o.name })),
                     field_contexts: (optionsData.field_contexts || []).map(fc => ({ value: fc.id, label: fc.name })),
-                    teams: (optionsData.teams || []).map(t => ({ value: t.id, label: t.name }))
+                    teams: (optionsData.teams || []).map(t => ({ value: t.id, label: t.name })),
+                    template_requests: (await requestsRes.json()) || []
                 });
             } else {
                 setError("Failed to fetch admin data. Are you sure you are an admin?");
@@ -166,6 +169,16 @@ export default function UserAdminModal({ show, onClose }) {
         }
     };
 
+    const handleDownloadTemplate = (request) => {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(request.initial_file_content, null, 2));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", `${request.name.replace(/\s+/g, '_')}_template.json`);
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+    };
+
     if (!show) return null;
 
     const filteredUsers = users.filter(user =>
@@ -206,10 +219,17 @@ export default function UserAdminModal({ show, onClose }) {
                         </div>
                     </div>
 
+                    {options.template_requests.some(r => r.status === 'pending') && (
+                        <div className="admin-notification alert">
+                            <i className="fa-solid fa-file-circle-exclamation"></i>
+                            <strong>New Template Requests:</strong> {options.template_requests.filter(r => r.status === 'pending').length} requests are awaiting review.
+                        </div>
+                    )}
+
                     {users.some(u => u.requested_role_id) && (
                         <div className="admin-notification">
                             <i className="fa-solid fa-bell"></i>
-                            <strong>Pending Requests:</strong> {users.filter(u => u.requested_role_id).length} users are requesting elevated access.
+                            <strong>Pending Access Requests:</strong> {users.filter(u => u.requested_role_id).length} users are requesting elevated access.
                         </div>
                     )}
 
@@ -312,6 +332,45 @@ export default function UserAdminModal({ show, onClose }) {
                                     ))}
                                 </tbody>
                             </table>
+                        </div>
+                    )}
+
+                    {options.template_requests.length > 0 && (
+                        <div className="admin-section">
+                            <h3><i className="fa-solid fa-file-lines"></i> Donor Template Requests</h3>
+                            <div className="users-table-container">
+                                <table className="users-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Template Name</th>
+                                            <th>Type</th>
+                                            <th>Requester</th>
+                                            <th>Status</th>
+                                            <th>Download</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {options.template_requests.map(req => (
+                                            <tr key={req.id} className={req.status === 'pending' ? 'row-highlight' : ''}>
+                                                <td>
+                                                    <div className="user-info">
+                                                        <span className="user-name">{req.name}</span>
+                                                        <span className="user-email">{req.donor_name || 'Multiple Donors'}</span>
+                                                    </div>
+                                                </td>
+                                                <td><span className="template-type-badge">{req.template_type}</span></td>
+                                                <td>{req.creator_name}</td>
+                                                <td><span className={`status-badge ${req.status}`}>{req.status}</span></td>
+                                                <td>
+                                                    <button className="primary-button small" onClick={() => handleDownloadTemplate(req)}>
+                                                        <i className="fa-solid fa-download"></i> JSON
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     )}
                 </div>
