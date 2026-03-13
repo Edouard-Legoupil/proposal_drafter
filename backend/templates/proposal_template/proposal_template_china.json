@@ -2,7 +2,7 @@
     "template_type": "Proposal",
     "donors": [
         "China - Ministry of Foreign Affairs",
-        "China -International Development Cooperation Agency"
+        "China - International Development Cooperation Agency"
     ],
     "special_requirements": {
         "instructions": [
@@ -10,11 +10,16 @@
             "Strictly base all content on the provided inputs and knowledge base.",
             "Do not invent or hallucinate facts, figures, or dates.",
             "If information is missing, explicitly state that it is not available in the context.",
-            "If there is no mention in the context of the targeted population size for the project, asssume the project target the entire population of interest for the designated field context.",
+            "If there is no mention in the context of the targeted population size for the project, assume the project targets the entire population of interest for the designated field context.",
             "Ensure tone, style, and formatting match a professional humanitarian proposal.",
-            "when referencing donor, use donor name and never  donor_id",
-            "when referencing outcomes, use outcome name and never  outcome_id",
-            "when referencing, field context, use field_context name and never field context_id"
+            "When referencing donor, use donor name and never donor_id",
+            "When referencing outcomes, use outcome name and never outcome_id",
+            "When referencing, field context, use field_context name and never field_context_id",
+            "Use only SDG numbers and sub-goal numbers (no full names). Limit to 1–2 major SDGs and ≤3 sub-goals; SDGs listed in Objectives must match the Basic Information table.",
+            "Insert all generated content into the official China Aid/GDF template and translate into Chinese before submission.",
+            "All proposals must be reviewed by UNHCR Beijing before approaching Chinese embassies.",
+            "For China policy narratives, operations must contact UNHCR Beijing ER team. Do not auto-generate China policy content.",
+            "Do not mention explicit budget buffers in any section."
         ]
     },
     "section_sequence": [
@@ -58,7 +63,9 @@
         "China Aid Logo Communication Plan",
         "Intellectual Property Administration Plan",
         "Maintenance Support Plan",
-        "Project Information"
+        "Project Information",
+        "China Aid Visibility Requirements",
+        "China Policy Narrative Placeholder"
     ],
     "sections": [
         {
@@ -66,7 +73,7 @@
             "section_label": "Project Information",
             "format_type": "table",
             "mandatory": true,
-            "instructions": "Fill the table strictly using the provided project information. Do not infer or invent data.",
+            "instructions": "Fill the table strictly using the provided project information. Use 'United Nations High Commissioner for Refugees (UNHCR) Representation in [Country]'. Do not infer or invent data.",
             "columns": [
                 {
                     "name": "Field",
@@ -86,11 +93,11 @@
                 },
                 {
                     "row_title": "Project Name Full",
-                    "instructions": "Project Name \u2013 Full"
+                    "instructions": "Project Name – Full"
                 },
                 {
                     "row_title": "Project Name Short",
-                    "instructions": "Project Name \u2013 Short (\u226415 words)"
+                    "instructions": "Project Name – Short (≤15 words)"
                 },
                 {
                     "row_title": "Concept Note ID",
@@ -130,19 +137,19 @@
                 },
                 {
                     "row_title": "Area of Assistance",
-                    "instructions": "Area of Assistance"
+                    "instructions": "Area of Assistance (e.g., Humanitarian Assistance)"
                 },
                 {
                     "row_title": "Brief Introduction",
-                    "instructions": "Brief Introduction (\u2264300 words)"
+                    "instructions": "Brief Introduction (≤300 words)"
                 },
                 {
                     "row_title": "SDGs Major",
-                    "instructions": "Major relevant SDGs (1\u20132 goals; \u22643 sub-goals each)"
+                    "instructions": "Major relevant SDGs (1–2 goals; ≤3 sub-goals each). Use SDG numbers only (e.g., SDG 1; sub-goal 1.5)."
                 },
                 {
                     "row_title": "SDGs Other",
-                    "instructions": "Other relevant SDGs (\u22643)"
+                    "instructions": "Other relevant SDGs (≤3). Use numbers only."
                 },
                 {
                     "row_title": "Implementation Duration Months",
@@ -188,7 +195,7 @@
             "format_type": "text",
             "mandatory": true,
             "word_limit": 400,
-            "instructions": "Introduce the social and economic situation where the project is implemented, focusing on issues targeted and displacement context (refugees/IDPs/stateless/returnees) and any emergencies using ONLY provided context. Do not invent history or statistics."
+            "instructions": "Introduce the socio-economic and humanitarian situation only; cite recent public sources (UNHCR/OCHA/WB/OECD). Do not include project activities."
         },
         {
             "section_name": "Necessity Requirements",
@@ -197,7 +204,7 @@
             "format_type": "text",
             "mandatory": true,
             "word_limit": 400,
-            "instructions": "Describe issues targeted, analyze necessity/importance/urgency, and explain needs identification (protection monitoring, assessments) based on available data. Link to multi-year strategy."
+            "instructions": "Describe targeted issues, necessity/importance/urgency, and needs identification (protection monitoring, assessments). Link to multi-year strategy. Use data from public sources where available."
         },
         {
             "section_name": "Necessity Conformity",
@@ -206,7 +213,7 @@
             "format_type": "text",
             "mandatory": true,
             "word_limit": 450,
-            "instructions": "Explain alignment with Chinese policies (e.g., Global Development Initiative, Belt and Road) and host government frameworks (e.g., 1951 Convention/1967 Protocol, domestic laws, GRF pledges) based on the inputs; add host government support details."
+            "instructions": "Part A (China policy): Explain alignment with Chinese policies (e.g., Global Development Initiative, Belt and Road). Part B (host government): explain alignment with national frameworks (1951 Convention/1967 Protocol, domestic laws, GRF pledges)."
         },
         {
             "section_name": "Objectives SDGs",
@@ -215,7 +222,7 @@
             "format_type": "text",
             "mandatory": true,
             "word_limit": 300,
-            "instructions": "List major SDGs and sub-goals (consistent with Basic Information) and corresponding indicators (from SDGs indicator framework) based strictly on the logframe."
+            "instructions": "List only SDG numbers and sub-goal numbers (e.g., SDG 1; sub-goal 1.5). Must match Project Information."
         },
         {
             "section_name": "Objectives Specific",
@@ -224,7 +231,7 @@
             "format_type": "text",
             "mandatory": true,
             "word_limit": 100,
-            "instructions": "Provide concise specific objective (100 words)."
+            "instructions": "Provide concise specific objective (≤100 words)."
         },
         {
             "section_name": "Expected Outputs",
@@ -232,7 +239,7 @@
             "format_type": "text",
             "mandatory": true,
             "word_limit": 500,
-            "instructions": "Map activities to UNHCR Global Results Framework Impact Areas and Outcome Areas based on the logframe. For each output: verification indicators, corresponding SDGs/sub-goals, input (USD), baseline and expected values."
+            "instructions": "Map outputs to UNHCR Global Results Framework Impact Areas and Outcome Areas based on the logframe. Use the correct IA/OA from the country MYS. Do not include 'Project Management' as an output."
         },
         {
             "section_name": "Conditions Prep Work",
@@ -241,7 +248,7 @@
             "format_type": "text",
             "mandatory": true,
             "word_limit": 400,
-            "instructions": "Describe groundwork and prior responses, government support/letters, and link to background and requirements analysis using provided info."
+            "instructions": "Describe groundwork and prior responses, UNHCR operational footprint, inter-agency roles, emergency mechanisms, and government support."
         },
         {
             "section_name": "Conditions Required",
@@ -249,7 +256,7 @@
             "section_parent": "5. Conditions of Project Implementation",
             "format_type": "table",
             "mandatory": true,
-            "instructions": "List necessary conditions (e.g., mobilization capacity, distribution capacity, monitoring/reporting systems) and describe completeness based on the plan.",
+            "instructions": "List necessary conditions (mobilization capacity, distribution capacity, monitoring/reporting systems) and describe completeness.",
             "columns": [
                 {
                     "name": "Necessary condition",
@@ -280,7 +287,7 @@
             "format_type": "text",
             "mandatory": true,
             "word_limit": 600,
-            "instructions": "Summarize UNHCR overview/strengths and add operation-specific capacity using available data; add one-paragraph overview per implementing partner."
+            "instructions": "Summarize UNHCR strengths and operation-specific capacity using available data; provide one-paragraph overview per implementing partner."
         },
         {
             "section_name": "Similar Projects Table",
@@ -353,7 +360,7 @@
             "format_type": "text",
             "mandatory": true,
             "word_limit": 300,
-            "instructions": "List UNHCR units (Programme, Supply, ER/Reporting) and implementing partners; describe roles based on the plan."
+            "instructions": "List UNHCR units (Programme, Supply, External Relations/Reporting) and implementing partners; describe roles based on the plan."
         },
         {
             "section_name": "Management Team Table",
@@ -361,7 +368,7 @@
             "section_parent": "6. Capabilities of Project Implementation and Management",
             "format_type": "table",
             "mandatory": false,
-            "instructions": "Provide team roster.",
+            "instructions": "Provide team roster (keep two rows: Project Director—usually Representative; Project Manager—Senior Programme Officer).",
             "columns": [
                 {
                     "name": "No.",
@@ -411,22 +418,13 @@
             ]
         },
         {
-            "section_name": "Internal Control System",
-            "section_label": "6.4 Internal Control System",
-            "section_parent": "6. Capabilities of Project Implementation and Management",
-            "format_type": "text",
-            "mandatory": true,
-            "word_limit": 350,
-            "instructions": "Provide standard narratives for internal control and oversight; subsections below detail specific systems."
-        },
-        {
             "section_name": "Anti-corruption",
             "section_label": "6.4.1 Anti-corruption & internal inspection systems",
             "section_parent": "6.4 Internal Control System",
             "format_type": "fixed_text",
             "mandatory": true,
             "word_limit": 250,
-            "fixed_text": "The Inspector General's Office (IGO) exists as the cornerstone of UNHCR's system of independent oversight. IGO provides the High Commissioner with independent assurance and oversight of UNHCR's activities and operations. Through strategic oversight and investigation services, the work of IGO helps deter fraud and abuse and improve the efficiency of UNHCR's programmes and operations. It contributes to the integrity of the organization and its accountability towards the people UNHCR protects, host communities, donors and other stakeholders. IGO's Investigation Service is responsible for receiving and assessing misconduct complaints related to UNHCR personnel, partner staff, vendors or contractors. Where appropriate, the Investigation Service conducts investigations into allegations of misconduct. Within UNHCR, it has the sole authority to do so. It also gathers, collates, processes and analyses information in order to detect or disrupt misconduct and prevent or mitigate risks thereof. These risks could be operational, financial, organizational/reputational, managerial or cyber-related in nature. In addition, UNHCR has an Independent Audit and Oversight Committee (IAOC) that is an expert advisory body established by UNHCR's Standing Committee in 2011 to assist the High Commissioner and the Executive Committee in exercising their oversight responsibilities in accordance with relevant best practices, industry standards, and the financial and staff regulations and rules applicable to UNHCR. It aims to 1) provide external, independent, senior-level advice regarding the functioning of audit and oversight in UNHCR; 2) review internal and external audit and oversight matters; and 3) review financial management and reporting within UNHCR. The Strategic Oversight Service under IGO is to strengthen the organization-wide response to oversight findings and facilitate coherence of all oversight functions by ensuring that there are no gaps or duplications. The Service is responsible for communication and coordination with internal and external oversight providers. In this context, the Service manages the relationship with the UN Office of Internal Oversight Services (OIOS), which carries out internal audits and advisories. It also acts as the focal point for the UN Joint Inspection Unit (JIU) and provides secretariat support for IAOC. Strategic Oversight also undertakes strategic analysis of oversight findings and conducts specific reviews and inquiries as appropriate. ."
+            "fixed_text": "The Inspector General's Office (IGO) exists as the cornerstone of UNHCR's system of independent oversight. IGO provides the High Commissioner with independent assurance and oversight of UNHCR's activities and operations. Through strategic oversight and investigation services, the work of IGO helps deter fraud and abuse and improve the efficiency of UNHCR's programmes and operations. It contributes to the integrity of the organization and its accountability towards the people UNHCR protects, host communities, donors and other stakeholders. IGO's Investigation Service is responsible for receiving and assessing misconduct complaints related to UNHCR personnel, partner staff, vendors or contractors. Where appropriate, the Investigation Service conducts investigations into allegations of misconduct. Within UNHCR, it has the sole authority to do so. It also gathers, collates, processes and analyses information in order to detect or disrupt misconduct and prevent or mitigate risks thereof. These risks could be operational, financial, organizational/reputational, managerial or cyber-related in nature. In addition, UNHCR has an Independent Audit and Oversight Committee (IAOC) that is an expert advisory body established by UNHCR's Standing Committee in 2011 to assist the High Commissioner and the Executive Committee in exercising their oversight responsibilities in accordance with relevant best practices, industry standards, and the financial and staff regulations and rules applicable to UNHCR. It aims to 1) provide external, independent, senior-level advice regarding the functioning of audit and oversight in UNHCR; 2) review internal and external audit and oversight matters; and 3) review financial management and reporting within UNHCR. The Strategic Oversight Service under IGO is to strengthen the organization-wide response to oversight findings and facilitate coherence of all oversight functions by ensuring that there are no gaps or duplications. The Service is responsible for communication and coordination with internal and external oversight providers. In this context, the Service manages the relationship with the UN Office of Internal Oversight Services (OIOS), which carries out internal audits and advisories. It also acts as the focal point for the UN Joint Inspection Unit (JIU) and provides secretariat support for IAOC. Strategic Oversight also undertakes strategic analysis of oversight findings and conducts specific reviews and inquiries as appropriate. ."
         },
         {
             "section_name": "Procurement System",
@@ -462,7 +460,7 @@
             "format_type": "text",
             "mandatory": true,
             "word_limit": 350,
-            "instructions": "Summarize UNHCR Strategic Plan for Climate Action 2024\u20132030, protection-centred climate principles, environmental sustainability in supply, and AGD/AAP engagement."
+            "instructions": "Summarize UNHCR Strategic Plan for Climate Action, protection-centred climate principles, environmental sustainability in supply, and AGD/AAP engagement."
         },
         {
             "section_name": "Emergency Management System",
@@ -506,7 +504,7 @@
             "section_parent": "7. Implementation Plan for Project Activities",
             "format_type": "table",
             "mandatory": true,
-            "instructions": "Define Project Output(s) and Activities with indicators based strictly on the logframe.",
+            "instructions": "Define Project Output(s) and Activities with indicators strictly based on the logframe. Include procurement source (global/regional stockpiles, local procurement, FAs), distribution methodology (targeting, verification, PDM), HR roles, and visibility/reporting narratives (from ER Beijing).",
             "columns": [
                 {
                     "name": "Level",
@@ -543,16 +541,16 @@
                     "instructions": "Enter Activity 1.2 with indicators."
                 },
                 {
-                    "row_title": "Project Output 2 \u2013 Project Management",
-                    "instructions": "Visibility & reporting activities."
+                    "row_title": "Project Output 2 – Project Management",
+                    "instructions": "Visibility & reporting activities (not to be repeated as an output in Section 4)."
                 },
                 {
-                    "row_title": "Project Activity 2.1 \u2013 Project visibility",
-                    "instructions": "Indicators: China Aid logo on multi-donor signages; \u22652 social posts."
+                    "row_title": "Project Activity 2.1 – Project visibility",
+                    "instructions": "Indicators: China Aid logo on signages; ≥2 social posts."
                 },
                 {
-                    "row_title": "Project Activity 2.2 \u2013 Project reporting",
-                    "instructions": "Quarterly & final reports per agreement; External Relations team support and cost coverage as per Section 9.1."
+                    "row_title": "Project Activity 2.2 – Project reporting",
+                    "instructions": "Quarterly & final reports; ER Beijing supports and costs per Section 9.1."
                 }
             ]
         },
@@ -563,7 +561,7 @@
             "format_type": "text",
             "mandatory": false,
             "word_limit": 500,
-            "instructions": "Explain procurement basis (global stockpiles mobilization, transport/logistics budgeting ~20% of item net cost as reference, local procurement & FAs, price basis and stability) based on the financial plan."
+            "instructions": "Explain procurement basis (global stockpiles mobilization, transport/logistics approach, local procurement & FAs, price basis and stability). Do not mention buffers."
         },
         {
             "section_name": "Maintenance Support Plan",
@@ -580,7 +578,7 @@
             "format_type": "text",
             "mandatory": true,
             "word_limit": 500,
-            "instructions": "Detail logo usage per CIDCA Administrative Measures and communication plan aligned with visibility indicators in Section 7.2."
+            "instructions": "Detail logo usage per China Aid Administrative Measures and communication plan aligned with visibility indicators in Section 7.2."
         },
         {
             "section_name": "Intellectual Property Administration Plan",
@@ -605,7 +603,7 @@
             "format_type": "text",
             "mandatory": true,
             "word_limit": 400,
-            "instructions": "For Output 1: unit cost & quantities (include 5\u201310% price buffer). Transport/logistics costs can be per kit or separate. Provide estimation basis. For Output 2: calculation basis for reporting/visibility personnel costs (see table). Note: ISC fixed 6.5%. Use strictly budget data."
+            "instructions": "For Output 1: unit cost & quantities; transport/logistics may be per kit or separate. Provide estimation basis without referring to explicit price buffers. For Output 2: explain basis for reporting/visibility personnel costs (see table). Note: ISC fixed 6.5%. Use strictly budget data."
         },
         {
             "section_name": "Budget Items Table",
@@ -623,7 +621,7 @@
                 {
                     "name": "Unit Price (USD)",
                     "format_type": "number",
-                    "instructions": "Unit price incl. buffer if applicable."
+                    "instructions": "Unit price."
                 },
                 {
                     "name": "Quantity",
@@ -693,7 +691,7 @@
             "format_type": "text",
             "mandatory": true,
             "word_limit": 200,
-            "instructions": "Explain UNHCR fixed 6.5% ISC application and calculation (amount/1.065 allocated to activities; difference recorded as ISC revenue)."
+            "instructions": "Use standardized text: UNHCR applies a fixed 6.5% ISC (Indirect Support Cost). The contribution divided by 1.065 to arrive at amount allocated to activities; difference is ISC revenue."
         },
         {
             "section_name": "Project Budget Overall",
@@ -725,7 +723,7 @@
             "section_label": "11. Project Risk Analysis",
             "format_type": "table",
             "mandatory": true,
-            "instructions": "Compile major risk assessment and countermeasures table.",
+            "instructions": "Compile major risk assessment and countermeasures table. Use China Aid categories and levels (very low, low, medium, high, very high).",
             "columns": [
                 {
                     "name": "No",
@@ -735,7 +733,7 @@
                 {
                     "name": "Risk Category",
                     "format_type": "text",
-                    "instructions": "e.g., policy/legal, operational, financial, environmental/social, force majeure."
+                    "instructions": "e.g., policy/legal, operational, financial, environmental/social, force majeure, public health."
                 },
                 {
                     "name": "Description",
@@ -779,7 +777,7 @@
             "format_type": "text",
             "mandatory": false,
             "word_limit": 400,
-            "instructions": "Provide analyses of long-term, social, (economic if any) and environmental impact (include CRI greening narratives if relevant)."
+            "instructions": "Provide analyses of long-term, social, economic (if any), and environmental impact; include greening narratives where relevant."
         },
         {
             "section_name": "Attachments List",
@@ -844,6 +842,14 @@
             "mandatory": true,
             "word_limit": 200,
             "instructions": "Insert declaration text and fields for name, seal, and date as per template; note system automation of partner acknowledgement."
+        },
+        {
+            "section_name": "China Aid Visibility Requirements",
+            "section_label": "China Aid Visibility Requirements",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 350,
+            "instructions": "Describe China Aid logo placement (banners, signages, packaging), bilingual posts, photo documentation, ER Beijing review, and compliance with Administrative Measures for the Foreign Aid Logo."
         }
     ]
 }

@@ -9,9 +9,11 @@
       "Strictly base all content on the provided inputs and knowledge base.",
       "Do not invent or hallucinate facts, figures, or dates.",
       "If information is missing, explicitly state that it is not available in the context.",
-      "If there is no mention in the context of the targeted population size for the project, asssume the project target the entire population of interest for the designated field context.",
+      "If the size of the targeted population for the project is not explicitly stated, do not assume that the action targets the entire population of concern. Estimate only the direct beneficiaries that can realistically be reached through the foreseen activities, implementation capacity, budget, and geographic scope; if this cannot be determined from the inputs, state that the exact direct target is not available in the context.",
       "Ensure tone, style, and formatting match a professional humanitarian proposal.",
-      "Reference donors, outcomes, and field context only by their name, not by ID."
+      "Reference donors, outcomes, and field context only by their name, not by ID.",
+      "Respect field discipline strictly: where a section asks for YES/NO, provide only YES or NO; where a section asks for table only, provide no narrative; where a section asks for no narrative, do not add explanatory text.",
+      "Ensure internal consistency across the proposal: beneficiary figures, sector figures, risks, contingency measures, logframe elements, and implementing partner information must align across all sections."
     ]
   },
   "section_sequence": [
@@ -85,7 +87,22 @@
     "Coordination with national and local authorities",
     "Annex financial statement and detailed budget",
     "Do you foresee communication actions that go beyond standard obligations?",
-    "Annexes"
+    "Embedded Detailed Budget",
+    "Embedded Workplan and Gantt Chart",
+    "Embedded Maps and Location Information",
+    "Embedded Partner List and Implementation Arrangements",
+    "Embedded Environmental Screening",
+    "Embedded Resilience Annex",
+    "Embedded Protection and Safeguarding Annex",
+    "Embedded Nexus and Sustainability Annex",
+    "Embedded Capacity Building Annex",
+    "Embedded Assessment Reports Summary",
+    "Embedded Evaluation or Learning Plan",
+    "Embedded TORs for External Evaluations and Audits",
+    "Embedded VAT Documentation",
+    "Embedded Indirect Cost Explanation",
+    "Embedded Fallback Plan for Co-Funding",
+    "Embedded Additional Sector Guidance Documents"
   ],
   "sections": [
     {
@@ -177,7 +194,7 @@
       "section_parent": "2. Project data overview by country",
       "format_type": "number",
       "mandatory": true,
-      "instructions": "Total direct unique individual beneficiaries (not households, no double counting). No narrative here."
+      "instructions": "Total direct unique individual beneficiaries reached by the action (not households, no double counting). This figure must reflect the activities foreseen in the proposal, the implementation capacity, budget, and geographic scope; do not default to the full population of concern unless this is explicitly supported by the provided inputs. No narrative here."
     },
     {
       "section_name": "Beneficiaries by sex and age",
@@ -231,7 +248,7 @@
         }
       ],
       "mandatory": true,
-      "instructions": "Provide complete disaggregation of all direct beneficiaries by sex (Female/Male/Other) and age groups. Use standard age categories: 0-4 years, 5-17 years, 18-59 years, 60+ years. Present data in table format with totals for each category. Ensure the sum equals the total unique beneficiaries reported in section 2.3.1. If exact data is unavailable, use demographic estimates from assessments and clearly note this."
+      "instructions": "Provide complete disaggregation of direct unique beneficiaries by sex (Female/Male/Other) and age groups. Use only the age categories already provided in the table. Present data in table format with totals for each category. Ensure the sum equals the total unique beneficiaries reported in section 2.3. If exact direct beneficiary data is unavailable, use the best supported estimate from the provided inputs and clearly note this in section 2.5, not below the table."
     },
     {
       "section_name": "Beneficiaries with disabilities",
@@ -298,7 +315,7 @@
         }
       ],
       "mandatory": true,
-      "instructions": "Categorize all beneficiaries by population profile using the following categories: (1) Local/host population, (2) Internally Displaced Persons (IDPs), (3) Refugees, (4) Asylum seekers, (5) Returnees (IDPs or refugees), (6) Persons on the move/in transit, (7) In-camp or camp-like settings. Provide numbers for each applicable category. Specify if beneficiaries fall into multiple categories and explain how double-counting is avoided. Present in table format."
+      "instructions": "Categorize all direct unique beneficiaries by population profile using the categories already listed in the table. Provide numbers only for applicable categories. Clearly avoid double counting. If beneficiaries fall into overlapping profiles, use the comments in section 2.5 to explain the counting approach; do not add narrative below the table."
     },
     {
       "section_name": "Organisation beneficiaries",
@@ -368,7 +385,7 @@
         }
       ],
       "mandatory": true,
-      "instructions": "Select relevant sector among the following: Food security and livelihoods, Disaster Risk Reduction - Disaster Preparedness, Shelter and settlements, Mine actions, Education in emergencies, Nutrition, WASH, Health, MPCA (multi-purpose-cash-assistance), Protection. For each sector: sector name, linked locations, budget, unique sector beneficiaries with breakdown Male / Female, Children, transfer modalities (cash/voucher/in-kind) including both initial amount and number of beneficiaries, and total cost transfer ratio in % (for sector or multi-purpose cash with transfers in cash above 1 million euro); If relevant, explain why cash transfers were not used. Add comments as needed."
+      "instructions": "Select only the relevant sector rows. For each relevant sector, provide: sector name, linked locations, budget, unique sector beneficiaries with breakdown Male / Female, Children, transfer modality, and comments. In the transfer modality and comments, specify the number of beneficiaries receiving cash, vouchers, in-kind assistance, or services, include transfer amount where relevant, and explain clearly if cash transfers are not used. Keep this section concise and structured, and ensure figures remain consistent with the overall beneficiary totals."
     },
     {
       "section_name": "Eventual comments",
@@ -377,7 +394,7 @@
       "format_type": "text",
       "char_limit": 1500,
       "mandatory": false,
-      "instructions": "Provide any necessary clarifications regarding: (1) How beneficiary numbers were calculated or estimated; (2) Data limitations or gaps in available information; (3) Methodologies used for projections or estimates; (4) Any assumptions made in beneficiary counting; (5) Explanation of any exceptions to standard ECHO reporting requirements. Be transparent about data quality and sources."
+      "instructions": "Provide only necessary clarifications regarding: (1) how beneficiary numbers were calculated or estimated; (2) data limitations or gaps; (3) methodologies used for projections or estimates; (4) assumptions made in beneficiary counting; (5) explanation of any exceptions to standard ECHO reporting requirements; and (6) explanation of how overlapping beneficiary categories were treated to avoid double counting. Be transparent about data quality and sources."
     },
     {
       "section_name": "Presence in the area",
@@ -395,7 +412,7 @@
       "format_type": "text",
       "char_limit": 3500,
       "mandatory": "true",
-      "instructions": "Demonstrate how this action complements and builds upon other UNHCR and partner interventions. Address: (1) Linkages to UNHCR's broader country program and annual operational plan; (2) Complementarity with other ongoing or planned projects in the same geographic area or sector; (3) Lessons learned from previous similar interventions and how they inform this action; (4) Coordination mechanisms to avoid duplication or overlap with other actors; (5) Strategies to prevent double funding. Explain how this action fits within the broader humanitarian response architecture and UNHCR's multi-year strategy."
+      "instructions": "Describe synergies primarily within UNHCR's own programmatic approach, country operation, annual operational plan, prior similar interventions, and multi-year strategy. Explain how this action complements and builds upon other UNHCR actions, lessons learned, and internal measures to avoid duplication or double funding. Do not elaborate here on synergies with external humanitarian, government, or development actors; those belong under section 11."
     },
     {
       "section_name": "Assessment dates and methodology",
@@ -404,7 +421,7 @@
       "format_type": "text",
       "char_limit": 3500,
       "mandatory": "true",
-      "instructions": "Provide detailed information on the most recent needs assessments that directly inform this proposal. ECHO is a NEEDS-BASED donor - this section is critical for justification. For each relevant assessment (maximum 2 years old, unless highly technical): (1) Date and name of assessment; (2) Lead organization(s) and whether it was joint/coordinated; (3) Methodology - who conducted it, sample size, data collection methods (surveys, focus groups, key informant interviews, etc.); (4) Type of data - primary vs. secondary sources; (5) Participation of affected populations in the assessment process. List ONLY assessments with DIRECT relevance to the proposed action. Demonstrate robust evidence base for the intervention."
+      "instructions": "Provide detailed information on the most recent needs assessments that directly inform this proposal. ECHO is a NEEDS-BASED donor - this section is critical for justification. Prioritize recent assessments and monitoring evidence, especially in fast-moving humanitarian contexts; for dynamic refugee situations, preference should be given to assessments, protection monitoring, registration updates, or rapid needs analyses from the last 12 months whenever available. For each relevant assessment, provide: (1) date and name of assessment; (2) lead organization(s) and whether it was joint/coordinated; (3) methodology - who conducted it, sample size, and data collection methods; (4) type of data - primary vs. secondary; (5) participation of affected populations. List only assessments with direct relevance to the proposed action. If an older assessment is used, explain briefly why it remains relevant and what more recent evidence complements it."
     },
     {
       "section_name": "Problems, needs and risk analysis",
@@ -413,7 +430,7 @@
       "format_type": "text",
       "char_limit": 7000,
       "mandatory": "true",
-      "instructions": "Based on the assessments described above, provide a structured analysis of problems, needs, and risks within the intervention area and sectors. For each sector/population group, clearly articulate: (1) PROBLEMS - the humanitarian issues identified (with evidence/data from assessments); (2) NEEDS - what is required to address these problems; (3) RISKS - threats to the affected population if needs are not met. Include cause-and-effect relationships. Address vulnerability factors related to age, gender, disability, and diversity (AGDD). Consider environmental and climate-related trends. Use specific examples: 'Problem: 5% of child population are unaccompanied/separated children (UAM/SC); Need: Best interest determination, foster family identification, safe learning environments; Risk: UAM/SC face high risk of exploitation, smuggling, and trafficking.'"
+      "instructions": "Based on the assessments described above, provide a structured analysis of problems, needs, and risks within the intervention area and sectors. Structure the narrative so that each problem is followed by its corresponding need and the specific risk if that need is not met. Maintain a strict mirrored logic throughout the section: 1 problem = 1 need = 1 risk. Include cause-and-effect relationships, vulnerability factors related to age, gender, disability, and diversity (AGDD), and relevant environmental or climate-related trends. Use evidence and examples directly linked to the assessments cited in section 4.1."
     },
     {
       "section_name": "Response analysis",
@@ -422,16 +439,16 @@
       "format_type": "text",
       "char_limit": 7000,
       "mandatory": "true",
-      "instructions": "Justify why the proposed intervention is the most appropriate response to the identified problems, needs, and risks. Demonstrate clear linkage: 1 PROBLEM/NEED/RISK = 1 ELEMENT OF RESPONSE. For each problem identified in section 4.2, explain: (1) Why this specific response/modality is appropriate for the context; (2) How activities are adapted to local conditions and beneficiary preferences; (3) Why this approach is environmentally sound and meets Minimum Environmental Requirements (MER) - particularly regarding greening of non-food items (NFI); (4) How the response aligns with ECHO priorities and humanitarian principles; (5) Evidence or precedent supporting the effectiveness of this approach. Demonstrate strategic thinking and context-appropriate programming."
+      "instructions": "Justify why the proposed intervention is the most appropriate response to the identified problems, needs, and risks. Maintain a strict mirrored logic with section 4.2: 1 problem / need / risk = 1 corresponding response element. For each problem identified in section 4.2, explain: (1) why this specific response or modality is appropriate for the context; (2) how activities are adapted to local conditions and beneficiary preferences; (3) how the response is environmentally sound and meets Minimum Environmental Requirements (MER), where relevant; (4) how the response aligns with ECHO priorities and humanitarian principles; (5) evidence or precedent supporting the effectiveness of this approach. Make the linkage with section 4.2 easy to trace."
     },
     {
       "section_name": "Have you assessed this project as entailing data protection risks?",
       "section_label": "4.4. Have you assessed this project as entailing data protection risks?",
       "section_parent": "4. Needs assessments and beneficiaries",
       "format_type": "text",
-      "char_limit": 3500,
+      "char_limit": 3,
       "mandatory": "true",
-      "instructions": "Assess and identify the operational scenario for data protection: Scenario 1 - The project involves neither the collection nor the processing of beneficiaries' personal data; Scenario 2 - The project relies on already collected data and existing processing, and will not result in the collection and/or processing of new data (essentially situations where there is no new influx/movement); Scenario 3 - The project will result in the collection and/or the processing of new data among the beneficiary populations (essentially situations where there is new influx/movement). State which scenario applies and reference UNHCR Data Protection Policy principles for compliance."
+      "instructions": "Answer only YES or NO in this field. Do not describe the applicable scenario or mitigation measures here. If YES, provide the scenario explanation and mitigation details only in section 4.4.1."
     },
     {
       "section_name": "Details of risk mitigation measures, including details of any planned Data Protection Impact Assessment (DPIA)",
@@ -440,7 +457,7 @@
       "format_type": "text",
       "char_limit": 3500,
       "mandatory": "false",
-      "instructions": "If Scenario 1 - Your project involves neither the collection nor the processing of beneficiaries’ personal data, mention Not Applicable. If Scenario 2 - The project relies on already collected data and existing processing, and will not result in the collection and/or processing of new data (= essentially situations where there is no new influx/movement); Scenario 3 - Theproject will result in the collection and/or the processing of new data among the beneficiary populations (= essentially situations where there is new influx/movement), then mention precisely -- Accountability structure: UNHCR Data Protection Policy establishes the notion of an internal Data Controller who bears accountability and responsibility within the organization for compliance with the Policy (including risk assessment and mitigation). Data controller’s role for projects is established on country, regional, or HQ level - depending on the territorial scope of the project. On country level, the role of Data controller belongs to country representative. - Data processing: UNHCR adheres to the 8 data protection principles established in the Policy for the collection and further processing of personal data of persons of concern. These principles are reflected in the key documents that guide UNHCR core mandate activities, including Guidance on Registration and Identity Management. - Risk assessment: The UNHCR Data Protection Policy and Guidance forms part of a risk management framework to identify and address the risks associated with the processing of personal data of persons of concern by UNHCR, its partners and other relevant third parties, and to outline appropriate mitigating measures. A Data Protection Impact Assessment (DPIA) is part of this risk management framework and is foreseen for new technologies, systems for data processing, projects or policies, and data sharing arrangements that may negatively impact on the protection of personal data of UNHCR persons of concern. UNHCR employs internal tools to map operational data lifecycle and assess where the processing meets a threshold for DPIA. DPIA is required when developing new data processing systems and new technologies, and where collection and processing or sharing of personal data is likely to be large, repeated or structural; and for the sharing of particularly sensitive personal data with a third party. DPIA is strongly recommended for sharing of personal data with a partner or third party with presumed data protection weaknesses or where the level of data protection is difficult to assess. DPIA may be recommended in the processing of particularly sensitive personal data as defined in the Data Protection Guidance. The Data Controller determines the need for DPIA, oversees the assessment process, signs off on the report and makes decisions with regards to the data processing initiative and the necessary mitigating measures. - Risk mitigation: When sharing personal data of persons of concern with third parties, UNHCR employs technical and organisational measures to ensure security, confidentiality and integrity of personal data, and has procedures in place to assess whether the third party adheres to comparable standards. Data sharing agreements are entered into with third parties in cases where the sharing of personal data is large, repeated and structural. "
+      "instructions": "If the answer to section 4.4 is NO, write Not Applicable. If the answer to section 4.4 is YES, explain here which operational scenario applies and provide the required details on accountability structure, data processing, risk assessment, DPIA, and risk mitigation. Use the standard UNHCR language below as applicable, while adapting it to the project context. - Accountability structure: UNHCR Data Protection Policy establishes the notion of an internal Data Controller who bears accountability and responsibility within the organization for compliance with the Policy (including risk assessment and mitigation). Data controller's role for projects is established on country, regional, or HQ level - depending on the territorial scope of the project. On country level, the role of Data controller belongs to country representative. - Data processing: UNHCR adheres to the 8 data protection principles established in the Policy for the collection and further processing of personal data of persons of concern. These principles are reflected in the key documents that guide UNHCR core mandate activities, including Guidance on Registration and Identity Management. - Risk assessment: The UNHCR Data Protection Policy and Guidance forms part of a risk management framework to identify and address the risks associated with the processing of personal data of persons of concern by UNHCR, its partners and other relevant third parties, and to outline appropriate mitigating measures. A Data Protection Impact Assessment (DPIA) is part of this risk management framework and is foreseen for new technologies, systems for data processing, projects or policies, and data sharing arrangements that may negatively impact on the protection of personal data of UNHCR persons of concern. UNHCR employs internal tools to map operational data lifecycle and assess where the processing meets a threshold for DPIA. DPIA is required when developing new data processing systems and new technologies, and where collection and processing or sharing of personal data is likely to be large, repeated or structural; and for the sharing of particularly sensitive personal data with a third party. DPIA is strongly recommended for sharing of personal data with a partner or third party with presumed data protection weaknesses or where the level of data protection is difficult to assess. DPIA may be recommended in the processing of particularly sensitive personal data as defined in the Data Protection Guidance. The Data Controller determines the need for DPIA, oversees the assessment process, signs off on the report and makes decisions with regards to the data processing initiative and the necessary mitigating measures. - Risk mitigation: When sharing personal data of persons of concern with third parties, UNHCR employs technical and organisational measures to ensure security, confidentiality and integrity of personal data, and has procedures in place to assess whether the third party adheres to comparable standards. Data sharing agreements are entered into with third parties in cases where the sharing of personal data is large, repeated and structural."
     },
     {
       "section_name": "Beneficiaries' identification criteria",
@@ -494,7 +511,7 @@
       "format_type": "fixed_text",
       "char_limit": 1750,
       "mandatory": "true",
-      "fixed_text": "- Sex and Age disaggregated data: UNHCR applies an Age, Gender, and Diversity (AGD) approach to ensure inclusive programming and participation of women, children, older persons, and persons with disabilities emphasising inclusive programming and meaningful participation of displaced populations and ensuring targeted and effective responses to protection challenges. Participatory assessments and registration provide sex- and age-disaggregated data, informing project design and targeted responses to protection challenges.\n - Adapted assistance: UNHCR and partners profile women, men, boys, and girls to tailor assistance. Monthly dashboards such 5Ws, protection dashboard, etc. track civil documentation, support for vulnerable individuals, and border monitoring. UNHCR and partners strengthen GBV and child protection through awareness campaigns, PSEA measures, and referral pathways for legal, medical, and psychosocial services in BAY states. \n - Prevention and mitigation of negative effects: AGD principles guide all sectors to prevent protection risks for vulnerable groups. UNHCR works with partners to assess capacity, implement PSEA, and ensure accountability and transparency, embedding inclusive approaches for women, children, older persons, and persons with disabilities in program design and delivery. \n - Adequate participation: Meaningful participation is central to AGD. UNHCR engages men, women, boys, girls, persons with disabilities, and minority groups in GBV prevention, child protection, and decision-making. Efforts target underrepresented groups to promote inclusion and ensure community voices shape responses across all sectors."
+      "fixed_text": "- Sex and Age disaggregated data: UNHCR applies an Age, Gender, and Diversity (AGD) approach to ensure inclusive programming and meaningful participation of women, men, girls, boys, older persons, and persons with disabilities. Participatory assessments, registration, and routine monitoring provide sex- and age-disaggregated data that inform project design and targeted responses to protection challenges.\\n- Adapted assistance: UNHCR and partners profile women, men, boys, and girls to tailor assistance and protection interventions to specific vulnerabilities and barriers to access in the intervention area. Dashboards, case management tools, and protection monitoring are used to track access to documentation, services, referral pathways, and support for persons with specific needs.\\n- Prevention and mitigation of negative effects: AGD principles guide programme design and delivery across all relevant sectors to prevent protection risks for vulnerable groups. UNHCR works with partners to assess capacity, implement PSEA, and ensure accountability and transparency, embedding inclusive approaches for women, children, older persons, persons with disabilities, and minority or marginalized groups.\\n- Adequate participation: Meaningful participation is central to AGD. UNHCR engages women, men, girls, boys, persons with disabilities, and minority groups in consultations, community-based protection, and decision-making. Efforts target underrepresented groups to promote inclusion and ensure community voices shape responses across all sectors."
     },
     {
       "section_name": "Principal objective",
@@ -611,7 +628,7 @@
       "format_type": "text",
       "char_limit": 3500,
       "mandatory": "true",
-      "instructions": "List all critical conditions OUTSIDE UNHCR's control that must be in place BEFORE activities can begin. These are necessary starting conditions, not ongoing assumptions. Format as bullet points. For each precondition, be specific about: what must exist, who is responsible, and why it's necessary. Examples: (1) Sufficient core funding secured for the operation; (2) Adequate staffing levels approved and recruited; (3) Memorandum of Understanding (MoU) signed with host government; (4) Security clearance obtained for field access; (5) Partner agreements finalized. Distinguish preconditions from assumptions (section 7.5) - preconditions must exist before start, assumptions must hold during implementation."
+      "instructions": "List all critical conditions outside UNHCR's control that must be in place before activities can begin. These are necessary starting conditions, not ongoing assumptions. Format as bullet points. For each precondition, be specific about what must exist, who is responsible, and why it is necessary. Distinguish preconditions from assumptions in section 7.5: preconditions must exist before the start; assumptions must hold during implementation."
     },
     {
       "section_name": "Assumptions and risks, including risk of fraudulent activities and environmental risk",
@@ -637,7 +654,7 @@
         }
       ],
       "mandatory": "true",
-      "instructions": "Clearly distinguish and list both ASSUMPTIONS and RISKS. Format as bullet points with clear labeling. ASSUMPTIONS = POSITIVE factors OUTSIDE UNHCR's control that must hold true DURING implementation for success. Examples: (1) Government maintains open-border policy; (2) Security situation remains stable in neighboring countries; (3) Supply chains remain functional. RISKS = NEGATIVE factors OUTSIDE UNHCR's control that could jeopardize implementation if they materialize DURING the action. List ALL foreseeable risks including: fraud/corruption risks, environmental risks, conflict/security risks, climate-related risks, and other operational risks. Examples: (1) Escalation of violence preventing humanitarian access; (2) Diversion of assistance through corruption; (3) Natural disasters disrupting operations. Comprehensive risk identification helps justify under-implementation and can prevent reimbursement issues."
+      "instructions": "Clearly distinguish and list both assumptions and risks. Assumptions are positive factors outside UNHCR's control that must hold true during implementation for success. Risks are negative factors outside UNHCR's control that could jeopardize implementation if they materialize during the action. Include all foreseeable risks, including fraud/corruption risks, environmental risks, conflict/security risks, climate-related risks, and other operational risks. Present the content so that each assumption is clearly linked to its corresponding risk if the assumption fails, and make sure the risks listed here can be directly matched with the contingency measures in section 7.6."
     },
     {
       "section_name": "Contingency measures taken to mitigate risks",
@@ -646,7 +663,7 @@
       "char_limit": 1750,
       "format_type": "text",
       "mandatory": "true",
-      "instructions": "For each risk identified in section 7.5, describe specific, practical contingency measures. Follow the principle: 1 RISK = 1 CONTINGENCY MEASURE. For each contingency, explain: (1) What alternative approach will be used if the risk materializes; (2) What mitigation steps are already in place to reduce likelihood/impact; (3) What triggers will activate the contingency plan; (4) What resources or partnerships enable the alternative approach. Be concrete and actionable. Example: 'Risk: Escalation of violence in intervention areas. Contingency: (a) Establish remote management protocols with vetted local partners; (b) Pre-position emergency supplies in secure locations; (c) Activate when UN security phase reaches level 4; (d) Maintain communication through satellite phones and encrypted channels.'"
+      "instructions": "Describe specific, practical contingency measures aligned to the risks identified in section 7.5. Maintain a clear one-to-one logic: 1 risk = 1 contingency measure or mitigation approach. For each contingency, explain what alternative approach will be used if the risk materializes, what mitigation steps are already in place, what triggers would activate the contingency plan, and what resources or partnerships enable the alternative approach. Keep the linkage with section 7.5 explicit and easy to follow."
     },
     {
       "section_name": "Vulnerability analysis",
@@ -685,9 +702,10 @@
       "section_name": "Complaint mechanism",
       "section_label": "9.1. Complaint mechanism",
       "section_parent": "9. Monitoring and Evaluation",
-      "format_type": "fixed_text",
+      "format_type": "text",
+      "char_limit": 1750,
       "mandatory": "true",
-      "fixed_text": "UNHCR is committed to institutionalizing a culture of Accountability towards Affected People (AAP) beyond consultation with communities to an actual means of measuring the effectiveness and overall protection outcomes of multi-sectoral interventions. For UNHCR, AAP is outlined in its Age, Gender, and Diversity Policy (2018). Besides promoting participatory approaches to programming, our policy covers other key elements including Communication and Transparency, to ensure that forcibly displaced and stateless persons receive information in a timely manner, in their most preferred and accessible way, in order to mitigate protection risks and promote access to available services. Additionally, our policy highlights the importance of building effective feedback and response Mechanisms to ensure the appropriate management of forcibly displaced and stateless persons concerns and complaints - including those linked to fraud and sexual exploitation and abuse - and to adapt its programs, based on feedback received from people. UNHCR utilizes a diverse set of feedback and complaint mechanisms and tools in camps and urban areas. These include complaint and feedback boxes, information feedback points at community centers and networks of community-based structures. They enable forcibly displaced and stateless populations to communicate complaints and ideas regarding their experience of UNHCR or partner services and interventions. In addition, UNHCR and its partners are continuously investing in awareness raising among forcibly displaced populations about the available mechanisms for filing complaints and providing feedback to ensure that they can access these services and that they are provided in a satisfactory manner."
+      "fixed_text": "UNHCR is committed to institutionalizing a culture of Accountability towards Affected People (AAP) beyond consultation with communities to an actual means of measuring the effectiveness and overall protection outcomes of multi-sectoral interventions. For UNHCR, AAP is outlined in its Age, Gender, and Diversity Policy (2018). Besides promoting participatory approaches to programming, our policy covers other key elements including Communication and Transparency, to ensure that forcibly displaced and stateless persons receive information in a timely manner, in their most preferred and accessible way, in order to mitigate protection risks and promote access to available services. Additionally, our policy highlights the importance of building effective feedback and response mechanisms to ensure the appropriate management of concerns and complaints - including those linked to fraud and sexual exploitation and abuse - and to adapt programmes based on feedback received from people. In this section, recall UNHCR approach and go beyond the standard corporate approach and specify the actual complaint and feedback channels that will be available in the intervention area (for example complaint and feedback boxes, information desks, hotlines, outreach volunteers, community-based structures, or digital channels as applicable), who manages them, how confidentiality and safe referral are ensured, what accessibility measures are in place for children, older persons, persons with disabilities and minority groups, and how allegations related to SEA, fraud, or serious misconduct are referred and followed up. Mention the language or communication adaptations used locally and explain briefly how feedback is analyzed and used to adjust programming."
     },
     {
       "section_name": "Monitoring of the action",
@@ -713,7 +731,7 @@
       "format_type": "text",
       "char_limit": 3500,
       "mandatory": "false",
-      "instructions": "List and justify all evaluations (among: Internal evaluation of the action's results,  External evaluation of the action's results, External audit,  Studies carried out in relation to the action) that are Action-specific and will be charged to ECHO; create ToRs as needed."
+      "instructions": "Complete this section only if there is an action-specific evaluation, audit, or study that will be charged to this action. If none is foreseen, write Not Applicable and do not add narrative. If applicable, list and justify only evaluations that are action-specific and funded under this action, among: Internal evaluation of the action's results, External evaluation of the action's results, External audit, Studies carried out in relation to the action."
     },
     {
       "section_name": "Human resources and management capacities",
@@ -740,7 +758,7 @@
       "format_type": "text",
       "char_limit": 3500,
       "mandatory": "true",
-      "instructions": "Explain supply/procurement chain details, sources, sustainability and cost-efficiency. Answer No if the project  will likely rely on other entities to do this either fully or partially (e.g. Humanitarian Procurement Centre, Global Logistics Cluster, through joint procurement initiatives etc.)"
+      "instructions": "Explain the logistics approach only if relevant to the action. If the project relies fully or partially on other entities or existing supply arrangements for procurement or logistics, simply state No and do not add unnecessary narrative. If relevant, explain supply and procurement chain details, sources, sustainability, and cost-efficiency in a concise manner."
     },
     {
       "section_name": "Supply Chain",
@@ -758,7 +776,7 @@
       "format_type": "text",
       "char_limit": 3500,
       "mandatory": "false",
-      "instructions": "YES/NO. If YES, explain foreseen risks and constraints."
+      "instructions": "Answer only YES or NO. If NO, do not add explanation. If YES, explain only the foreseen supply chain risks and constraints in section 10.4.2."
     },
     {
       "section_name": "Please describe shortly these challenges and indicate how you foresee to mitigate them",
@@ -767,7 +785,7 @@
       "char_limit": 3500,
       "format_type": "text",
       "mandatory": "false",
-      "instructions": "Outline concrete mitigation/adaptation strategies for each challenge described above."
+      "instructions": "Complete this section only if the answer in section 10.4.1 is YES. Outline briefly the concrete mitigation or adaptation strategies for each challenge described above. Keep the response concise and aligned only to the challenges identified."
     },
     {
       "section_name": "Work plan",
@@ -776,7 +794,7 @@
       "format_type": "text",
       "char_limit": 3500,
       "mandatory": "false",
-      "instructions": "Brief description; reminder to upload the workplan/Gantt as annex."
+      "instructions": "No narrative needed. State only that the detailed work plan / Gantt chart is uploaded as an annex, and keep the text minimal."
     },
     {
       "section_name": "Are there any other participants in the action?",
@@ -785,7 +803,7 @@
       "format_type": "text",
       "char_limit": 3500,
       "mandatory": "false",
-      "instructions": "Answer YES or NO. If YES, explain: (1) Rationale for partnership - why partners are necessary (geographic access, technical expertise, community acceptance, capacity); (2) Partner selection process - how partners were identified and vetted (capacity assessment, due diligence, track record); (3) Roles and responsibilities - clear division of tasks between UNHCR and partners; (4) Value added - what unique contribution each partner brings; (5) Capacity building - how UNHCR supports partner capacity development. Include the statement: 'UNHCR does not include partner overhead costs in ECHO financial reports. UNHCR pays overhead costs to implementing partners (local or international) at programme level, not at project/activity level. The overheads are part of the broader partnership agreement covering the entire UNHCR country programme. Overhead costs are paid from the country's operational budget, which bears no direct relation to overhead costs received from ECHO and recorded at HQ level.'"
+      "instructions": "Answer only YES or NO in this field. Do not provide detailed explanation here. If YES, provide the rationale for partnership and related details under the implementing partners section or other relevant implementation sections."
     },
     {
       "section_name": "Implementing partners",
@@ -821,7 +839,7 @@
         }
       ],
       "mandatory": "false",
-      "instructions": "For each: name, type, estimated EC budget, status (local, IP, international), Grand Bargain compliance, rationale, role, value-added, capacity built or transferred."
+      "instructions": "For each implementing partner, provide the information requested in the table and use the role and location fields to capture key operational details. In the narrative within those fields, include as relevant whether the entity is an implementing partner, whether it is local or international, its operational value added, approximate programme or project financial envelope relevant to the action where available, and key elements on capacity support, training plan, monitoring plan, and follow-up arrangements. If the partner's full address, PPA amount, training arrangements, or monitoring arrangements are available in the source inputs, reflect them concisely within the existing fields. Keep all partner information consistent with section 10.6 and the wider proposal."
     },
     {
       "section_name": "Operational coordination with humanitarian actors",
@@ -946,7 +964,8 @@
       "section_parent": "13. Financial overview of the action",
       "format_type": "fixed_text",
       "mandatory": "true",
-      "instructions": "Upload latest Excel/financial annex as required."
+      "instructions": "Upload latest Excel/financial annex as required.",
+      "fixed_text": "Upload the latest financial statement and detailed budget annex separately in APPEL as required. No narrative needed in this field."
     },
     {
       "section_name": "Contribution in kind",
@@ -1003,7 +1022,7 @@
       "format_type": "text",
       "char_limit": 3500,
       "mandatory": "true",
-      "instructions": "Provide any additional information relevant to the appraisal of this proposal that does not fit in other sections. This may include: (1) Sensitive or confidential information affecting implementation; (2) Recent contextual changes not reflected elsewhere; (3) Specific challenges or constraints requiring ECHO awareness; (4) Innovative approaches or pilot activities; (5) Coordination agreements or partnerships still being finalized. For final reports, this section should include: (1) Overall assessment of achievement against objectives; (2) Specific difficulties encountered and how they were addressed; (3) Lessons learned and their implications; (4) Recommendations for future programming in this context/sector; (5) Reflections on what worked well and what could be improved. Be concise but comprehensive. Clearly mark any information that is sensitive or confidential."
+      "instructions": "Provide only additional information relevant to the appraisal of this proposal that does not fit in other sections. Keep this section concise. Use it for genuinely relevant lessons learned, recent contextual changes, sensitive implementation considerations, specific challenges requiring ECHO awareness, or brief recommendations for future programming. Do not repeat information already covered elsewhere in the proposal."
     },
     {
       "section_name": "Logframe",
@@ -1085,7 +1104,7 @@
       "section_label": "Annex: Checklist",
       "format_type": "table",
       "mandatory": true,
-      "instructions": "For proposal submission, generate a checklist and summary describing: (1) All required ECHO annexes: Detailed Budget (Excel), Workplan/Gantt chart, Maps or location info (if required), List of Partners/Implementing Partners, Environmental Screening/Resilience/Protection/Nexus/Capacity Building annexes (as applicable), Assessment Reports (if referenced), Evaluation or Learning Plan (as relevant), TORs for external evaluations/audits (when funded), VAT documentation, Indirect cost explanations, Fallback plan for co-funding, all additional documents required by sector guidance. For each annex, provide: name, type ('mandatory'/'optional'), brief description of content, file name/reference, and status (attached/expected/NA). For narrative annexes, include clearly labeled markdown subsections for each, and for files, provide exact filenames or placeholders. Ensure completeness, proper cross-referencing, and notes for future updates/reporting stages.",
+      "instructions": "Generate a concise checklist and summary of the required annexes for proposal submission. Cover the dedicated embedded annex sections generated below and identify whether each is mandatory, optional, fully generated in the proposal, or not applicable.  Do not leave this section blank. Keep descriptions short and functional.",
       "rows": [
         {
           "row_title": "Annex 1"
@@ -1124,6 +1143,264 @@
           "instructions": "Attached / Expected / Not applicable"
         }
       ]
+    },
+    {
+      "section_name": "Embedded Detailed Budget",
+      "section_label": "17.1. Detailed Budget",
+      "section_parent": "17. Embedded Annexes and Supporting Documents",
+      "format_type": "table",
+      "mandatory": "true",
+      "instructions": "Generate the detailed budget directly in this section instead of referring to an external Excel annex. Present a structured budget table covering the main direct cost categories, short description of each cost line, amount, funding source where relevant, and concise justification. Ensure consistency with sections 7.3, 13.1, 13.3, and 13.4. If exact figures are not available, state that the detailed budget parameters are not fully available in the context and provide the clearest possible structured draft without inventing unsupported amounts.",
+      "rows": [
+        {
+          "row_title": "Budget line 1"
+        },
+        {
+          "row_title": "Budget line 2"
+        },
+        {
+          "row_title": "Budget line 3"
+        },
+        {
+          "row_title": "Budget line 4"
+        },
+        {
+          "row_title": "Budget line 5"
+        },
+        {
+          "row_title": "Budget line 6"
+        }
+      ],
+      "columns": [
+        {
+          "name": "Budget Category",
+          "format_type": "text"
+        },
+        {
+          "name": "Description",
+          "format_type": "text"
+        },
+        {
+          "name": "Amount",
+          "format_type": "number"
+        },
+        {
+          "name": "Funding Source",
+          "format_type": "text"
+        },
+        {
+          "name": "Justification",
+          "format_type": "text"
+        }
+      ]
+    },
+    {
+      "section_name": "Embedded Workplan and Gantt Chart",
+      "section_label": "17.2. Workplan / Gantt Chart",
+      "section_parent": "17. Embedded Annexes and Supporting Documents",
+      "format_type": "table",
+      "mandatory": "true",
+      "instructions": "Generate the workplan directly in this section instead of referring only to an external annex. Present a Gantt-style implementation schedule using the existing table structure. Show the major activities, start period, end period, responsible lead, and key milestone or dependency. Ensure full consistency with section 7.3 Results and the logic of intervention.",
+      "rows": [
+        {
+          "row_title": "Activity 1"
+        },
+        {
+          "row_title": "Activity 2"
+        },
+        {
+          "row_title": "Activity 3"
+        },
+        {
+          "row_title": "Activity 4"
+        },
+        {
+          "row_title": "Activity 5"
+        },
+        {
+          "row_title": "Activity 6"
+        }
+      ],
+      "columns": [
+        {
+          "name": "Activity / Output",
+          "format_type": "text"
+        },
+        {
+          "name": "Start Period",
+          "format_type": "text"
+        },
+        {
+          "name": "End Period",
+          "format_type": "text"
+        },
+        {
+          "name": "Lead Actor",
+          "format_type": "text"
+        },
+        {
+          "name": "Milestone / Dependency",
+          "format_type": "text"
+        }
+      ]
+    },
+    {
+      "section_name": "Embedded Maps and Location Information",
+      "section_label": "17.3. Maps or Location Information",
+      "section_parent": "17. Embedded Annexes and Supporting Documents",
+      "format_type": "text",
+      "char_limit": 2500,
+      "mandatory": "false",
+      "instructions": "Generate the location and mapping content directly in this section. If an actual map cannot be embedded, provide a clear location narrative covering intervention sites, geographic spread, admin divisions, camp/out-of-camp setting, border or access corridors where relevant, and any location details needed for appraisal. Keep it consistent with sections 2.1 and 2.2. If maps are not required or not supported by the available inputs, state Not Applicable."
+    },
+    {
+      "section_name": "Embedded Partner List and Implementation Arrangements",
+      "section_label": "17.4. List of Partners / Implementing Partners",
+      "section_parent": "17. Embedded Annexes and Supporting Documents",
+      "format_type": "table",
+      "mandatory": "true",
+      "instructions": "Generate a consolidated partner annex directly in this section. Include all partners and implementing partners relevant to the action and summarize their type, role, status, location or address details where available, and key implementation or capacity-building arrangements. Keep this section aligned with sections 10.6 and 10.7.",
+      "rows": [
+        {
+          "row_title": "Partner 1"
+        },
+        {
+          "row_title": "Partner 2"
+        },
+        {
+          "row_title": "Partner 3"
+        }
+      ],
+      "columns": [
+        {
+          "name": "Partner Name",
+          "format_type": "text"
+        },
+        {
+          "name": "Type / Status",
+          "format_type": "text"
+        },
+        {
+          "name": "Role / Value Added",
+          "format_type": "text"
+        },
+        {
+          "name": "Location / Address",
+          "format_type": "text"
+        },
+        {
+          "name": "Implementation / Monitoring Notes",
+          "format_type": "text"
+        }
+      ]
+    },
+    {
+      "section_name": "Embedded Environmental Screening",
+      "section_label": "17.5. Environmental Screening",
+      "section_parent": "17. Embedded Annexes and Supporting Documents",
+      "format_type": "text",
+      "char_limit": 2500,
+      "mandatory": "false",
+      "instructions": "Generate the environmental screening content directly in this section when applicable. Summarize the main environmental risks linked to the action, likely impacts, minimum environmental requirements, mitigation measures, and any greening approach relevant to the intervention. Keep it consistent with sections 4.3, 7.5, 7.6, and 8."
+    },
+    {
+      "section_name": "Embedded Resilience Annex",
+      "section_label": "17.6. Resilience Annex",
+      "section_parent": "17. Embedded Annexes and Supporting Documents",
+      "format_type": "text",
+      "char_limit": 2500,
+      "mandatory": "false",
+      "instructions": "Generate the resilience-related annex content directly in this section when applicable. Summarize risk-informed programming, vulnerability analysis, do-no-harm considerations, local capacity strengthening, and how the action contributes to resilience over time. Keep it aligned with section 8."
+    },
+    {
+      "section_name": "Embedded Protection and Safeguarding Annex",
+      "section_label": "17.7. Protection / Safeguarding Annex",
+      "section_parent": "17. Embedded Annexes and Supporting Documents",
+      "format_type": "text",
+      "char_limit": 2500,
+      "mandatory": "false",
+      "instructions": "Generate the protection, accountability, safeguarding, AGD, PSEA, and data-protection-related supporting content directly in this section when applicable. Summarize key protection mainstreaming measures, safeguarding controls, referral pathways, complaint handling, and inclusion measures. Keep it consistent with sections 4, 5, 6, and 9."
+    },
+    {
+      "section_name": "Embedded Nexus and Sustainability Annex",
+      "section_label": "17.8. Nexus / Transition / Sustainability Annex",
+      "section_parent": "17. Embedded Annexes and Supporting Documents",
+      "format_type": "text",
+      "char_limit": 2500,
+      "mandatory": "false",
+      "instructions": "Generate the humanitarian-development-peace nexus and sustainability supporting content directly in this section when applicable. Summarize transition strategy, development linkages, national-system alignment, sustainability measures, and exit or handover considerations. Keep it aligned with sections 8 and 11."
+    },
+    {
+      "section_name": "Embedded Capacity Building Annex",
+      "section_label": "17.9. Capacity Building Annex",
+      "section_parent": "17. Embedded Annexes and Supporting Documents",
+      "format_type": "text",
+      "char_limit": 2500,
+      "mandatory": "false",
+      "instructions": "Generate the capacity-building annex content directly in this section when applicable. Describe the training, mentoring, institutional support, monitoring follow-up, and expected capacity outcomes for local authorities, partners, community structures, or affected populations. Keep it aligned with sections 8, 10.6, and 10.7."
+    },
+    {
+      "section_name": "Embedded Assessment Reports Summary",
+      "section_label": "17.10. Assessment Reports",
+      "section_parent": "17. Embedded Annexes and Supporting Documents",
+      "format_type": "text",
+      "char_limit": 3000,
+      "mandatory": "false",
+      "instructions": "Generate a summary of the assessment reports directly in this section whenever assessments are referenced in the proposal. Summarize each key assessment, date, lead agency, methodology, relevance, and core findings that support the action. Keep it fully consistent with section 4.1."
+    },
+    {
+      "section_name": "Embedded Evaluation or Learning Plan",
+      "section_label": "17.11. Evaluation or Learning Plan",
+      "section_parent": "17. Embedded Annexes and Supporting Documents",
+      "format_type": "text",
+      "char_limit": 2500,
+      "mandatory": "false",
+      "instructions": "Generate the evaluation or learning plan directly in this section when relevant. If no evaluation, audit, or learning exercise is planned, write Not Applicable. If relevant, summarize purpose, timing, scope, methodology, intended use of findings, and relation to section 9.4."
+    },
+    {
+      "section_name": "Embedded TORs for External Evaluations and Audits",
+      "section_label": "17.12. TORs for External Evaluations / Audits",
+      "section_parent": "17. Embedded Annexes and Supporting Documents",
+      "format_type": "text",
+      "char_limit": 3000,
+      "mandatory": "false",
+      "instructions": "Generate concise Terms of Reference content directly in this section only when an external evaluation or audit is funded under the action. If not applicable, write Not Applicable. If applicable, include purpose, scope, key questions, deliverables, timing, and reporting line, consistent with section 9.4."
+    },
+    {
+      "section_name": "Embedded VAT Documentation",
+      "section_label": "17.13. VAT Documentation",
+      "section_parent": "17. Embedded Annexes and Supporting Documents",
+      "format_type": "text",
+      "char_limit": 2000,
+      "mandatory": "false",
+      "instructions": "Generate the VAT-related supporting information directly in this section. State the VAT exemption status, any pending actions to secure exemption, and any implications for implementing partners if relevant. Keep it aligned with section 13.8. If not applicable or unknown, state this clearly."
+    },
+    {
+      "section_name": "Embedded Indirect Cost Explanation",
+      "section_label": "17.14. Indirect Cost Explanation",
+      "section_parent": "17. Embedded Annexes and Supporting Documents",
+      "format_type": "text",
+      "char_limit": 2000,
+      "mandatory": "false",
+      "instructions": "Generate the indirect cost explanation directly in this section. Summarize the rationale for the support-cost percentage used, how indirect costs relate to the action, and any donor-specific compliance points relevant to the support-cost level. Keep it consistent with section 13.2."
+    },
+    {
+      "section_name": "Embedded Fallback Plan for Co-Funding",
+      "section_label": "17.15. Fallback Plan for Co-Funding",
+      "section_parent": "17. Embedded Annexes and Supporting Documents",
+      "format_type": "text",
+      "char_limit": 2000,
+      "mandatory": "false",
+      "instructions": "Generate a fallback plan for co-funding directly in this section whenever relevant. Explain how the action would be adapted, phased, prioritized, or supplemented if expected complementary funding is delayed, reduced, or not confirmed. Keep it aligned with sections 13.3, 13.4, and 13.7. If not relevant, write Not Applicable."
+    },
+    {
+      "section_name": "Embedded Additional Sector Guidance Documents",
+      "section_label": "17.16. Additional Documents Required by Sector Guidance",
+      "section_parent": "17. Embedded Annexes and Supporting Documents",
+      "format_type": "text",
+      "char_limit": 3000,
+      "mandatory": "false",
+      "instructions": "Generate any additional supporting content required by sector guidance directly in this section when relevant. Summarize what sector-specific supporting notes, compliance details, technical standards, or methodological clarifications are required for the action and provide the content directly here. If no additional sector-guidance documents are relevant, write Not Applicable."
     }
   ]
 }

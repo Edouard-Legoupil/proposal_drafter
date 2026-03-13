@@ -2,65 +2,74 @@
     "template_type": "Concept Note",
     "donors": [
         "China - Ministry of Foreign Affairs",
-        "China -International Development Cooperation Agency"
+        "China - International Development Cooperation Agency"
     ],
     "special_requirements": {
         "instructions": [
             "Strictly base all content on the provided inputs and knowledge base.",
             "Do not invent or hallucinate facts, figures, or dates.",
             "If information is missing, explicitly state that it is not available in the context.",
-            "If there is no mention in the context of the targeted population size for the project, asssume the project target the entire population of interest for the designated field context.",
+            "If there is no mention in the context of the targeted population size, assume the project targets the full population of interest for the designated field context.",
             "Ensure tone, style, and formatting match a professional humanitarian concept note.",
-            "when referencing donor, use donor name and never  donor_id",
-            "when referencing outcomes, use outcome name and never  outcome_id",
-            "when referencing, field context, use field_context name and never field context_id"
+            "When referencing donor, use donor name and never donor_id",
+            "When referencing outcomes, use outcome name and never outcome_id",
+            "When referencing, field context, use field_context name and never field context_id",
+            "China Aid/GDF templates must be filled using the donor’s official format; generated text must be pasted into the official template.",
+            "China Aid proposals must be translated into Chinese before submission; English-only submissions are not accepted.",
+            "All proposals must be vetted by UNHCR Beijing before contacting Chinese embassies.",
+            "Use only SDG numbers and sub-goal numbers (no full names). Limit to 1–2 major SDGs and ≤3 sub-goals; for CRI/NFI, SDG 1 and sub-goal 1.5 are usually appropriate.",
+            "Cite publicly available sources (UNHCR/OCHA/WB/OECD) for socio-economic data and humanitarian needs; if not available, state not available."
         ]
     },
     "section_sequence": [
+        "Summary",
         "Rationale",
         "Project Description",
         "Implementation and Coordination Arrangements",
         "Budget Estimate",
-        "Summary"
+        "Applicant Introduction",
+        "Partner Introduction",
+        "China Aid Visibility Requirements",
+        "Organizational Chart"
     ],
     "sections": [
         {
             "section_name": "Summary",
             "word_limit": 400,
             "format_type": "text",
-            "instructions": "Briefly summarize the crisis/emergency context, humanitarian needs, target population, and key proposed activities. Focus on the core value proposition of the project.",
+            "instructions": "Briefly summarize the crisis/emergency context, humanitarian needs, target population, and key proposed activities.",
             "mandatory": true
         },
         {
             "section_name": "Rationale",
             "word_limit": 600,
             "format_type": "text",
-            "instructions": "Justify the project within the field context: What is the emergency? Why is this response necessary now? What is the gap being addressed?",
+            "instructions": "Justify the project within the field context using recent (≤6 months) public sources (UNHCR, OCHA, WB, OECD). Do not include activities here.",
             "mandatory": true
         },
         {
             "section_name": "Project Description",
             "word_limit": 500,
             "format_type": "text",
-            "instructions": "Describe the main proposed interventions, expected outputs, and intended impact on the affected population.",
+            "instructions": "Describe the main proposed interventions, expected outputs, and indicators; align with no more than 1–2 SDGs (e.g., SDG 1, sub-goal 1.5 for CRI/NFI).",
             "mandatory": true
         },
         {
             "section_name": "Implementation and Coordination Arrangements",
             "word_limit": 300,
             "format_type": "text",
-            "instructions": "Briefly describe coordination with government and other humanitarian actors, and the roles of key partners.",
+            "instructions": "Describe coordination with government (e.g., Commission for Refugees) and other humanitarian actors, and roles of partners.",
             "mandatory": true
         },
         {
             "section_name": "Budget Estimate",
-            "instructions": "Provide a high-level budget breakdown by major category.",
+            "instructions": "Provide a high-level budget breakdown by major category. Do not reference explicit budget buffers.",
             "format_type": "table",
             "columns": [
                 {
                     "name": "Category",
                     "format_type": "text",
-                    "instructions": "Major budget category (e.g., Staffing, Supplies, Grants)."
+                    "instructions": "Major budget category (e.g., Staffing, Supplies, Logistics)."
                 },
                 {
                     "name": "Estimated Cost (USD)",
@@ -75,10 +84,38 @@
                 },
                 {
                     "row_title": "Support Costs",
-                    "instructions": "Estimate indirect/support costs."
+                    "instructions": "Estimate indirect/support costs (e.g., 6.5% ISC as applicable)."
                 }
             ],
             "mandatory": true
+        },
+        {
+            "section_name": "Applicant Introduction",
+            "word_limit": 300,
+            "format_type": "text",
+            "instructions": "Provide a brief introduction of the Applicant: UNHCR Representation in [Country], highlighting experience and technical capacity relevant to the project.",
+            "mandatory": true
+        },
+        {
+            "section_name": "Partner Introduction",
+            "word_limit": 300,
+            "format_type": "text",
+            "instructions": "Introduce project partner(s) (e.g., government and NGOs), with mandates and roles relevant to this CN.",
+            "mandatory": false
+        },
+        {
+            "section_name": "China Aid Visibility Requirements",
+            "word_limit": 200,
+            "format_type": "text",
+            "instructions": "Describe visibility activities including use of the China Aid logo per Administrative Measures, signage at distributions, and photo documentation.",
+            "mandatory": true
+        },
+        {
+            "section_name": "Organizational Chart",
+            "word_limit": 150,
+            "format_type": "text",
+            "instructions": "Describe the management structure of Applicant, Partner(s), and field-level roles in text (no image needed).",
+            "mandatory": false
         }
     ]
 }
