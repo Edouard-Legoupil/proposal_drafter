@@ -306,10 +306,51 @@ export default function Chat(props) {
 
                 const fieldId = toKebabCase(label);
 
+                const OUTCOME_ORDER = [
+                        "OA1. Access to Territory, Registration and Documentation",
+                        "OA2. Status Determination",
+                        "OA3. Protection Policy and Law",
+                        "OA4. Gender-based Violence",
+                        "OA5. Child Protection",
+                        "OA6. Safety and Access to Justice",
+                        "OA7. Community Engagement and Participation",
+                        "OA8. Well-Being and Basic Needs",
+                        "OA9. Sustainable housing and Settlements",
+                        "OA10. Healthy Lives",
+                        "OA11. Education",
+                        "OA12. Clean Water, Sanitation and Hygiene",
+                        "OA13. Self Reliance, Economic Inclusion and Livelihoods",
+                        "OA14. Voluntary Repatriation and Sustainable Reintegration",
+                        "OA15. Resettlement and Complementary Pathways",
+                        "OA16. Local Integration and other Local Solutions",
+                        "EA17. Systems and Processes",
+                        "EA18. Operational support and supply chain",
+                        "EA19. People and culture",
+                        "EA20. External engagement and resource mobilization",
+                        "EA21. Leadership and Governance",
+                        "FA1. Safeguard international protection, including in the context of mixed movements.",
+                        "FA2. Strengthen accountability to the people we serve, especially women and children.",
+                        "FA3. Reinforce efforts to strengthen gender-based violence prevention, risk mitigation and response.",
+                        "FA4. Expand, pursue and adapt options for resettlement and complementary pathways.",
+                        "FA5. Mainstream development engagement in our responses from the outset, especially by building coalitions with development partners.",
+                        "FA6. Grow our engagement on responses and solutions for internally displaced people.",
+                        "FA7. Redouble efforts on statelessness so that the objectives of the #IBelong campaign are best pursued.",
+                        "FA8. Proactively act to mitigate the effects of the climate change crisis on displacement and in line with our protection mandate."
+                ];
+
                 const getOptions = (label) => {
                         switch (label) {
-                                case "Main Outcome":
-                                        return [...outcomes, ...newOutcomes].map(o => ({ value: o.id, label: o.name })).sort((a, b) => a.label.localeCompare(b.label));
+                                case "Main Outcome": {
+                                        const options = [...outcomes, ...newOutcomes].map(o => ({ value: o.id, label: o.name }));
+                                        return options.sort((a, b) => {
+                                                const indexA = OUTCOME_ORDER.indexOf(a.label);
+                                                const indexB = OUTCOME_ORDER.indexOf(b.label);
+                                                if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                                                if (indexA !== -1) return -1;
+                                                if (indexB !== -1) return 1;
+                                                return a.label.localeCompare(b.label);
+                                        });
+                                }
                                 case "Targeted Donor":
                                         return [...donors, ...newDonors].map(d => ({ value: d.id, label: d.name })).sort((a, b) => a.label.localeCompare(b.label));
                                 case "Country / Location(s)":
@@ -1316,57 +1357,57 @@ export default function Chat(props) {
                                                                                 {renderFormField("Beneficiaries Profile", proposalStatus !== 'draft')}
                                                                                 {renderFormField("Potential Implementing Partner", proposalStatus !== 'draft')}
                                                                         </div>
-                                                                                <div className='Chat_form_group'>
-                                                                                        <div className="tooltip-container">
-                                                                                                <h3 className='Chat_form_group_title'>Define Field Context</h3>
-                                                                                                <span className="tooltip-text">surface Situation Analysis and Needs Assessment</span>
-                                                                                        </div>
-                                                                                        {renderFormField("Geographical Scope", proposalStatus !== 'draft')}
-                                                                                        <div className="Chat_form_inputContainer" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
-                                                                                                <input
-                                                                                                        type="checkbox"
-                                                                                                        id="multiple-countries"
-                                                                                                        checked={formData["multiple countries"].value}
-                                                                                                        onChange={e => {
-                                                                                                                const isChecked = e.target.checked;
-                                                                                                                setFormData(prev => ({
-                                                                                                                        ...prev,
-                                                                                                                        "multiple countries": { ...prev["multiple countries"], value: isChecked },
-                                                                                                                        "Country / Location(s)": { ...prev["Country / Location(s)"], value: isChecked ? [] : "" }
-                                                                                                                }));
-                                                                                                        }}
-                                                                                                        disabled={proposalStatus !== 'draft'}
-                                                                                                />
-                                                                                                <label htmlFor="multiple-countries" className="Chat_form_inputLabel" style={{ marginBottom: 0 }}>Multiple Countries</label>
-                                                                                        </div>
-                                                                                        {renderFormField("Country / Location(s)", proposalStatus !== 'draft')}
+                                                                        <div className='Chat_form_group'>
+                                                                                <div className="tooltip-container">
+                                                                                        <h3 className='Chat_form_group_title'>Define Field Context</h3>
+                                                                                        <span className="tooltip-text">surface Situation Analysis and Needs Assessment</span>
                                                                                 </div>
-                                                                                <div className='Chat_form_group'>
-                                                                                        <div className="tooltip-container">
-                                                                                                <h3 className='Chat_form_group_title'>Tailor Funding Request</h3>
-                                                                                                <span className="tooltip-text">surface Donor profile and apply Formal Requirement for Submission</span>
-                                                                                        </div>
-                                                                                        {renderFormField("Budget Range", proposalStatus !== 'draft')}
-                                                                                        {renderFormField("Duration", proposalStatus !== 'draft')}
-                                                                                        <div className="Chat_form_inputContainer" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
-                                                                                                <input
-                                                                                                        type="checkbox"
-                                                                                                        id="multiple-donors"
-                                                                                                        checked={formData["multiple donors"].value}
-                                                                                                        onChange={e => {
-                                                                                                                const isChecked = e.target.checked;
-                                                                                                                setFormData(prev => ({
-                                                                                                                        ...prev,
-                                                                                                                        "multiple donors": { ...prev["multiple donors"], value: isChecked },
-                                                                                                                        "Targeted Donor": { ...prev["Targeted Donor"], value: isChecked ? [] : "" }
-                                                                                                                }));
-                                                                                                        }}
-                                                                                                        disabled={proposalStatus !== 'draft'}
-                                                                                                />
-                                                                                                <label htmlFor="multiple-donors" className="Chat_form_inputLabel" style={{ marginBottom: 0 }}>Multiple Donors</label>
-                                                                                        </div>
-                                                                                        {renderFormField("Targeted Donor", proposalStatus !== 'draft')}
+                                                                                {renderFormField("Geographical Scope", proposalStatus !== 'draft')}
+                                                                                <div className="Chat_form_inputContainer" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
+                                                                                        <input
+                                                                                                type="checkbox"
+                                                                                                id="multiple-countries"
+                                                                                                checked={formData["multiple countries"].value}
+                                                                                                onChange={e => {
+                                                                                                        const isChecked = e.target.checked;
+                                                                                                        setFormData(prev => ({
+                                                                                                                ...prev,
+                                                                                                                "multiple countries": { ...prev["multiple countries"], value: isChecked },
+                                                                                                                "Country / Location(s)": { ...prev["Country / Location(s)"], value: isChecked ? [] : "" }
+                                                                                                        }));
+                                                                                                }}
+                                                                                                disabled={proposalStatus !== 'draft'}
+                                                                                        />
+                                                                                        <label htmlFor="multiple-countries" className="Chat_form_inputLabel" style={{ marginBottom: 0 }}>Multiple Countries</label>
                                                                                 </div>
+                                                                                {renderFormField("Country / Location(s)", proposalStatus !== 'draft')}
+                                                                        </div>
+                                                                        <div className='Chat_form_group'>
+                                                                                <div className="tooltip-container">
+                                                                                        <h3 className='Chat_form_group_title'>Tailor Funding Request</h3>
+                                                                                        <span className="tooltip-text">surface Donor profile and apply Formal Requirement for Submission</span>
+                                                                                </div>
+                                                                                {renderFormField("Budget Range", proposalStatus !== 'draft')}
+                                                                                {renderFormField("Duration", proposalStatus !== 'draft')}
+                                                                                <div className="Chat_form_inputContainer" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
+                                                                                        <input
+                                                                                                type="checkbox"
+                                                                                                id="multiple-donors"
+                                                                                                checked={formData["multiple donors"].value}
+                                                                                                onChange={e => {
+                                                                                                        const isChecked = e.target.checked;
+                                                                                                        setFormData(prev => ({
+                                                                                                                ...prev,
+                                                                                                                "multiple donors": { ...prev["multiple donors"], value: isChecked },
+                                                                                                                "Targeted Donor": { ...prev["Targeted Donor"], value: isChecked ? [] : "" }
+                                                                                                        }));
+                                                                                                }}
+                                                                                                disabled={proposalStatus !== 'draft'}
+                                                                                        />
+                                                                                        <label htmlFor="multiple-donors" className="Chat_form_inputLabel" style={{ marginBottom: 0 }}>Multiple Donors</label>
+                                                                                </div>
+                                                                                {renderFormField("Targeted Donor", proposalStatus !== 'draft')}
+                                                                        </div>
                                                                 </form> : ""
                                                         }
 
