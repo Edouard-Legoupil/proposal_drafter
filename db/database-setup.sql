@@ -45,11 +45,25 @@ CREATE TABLE IF NOT EXISTS user_roles (
     PRIMARY KEY (user_id, role_id)
 );
 
+-- Create User Role Requests table for pending roles
+CREATE TABLE IF NOT EXISTS user_role_requests (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, role_id)
+);
+
 -- Create User Donor Groups table
 CREATE TABLE IF NOT EXISTS user_donor_groups (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     donor_group TEXT NOT NULL,
     PRIMARY KEY (user_id, donor_group)
+);
+
+-- Create User Donors table for specific donor focal points
+CREATE TABLE IF NOT EXISTS user_donors (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    donor_id UUID NOT NULL REFERENCES donors(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, donor_id)
 );
 
 -- Create User Outcomes table
@@ -303,7 +317,10 @@ CREATE INDEX IF NOT EXISTS idx_knowledge_card_history_knowledge_card_id ON knowl
 CREATE INDEX IF NOT EXISTS idx_proposal_peer_reviews_proposal_id ON proposal_peer_reviews(proposal_id);
 CREATE INDEX IF NOT EXISTS idx_proposal_peer_reviews_reviewer_id ON proposal_peer_reviews(reviewer_id);
 CREATE INDEX IF NOT EXISTS idx_proposal_status_history_proposal_id ON proposal_status_history(proposal_id);
-
+CREATE INDEX IF NOT EXISTS idx_user_role_requests_user_id ON user_role_requests(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_donors_user_id ON user_donors(user_id);
+CREATE INDEX IF NOT EXISTS idx_donor_template_comments_section
+    ON donor_template_comments(template_request_id, section_name);
  
  
 

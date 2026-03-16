@@ -38,6 +38,8 @@ def test_engine():
             connection.execute(text("DROP TABLE IF EXISTS proposal_peer_reviews"))
             connection.execute(text("DROP TABLE IF EXISTS proposal_status_history"))
             connection.execute(text("DROP TABLE IF EXISTS proposals"))
+            connection.execute(text("DROP TABLE IF EXISTS donor_template_comments"))
+            connection.execute(text("DROP TABLE IF EXISTS donor_template_requests"))
             connection.execute(text("""
                 CREATE TABLE IF NOT EXISTS teams (
                     id TEXT PRIMARY KEY, name TEXT UNIQUE NOT NULL
@@ -162,6 +164,28 @@ def test_engine():
                     category TEXT,
                     geographic_coverage TEXT,
                     created_by TEXT
+                )
+            """))
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS donor_template_requests (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    donor_id TEXT,
+                    configuration TEXT,
+                    initial_file_content TEXT,
+                    status TEXT DEFAULT 'pending',
+                    created_by TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            connection.execute(text("""
+                CREATE TABLE IF NOT EXISTS donor_template_comments (
+                    id TEXT PRIMARY KEY,
+                    template_request_id TEXT NOT NULL,
+                    user_id TEXT NOT NULL,
+                    comment_text TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             """))
     return engine

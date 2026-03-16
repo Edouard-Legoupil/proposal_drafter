@@ -149,20 +149,53 @@ origins = [
 BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATES_DIR = os.path.join(BACKEND_DIR, "templates")
 
+# Sub-folders that hold the actual template JSON files
+TEMPLATE_SUB_DIRS = [
+    os.path.join(TEMPLATES_DIR, "proposal_template"),
+    os.path.join(TEMPLATES_DIR, "concept_note_template"),
+    TEMPLATES_DIR,  # fallback: root templates dir for any legacy files
+]
+
+
+def _find_template_path(filename: str) -> str | None:
+    """
+    Searches all known template sub-directories for a given filename.
+    Returns the full path if found, or None.
+    """
+    for sub_dir in TEMPLATE_SUB_DIRS:
+        candidate = os.path.join(sub_dir, filename)
+        if os.path.isfile(candidate):
+            return candidate
+    return None
+
+
 def get_available_templates():
     """
-    Scans the templates directory, reads each template file, and returns a
+    Scans both template sub-directories, reads each template file, and returns a
     dictionary mapping donor names to their corresponding template filename.
     This supports a one-to-many relationship between templates and donors.
     """
     templates_map = {}
-    if not os.path.isdir(TEMPLATES_DIR):
-        logger.error(f"Templates directory not found at: {TEMPLATES_DIR}")
-        return templates_map
 
-    for filename in os.listdir(TEMPLATES_DIR):
-        if filename.endswith('.json') and os.path.isfile(os.path.join(TEMPLATES_DIR, filename)):
-            template_path = os.path.join(TEMPLATES_DIR, filename)
+    dirs_to_scan = [
+        os.path.join(TEMPLATES_DIR, "proposal_template"),
+        os.path.join(TEMPLATES_DIR, "concept_note_template"),
+    ]
+
+    for scan_dir in dirs_to_scan:
+        if not os.path.isdir(scan_dir):
+            logger.warning(f"Template sub-directory not found: {scan_dir}")
+            continue
+
+        is_concept_note_dir = scan_dir.endswith("concept_note_template")
+
+        for filename in os.listdir(scan_dir):
+            if not filename.endswith('.json'):
+                continue
+            template_path = os.path.join(scan_dir, filename)
+            if not os.path.isfile(template_path):
+                continue
+
             try:
                 with open(template_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
@@ -172,45 +205,46 @@ def get_available_templates():
                     continue
 
                 donors = data.get("donors", [])
-                if isinstance(donors, list) and not filename.startswith("concept_note_"):
+                # Map proposal templates by donor name (not concept notes)
+                if isinstance(donors, list) and not is_concept_note_dir:
                     for donor_name in donors:
                         templates_map[donor_name] = filename
 
-                # Also map the template by its filename for direct access
+                # Always map by filename for direct access
                 templates_map[filename] = filename
 
             except (json.JSONDecodeError, IOError) as e:
                 logger.error(f"Failed to read or parse template file: {filename}. Error: {e}")
-                continue # Skip to the next file
+                continue
 
     # Ensure "Not Yet Specified" option points to the default UNHCR template.
     unhcr_template_file = "proposal_template_unhcr.json"
-    if os.path.isfile(os.path.join(TEMPLATES_DIR, unhcr_template_file)):
+    if _find_template_path(unhcr_template_file):
         templates_map["Not Yet Specified"] = unhcr_template_file
 
     return templates_map
 
+
 def load_proposal_template(template_name: str):
     """
     Loads a specific proposal template by its filename.
+    Searches proposal_template/ and concept_note_template/ sub-directories.
     """
-    # Validate that the template name is one of the available template files to prevent
-    # directory traversal attacks.
     available_templates = get_available_templates()
     if template_name not in available_templates.values():
         logger.error(f"Invalid or non-existent template requested: {template_name}")
         raise HTTPException(status_code=400, detail=f"Template '{template_name}' not found.")
 
-    template_path = os.path.join(TEMPLATES_DIR, template_name)
+    template_path = _find_template_path(template_name)
+    if not template_path:
+        logger.error(f"Proposal template file not found: {template_name}")
+        raise HTTPException(status_code=404, detail="Proposal template file not found.")
 
     try:
         with open(template_path, "r", encoding="utf-8") as file:
             proposal_data = json.load(file)
             logger.info(f"Proposal template loaded successfully from {template_path}")
             return proposal_data
-    except FileNotFoundError:
-        logger.error(f"Proposal template file not found at: {template_path}")
-        raise HTTPException(status_code=404, detail="Proposal template file not found.")
     except json.JSONDecodeError:
         logger.error(f"Error decoding JSON from proposal template file: {template_path}")
         raise HTTPException(status_code=500, detail="Error parsing proposal template file.")

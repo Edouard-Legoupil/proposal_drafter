@@ -140,13 +140,17 @@ async def get_admin_options(admin: dict = Depends(is_system_admin)):
 
             # Teams
             teams = connection.execute(text("SELECT id, name FROM teams ORDER BY name")).mappings().all()
+
+            # Pending template requests count
+            pending_templates_count = connection.execute(text("SELECT COUNT(*) FROM donor_template_requests WHERE status = 'pending'")).scalar()
             
             return {
                 "roles": [dict(r) for r in roles],
                 "donor_groups": [row[0] for row in donors],
                 "outcomes": [dict(o) for o in outcomes],
                 "field_contexts": [dict(fc) for fc in field_contexts],
-                "teams": [dict(t) for t in teams]
+                "teams": [dict(t) for t in teams],
+                "pending_template_requests": pending_templates_count
             }
     except Exception as e:
         logger.error(f"[GET ADMIN OPTIONS ERROR] {e}", exc_info=True)
@@ -235,3 +239,39 @@ async def delete_user(user_id: str, admin: dict = Depends(is_system_admin)):
         logger.error(f"[DELETE USER ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to delete user.")
 
+
+@router.get("/admin/template-requests")
+async def get_admin_template_requests(admin: dict = Depends(is_system_admin)):
+    """
+    Returns a list of all template requests for admin download.
+    """
+    try:
+        with get_engine().connect() as connection:
+            query = text("""
+                SELECT tr.*, u.name as creator_name, d.name as donor_name
+                FROM donor_template_requests tr
+                JOIN users u ON tr.created_by = u.id
+                LEFT JOIN donors d ON tr.donor_id = d.id
+                ORDER BY tr.created_at DESC
+            """)
+            result = connection.execute(query).mappings().all()
+            
+            requests = []
+            for row in result:
+                req = dict(row)
+                req["id"] = str(row["id"])
+                # Handle potential JSON strings or objects
+                for field in ["configuration", "initial_file_content"]:
+                    if isinstance(req[field], str):
+                        try:
+                            import json
+                            req[field] = json.loads(req[field])
+                        except:
+                            pass
+                req["created_at"] = row["created_at"].isoformat() if row["created_at"] else None
+                requests.append(req)
+                
+            return requests
+    except Exception as e:
+        logger.error(f"[GET ADMIN TEMPLATE REQUESTS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Could not retrieve template requests.")

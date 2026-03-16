@@ -1,0 +1,326 @@
+.DonorTemplateRequest {
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.page-header {
+    margin-bottom: 2rem;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 1rem;
+}
+
+.page-header h1 {
+    color: #0072bc;
+    margin-bottom: 0.5rem;
+}
+
+.request-form {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.form-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.5rem;
+    border: 1px solid #e8e8e8;
+    border-radius: 8px;
+    background: #fafafa;
+}
+
+.form-section h3 {
+    margin: 0 0 0.25rem 0;
+    border-left: 4px solid #0072bc;
+    padding-left: 1rem;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+.section-help {
+    font-size: 0.88rem;
+    color: #666;
+    margin: 0;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.form-group label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #444;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 0.65rem 0.85rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    background: #fff;
+    transition: border-color 0.15s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #0072bc;
+    box-shadow: 0 0 0 2px rgba(0,114,188,0.1);
+}
+
+/* Template type toggle */
+.type-toggle {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.type-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.25rem;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    background: #fff;
+    color: #555;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.18s;
+    font-weight: 500;
+}
+
+.type-btn:hover {
+    border-color: #0072bc;
+    color: #0072bc;
+}
+
+.type-btn.active {
+    border-color: #0072bc;
+    background: #e3f0fb;
+    color: #0072bc;
+    font-weight: 600;
+}
+
+/* Instructions list */
+.instructions-list {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.instruction-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.instruction-num {
+    min-width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #0072bc;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.instruction-item input {
+    flex: 1;
+    padding: 0.55rem 0.8rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.92rem;
+}
+
+/* Sections editor */
+.sections-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.section-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+    transition: box-shadow 0.2s;
+}
+
+.section-card.open {
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+}
+
+.section-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.85rem 1.25rem;
+    background: #f5f7f9;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid transparent;
+}
+
+.section-card.open .section-card-header {
+    border-bottom-color: #e0e0e0;
+}
+
+.section-card-header:hover {
+    background: #eef2f6;
+}
+
+.section-card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.section-num {
+    background: #0072bc;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.section-name-preview {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #333;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.section-name-preview em {
+    color: #aaa;
+    font-style: italic;
+    font-weight: 400;
+}
+
+.section-badges {
+    display: flex;
+    gap: 0.4rem;
+    flex-shrink: 0;
+}
+
+.badge-fmt, .badge-req {
+    font-size: 0.7rem;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-fmt { background: #e3f2fd; color: #1565c2; }
+.badge-req { background: #fff3e0; color: #e65100; }
+
+.section-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.toggle-icon {
+    margin-left: 0.5rem;
+    color: #999;
+    font-size: 0.85rem;
+}
+
+.section-card-body {
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.fields-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.fields-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+}
+
+@media (max-width: 640px) {
+    .fields-grid-2, .fields-grid-4 { grid-template-columns: 1fr; }
+}
+
+.mandatory-row .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.92rem;
+}
+
+.mandatory-row input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.add-section-btn {
+    margin-top: 0.5rem;
+    align-self: flex-start;
+}
+
+/* Buttons */
+.btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #666;
+    padding: 4px 6px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    transition: color 0.15s, background 0.15s;
+}
+.btn-icon:hover { background: #f0f0f0; color: #333; }
+.btn-icon:disabled { opacity: 0.3; cursor: default; }
+.btn-icon.delete { color: #c62828; }
+.btn-icon.delete:hover { background: #ffebee; }
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 2rem;
+    border-top: 1px solid #eee;
+}
+
+.error-message {
+    color: #c62828;
+    background-color: #ffebee;
+    padding: 1rem;
+    border-radius: 4px;
+}

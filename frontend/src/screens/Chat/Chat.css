@@ -115,7 +115,7 @@
 
         background-color: #F0F3F8;
 
-        resize: none;
+        resize: vertical;
 
         height: 100px;
         width: 100%;
