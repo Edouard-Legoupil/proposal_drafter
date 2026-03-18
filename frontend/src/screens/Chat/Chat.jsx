@@ -268,8 +268,8 @@ export default function Chat(props) {
                 setFormData(p => ({
                         ...p,
                         [label]: {
-                                ...formData[label],
-                                value: e.target.value
+                                ...(p[label] || {}),
+                                value: e?.target ? e.target.value : e
                         }
                 }))
         }
@@ -386,7 +386,7 @@ export default function Chat(props) {
 
                 const isCreatableSelect = ["Duration", "Budget Range"].includes(label);
                 const isSelect = ["Targeted Donor", "Country / Location(s)"].includes(label);
-                const isMultiSelect = label === "Main Outcome" || (label === "Targeted Donor" && formData["multiple donors"].value) || (label === "Country / Location(s)" && formData["multiple countries"].value);
+                const isMultiSelect = label === "Main Outcome" || (label === "Targeted Donor" && formData["multiple donors"]?.value) || (label === "Country / Location(s)" && formData["multiple countries"]?.value);
                 const isNormalSelect = label === "Geographical Scope";
 
                 return (
@@ -955,12 +955,16 @@ export default function Chat(props) {
 
                                 setUserPrompt(data.project_description)
 
-                                setFormData(p => Object.fromEntries(Object.entries(data.form_data).map(field =>
-                                        [field[0], {
-                                                value: field[1],
-                                                mandatory: p[field[0]]?.mandatory || false
-                                        }]
-                                )))
+                                setFormData(p => {
+                                        const next = { ...p };
+                                        Object.entries(data.form_data).forEach(([key, val]) => {
+                                                next[key] = {
+                                                        ...(p[key] || { mandatory: false }),
+                                                        value: val
+                                                };
+                                        });
+                                        return next;
+                                });
 
                                 const sectionState = {};
                                 Object.entries(data.generated_sections).forEach(([key, value]) => {
@@ -1239,9 +1243,9 @@ export default function Chat(props) {
                                 isOpen={isAssociateKnowledgeModalOpen}
                                 onClose={() => setIsAssociateKnowledgeModalOpen(false)}
                                 onConfirm={handleAssociateKnowledgeConfirm}
-                                donorId={formData["Targeted Donor"].value}
-                                outcomeId={formData["Main Outcome"].value}
-                                fieldContextId={formData["Country / Location(s)"].value}
+                                donorId={formData["Targeted Donor"]?.value}
+                                outcomeId={formData["Main Outcome"]?.value}
+                                fieldContextId={formData["Country / Location(s)"]?.value}
                                 initialSelection={associatedKnowledgeCards}
                         />
                         <PdfUploadModal
@@ -1367,7 +1371,7 @@ export default function Chat(props) {
                                                                                         <input
                                                                                                 type="checkbox"
                                                                                                 id="multiple-countries"
-                                                                                                checked={formData["multiple countries"].value}
+                                                                                                checked={formData["multiple countries"]?.value || false}
                                                                                                 onChange={e => {
                                                                                                         const isChecked = e.target.checked;
                                                                                                         setFormData(prev => ({
@@ -1393,13 +1397,13 @@ export default function Chat(props) {
                                                                                         <input
                                                                                                 type="checkbox"
                                                                                                 id="multiple-donors"
-                                                                                                checked={formData["multiple donors"].value}
+                                                                                                checked={formData["multiple donors"]?.value || false}
                                                                                                 onChange={e => {
                                                                                                         const isChecked = e.target.checked;
                                                                                                         setFormData(prev => ({
                                                                                                                 ...prev,
                                                                                                                 "multiple donors": { ...prev["multiple donors"], value: isChecked },
-                                                                                                                "Targeted Donor": { ...prev["Targeted Donor"], value: isChecked ? [] : "" }
+                                                                                                                "Targeted Donor": { ...prev["Targeted Donor"], value: isChecked ? [] : (prev["Targeted Donor"]?.value || "") }
                                                                                                         }));
                                                                                                 }}
                                                                                                 disabled={proposalStatus !== 'draft'}

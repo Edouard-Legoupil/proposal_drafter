@@ -218,7 +218,7 @@ export default function KnowledgeCard() {
                     // Fetch the template using the DERIVED linkType, not from the card data
                     if (determinedLinkType) {
                         const templateName = `knowledge_card_${determinedLinkType}_template.json`;
-                        const templateRes = await authenticatedFetch(`${API_BASE_URL}/templates/${templateName}`, { credentials: 'include' });
+                        const templateRes = await authenticatedFetch(`${API_BASE_URL}/templates/published/${templateName}`, { credentials: 'include' });
                         if (templateRes.ok) {
                             const templateData = await templateRes.json();
                             setProposalTemplate(templateData);
@@ -347,7 +347,7 @@ export default function KnowledgeCard() {
             if (!id && linkType) { // Only for new cards
                 const templateName = `knowledge_card_${linkType}_template.json`;
                 try {
-                    const response = await authenticatedFetch(`${API_BASE_URL}/templates/${templateName}`, { credentials: 'include' });
+                    const response = await authenticatedFetch(`${API_BASE_URL}/templates/published/${templateName}`, { credentials: 'include' });
                     if (response.ok) {
                         const data = await response.json();
                         setProposalTemplate(data);

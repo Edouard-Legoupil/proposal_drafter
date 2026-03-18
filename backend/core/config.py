@@ -180,6 +180,7 @@ def get_available_templates():
     dirs_to_scan = [
         os.path.join(TEMPLATES_DIR, "proposal_template"),
         os.path.join(TEMPLATES_DIR, "concept_note_template"),
+        TEMPLATES_DIR, # Include knowledge card templates in root templates dir
     ]
 
     for scan_dir in dirs_to_scan:
