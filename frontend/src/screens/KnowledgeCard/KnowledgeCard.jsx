@@ -1183,11 +1183,21 @@ export default function KnowledgeCard() {
 
                         <div className="kc-content-header">
                             <h2>Generated Content</h2>
-                            <button type="button" onClick={() => handleExport("docx")} className="download-word-btn" data-testid="export-word-button">
-                                <img src={word_icon} alt="Download as Word" />
-                                Download as Word
-                            </button>
-
+                            <div className="kc-content-header-actions">
+                                <button
+                                    type="button"
+                                    className="review-mode-btn"
+                                    onClick={() => navigate(`/review/knowledge-card/${id}`)}
+                                    data-testid="switch-to-review-button"
+                                    title="Open the review interface for this knowledge card"
+                                >
+                                    🔍 Switch to Review Mode
+                                </button>
+                                <button type="button" onClick={() => handleExport("docx")} className="download-word-btn" data-testid="export-word-button">
+                                    <img src={word_icon} alt="Download as Word" />
+                                    Download as Word
+                                </button>
+                            </div>
                         </div>
                         {proposal_template.sections.map(sectionInfo => {
                             const section = sectionInfo.section_name;

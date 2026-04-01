@@ -1,18 +1,34 @@
 import './Review.css'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Markdown from 'react-markdown'
 import rehypeSanitize from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faThumbsUp, faThumbsDown } from '@fortawesome/free-solid-svg-icons'
+import { faThumbsUp, faThumbsDown, faTrash } from '@fortawesome/free-solid-svg-icons'
 
 import Base from '../../components/Base/Base'
 import CommonButton from '../../components/CommonButton/CommonButton'
 import Modal from '../../components/Modal/Modal'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
+
+// P0-P3 severity categories per review context
+const SEVERITY_OPTIONS = {
+    proposal: [
+        { value: 'P0', label: 'P0 – Critical: Output unsafe or unacceptable', description: 'Unsupported claims, fabricated numbers, wrong donor/country content, non-compliant with mandatory requirements, or evidence base is fundamentally wrong.' },
+        { value: 'P1', label: 'P1 – High: Major quality or compliance risk', description: 'Misses major required content, major logic gaps, excessive editing effort, or consistent reviewer approval failure.' },
+        { value: 'P2', label: 'P2 – Medium: Weakens reliability (manageable)', description: 'Acceptable in principle but requires noticeable rewrite for specificity, completeness, or tone; too generic to be efficient.' },
+        { value: 'P3', label: 'P3 – Low: Minor issue, no material impact', description: 'Minor formatting or polish issue; small editorial improvement needed with no factual or compliance impact.' },
+    ],
+    knowledge_card: [
+        { value: 'P0', label: 'P0 – Critical: Output unsafe or unacceptable', description: 'Wrong source type admitted as authoritative, corpus so incomplete grounded outputs are impossible, hallucinated statistic/requirement, or missing critical mandatory card.' },
+        { value: 'P1', label: 'P1 – High: Major quality or compliance risk', description: 'Outdated donor guidance, major metadata error (wrong donor/country/tag), near-duplicate/conflicting documents, major card omission, or retrieval returns regional generalities for specific ask.' },
+        { value: 'P2', label: 'P2 – Medium: Weakens reliability (manageable)', description: 'Context mostly relevant but incomplete, extra irrelevant information retrieved, card broadly correct but too generic, or partial traceability gaps for non-critical details.' },
+        { value: 'P3', label: 'P3 – Low: Minor issue, no material impact', description: 'Stylistic or wording issues in the card with no factual impact; minor formatting issues in the source record.' },
+    ],
+}
 
 export default function Review() {
     const [proposalTemplate, setProposalTemplate] = useState(null);
@@ -26,6 +42,8 @@ export default function Review() {
     const [currentUser, setCurrentUser] = useState(null)
     const [replyingTo, setReplyingTo] = useState(null); // section name
     const [replyText, setReplyText] = useState("");
+    const [submittedReviews, setSubmittedReviews] = useState([]); // list of fully saved review objects with DB ids
+    const autoSaveTimers = useRef({});
 
     async function getProfile() {
         const response = await fetch(`${API_BASE_URL}/profile`, {
@@ -65,8 +83,8 @@ export default function Review() {
                 const existing = result.draft_comments[section] || {};
                 initialComments[section] = {
                     review_text: existing.review_text || "",
-                    type_of_comment: existing.type_of_comment || "General",
-                    severity: existing.severity || "Medium",
+                    type_of_comment: existing.type_of_comment || "P2",
+                    severity: existing.severity || "P2",
                     author_response: existing.author_response || "",
                     rating: existing.rating || null
                 }
@@ -74,6 +92,19 @@ export default function Review() {
             })
             setReviewComments(initialComments)
             setReviewStatus(initialStatus)
+
+            // Load all submitted reviews (with DB ids) for delete capability
+            try {
+                const reviewsEndpoint = type === 'proposal'
+                    ? `${API_BASE_URL}/proposals/${id}/peer-reviews`
+                    : `${API_BASE_URL}/knowledge-cards/${id}/all-reviews`;
+                const reviewsRes = await fetch(reviewsEndpoint, { credentials: 'include' });
+                if (reviewsRes.ok) {
+                    const { reviews } = await reviewsRes.json();
+                    setSubmittedReviews(reviews || []);
+                }
+            } catch (e) { /* silent – reviews list is optional */ void e; }
+
 
             // === PATCH: Fetch template for section order ===
             if (type !== 'proposal' && result.knowledge_card) {
@@ -133,13 +164,20 @@ export default function Review() {
     }, [type, currentUser, id, navigate]);
 
     function handleCommentChange(section, field, value) {
-        setReviewComments(prev => ({
-            ...prev,
-            [section]: {
-                ...prev[section],
-                [field]: value
+        setReviewComments(prev => {
+            const updated = {
+                ...prev,
+                [section]: {
+                    ...prev[section],
+                    [field]: value
+                }
+            };
+            // Trigger auto-save whenever text or category changes
+            if (field === 'review_text' || field === 'type_of_comment' || field === 'severity') {
+                autoSaveSection(section, updated[section]);
             }
-        }))
+            return updated;
+        });
     }
 
     function handleStatusChange(section, status) {
@@ -148,36 +186,48 @@ export default function Review() {
             [section]: status
         }));
         handleCommentChange(section, 'rating', status);
-
-        if (status === 'up') {
-            // Reset comment fields when thumbing up, if you want it strict
-            // handleCommentChange(section, 'review_text', '');
-        }
     }
 
-    async function handleSaveDraft() {
-        const comments = Object.entries(reviewComments).map(([section_name, comment_data]) => ({
-            section_name,
-            ...comment_data
-        }));
+    // Auto-save a single section's comment after a short debounce
+    const autoSaveSection = useCallback((section, commentData) => {
+        if (autoSaveTimers.current[section]) clearTimeout(autoSaveTimers.current[section]);
+        autoSaveTimers.current[section] = setTimeout(async () => {
+            const endpoint = type === 'proposal'
+                ? `${API_BASE_URL}/proposals/${id}/save-draft-review`
+                : `${API_BASE_URL}/knowledge-cards/${id}/save-draft-review`;
+            try {
+                await fetch(endpoint, {
+                    method: "POST",
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ comments: [{ section_name: section, ...commentData }] }),
+                    credentials: "include"
+                });
+            } catch (e) { /* silent auto-save failure */ void e; }
+        }, 800);
+    }, [type, id]);
 
-        const endpoint = type === 'proposal'
-            ? `${API_BASE_URL}/proposals/${id}/save-draft-review`
-            : `${API_BASE_URL}/knowledge-cards/${id}/save-draft-review`;
-
-        const response = await fetch(endpoint, {
-            method: "POST",
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ comments }),
-            credentials: "include"
-        })
-
-        if (response.ok) {
-            alert("Draft saved successfully!")
+    async function handleDeleteComment(section) {
+        // find the DB record for this section from submittedReviews
+        const review = submittedReviews.find(r => r.section_name === section);
+        if (!review) {
+            // Nothing persisted yet – just clear local state
+            handleCommentChange(section, 'review_text', '');
+            handleCommentChange(section, 'rating', null);
+            handleStatusChange(section, null);
+            return;
         }
-        else if (response.status === 401) {
-            sessionStorage.setItem("session_expired", "Session expired. Please login again.")
-            navigate("/login")
+        if (!window.confirm(`Delete your comment for "${section}"?`)) return;
+        const deleteEndpoint = type === 'proposal'
+            ? `${API_BASE_URL}/peer-reviews/${review.id}`
+            : `${API_BASE_URL}/knowledge-card-reviews/${review.id}`;
+        const res = await fetch(deleteEndpoint, { method: 'DELETE', credentials: 'include' });
+        if (res.ok || res.status === 404) {
+            setSubmittedReviews(prev => prev.filter(r => r.id !== review.id));
+            handleCommentChange(section, 'review_text', '');
+            handleCommentChange(section, 'rating', null);
+            setReviewStatus(prev => ({ ...prev, [section]: null }));
+        } else {
+            alert('Failed to delete comment.');
         }
     }
 
@@ -369,28 +419,74 @@ export default function Review() {
                                             disabled={!isReviewEditable}
                                         />
                                         <div className="Review_comment_controls">
-                                            <select
-                                                value={reviewComments[section]?.type_of_comment || 'General'}
-                                                onChange={e => handleCommentChange(section, 'type_of_comment', e.target.value)}
-                                                data-testid={`comment-type-select-${section}`}
-                                                disabled={!isReviewEditable}
-                                            >
-                                                <option value="General">General</option>
-                                                <option value="Clarity">Clarity</option>
-                                                <option value="Compliance">Compliance</option>
-                                                <option value="Impact">Impact</option>
-                                            </select>
-                                            <select
-                                                value={reviewComments[section]?.severity || 'Medium'}
-                                                onChange={e => handleCommentChange(section, 'severity', e.target.value)}
-                                                data-testid={`severity-select-${section}`}
-                                                disabled={!isReviewEditable}
-                                            >
-                                                <option value="Low">Low</option>
-                                                <option value="Medium">Medium</option>
-                                                <option value="High">High</option>
-                                            </select>
+                                            <div className="severity-selector">
+                                                <label className="severity-label">Incident Severity</label>
+                                                <div className="severity-options">
+                                                    {(SEVERITY_OPTIONS[type === 'proposal' ? 'proposal' : 'knowledge_card']).map(opt => (
+                                                        <label
+                                                            key={opt.value}
+                                                            className={`severity-option ${(reviewComments[section]?.type_of_comment || 'P2') === opt.value ? 'selected' : ''} severity-${opt.value}`}
+                                                            title={opt.description}
+                                                            data-testid={`severity-option-${opt.value}-${section}`}
+                                                        >
+                                                            <input
+                                                                type="radio"
+                                                                name={`severity-${section}`}
+                                                                value={opt.value}
+                                                                checked={(reviewComments[section]?.type_of_comment || 'P2') === opt.value}
+                                                                onChange={() => {
+                                                                    handleCommentChange(section, 'type_of_comment', opt.value);
+                                                                    handleCommentChange(section, 'severity', opt.value);
+                                                                }}
+                                                                disabled={!isReviewEditable}
+                                                            />
+                                                            <span className="severity-badge">{opt.value}</span>
+                                                            <span className="severity-text">{opt.label.replace(`${opt.value} – `, '')}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                                {/* Show description for selected */}
+                                                {(() => {
+                                                    const opts = SEVERITY_OPTIONS[type === 'proposal' ? 'proposal' : 'knowledge_card'];
+                                                    const sel = opts.find(o => o.value === (reviewComments[section]?.type_of_comment || 'P2'));
+                                                    return sel ? <p className="severity-description">{sel.description}</p> : null;
+                                                })()}
+                                            </div>
                                         </div>
+                                        {/* Delete comment button */}
+                                        {isReviewEditable && (
+                                            (() => {
+                                                const saved = submittedReviews.find(r => r.section_name === section);
+                                                const isOwnerOfComment = saved && (saved.reviewer_id === currentUser?.id || saved.reviewer_id === currentUser?.user_id);
+                                                const isAdmin = currentUser?.is_admin || currentUser?.roles?.some(r => r === 'admin' || r?.name === 'admin');
+                                                if (isOwnerOfComment || isAdmin) {
+                                                    return (
+                                                        <button
+                                                            className="Review_delete_comment_btn"
+                                                            onClick={() => handleDeleteComment(section)}
+                                                            title="Delete this comment"
+                                                            data-testid={`delete-comment-${section}`}
+                                                        >
+                                                            <FontAwesomeIcon icon={faTrash} /> Delete comment
+                                                        </button>
+                                                    );
+                                                }
+                                                // Also show delete for comments not yet saved (local only)
+                                                if (!saved && reviewComments[section]?.review_text) {
+                                                    return (
+                                                        <button
+                                                            className="Review_delete_comment_btn"
+                                                            onClick={() => handleDeleteComment(section)}
+                                                            title="Clear this comment"
+                                                            data-testid={`delete-comment-${section}`}
+                                                        >
+                                                            <FontAwesomeIcon icon={faTrash} /> Clear comment
+                                                        </button>
+                                                    );
+                                                }
+                                                return null;
+                                            })()
+                                        )}
                                         {reviewComments[section]?.author_response && (
                                             <div className="author-response-display" data-testid={`author-response-display-${section}`}>
                                                 <strong>Author's Response:</strong>
@@ -435,7 +531,6 @@ export default function Review() {
 
             {isReviewEditable && (
                 <div className="Review_footer">
-                    <CommonButton label="Save as draft review" onClick={handleSaveDraft} data-testid="save-draft-button-footer" />
                     <CommonButton label="Peer review completed" onClick={handleFinalizeClick} data-testid="review-completed-button-footer" />
                 </div>
             )}

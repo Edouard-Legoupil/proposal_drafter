@@ -3,9 +3,17 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import './DonorTemplateDetail.css'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faThumbsUp, faThumbsDown, faComments, faListCheck, faRobot, faList, faArrowLeft, faFileLines, faFileContract } from '@fortawesome/free-solid-svg-icons'
+import { faThumbsUp, faThumbsDown, faComments, faListCheck, faRobot, faList, faArrowLeft, faFileLines, faFileContract, faTrash } from '@fortawesome/free-solid-svg-icons'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
+
+// P0-P3 incident severity taxonomy for template feedback
+const TEMPLATE_SEVERITY_OPTIONS = [
+    { value: 'P0', label: 'P0 – Critical', description: 'Mandatory donor section omitted (non-compliant) or unsupported/fabricated content introduced despite available source cards.' },
+    { value: 'P1', label: 'P1 – High', description: 'Prompt fails to enforce required donor structure or tone in a material way; placeholder text remains in output.' },
+    { value: 'P2', label: 'P2 – Medium', description: 'Draft structurally acceptable but too generic; style mismatch that increases editing effort; minor completeness gap in non-mandatory section.' },
+    { value: 'P3', label: 'P3 – Low', description: 'Tone slightly off but easily corrected; minor formatting issue with no material donor-compliance impact.' },
+]
 
 export default function DonorTemplateDetail() {
     const { id } = useParams()
@@ -16,6 +24,7 @@ export default function DonorTemplateDetail() {
     const [template, setTemplate] = useState(null)
     const [commentText, setCommentText] = useState('')
     const [commentSection, setCommentSection] = useState('')
+    const [commentSeverity, setCommentSeverity] = useState('P2')
     const [isSubmittingComment, setIsSubmittingComment] = useState(false)
     const [error, setError] = useState(null)
     const [currentUser, setCurrentUser] = useState(null)
@@ -129,18 +138,32 @@ export default function DonorTemplateDetail() {
                 {template.comments?.filter(c => c.section_name === hliName).length > 0 && (
                     <div className="section-comments-history" style={{ borderTop: 'none', marginTop: '0.5rem', paddingTop: 0 }}>
                         <div className="shared-history-label">Previous Feedback:</div>
-                        {template.comments.filter(c => c.section_name === hliName).map(c => (
-                            <div key={c.id} className={`mini-comment ${c.rating === 'up' ? 'positive' : 'negative'}`}>
-                                <div className="mini-comment-header">
-                                    <strong>{c.user}</strong>
-                                    <span className="mini-comment-date">{new Date(c.created_at).toLocaleDateString()}</span>
+                        {template.comments.filter(c => c.section_name === hliName).map(c => {
+                            const isOwnerOfComment = c.user_id && (c.user_id === currentUser?.id || c.user_id === currentUser?.user_id);
+                            const isAdmin = currentUser?.is_admin || currentUser?.roles?.some(r => r === 'admin' || r?.name === 'admin');
+                            return (
+                                <div key={c.id} className={`mini-comment ${c.rating === 'up' ? 'positive' : 'negative'}`}>
+                                    <div className="mini-comment-header">
+                                        <strong>{c.user}</strong>
+                                        {c.severity && <span className={`mini-severity-badge sev-${c.severity}`}>{c.severity}</span>}
+                                        <span className="mini-comment-date">{new Date(c.created_at).toLocaleDateString()}</span>
+                                        {(isOwnerOfComment || isAdmin) && (
+                                            <button
+                                                className="mini-delete-btn"
+                                                onClick={() => handleDeleteTemplateComment(c.id)}
+                                                title="Delete comment"
+                                            >
+                                                <FontAwesomeIcon icon={faTrash} />
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="mini-comment-body">
+                                        <FontAwesomeIcon icon={c.rating === 'up' ? faThumbsUp : faThumbsDown} style={{ marginRight: '6px', opacity: 0.6 }} />
+                                        {c.text}
+                                    </div>
                                 </div>
-                                <div className="mini-comment-body">
-                                    <FontAwesomeIcon icon={c.rating === 'up' ? faThumbsUp : faThumbsDown} style={{ marginRight: '6px', opacity: 0.6 }} />
-                                    {c.text}
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
 
@@ -152,9 +175,30 @@ export default function DonorTemplateDetail() {
                             onChange={(e) => setCommentText(e.target.value)}
                             placeholder="Feedback for High-level Instructions..."
                         />
+                        <div className="inline-severity-selector">
+                            <span className="inline-severity-label">Incident Severity:</span>
+                            <div className="inline-severity-options">
+                                {TEMPLATE_SEVERITY_OPTIONS.map(opt => (
+                                    <label
+                                        key={opt.value}
+                                        className={`inline-sev-option ${commentSeverity === opt.value ? 'selected' : ''} sev-${opt.value}`}
+                                        title={opt.description}
+                                    >
+                                        <input
+                                            type="radio"
+                                            name="hli-severity"
+                                            value={opt.value}
+                                            checked={commentSeverity === opt.value}
+                                            onChange={() => setCommentSeverity(opt.value)}
+                                        />
+                                        {opt.label}
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
                         <div className="inline-comment-actions">
                             <button className="btn btn--primary btn--small" onClick={handleAddComment}>Save Comment</button>
-                            <button className="btn btn--link btn--small" onClick={() => { setCommentSection(''); setCommentText(''); }}>Cancel</button>
+                            <button className="btn btn--link btn--small" onClick={() => { setCommentSection(''); setCommentText(''); setCommentSeverity('P2'); }}>Cancel</button>
                         </div>
                     </div>
                 )}
@@ -307,21 +351,35 @@ export default function DonorTemplateDetail() {
                             {template.comments?.filter(c => c.section_name === name).length > 0 && (
                                 <div className="section-comments-history">
                                     <div className="shared-history-label">Previous Feedback:</div>
-                                    {template.comments.filter(c => c.section_name === name).map(c => (
-                                        <div key={c.id} className={`mini-comment ${c.rating === 'up' ? 'positive' : 'negative'}`}>
-                                            <div className="mini-comment-header">
-                                                <strong>{c.user}</strong>
-                                                <span className="mini-comment-date">{new Date(c.created_at).toLocaleDateString()}</span>
+                                    {template.comments.filter(c => c.section_name === name).map(c => {
+                                        const isOwnerOfComment = c.user_id && (c.user_id === currentUser?.id || c.user_id === currentUser?.user_id);
+                                        const isAdmin = currentUser?.is_admin || currentUser?.roles?.some(r => r === 'admin' || r?.name === 'admin');
+                                        return (
+                                            <div key={c.id} className={`mini-comment ${c.rating === 'up' ? 'positive' : 'negative'}`}>
+                                                <div className="mini-comment-header">
+                                                    <strong>{c.user}</strong>
+                                                    {c.severity && <span className={`mini-severity-badge sev-${c.severity}`}>{c.severity}</span>}
+                                                    <span className="mini-comment-date">{new Date(c.created_at).toLocaleDateString()}</span>
+                                                    {(isOwnerOfComment || isAdmin) && (
+                                                        <button
+                                                            className="mini-delete-btn"
+                                                            onClick={() => handleDeleteTemplateComment(c.id)}
+                                                            title="Delete comment"
+                                                        >
+                                                            <FontAwesomeIcon icon={faTrash} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <div className="mini-comment-body">
+                                                    <FontAwesomeIcon
+                                                        icon={c.rating === 'up' ? faThumbsUp : faThumbsDown}
+                                                        style={{ marginRight: '6px', opacity: 0.6 }}
+                                                    />
+                                                    {c.text}
+                                                </div>
                                             </div>
-                                            <div className="mini-comment-body">
-                                                <FontAwesomeIcon 
-                                                    icon={c.rating === 'up' ? faThumbsUp : faThumbsDown} 
-                                                    style={{ marginRight: '6px', opacity: 0.6 }} 
-                                                />
-                                                {c.text}
-                                            </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
 
@@ -337,20 +395,38 @@ export default function DonorTemplateDetail() {
                                         }}
                                         placeholder={`Feedback for ${name}...`}
                                     />
+                                    <div className="inline-severity-selector">
+                                        <span className="inline-severity-label">Incident Severity:</span>
+                                        <div className="inline-severity-options">
+                                            {TEMPLATE_SEVERITY_OPTIONS.map(opt => (
+                                                <label
+                                                    key={opt.value}
+                                                    className={`inline-sev-option ${commentSeverity === opt.value ? 'selected' : ''} sev-${opt.value}`}
+                                                    title={opt.description}
+                                                >
+                                                    <input
+                                                        type="radio"
+                                                        name={`section-severity-${idx}`}
+                                                        value={opt.value}
+                                                        checked={commentSeverity === opt.value}
+                                                        onChange={() => { setCommentSection(name); setCommentSeverity(opt.value); }}
+                                                    />
+                                                    {opt.label}
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
                                     <div className="inline-comment-actions">
-                                        <button 
-                                            className="btn btn--primary btn--small" 
+                                        <button
+                                            className="btn btn--primary btn--small"
                                             onClick={handleAddComment}
                                             disabled={isSubmittingComment || (commentSection === name && !commentText.trim())}
                                         >
                                             {isSubmittingComment && commentSection === name ? 'Saving...' : 'Save Comment'}
                                         </button>
-                                        <button 
-                                            className="btn btn--link btn--small" 
-                                            onClick={() => {
-                                                setCommentSection('')
-                                                setCommentText('')
-                                            }}
+                                        <button
+                                            className="btn btn--link btn--small"
+                                            onClick={() => { setCommentSection(''); setCommentText(''); setCommentSeverity('P2'); }}
                                         >
                                             Cancel
                                         </button>
@@ -430,7 +506,8 @@ export default function DonorTemplateDetail() {
                 body: JSON.stringify({
                     comment_text: commentText,
                     section_name: commentSection || null,
-                    rating: 'down' // Manual comments are usually for improvements/rejections
+                    rating: 'down',
+                    severity: commentSeverity,
                 }),
                 credentials: 'include'
             })
@@ -438,12 +515,30 @@ export default function DonorTemplateDetail() {
             if (res.ok) {
                 setCommentText('')
                 setCommentSection('')
+                setCommentSeverity('P2')
                 await fetchTemplate()
             }
         } catch (err) {
             console.error("Error adding comment", err)
         } finally {
             setIsSubmittingComment(false)
+        }
+    }
+
+    const handleDeleteTemplateComment = async (commentId) => {
+        if (!window.confirm('Delete this comment?')) return
+        try {
+            const res = await fetch(`${API_BASE_URL}/templates/request/${id}/comment/${commentId}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            })
+            if (res.ok || res.status === 404) {
+                await fetchTemplate()
+            } else {
+                alert('Failed to delete comment.')
+            }
+        } catch (err) {
+            console.error('Error deleting comment', err)
         }
     }
 
