@@ -84,10 +84,10 @@ CREATE TABLE IF NOT EXISTS user_field_contexts (
 -- Create Donors table 
 CREATE TABLE IF NOT EXISTS donors (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    account_id TEXT NOT NULL UNIQUE,
+    account_id TEXT UNIQUE,
     name TEXT UNIQUE NOT NULL,
-    country TEXT NOT NULL,
-    donor_group TEXT NOT NULL,
+    country TEXT,
+    donor_group TEXT,
     created_by UUID REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -105,6 +105,7 @@ CREATE TABLE IF NOT EXISTS outcomes (
 -- Create Field Contexts table  
 CREATE TABLE IF NOT EXISTS field_contexts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT,
     name TEXT UNIQUE NOT NULL,
     category TEXT NOT NULL,
     geographic_coverage TEXT,
@@ -219,7 +220,7 @@ CREATE TABLE IF NOT EXISTS knowledge_card_reviews (
     review_text TEXT,
     author_response TEXT,
     type_of_comment TEXT,
-    severity VARCHAR(20),
+    severity TEXT,
     status VARCHAR(50) DEFAULT 'pending',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -303,6 +304,35 @@ CREATE TABLE IF NOT EXISTS proposal_field_contexts (
     PRIMARY KEY (proposal_id, field_context_id)
 );
 
+-- Create Donor Template Requests table
+CREATE TABLE IF NOT EXISTS donor_template_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    donor_id UUID REFERENCES donors(id) ON DELETE SET NULL,
+    donor_ids UUID[],
+    template_type TEXT DEFAULT 'proposal',
+    configuration JSONB NOT NULL,
+    initial_file_content JSONB,
+    status VARCHAR(50) DEFAULT 'pending',
+    created_by UUID NOT NULL REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create Donor Template Comments table
+CREATE TABLE IF NOT EXISTS donor_template_comments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    template_request_id UUID REFERENCES donor_template_requests(id) ON DELETE CASCADE,
+    template_name TEXT,
+    user_id UUID NOT NULL REFERENCES users(id),
+    comment_text TEXT NOT NULL,
+    section_name TEXT,
+    rating VARCHAR(10),
+    severity TEXT,
+    type_of_comment TEXT DEFAULT 'Donor Template',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create index for faster user lookup
 CREATE INDEX IF NOT EXISTS idx_proposals_user_id ON proposals(user_id);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email); 
@@ -319,8 +349,11 @@ CREATE INDEX IF NOT EXISTS idx_proposal_peer_reviews_reviewer_id ON proposal_pee
 CREATE INDEX IF NOT EXISTS idx_proposal_status_history_proposal_id ON proposal_status_history(proposal_id);
 CREATE INDEX IF NOT EXISTS idx_user_role_requests_user_id ON user_role_requests(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_donors_user_id ON user_donors(user_id);
-CREATE INDEX IF NOT EXISTS idx_donor_template_comments_section
-    ON donor_template_comments(template_request_id, section_name);
+
+CREATE INDEX IF NOT EXISTS idx_donor_template_requests_creator ON donor_template_requests(created_by);
+CREATE INDEX IF NOT EXISTS idx_donor_template_comments_request ON donor_template_comments(template_request_id);
+CREATE INDEX IF NOT EXISTS idx_donor_template_comments_section ON donor_template_comments(template_request_id, section_name);
+CREATE INDEX IF NOT EXISTS idx_donor_template_comments_user ON donor_template_comments(user_id);
  
  
 

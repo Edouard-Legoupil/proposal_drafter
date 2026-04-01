@@ -1060,7 +1060,7 @@ async def get_quality_incidents(
 async def get_quality_kpis(
     current_user: dict = Depends(get_current_user),
 ):
-    q = \"\"\"
+    q = """
     WITH all_incidents AS (
         (SELECT type_of_comment, severity FROM proposal_peer_reviews WHERE severity IS NOT NULL AND severity != '')
         UNION ALL
@@ -1074,5 +1074,5 @@ async def get_quality_kpis(
         COUNT(*) as count
     FROM all_incidents
     GROUP BY type_of_comment, severity
-    \"\"\"
+    """
     return robust_query(q, {}, [], lambda rows: rows)
