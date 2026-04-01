@@ -985,3 +985,94 @@ async def get_knowledge_silos(
             "silo_teams": [row["silo_team"] for row in rows if "silo_team" in row],
         },
     )
+
+@router.get("/metrics/quality-incidents",
+    summary="Consolidated Quality Incidents",
+    description="Returns all quality-related feedback (incidents) across Proposals, Knowledge Cards, and Donor Templates."
+)
+async def get_quality_incidents(
+    current_user: dict = Depends(get_current_user),
+):
+    q = """
+    (SELECT 
+        pr.id::text, 
+        'Proposal' as source_type,
+        substring(p.project_description from 1 for 100) as source_name,
+        pr.section_name,
+        pr.review_text,
+        pr.type_of_comment,
+        pr.severity,
+        pr.created_at,
+        u.name as reviewer_name
+    FROM proposal_peer_reviews pr
+    JOIN proposals p ON pr.proposal_id = p.id
+    JOIN users u ON pr.reviewer_id = u.id
+    WHERE pr.severity IS NOT NULL AND pr.severity != '')
+    
+    UNION ALL
+    
+    (SELECT 
+        kcr.id::text, 
+        'Knowledge Card' as source_type,
+        kc.summary as source_name,
+        kcr.section_name,
+        kcr.review_text,
+        kcr.type_of_comment,
+        kcr.severity,
+        kcr.created_at,
+        u.name as reviewer_name
+    FROM knowledge_card_reviews kcr
+    JOIN knowledge_cards kc ON kcr.knowledge_card_id = kc.id
+    JOIN users u ON kcr.reviewer_id = u.id
+    WHERE kcr.severity IS NOT NULL AND kcr.severity != '')
+    
+    UNION ALL
+    
+    (SELECT 
+        tc.id::text, 
+        'Donor Template' as source_type,
+        COALESCE(tr.name, tc.template_name) as source_name,
+        tc.section_name,
+        tc.comment_text as review_text,
+        tc.type_of_comment,
+        tc.severity,
+        tc.created_at,
+        u.name as reviewer_name
+    FROM donor_template_comments tc
+    LEFT JOIN donor_template_requests tr ON tc.template_request_id = tr.id
+    JOIN users u ON tc.user_id = u.id
+    WHERE tc.severity IS NOT NULL AND tc.severity != '')
+    
+    ORDER BY created_at DESC
+    """
+    
+    return robust_query(
+        q,
+        {},
+        [],
+        lambda rows: rows
+    )
+
+@router.get("/metrics/quality-kpis",
+    summary="Quality KPIs",
+    description="Total incidents by type and severity."
+)
+async def get_quality_kpis(
+    current_user: dict = Depends(get_current_user),
+):
+    q = \"\"\"
+    WITH all_incidents AS (
+        (SELECT type_of_comment, severity FROM proposal_peer_reviews WHERE severity IS NOT NULL AND severity != '')
+        UNION ALL
+        (SELECT type_of_comment, severity FROM knowledge_card_reviews WHERE severity IS NOT NULL AND severity != '')
+        UNION ALL
+        (SELECT type_of_comment, severity FROM donor_template_comments WHERE severity IS NOT NULL AND severity != '')
+    )
+    SELECT 
+        COALESCE(type_of_comment, 'General') as type,
+        severity,
+        COUNT(*) as count
+    FROM all_incidents
+    GROUP BY type_of_comment, severity
+    \"\"\"
+    return robust_query(q, {}, [], lambda rows: rows)

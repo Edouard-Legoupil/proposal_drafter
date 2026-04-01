@@ -198,6 +198,8 @@ class DonorTemplateCommentCreate(BaseModel):
     comment_text: str
     section_name: Optional[str] = None  # None = general comment; set for section-scoped
     rating: Optional[str] = None # 'up' or 'down'
+    severity: Optional[str] = None
+    type_of_comment: Optional[str] = "Donor Template"
 
 class DonorTemplateStatusUpdate(BaseModel):
     status: str  # pending, approved, rejected, published

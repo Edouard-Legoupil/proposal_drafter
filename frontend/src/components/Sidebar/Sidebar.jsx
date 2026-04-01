@@ -141,6 +141,11 @@ const Sidebar = ({ userRoles, isOpen }) => {
                     <span>Metrics</span>
                 </NavLink>
 
+                <NavLink to="/quality-gate" className="Sidebar_folderHeader Sidebar_link_header" data-testid="sidebar-link-quality">
+                    <i className="fa-solid fa-shield-halved"></i>
+                    <span>Quality Gate</span>
+                </NavLink>
+
                 {userRoles.includes('project reviewer') && (
                     <div className="Sidebar_folder">
                         <div className="Sidebar_folderHeader" onClick={() => toggleFolder('otherProposals')} data-testid="sidebar-other-proposals-folder">

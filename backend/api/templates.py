@@ -43,6 +43,8 @@ async def get_published_template(
                 "text": c["comment_text"],
                 "section_name": c["section_name"],
                 "rating": c["rating"],
+                "severity": c["severity"],
+                "type_of_comment": c.get("type_of_comment", "Donor Template"),
                 "created_at": _to_iso(c["created_at"])
             } for c in comments_result]
             
@@ -256,6 +258,8 @@ async def get_template_request(
                 "text": c["comment_text"],
                 "section_name": c["section_name"],
                 "rating": c["rating"],
+                "severity": c["severity"],
+                "type_of_comment": c.get("type_of_comment", "Donor Template"),
                 "created_at": _to_iso(c["created_at"])
             } for c in comments_result]
 
@@ -329,8 +333,8 @@ async def add_comment(
             if is_uuid:
                 connection.execute(
                     text("""
-                        INSERT INTO donor_template_comments (id, template_request_id, user_id, comment_text, section_name, rating)
-                        VALUES (:id, :tid, :uid, :text, :section, :rating)
+                        INSERT INTO donor_template_comments (id, template_request_id, user_id, comment_text, section_name, rating, severity, type_of_comment)
+                        VALUES (:id, :tid, :uid, :text, :section, :rating, :severity, :type)
                     """),
                     {
                         "id": str(uuid.uuid4()),
@@ -338,15 +342,17 @@ async def add_comment(
                         "uid": user_id,
                         "text": req.comment_text,
                         "section": req.section_name,
-                        "rating": req.rating
+                        "rating": req.rating,
+                        "severity": req.severity,
+                        "type": req.type_of_comment
                     }
                 )
             else:
                 # Store as a file-based comment using template_name
                 connection.execute(
                     text("""
-                        INSERT INTO donor_template_comments (id, template_name, user_id, comment_text, section_name, rating)
-                        VALUES (:id, :tname, :uid, :text, :section, :rating)
+                        INSERT INTO donor_template_comments (id, template_name, user_id, comment_text, section_name, rating, severity, type_of_comment)
+                        VALUES (:id, :tname, :uid, :text, :section, :rating, :severity, :type)
                     """),
                     {
                         "id": str(uuid.uuid4()),
@@ -354,7 +360,9 @@ async def add_comment(
                         "uid": user_id,
                         "text": req.comment_text,
                         "section": req.section_name,
-                        "rating": req.rating
+                        "rating": req.rating,
+                        "severity": req.severity,
+                        "type": req.type_of_comment
                     }
                 )
         return {"message": "Comment added successfully."}
