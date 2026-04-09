@@ -36,7 +36,7 @@ import litellm
 import numpy as np
 import io
 from backend.utils.doc_export import create_word_from_knowledge_card
-from backend.models.schemas import SubmitReviewRequest, AuthorResponseRequest
+from backend.models.schemas import SubmitReviewRequest, AuthorResponseRequest, ReviewComment
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -1701,7 +1701,7 @@ async def get_knowledge_card_for_review(card_id: uuid.UUID, current_user: dict =
 
             # Fetch existing reviews/comments by this user
             reviews_query = text("""
-                SELECT section_name, review_text, type_of_comment, severity, rating, author_response
+                SELECT id, section_name, review_text, type_of_comment, severity, rating, author_response
                 FROM knowledge_card_reviews
                 WHERE knowledge_card_id = :card_id AND reviewer_id = :user_id
             """)
@@ -1710,6 +1710,7 @@ async def get_knowledge_card_for_review(card_id: uuid.UUID, current_user: dict =
             draft_comments = {}
             for row in reviews:
                 draft_comments[row['section_name']] = {
+                    "id": str(row['id']),
                     "review_text": row['review_text'],
                     "type_of_comment": row['type_of_comment'],
                     "severity": row['severity'],
@@ -1894,3 +1895,80 @@ async def get_all_knowledge_card_reviews(card_id: uuid.UUID, current_user: dict 
     except Exception as e:
         logger.error(f"[GET ALL KC REVIEWS ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch reviews.")
+
+@router.post("/knowledge-cards/{card_id}/comment")
+async def add_knowledge_card_comment(
+    card_id: uuid.UUID,
+    req: ReviewComment,
+    current_user: dict = Depends(get_current_user),
+    engine = Depends(get_engine)
+):
+    """
+    Add or update an individual comment on a knowledge card section.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with engine.begin() as connection:
+            # Upsert logic based on UNIQUE(knowledge_card_id, reviewer_id, section_name)
+            connection.execute(
+                text("""
+                    INSERT INTO knowledge_card_reviews (knowledge_card_id, reviewer_id, section_name, review_text, rating, severity, type_of_comment, status)
+                    VALUES (:cid, :rid, :section, :text, :rating, :severity, :type, 'pending')
+                    ON CONFLICT (knowledge_card_id, reviewer_id, section_name)
+                    DO UPDATE SET 
+                        review_text = EXCLUDED.review_text,
+                        rating = EXCLUDED.rating,
+                        severity = EXCLUDED.severity,
+                        type_of_comment = EXCLUDED.type_of_comment,
+                        updated_at = CURRENT_TIMESTAMP
+                """),
+                {
+                    "cid": str(card_id),
+                    "rid": str(user_id),
+                    "section": req.section_name,
+                    "text": req.review_text,
+                    "rating": req.rating,
+                    "severity": req.severity,
+                    "type": req.type_of_comment
+                }
+            )
+        return {"message": "Comment saved successfully."}
+    except Exception as e:
+        logger.error(f"Error saving knowledge card comment: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to save comment.")
+
+@router.delete("/knowledge-cards/{card_id}/comment/{comment_id}")
+async def delete_knowledge_card_comment(
+    card_id: uuid.UUID,
+    comment_id: uuid.UUID,
+    current_user: dict = Depends(get_current_user),
+    engine = Depends(get_engine)
+):
+    """
+    Remove an individual comment from a knowledge card.
+    """
+    user_id = current_user["user_id"]
+    is_admin = any(role in ["admin", "knowledge manager donors"] for role in current_user.get("roles", []))
+    
+    try:
+        with engine.begin() as connection:
+            # Check ownership
+            check_query = text("SELECT reviewer_id FROM knowledge_card_reviews WHERE id = :cid")
+            comment = connection.execute(check_query, {"cid": str(comment_id)}).mappings().fetchone()
+            
+            if not comment:
+                return {"message": "Comment not found."}
+            
+            if str(comment["reviewer_id"]) != str(user_id) and not is_admin:
+                raise HTTPException(status_code=403, detail="You can only delete your own comments.")
+            
+            connection.execute(
+                text("DELETE FROM knowledge_card_reviews WHERE id = :cid"),
+                {"cid": str(comment_id)}
+            )
+        return {"message": "Comment deleted successfully."}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting knowledge card comment: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to delete comment.")

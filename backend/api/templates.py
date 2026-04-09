@@ -68,6 +68,18 @@ async def get_published_template(
         logger.error(f"Error loading published template {template_name}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to load template content.")
 
+@router.get("/{template_name}/sections")
+async def get_template_sections(template_name: str):
+    """
+    Returns the list of sections for a given template.
+    """
+    try:
+        proposal_template = load_proposal_template(template_name)
+        return {"sections": proposal_template.get("sections", [])}
+    except Exception as e:
+        logger.error(f"Error loading sections for {template_name}: {e}")
+        return {"sections": []}
+
 def _to_iso(dt):
     if dt is None:
         return None

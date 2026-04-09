@@ -3,17 +3,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import './DonorTemplateDetail.css'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faThumbsUp, faThumbsDown, faComments, faListCheck, faRobot, faList, faArrowLeft, faFileLines, faFileContract, faTrash } from '@fortawesome/free-solid-svg-icons'
+import { faThumbsDown, faComments, faListCheck, faRobot, faList, faArrowLeft, faFileLines, faFileContract, faTrash, faCircleInfo } from '@fortawesome/free-solid-svg-icons'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
-
-// P0-P3 incident severity taxonomy for template feedback
-const TEMPLATE_SEVERITY_OPTIONS = [
-    { value: 'P0', label: 'P0 – Critical', description: 'Mandatory donor section omitted (non-compliant) or unsupported/fabricated content introduced despite available source cards.' },
-    { value: 'P1', label: 'P1 – High', description: 'Prompt fails to enforce required donor structure or tone in a material way; placeholder text remains in output.' },
-    { value: 'P2', label: 'P2 – Medium', description: 'Draft structurally acceptable but too generic; style mismatch that increases editing effort; minor completeness gap in non-mandatory section.' },
-    { value: 'P3', label: 'P3 – Low', description: 'Tone slightly off but easily corrected; minor formatting issue with no material donor-compliance impact.' },
-]
+import SectionReview from '../../components/SectionReview/SectionReview'
 
 export default function DonorTemplateDetail() {
     const { id } = useParams()
@@ -105,19 +98,6 @@ export default function DonorTemplateDetail() {
             <div className="hli-panel">
                 <div className="hli-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                     <h4 style={{ margin: 0 }}><FontAwesomeIcon icon={faListCheck} style={{ marginRight: '8px' }} /> High-level Instructions</h4>
-                    <div className="section-review-actions">
-                        <button
-                            className={`thumb-btn down ${rating === 'down' ? 'active' : ''}`}
-                            onClick={() => {
-                                setCommentSection(hliName)
-                                setCommentText(comment)
-                            }}
-                            title="Needs changes"
-                        >
-                            <FontAwesomeIcon icon={faThumbsDown} />
-                            <span style={{ fontSize: '0.65rem', marginLeft: '4px' }}>Fix</span>
-                        </button>
-                    </div>
                 </div>
 
                 <ol className="hli-list">
@@ -150,7 +130,7 @@ export default function DonorTemplateDetail() {
                                         )}
                                     </div>
                                     <div className="mini-comment-body">
-                                        <FontAwesomeIcon icon={c.rating === 'up' ? faThumbsUp : faThumbsDown} style={{ marginRight: '6px', opacity: 0.6 }} />
+                                        <FontAwesomeIcon icon={c.rating === 'up' ? faCircleInfo : faThumbsDown} style={{ marginRight: '6px', opacity: 0.6 }} />
                                         {c.text}
                                     </div>
                                 </div>
@@ -159,41 +139,39 @@ export default function DonorTemplateDetail() {
                     </div>
                 )}
 
-                {/* HLI Inline Comment Form */}
-                {commentSection === hliName && (
-                    <div className="inline-comment-form">
-                        <textarea
-                            value={commentText}
-                            onChange={(e) => setCommentText(e.target.value)}
-                            placeholder="Feedback for High-level Instructions..."
+                {/* HLI Inline Comment Form wrapped in SectionReview */}
+                {(() => {
+                    const existing = template.comments?.find(c => c.section_name === hliName && c.user === currentUser?.name);
+                    return (
+                        <SectionReview
+                            section={hliName}
+                            type="template"
+                            status={commentSection === hliName ? 'down' : rating}
+                            reviewComment={{
+                                id: existing?.id,
+                                review_text: commentSection === hliName ? commentText : comment,
+                                severity: commentSeverity
+                            }}
+                            isReviewEditable={true}
+                            onStatusChange={(sec, stat) => {
+                                setCommentSection(sec);
+                                setCommentText(comment);
+                            }}
+                            onCommentChange={(sec, field, val) => {
+                                if (field === 'save') handleAddComment();
+                                else if (field === 'review_text') setCommentText(val);
+                                else if (field === 'severity' || field === 'type_of_comment') setCommentSeverity(val);
+                            }}
+                            onDeleteComment={() => {
+                                if (existing) handleDeleteTemplateComment(existing.id);
+                                setCommentSection('');
+                                setCommentText('');
+                            }}
+                            isOwnerOfComment={true}
+                            isAdmin={currentUser?.is_admin}
                         />
-                        <div className="inline-severity-selector">
-                            <span className="inline-severity-label">Incident Severity:</span>
-                            <div className="inline-severity-options">
-                                {TEMPLATE_SEVERITY_OPTIONS.map(opt => (
-                                    <label
-                                        key={opt.value}
-                                        className={`inline-sev-option ${commentSeverity === opt.value ? 'selected' : ''} sev-${opt.value}`}
-                                        title={opt.description}
-                                    >
-                                        <input
-                                            type="radio"
-                                            name="hli-severity"
-                                            value={opt.value}
-                                            checked={commentSeverity === opt.value}
-                                            onChange={() => setCommentSeverity(opt.value)}
-                                        />
-                                        {opt.label}
-                                    </label>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="inline-comment-actions">
-                            <button className="btn btn--primary btn--small" onClick={handleAddComment}>Save Comment</button>
-                            <button className="btn btn--link btn--small" onClick={() => { setCommentSection(''); setCommentText(''); setCommentSeverity('P2'); }}>Cancel</button>
-                        </div>
-                    </div>
-                )}
+                    );
+                })()}
             </div>
         )
     }
@@ -296,34 +274,6 @@ export default function DonorTemplateDetail() {
                                         </span>
                                     )}
                                 </div>
-
-                                {/* Enable feedback for all templates */}
-                                <div className="section-review-actions">
-                                    <button
-                                        className={`thumb-btn up ${sectionRating === 'up' ? 'active' : ''}`}
-                                        onClick={() => handleAddQuickComment(name, 'up')}
-                                        title="Looks good"
-                                    >
-                                        <FontAwesomeIcon icon={faThumbsUp} />
-                                        <span style={{ fontSize: '0.65rem', marginLeft: '4px' }}>Good</span>
-                                    </button>
-                                    <button
-                                        className={`thumb-btn down ${sectionRating === 'down' ? 'active' : ''}`}
-                                        onClick={() => {
-                                            setCommentSection(name)
-                                            setCommentText(sectionComment)
-                                            // Focus the local textarea
-                                            setTimeout(() => {
-                                                const el = document.getElementById(`comment-textarea-${idx}`);
-                                                if (el) el.focus();
-                                            }, 10);
-                                        }}
-                                        title="Needs changes"
-                                    >
-                                        <FontAwesomeIcon icon={faThumbsDown} />
-                                        <span style={{ fontSize: '0.65rem', marginLeft: '4px' }}>Fix</span>
-                                    </button>
-                                </div>
                             </div>
 
                             {instructions && (
@@ -364,7 +314,7 @@ export default function DonorTemplateDetail() {
                                                 </div>
                                                 <div className="mini-comment-body">
                                                     <FontAwesomeIcon
-                                                        icon={c.rating === 'up' ? faThumbsUp : faThumbsDown}
+                                                        icon={c.rating === 'up' ? faCircleInfo : faThumbsDown}
                                                         style={{ marginRight: '6px', opacity: 0.6 }}
                                                     />
                                                     {c.text}
@@ -375,56 +325,42 @@ export default function DonorTemplateDetail() {
                                 </div>
                             )}
 
-                            {/* Inline Comment Form (when thumb-down or active) */}
-                            {(sectionRating === 'down' || commentSection === name) && (
-                                <div className="inline-comment-form">
-                                    <textarea
-                                        id={`comment-textarea-${idx}`}
-                                        value={commentSection === name ? commentText : ''}
-                                        onChange={(e) => {
-                                            setCommentSection(name)
-                                            setCommentText(e.target.value)
+                            {/* SectionReview Integrated */}
+                            {(() => {
+                                const existing = template.comments?.find(c => c.section_name === name && c.user === currentUser?.name);
+                                return (
+                                    <SectionReview
+                                        section={name}
+                                        type="template"
+                                        status={commentSection === name ? 'down' : sectionRating}
+                                        reviewComment={{
+                                            id: existing?.id,
+                                            review_text: commentSection === name ? commentText : sectionComment,
+                                            severity: commentSeverity
                                         }}
-                                        placeholder={`Feedback for ${name}...`}
+                                        isReviewEditable={true}
+                                        onStatusChange={(sec, stat) => {
+                                            setCommentSection(sec);
+                                            setCommentText(sectionComment);
+                                        }}
+                                        onCommentChange={(sec, field, val) => {
+                                            if (field === 'save') handleAddComment();
+                                            else if (field === 'review_text') {
+                                                setCommentSection(sec);
+                                                setCommentText(val);
+                                            }
+                                            else if (field === 'severity' || field === 'type_of_comment') setCommentSeverity(val);
+                                        }}
+                                        onDeleteComment={() => {
+                                            if (existing) handleDeleteTemplateComment(existing.id);
+                                            setCommentSection('');
+                                            setCommentText('');
+                                        }}
+                                        isOwnerOfComment={true}
+                                        isAdmin={currentUser?.is_admin}
                                     />
-                                    <div className="inline-severity-selector">
-                                        <span className="inline-severity-label">Incident Severity:</span>
-                                        <div className="inline-severity-options">
-                                            {TEMPLATE_SEVERITY_OPTIONS.map(opt => (
-                                                <label
-                                                    key={opt.value}
-                                                    className={`inline-sev-option ${commentSeverity === opt.value ? 'selected' : ''} sev-${opt.value}`}
-                                                    title={opt.description}
-                                                >
-                                                    <input
-                                                        type="radio"
-                                                        name={`section-severity-${idx}`}
-                                                        value={opt.value}
-                                                        checked={commentSeverity === opt.value}
-                                                        onChange={() => { setCommentSection(name); setCommentSeverity(opt.value); }}
-                                                    />
-                                                    {opt.label}
-                                                </label>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div className="inline-comment-actions">
-                                        <button
-                                            className="btn btn--primary btn--small"
-                                            onClick={handleAddComment}
-                                            disabled={isSubmittingComment || (commentSection === name && !commentText.trim())}
-                                        >
-                                            {isSubmittingComment && commentSection === name ? 'Saving...' : 'Save Comment'}
-                                        </button>
-                                        <button
-                                            className="btn btn--link btn--small"
-                                            onClick={() => { setCommentSection(''); setCommentText(''); setCommentSeverity('P2'); }}
-                                        >
-                                            Cancel
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
+                                );
+                            })()}
 
                             {format === 'table' && columns && (
                                 <div className="table-preview-container">
@@ -465,29 +401,9 @@ export default function DonorTemplateDetail() {
         )
     }
 
-    const handleAddQuickComment = async (sectionName, rating) => {
-        try {
-            const res = await fetch(`${API_BASE_URL}/templates/request/${id}/comment`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    comment_text: rating === 'up' ? 'Approved' : 'Needs review',
-                    section_name: sectionName,
-                    rating: rating
-                }),
-                credentials: 'include'
-            })
-            if (res.ok) {
-                await fetchTemplate()
-            }
-        } catch (err) {
-            console.error("Error adding quick comment", err)
-        }
-    }
-
     // ── Comment handlers ───────────────────────────────────────────────────
     const handleAddComment = async (e) => {
-        e.preventDefault()
+        if (e && e.preventDefault) e.preventDefault()
         if (!commentText.trim()) return
         setIsSubmittingComment(true)
 

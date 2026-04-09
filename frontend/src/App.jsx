@@ -23,6 +23,7 @@ export default function App()
                 <Route path="/chat/:id" element={<Chat/>} />
                 <Route path="/knowledge-card/new" element={<KnowledgeCard />} />
                 <Route path="/knowledge-card/:id" element={<KnowledgeCard />} />
+                <Route path="/review/knowledge-card/:id" element={<KnowledgeCard />} />
                 <Route path="/donor-templates/new" element={<DonorTemplateRequest />} />
                 <Route path="/donor-templates/:id" element={<DonorTemplateDetail />} />
                 <Route path="/quality-gate" element={<QualityGate />} />

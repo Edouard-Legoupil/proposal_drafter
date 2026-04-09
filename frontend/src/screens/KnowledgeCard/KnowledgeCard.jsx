@@ -90,7 +90,7 @@ export default function KnowledgeCard() {
         eventSourceRef.current = eventSource;
     }, [eventSource]);
 
-    
+
     function handleCommentChange(section, field, value) {
         setSectionReviews(prev => {
             const currentSectionReview = Array.isArray(prev[section]) ? {} : (prev[section] || {});
@@ -136,14 +136,14 @@ export default function KnowledgeCard() {
     async function handleSubmitReview() {
         let comments = [];
         if (!Array.isArray(sectionReviews)) {
-           comments = Object.entries(sectionReviews)
-               .filter(([k,v]) => !Array.isArray(v))
-               .map(([section_name, comment_data]) => ({
-                   section_name,
-                   ...comment_data
-               }));
+            comments = Object.entries(sectionReviews)
+                .filter(([k, v]) => !Array.isArray(v))
+                .map(([section_name, comment_data]) => ({
+                    section_name,
+                    ...comment_data
+                }));
         }
-        
+
         const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${id}/review`, {
             method: "POST",
             headers: { 'Content-Type': 'application/json' },
@@ -163,8 +163,8 @@ export default function KnowledgeCard() {
                 body: JSON.stringify({ section_name: section, author_response: responseText })
             });
             if (res.ok) {
-               // Reload data
-               fetchData();
+                // Reload data
+                fetchData();
             }
         } catch (error) {
             console.error('Error saving author response:', error);
@@ -250,14 +250,14 @@ export default function KnowledgeCard() {
                     });
 
                     const _isAdmin = curUser.is_admin || (curUser.roles || []).some(r => {
-                          const n = typeof r === 'string' ? r : r.name;
-                          return n && n.toLowerCase() === 'admin';
+                        const n = typeof r === 'string' ? r : r.name;
+                        return n && n.toLowerCase() === 'admin';
                     });
                     setIsAdmin(_isAdmin);
 
                     if (!hasSpecificRole) {
                         setIsReviewer(true);
-                        
+
                         try {
                             const reviewRes = await authenticatedFetch(`${API_BASE_URL}/review-knowledge-card/${id}`);
                             if (reviewRes.ok) {
@@ -278,21 +278,21 @@ export default function KnowledgeCard() {
                                 setSectionReviews(initialComments);
                                 setReviewStatus(initialStatus);
                             }
-                        } catch(e) { console.error("fetch review error", e) }
+                        } catch (e) { console.error("fetch review error", e) }
                     } else {
                         // fetch peer reviews normally if we are the owner
                         try {
                             const prRes = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${id}/all-reviews`);
                             if (prRes.ok) {
-                               const prData = await prRes.json();
-                               const grouped = {};
-                               (prData.reviews || []).forEach(r => {
-                                   if (!grouped[r.section_name]) grouped[r.section_name] = [];
-                                   grouped[r.section_name].push(r);
-                               });
-                               setSectionReviews(grouped);
+                                const prData = await prRes.json();
+                                const grouped = {};
+                                (prData.reviews || []).forEach(r => {
+                                    if (!grouped[r.section_name]) grouped[r.section_name] = [];
+                                    grouped[r.section_name].push(r);
+                                });
+                                setSectionReviews(grouped);
                             }
-                        } catch(e){}
+                        } catch (e) { }
                     }
 
                     setSummary(card.summary || '');
@@ -1350,7 +1350,7 @@ export default function KnowledgeCard() {
                                         />
                                     ) : (
                                         <div className="kc-section-content" data-testid={`section-content-${section}`}>
-                                            <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>{content}</Markdown>
+                                            <div style={{ whiteSpace: 'pre-wrap' }}>{content}</div>
                                             {/* --- Knowledge Card Review Comments display --- */}
                                             <div className="kc-reviews-container">
                                                 {isReviewer ? (

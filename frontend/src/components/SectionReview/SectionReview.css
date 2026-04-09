@@ -1,203 +1,163 @@
 .SectionReview_container {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px dashed #ccc;
-    background-color: #fafafa;
-    padding: 1rem;
-    border-radius: 8px;
+    margin-top: 1.5rem;
+    padding: 1.25rem;
+    border: 1px solid #e0e0e0;
+    background-color: #fdfdfd;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
 }
 
 .SectionReview_header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.SectionReview_header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #333;
+    font-weight: 600;
 }
 
 .SectionReview_thumbs {
     display: flex;
     gap: 1rem;
-    font-size: 1.5rem;
 }
 
-.SectionReview_thumb-up,
-.SectionReview_thumb-down {
-    cursor: pointer;
-    color: #ccc;
+.thumb-btn.down {
+    padding: 6px 12px;
+    border-radius: 6px;
 }
 
-.SectionReview_thumb-up.active {
-    color: green;
+.thumb-btn.down:hover {
+    background-color: #fff1f0;
 }
 
-.SectionReview_thumb-down.active {
-    color: red;
+.thumb-btn.down.active {
+    background-color: #fff1f0;
+    color: #d32f2f !important;
 }
 
 .SectionReview_comment_section {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 1.25rem;
 }
 
 .SectionReview_comment_textarea {
     width: 100%;
-    min-height: 100px;
-    padding: 0.5rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    min-height: 120px;
+    padding: 0.75rem;
+    border: 1px solid #dcdcdc;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    resize: vertical;
+    transition: border-color 0.2s;
 }
 
-.SectionReview_comment_controls {
-    margin-bottom: 0.5rem;
+.SectionReview_comment_textarea:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
 }
 
 .SectionReview_severity-selector {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: 0.75rem;
 }
 
 .SectionReview_severity-label {
-    font-size: 0.72rem;
+    font-size: 0.8rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #555;
+    letter-spacing: 0.5px;
+    color: #666;
 }
 
 .SectionReview_severity-options {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
 }
 
 .SectionReview_severity-option {
     display: flex;
-    align-items: flex-start;
-    gap: 0.5rem;
-    padding: 0.45rem 0.6rem;
-    border-radius: 6px;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 0.8rem;
+    border-radius: 8px;
     border: 2px solid transparent;
     cursor: pointer;
-    background: #f4f4f4;
-    transition: border-color 0.15s, background 0.15s;
-    line-height: 1.3;
+    background: #f5f5f5;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .SectionReview_severity-option input[type="radio"] {
-    margin-top: 2px;
+    margin: 0;
     flex-shrink: 0;
-    accent-color: currentColor;
+    cursor: pointer;
 }
 
-.SectionReview_severity-option:hover { background: #eaeaea; }
+.SectionReview_severity-option:hover {
+    background: #eeeeee;
+    transform: translateY(-1px);
+}
 
-.SectionReview_severity-option.selected.severity-P0 { border-color: #c0392b; background: #fdecea; }
-.SectionReview_severity-option.selected.severity-P1 { border-color: #e67e22; background: #fef5eb; }
-.SectionReview_severity-option.selected.severity-P2 { border-color: #2980b9; background: #eaf4fb; }
+.SectionReview_severity-option.selected.severity-P0 { border-color: #d32f2f; background: #fff1f0; }
+.SectionReview_severity-option.selected.severity-P1 { border-color: #f39c12; background: #fef5e7; }
+.SectionReview_severity-option.selected.severity-P2 { border-color: #3498db; background: #ebf5fb; }
 .SectionReview_severity-option.selected.severity-P3 { border-color: #27ae60; background: #eafaf1; }
 
 .SectionReview_severity-badge {
-    font-size: 0.7rem;
-    font-weight: 800;
-    padding: 1px 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 2px 6px;
     border-radius: 4px;
-    flex-shrink: 0;
     background: rgba(0,0,0,0.08);
-    letter-spacing: 0.04em;
 }
 
-.severity-P0 .SectionReview_severity-badge { background: #c0392b; color: #fff; }
-.severity-P1 .SectionReview_severity-badge { background: #e67e22; color: #fff; }
-.severity-P2 .SectionReview_severity-badge { background: #2980b9; color: #fff; }
+.severity-P0 .SectionReview_severity-badge { background: #d32f2f; color: #fff; }
+.severity-P1 .SectionReview_severity-badge { background: #f39c12; color: #fff; }
+.severity-P2 .SectionReview_severity-badge { background: #3498db; color: #fff; }
 .severity-P3 .SectionReview_severity-badge { background: #27ae60; color: #fff; }
 
 .SectionReview_severity-text {
-    font-size: 0.78rem;
-    color: #333;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #444;
 }
 
-.SectionReview_severity-description {
-    font-size: 0.72rem;
-    color: #666;
-    font-style: italic;
-    line-height: 1.4;
-    margin: 0.25rem 0 0 0;
-    padding: 0.4rem 0.6rem;
-    background: #f8f8f8;
-    border-left: 3px solid #ccc;
-    border-radius: 0 4px 4px 0;
+.SectionReview_actions_footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #f0f0f0;
 }
 
 .SectionReview_delete_comment_btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    margin-top: 0.5rem;
-    padding: 4px 10px;
-    font-size: 0.75rem;
-    background: none;
-    border: 1px solid #e74c3c;
-    color: #e74c3c;
-    border-radius: 4px;
+    gap: 0.5rem;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: #fff;
+    border: 1px solid #d32f2f;
+    color: #d32f2f;
+    border-radius: 6px;
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
-    align-self: flex-start;
+    transition: all 0.2s;
 }
 
 .SectionReview_delete_comment_btn:hover {
-    background: #e74c3c;
+    background: #d32f2f;
     color: #fff;
-}
-
-.SectionReview_author_reply {
-    margin-top: 15px;
-    padding: 10px;
-    background: #f0f4f8;
-    border-radius: 8px;
-    border-left: 4px solid #3498db;
-}
-
-.SectionReview_reply_textarea {
-    width: 100%;
-    min-height: 80px;
-    padding: 8px;
-    border: 1px solid #bdc3c7;
-    border-radius: 4px;
-    margin-bottom: 10px;
-}
-
-.SectionReview_reply_actions {
-    display: flex;
-    gap: 10px;
-}
-
-.SectionReview_reply_actions button {
-    padding: 5px 12px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.SectionReview_reply_actions button:first-child {
-    background: #3498db;
-    color: white;
-}
-
-.SectionReview_reply_btn {
-    padding: 5px 12px;
-    background: #3498db;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.SectionReview_author-response-display {
-    margin-top: 15px;
-    padding: 10px;
-    background: #eaf2f8;
-    border-radius: 8px;
-    border-left: 4px solid #2980b9;
 }

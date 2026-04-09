@@ -25,7 +25,7 @@ import generateIcon from "../../assets/images/generateIcon.svg"
 import knowIcon from "../../assets/images/knowIcon.svg"
 import resultsIcon from "../../assets/images/Chat_resultsIcon.svg"
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faThumbsUp, faThumbsDown } from '@fortawesome/free-solid-svg-icons'
+import { faThumbsDown } from '@fortawesome/free-solid-svg-icons'
 import SectionReview from '../../components/SectionReview/SectionReview'
 import edit from "../../assets/images/Chat_edit.svg"
 import save from "../../assets/images/Chat_save.svg"
@@ -1043,6 +1043,7 @@ export default function Chat(props) {
                                         Object.keys(reviewData.generated_sections || {}).forEach(section => {
                                                 const existing = reviewData.draft_comments?.[section] || {};
                                                 initialComments[section] = {
+                                                        id: existing.id || null,
                                                         review_text: existing.review_text || '',
                                                         type_of_comment: existing.type_of_comment || 'P2',
                                                         severity: existing.severity || 'P2',
@@ -1081,7 +1082,27 @@ export default function Chat(props) {
         }
 
         // ── Review handler functions ────────────────────────────────────────
-        function handleCommentChange(section, field, value) {
+        async function handleCommentChange(section, field, value) {
+                if (field === 'save') {
+                        const proposalId = id || sessionStorage.getItem('proposal_id');
+                        if (!proposalId) {
+                                console.error("No proposal ID found in params");
+                                return;
+                        }
+                        const commentData = { ...reviewComments[section], section_name: section, review_text: value };
+                        try {
+                                const res = await fetch(`${API_BASE_URL}/proposals/${proposalId}/comment`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify(commentData),
+                                        credentials: 'include'
+                                });
+                                if (res.ok) {
+                                        setReviewComments(prev => ({ ...prev, [section]: { ...(prev[section] || {}), review_text: value } }));
+                                }
+                        } catch (e) { console.error("Error saving comment", e); }
+                        return;
+                }
                 setReviewComments(prev => {
                         const updated = {
                                 ...prev,
@@ -1119,7 +1140,33 @@ export default function Chat(props) {
         }, []);
 
         async function handleDeleteComment(section) {
-                handleCommentChange(section, 'review_text', '');
+                if (!window.confirm('Remove this comment?')) return;
+                const proposalId = sessionStorage.getItem('proposal_id');
+                
+                // Try from local draft state first
+                let commentId = reviewComments[section]?.id;
+                
+                // If not there, try from reviews array
+                if (!commentId) {
+                        const existing = reviews.find(r => r.section_name === section && (r.reviewer_id === currentUser?.id || r.reviewer_id === currentUser?.user_id));
+                        commentId = existing?.id;
+                }
+                
+                if (commentId && proposalId) {
+                        try {
+                                const res = await fetch(`${API_BASE_URL}/proposals/${proposalId}/comment/${commentId}`, {
+                                        method: 'DELETE',
+                                        credentials: 'include'
+                                });
+                                if (res.ok) {
+                                        getPeerReviews();
+                                        // Also refresh draft comments if we are in review mode
+                                        if (isReviewer) getContent();
+                                }
+                        } catch (err) { console.error('Error deleting comment', err); }
+                }
+
+                setReviewComments(prev => ({ ...prev, [section]: { review_text: '', severity: 'Medium', type_of_comment: 'General' } }));
                 handleStatusChange(section, null);
         }
 
@@ -1733,23 +1780,6 @@ export default function Chat(props) {
                                                                                                                 <img src={regenerate} alt="" />
                                                                                                                 <span>Regenerate</span>
                                                                                                         </button>}
-
-                                                                                                        {(proposalStatus === 'draft' || proposalStatus === 'in_review') && (
-                                                                                                                <>
-
-                                                                                                                        <button
-                                                                                                                                type="button"
-                                                                                                                                className={`Chat_thumbBtn Chat_thumbDown ${reviewStatus[sectionName] === 'down' ? 'active' : ''}`}
-                                                                                                                                onClick={() => (isReviewer || proposalStatus === 'draft') ? handleStatusChange(sectionName, reviewStatus[sectionName] === 'down' ? null : 'down') : null}
-                                                                                                                                title="Flag an issue with this section"
-                                                                                                                                data-testid={`thumb-down-${kebabSectionName}`}
-                                                                                                                                style={{ pointerEvents: (!isReviewer && proposalStatus === 'in_review') ? 'none' : 'auto' }}
-                                                                                                                        >
-                                                                                                                                <FontAwesomeIcon icon={faThumbsDown} />
-                                                                                                                                <span>Flag</span>
-                                                                                                                        </button>
-                                                                                                                </>
-                                                                                                        )}
                                                                                                 </>
                                                                                                 : ""}
                                                                                 </div> : ""}
@@ -1771,36 +1801,22 @@ export default function Chat(props) {
                                                                                                 <span className='Chat_sectionContent_loading'>Loading</span>
                                                                                         </div>
                                                                                 }
-                                                                        </div> : ""}
-
-                                                                        {(proposalStatus === 'draft' || proposalStatus === 'in_review') && reviewStatus[sectionName] === 'down' && (
-                                                                                <div className="Chat_inlineReview" data-testid={`inline-review-${kebabSectionName}`}>
-                                                                                        <div className="SectionReview_severity-selector">
-                                                                                                <label className="SectionReview_severity-label">Incident Severity</label>
-                                                                                                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                                                                                                        {[{ v: 'P0', label: 'P0 – Critical' }, { v: 'P1', label: 'P1 – High' }, { v: 'P2', label: 'P2 – Medium' }, { v: 'P3', label: 'P3 – Low' }].map(opt => (
-                                                                                                                <label key={opt.v} className={`SectionReview_severity-option ${(reviewComments[sectionName]?.type_of_comment || 'P2') === opt.v ? 'selected' : ''} severity-${opt.v}`} style={{ cursor: (isReviewer || proposalStatus === 'draft') ? 'pointer' : 'default', padding: '3px 8px', fontSize: '0.78rem' }}>
-                                                                                                                        <input type="radio" name={`sev-${sectionName}`} value={opt.v} checked={(reviewComments[sectionName]?.type_of_comment || 'P2') === opt.v} onChange={() => { if (isReviewer || proposalStatus === 'draft') { handleCommentChange(sectionName, 'type_of_comment', opt.v); handleCommentChange(sectionName, 'severity', opt.v); } }} disabled={!isReviewer && proposalStatus !== 'draft'} />
-                                                                                                                        <span className="SectionReview_severity-badge">{opt.v}</span>
-                                                                                                                        <span className="SectionReview_severity-text">{opt.label.replace(`${opt.v} – `, '')}</span>
-                                                                                                                </label>
-                                                                                                        ))}
-                                                                                                </div>
-                                                                                        </div>
-                                                                                        <textarea
-                                                                                                className="Chat_inlineReview_textarea"
-                                                                                                placeholder={(isReviewer || proposalStatus === 'draft') ? `Describe the issue in "${sectionName}"…` : "No description provided."}
-                                                                                                value={reviewComments[sectionName]?.review_text || ''}
-                                                                                                onChange={e => handleCommentChange(sectionName, 'review_text', e.target.value)}
-                                                                                                disabled={!isReviewer && proposalStatus !== 'draft'}
-                                                                                                rows={3}
-                                                                                                data-testid={`review-comment-${kebabSectionName}`}
+                                                                                {/* SectionReview Integrated */}
+                                                                                {(proposalStatus === 'draft' || proposalStatus === 'in_review') && (
+                                                                                        <SectionReview
+                                                                                                section={sectionName}
+                                                                                                type="proposal"
+                                                                                                reviewComment={reviewComments[sectionName]}
+                                                                                                status={reviewStatus[sectionName]}
+                                                                                                isReviewEditable={isReviewer || proposalStatus === 'draft'}
+                                                                                                onCommentChange={handleCommentChange}
+                                                                                                onStatusChange={handleStatusChange}
+                                                                                                onDeleteComment={handleDeleteComment}
+                                                                                                isOwnerOfComment={true}
+                                                                                                isAdmin={isAdmin}
                                                                                         />
-                                                                                        {(isReviewer || proposalStatus === 'draft') && <span style={{ fontSize: '0.72rem', color: '#888' }}>Auto-saved as draft</span>}
-
-
-                                                                                </div>
-                                                                        )}
+                                                                                )}
+                                                                        </div> : ""}
 
                                                                         {(proposalStatus === 'pre_submission' || proposalStatus === 'submission') && (
                                                                                 <div className="reviews-container" data-testid={`reviews-container-${kebabSectionName}`}>
@@ -1809,6 +1825,7 @@ export default function Chat(props) {
                                                                                                         <h4>Peer Reviews</h4>
                                                                                                         {reviews.filter(r => r.section_name === sectionName).map(review => {
                                                                                                                 let mappedComment = {
+                                                                                                                        id: review.id,
                                                                                                                         review_text: review.review_text,
                                                                                                                         type_of_comment: review.type_of_comment,
                                                                                                                         severity: review.severity,
