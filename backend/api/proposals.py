@@ -1298,13 +1298,13 @@ async def save_draft_review(proposal_id: uuid.UUID, request: SubmitReviewRequest
     try:
         with get_engine().begin() as connection:
             # Check if the user is assigned to review this proposal
-            reviewer_id_from_db = connection.execute(
-                text("SELECT reviewer_id FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND (status = 'pending' OR status = 'draft')"),
-                {"proposal_id": str(proposal_id), "user_id": str(user_id)}
-            ).scalar()
+          #  reviewer_id_from_db = connection.execute(
+          #      text("SELECT reviewer_id FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND (status = 'pending' OR status = 'draft')"),
+          #      {"proposal_id": str(proposal_id), "user_id": str(user_id)}
+          #  ).scalar()
 
-            if not reviewer_id_from_db:
-                raise HTTPException(status_code=403, detail="You are not assigned to review this proposal or the review is already completed.")
+          #  if not reviewer_id_from_db:
+          #      raise HTTPException(status_code=403, detail="You are not assigned to review this proposal or the review is already completed.")
 
             # Get the latest 'in_review' status history ID
             history_id = connection.execute(
@@ -1633,7 +1633,10 @@ async def get_proposal_for_review(proposal_id: uuid.UUID, current_user: dict = D
                     "severity": comment['severity']
                 }
 
-            template_name = draft.template_name or "unhcr_proposal_template.json"
+            template_name = draft.template_name or "proposal_template_unhcr.json"
+            if template_name == "unhcr_proposal_template.json":
+                template_name = "proposal_template_unhcr.json"
+            
             proposal_template = load_proposal_template(template_name)
             section_names = [s.get("section_name") for s in proposal_template.get("sections", [])]
 

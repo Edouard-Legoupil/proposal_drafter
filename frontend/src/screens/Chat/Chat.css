@@ -803,3 +803,89 @@
 .Chat_docTypeButton:not(.active):not(:disabled):hover {
         background: #f0f7ff;
 }
+
+/* ── Inline review thumb buttons ──────────────────────────────── */
+.Chat_thumbBtn {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 10px;
+        border-radius: 20px;
+        border: 1.5px solid transparent;
+        background: #E6ECF5;
+        cursor: pointer;
+        font-family: "Noto";
+        font-size: 13px;
+        font-weight: 500;
+        transition: background 0.15s, border-color 0.15s, color 0.15s;
+        position: relative;
+}
+
+.Chat_thumbBtn span {
+        display: none;
+}
+
+.Chat_thumbBtn:hover span {
+        display: flex;
+        position: absolute;
+        top: -40px;
+        left: 50%;
+        transform: translateX(-50%);
+        text-align: center;
+        border-radius: 8px;
+        background: black;
+        font-family: "Noto";
+        font-size: 13px;
+        color: white;
+        padding: 6px 12px;
+        white-space: nowrap;
+}
+
+.Chat_thumbBtn:hover span::after {
+        content: " ";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: black transparent transparent transparent;
+}
+
+.Chat_thumbUp { color: #555; }
+.Chat_thumbUp.active { color: #27ae60; border-color: #27ae60; background: #eafaf1; }
+.Chat_thumbUp:hover { color: #27ae60; border-color: #27ae60; }
+
+.Chat_thumbDown { color: #555; }
+.Chat_thumbDown.active { color: #e74c3c; border-color: #e74c3c; background: #fdecea; }
+.Chat_thumbDown:hover { color: #e74c3c; border-color: #e74c3c; }
+
+/* ── Inline review comment panel ──────────────────────────────── */
+.Chat_inlineReview {
+        margin: 0 30px 16px 30px;
+        padding: 14px 18px;
+        background: #fef9ec;
+        border: 1px solid #f0c04a;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+}
+
+.Chat_inlineReview_textarea {
+        width: 100%;
+        min-height: 80px;
+        padding: 8px 12px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        font-family: "Noto";
+        font-size: 14px;
+        resize: vertical;
+}
+
+/* ── Submit review button area ────────────────────────────────── */
+.Chat_submitReviewBar {
+        margin: 4px 30px 24px 30px;
+        display: flex;
+        justify-content: flex-end;
+}

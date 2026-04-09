@@ -3,7 +3,6 @@ import { Routes, Route } from 'react-router-dom'
 import Login from './screens/Login/Login'
 import Dashboard from './screens/Dashboard/Dashboard'
 import Chat from './screens/Chat/Chat'
-import Review from './screens/Review/Review'
 import KnowledgeCard from './screens/KnowledgeCard/KnowledgeCard'
 import DonorTemplateRequest from './screens/DonorTemplateRequest/DonorTemplateRequest'
 import DonorTemplateDetail from './screens/DonorTemplateDetail/DonorTemplateDetail'
@@ -22,7 +21,6 @@ export default function App()
                 <Route path="/dashboard/:folder/:subfolder/:filter" element={<Dashboard/>} />
                 <Route path="/chat" element={<Chat/>} />
                 <Route path="/chat/:id" element={<Chat/>} />
-                <Route path="/review/:type/:id" element={<Review />} />
                 <Route path="/knowledge-card/new" element={<KnowledgeCard />} />
                 <Route path="/knowledge-card/:id" element={<KnowledgeCard />} />
                 <Route path="/donor-templates/new" element={<DonorTemplateRequest />} />

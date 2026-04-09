@@ -213,7 +213,7 @@ export default function Dashboard() {
         async function handleProjectClick(e, proposal_id, isReview = false) {
                 sessionStorage.setItem("proposal_id", proposal_id)
                 if (isReview || selectedTab === 'other') {
-                        navigate(`/review/proposal/${proposal_id}`)
+                        navigate(`/chat/${proposal_id}`)
                 } else {
                         navigate(`/chat/${proposal_id}`)
                 }
@@ -563,11 +563,7 @@ export default function Dashboard() {
                                                                 card={card}
                                                                 date={cleanedDate(card.updated_at)}
                                                                 onClick={() => {
-                                                                         if (hasKnowledgeManagerRole) {
-                                                                                 navigate(`/knowledge-card/${card.id}`);
-                                                                         } else {
-                                                                                 navigate(`/review/knowledge-card/${card.id}`);
-                                                                         }
+                                                                        navigate(`/knowledge-card/${card.id}`);
                                                                 }}
                                                                 isDuplicate={duplicateCardIds.has(card.id)}
                                                                 onDelete={() => handleDeleteKnowledgeCard(card.id)}
@@ -595,11 +591,7 @@ export default function Dashboard() {
 
                                                                         return (
                                                                                 <tr key={card.id} onClick={() => {
-                                                                                         if (hasKnowledgeManagerRole) {
-                                                                                                navigate(`/knowledge-card/${card.id}`);
-                                                                                         } else {
-                                                                                                navigate(`/review/knowledge-card/${card.id}`);
-                                                                                         }
+                                                                                        navigate(`/knowledge-card/${card.id}`);
                                                                                 }} style={{ cursor: 'pointer' }}>
                                                                                         <td>
                                                                                                 {card.donor_name && <i className="fa-solid fa-money-bill-wave donor"></i>}

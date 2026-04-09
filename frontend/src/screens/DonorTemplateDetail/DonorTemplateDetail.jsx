@@ -106,15 +106,7 @@ export default function DonorTemplateDetail() {
                 <div className="hli-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                     <h4 style={{ margin: 0 }}><FontAwesomeIcon icon={faListCheck} style={{ marginRight: '8px' }} /> High-level Instructions</h4>
                     <div className="section-review-actions">
-                        <button 
-                            className={`thumb-btn up ${rating === 'up' ? 'active' : ''}`}
-                            onClick={() => handleAddQuickComment(hliName, 'up')}
-                            title="Looks good"
-                        >
-                            <FontAwesomeIcon icon={faThumbsUp} />
-                            <span style={{ fontSize: '0.65rem', marginLeft: '4px' }}>Good</span>
-                        </button>
-                        <button 
+                        <button
                             className={`thumb-btn down ${rating === 'down' ? 'active' : ''}`}
                             onClick={() => {
                                 setCommentSection(hliName)
@@ -307,15 +299,15 @@ export default function DonorTemplateDetail() {
 
                                 {/* Enable feedback for all templates */}
                                 <div className="section-review-actions">
-                                        <button 
-                                            className={`thumb-btn up ${sectionRating === 'up' ? 'active' : ''}`}
-                                            onClick={() => handleAddQuickComment(name, 'up')}
-                                            title="Looks good"
-                                        >
-                                            <FontAwesomeIcon icon={faThumbsUp} />
-                                            <span style={{ fontSize: '0.65rem', marginLeft: '4px' }}>Good</span>
-                                        </button>
-                                    <button 
+                                    <button
+                                        className={`thumb-btn up ${sectionRating === 'up' ? 'active' : ''}`}
+                                        onClick={() => handleAddQuickComment(name, 'up')}
+                                        title="Looks good"
+                                    >
+                                        <FontAwesomeIcon icon={faThumbsUp} />
+                                        <span style={{ fontSize: '0.65rem', marginLeft: '4px' }}>Good</span>
+                                    </button>
+                                    <button
                                         className={`thumb-btn down ${sectionRating === 'down' ? 'active' : ''}`}
                                         onClick={() => {
                                             setCommentSection(name)
@@ -589,9 +581,9 @@ export default function DonorTemplateDetail() {
                         <div className="header-title-group">
                             <h1>{template.name}</h1>
                             <span className="template-type-badge">
-                                <FontAwesomeIcon 
-                                    icon={template.template_type === 'concept_note' || template.template_type === 'Concept Note' ? faFileLines : faFileContract} 
-                                    style={{ marginRight: '6px' }} 
+                                <FontAwesomeIcon
+                                    icon={template.template_type === 'concept_note' || template.template_type === 'Concept Note' ? faFileLines : faFileContract}
+                                    style={{ marginRight: '6px' }}
                                 />
                                 {template.template_type === 'concept_note' ? 'Concept Note' : template.template_type || 'Proposal'}
                             </span>

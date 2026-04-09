@@ -1,0 +1,203 @@
+.SectionReview_container {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px dashed #ccc;
+    background-color: #fafafa;
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+.SectionReview_header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.SectionReview_thumbs {
+    display: flex;
+    gap: 1rem;
+    font-size: 1.5rem;
+}
+
+.SectionReview_thumb-up,
+.SectionReview_thumb-down {
+    cursor: pointer;
+    color: #ccc;
+}
+
+.SectionReview_thumb-up.active {
+    color: green;
+}
+
+.SectionReview_thumb-down.active {
+    color: red;
+}
+
+.SectionReview_comment_section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.SectionReview_comment_textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.SectionReview_comment_controls {
+    margin-bottom: 0.5rem;
+}
+
+.SectionReview_severity-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.SectionReview_severity-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #555;
+}
+
+.SectionReview_severity-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.SectionReview_severity-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.45rem 0.6rem;
+    border-radius: 6px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    background: #f4f4f4;
+    transition: border-color 0.15s, background 0.15s;
+    line-height: 1.3;
+}
+
+.SectionReview_severity-option input[type="radio"] {
+    margin-top: 2px;
+    flex-shrink: 0;
+    accent-color: currentColor;
+}
+
+.SectionReview_severity-option:hover { background: #eaeaea; }
+
+.SectionReview_severity-option.selected.severity-P0 { border-color: #c0392b; background: #fdecea; }
+.SectionReview_severity-option.selected.severity-P1 { border-color: #e67e22; background: #fef5eb; }
+.SectionReview_severity-option.selected.severity-P2 { border-color: #2980b9; background: #eaf4fb; }
+.SectionReview_severity-option.selected.severity-P3 { border-color: #27ae60; background: #eafaf1; }
+
+.SectionReview_severity-badge {
+    font-size: 0.7rem;
+    font-weight: 800;
+    padding: 1px 6px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    background: rgba(0,0,0,0.08);
+    letter-spacing: 0.04em;
+}
+
+.severity-P0 .SectionReview_severity-badge { background: #c0392b; color: #fff; }
+.severity-P1 .SectionReview_severity-badge { background: #e67e22; color: #fff; }
+.severity-P2 .SectionReview_severity-badge { background: #2980b9; color: #fff; }
+.severity-P3 .SectionReview_severity-badge { background: #27ae60; color: #fff; }
+
+.SectionReview_severity-text {
+    font-size: 0.78rem;
+    color: #333;
+}
+
+.SectionReview_severity-description {
+    font-size: 0.72rem;
+    color: #666;
+    font-style: italic;
+    line-height: 1.4;
+    margin: 0.25rem 0 0 0;
+    padding: 0.4rem 0.6rem;
+    background: #f8f8f8;
+    border-left: 3px solid #ccc;
+    border-radius: 0 4px 4px 0;
+}
+
+.SectionReview_delete_comment_btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    background: none;
+    border: 1px solid #e74c3c;
+    color: #e74c3c;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    align-self: flex-start;
+}
+
+.SectionReview_delete_comment_btn:hover {
+    background: #e74c3c;
+    color: #fff;
+}
+
+.SectionReview_author_reply {
+    margin-top: 15px;
+    padding: 10px;
+    background: #f0f4f8;
+    border-radius: 8px;
+    border-left: 4px solid #3498db;
+}
+
+.SectionReview_reply_textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 8px;
+    border: 1px solid #bdc3c7;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+.SectionReview_reply_actions {
+    display: flex;
+    gap: 10px;
+}
+
+.SectionReview_reply_actions button {
+    padding: 5px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.SectionReview_reply_actions button:first-child {
+    background: #3498db;
+    color: white;
+}
+
+.SectionReview_reply_btn {
+    padding: 5px 12px;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.SectionReview_author-response-display {
+    margin-top: 15px;
+    padding: 10px;
+    background: #eaf2f8;
+    border-radius: 8px;
+    border-left: 4px solid #2980b9;
+}
