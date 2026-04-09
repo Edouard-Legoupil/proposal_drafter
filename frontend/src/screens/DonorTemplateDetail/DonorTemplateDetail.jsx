@@ -153,6 +153,8 @@ export default function DonorTemplateDetail() {
                                 severity: commentSeverity
                             }}
                             isReviewEditable={true}
+                            isAuthorizedToReply={false}
+                            onSaveReply={handleAddComment}
                             onStatusChange={(sec, stat) => {
                                 setCommentSection(sec);
                                 setCommentText(comment);

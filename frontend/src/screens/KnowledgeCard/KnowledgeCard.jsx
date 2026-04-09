@@ -13,10 +13,7 @@ import KnowledgeCardHistory from '../../components/KnowledgeCardHistory/Knowledg
 import KnowledgeCardReferences from '../../components/KnowledgeCardReferences/KnowledgeCardReferences';
 import UploadReferenceModal from '../../components/UploadReferenceModal/UploadReferenceModal';
 import { setupSse } from '../../utils/sse';
-import Markdown from 'react-markdown';
 import SectionReview from '../../components/SectionReview/SectionReview';
-import rehypeSanitize from 'rehype-sanitize';
-import remarkGfm from 'remark-gfm';
 import word_icon from '../../assets/images/word.svg';
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api";

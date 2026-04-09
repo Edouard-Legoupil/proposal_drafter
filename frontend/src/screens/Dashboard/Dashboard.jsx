@@ -5,7 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 
 import Base from '../../components/Base/Base'
 import Project from './components/Project/Project'
-import KnowledgeCard from './components/KnowledgeCard/KnowledgeCard'
+import KnowledgeCardPreview from './components/KnowledgeCard/KnowledgeCardPreview'
 import DonorTemplate from './components/DonorTemplate/DonorTemplate'
 import MetricsDashboard from './components/MetricsDashboard/MetricsDashboard'
 import SingleSelectUserModal from '../../components/SingleSelectUserModal/SingleSelectUserModal'
@@ -558,7 +558,7 @@ export default function Dashboard() {
                                                         <button className="btn" type="button" aria-label="Start a new knowledge card" onClick={() => navigate("/knowledge-card/new")} data-testid="new-knowledge-card-button">Create New Knowledge Card</button>
                                                 </div>
                                                 {displayKnowledgeCards && displayKnowledgeCards.map((card) => {
-                                                        return <KnowledgeCard
+                                                        return <KnowledgeCardPreview
                                                                 key={card.id}
                                                                 card={card}
                                                                 date={cleanedDate(card.updated_at)}

@@ -1013,8 +1013,8 @@ async def get_quality_incidents(
     
     (SELECT 
         kcr.id::text, 
-        'Knowledge Card' as source_type,
-        kc.summary as source_name,
+        kc.template_name as source_type,
+        COALESCE(d.name, o.name, fc.name) as source_name,
         kcr.section_name,
         kcr.review_text,
         kcr.type_of_comment,
@@ -1023,6 +1023,13 @@ async def get_quality_incidents(
         u.name as reviewer_name
     FROM knowledge_card_reviews kcr
     JOIN knowledge_cards kc ON kcr.knowledge_card_id = kc.id
+    LEFT JOIN
+        donors d ON kc.donor_id = d.id
+    LEFT JOIN
+        outcomes o ON kc.outcome_id = o.id
+    LEFT JOIN
+        field_contexts fc ON kc.field_context_id = fc.id
+
     JOIN users u ON kcr.reviewer_id = u.id
     WHERE kcr.severity IS NOT NULL AND kcr.severity != '')
     

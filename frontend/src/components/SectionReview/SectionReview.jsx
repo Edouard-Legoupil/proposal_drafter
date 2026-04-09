@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faThumbsDown, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faThumbsDown, faTrash, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
 import './SectionReview.css';
 
 const SEVERITY_OPTIONS = {
@@ -24,6 +24,27 @@ const SEVERITY_OPTIONS = {
     ],
 };
 
+const TYPE_OF_COMMENT_OPTIONS = {
+    proposal: {
+        P0: ['Factual Error', 'Compliance Violation', 'Security Risk'],
+        P1: ['Major Content Gap', 'Structural Issue', 'Quality Concern'],
+        P2: ['Clarity Issue', 'Tone Mismatch', 'Minor Gap'],
+        P3: ['Formatting Issue', 'Typo', 'Style Suggestion']
+    },
+    knowledge_card: {
+        P0: ['Data Integrity', 'Source Error', 'Critical Omission'],
+        P1: ['Metadata Issue', 'Duplicate Content', 'Outdated Information'],
+        P2: ['Relevance Issue', 'Traceability Gap', 'Generic Content'],
+        P3: ['Formatting Issue', 'Minor Error', 'Style Suggestion']
+    },
+    template: {
+        P0: ['Compliance Issue', 'Structural Problem', 'Critical Error'],
+        P1: ['Major Quality Issue', 'Content Gap', 'Format Problem'],
+        P2: ['Clarity Issue', 'Tone Mismatch', 'Minor Improvement'],
+        P3: ['Formatting Issue', 'Typo', 'Style Suggestion']
+    }
+};
+
 export default function SectionReview({
     section,
     type,
@@ -34,10 +55,20 @@ export default function SectionReview({
     onStatusChange,
     onDeleteComment,
     isOwnerOfComment,
-    isAdmin
+    isAdmin,
+    isAuthorizedToReply,
+    onSaveReply
 }) {
     const severityOptions = SEVERITY_OPTIONS[type] || SEVERITY_OPTIONS.proposal;
     const selectedSeverity = reviewComment?.severity || reviewComment?.type_of_comment || 'P2';
+    const selectedTypeOfComment = reviewComment?.type_of_comment || '';
+    const [hoveredSeverity, setHoveredSeverity] = useState(null);
+    
+    // Get available type_of_comment options based on selected severity
+    const typeOfCommentOptions = TYPE_OF_COMMENT_OPTIONS[type]?.[selectedSeverity] || [];
+    
+    // Validation: check if all required fields are filled
+    const isSaveEnabled = reviewComment?.review_text?.trim() && selectedSeverity && selectedTypeOfComment;
 
     return (
         <div className="SectionReview_container">
@@ -75,7 +106,8 @@ export default function SectionReview({
                                 <label
                                     key={opt.value}
                                     className={`SectionReview_severity-option ${selectedSeverity === opt.value ? 'selected' : ''} severity-${opt.value}`}
-                                    title={opt.description}
+                                    onMouseEnter={() => setHoveredSeverity(opt.value)}
+                                    onMouseLeave={() => setHoveredSeverity(null)}
                                 >
                                     <input
                                         type="radio"
@@ -90,10 +122,34 @@ export default function SectionReview({
                                     />
                                     <span className="SectionReview_severity-badge">{opt.value}</span>
                                     <span className="SectionReview_severity-text">{opt.label.replace(`${opt.value} – `, '')}</span>
+                                    {hoveredSeverity === opt.value && (
+                                        <div className="severity-description-tooltip">
+                                            <FontAwesomeIcon icon={faInfoCircle} style={{ marginRight: '6px' }} />
+                                            {opt.description}
+                                        </div>
+                                    )}
                                 </label>
                             ))}
                         </div>
                     </div>
+
+                    {/* Type of Comment Selection */}
+                    {typeOfCommentOptions.length > 0 && (
+                        <div className="SectionReview_type-selector">
+                            <label className="SectionReview_type-label">Type of Comment</label>
+                            <select
+                                className="SectionReview_type-select"
+                                value={selectedTypeOfComment}
+                                onChange={e => onCommentChange(section, 'type_of_comment', e.target.value)}
+                                disabled={!isReviewEditable}
+                            >
+                                <option value="">Select comment type...</option>
+                                {typeOfCommentOptions.map(option => (
+                                    <option key={option} value={option}>{option}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
 
                     {isReviewEditable && (isOwnerOfComment || isAdmin) && (
                         <div className="SectionReview_actions_footer">
@@ -102,7 +158,7 @@ export default function SectionReview({
                                 onClick={() => onCommentChange(section, 'save', reviewComment?.review_text || '')}
                                 title="Save comment"
                                 type="button"
-                                disabled={!reviewComment?.review_text?.trim()}
+                                disabled={!isSaveEnabled}
                             >
                                 Save Comment
                             </button>
@@ -120,7 +176,30 @@ export default function SectionReview({
                     )}
                 </div>
             )}
+
+            {/* Author Response Section */}
+            {!isReviewEditable && isAuthorizedToReply && (
+                <div className="SectionReview_authorReply" data-testid={`author-reply-${section}`}>
+                    <textarea
+                        className="SectionReview_reply_textarea"
+                        placeholder={`Your response to ${section}...`}
+                        value={reviewComment?.author_response || ''}
+                        onChange={e => onSaveReply(section, e.target.value)}
+                        data-testid={`author-response-textarea-${section}`}
+                    />
+                    <div className="SectionReview_reply_actions">
+                        <button
+                            type="button"
+                            className="btn btn--primary btn--small"
+                            onClick={() => onSaveReply(section, reviewComment?.author_response || '')}
+                            disabled={!reviewComment?.author_response?.trim()}
+                            data-testid={`save-reply-button-${section}`}
+                        >
+                            Save Response
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
-

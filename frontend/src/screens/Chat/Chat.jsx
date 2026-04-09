@@ -1803,18 +1803,20 @@ export default function Chat(props) {
                                                                                 }
                                                                                 {/* SectionReview Integrated */}
                                                                                 {(proposalStatus === 'draft' || proposalStatus === 'in_review') && (
-                                                                                        <SectionReview
-                                                                                                section={sectionName}
-                                                                                                type="proposal"
-                                                                                                reviewComment={reviewComments[sectionName]}
-                                                                                                status={reviewStatus[sectionName]}
-                                                                                                isReviewEditable={isReviewer || proposalStatus === 'draft'}
-                                                                                                onCommentChange={handleCommentChange}
-                                                                                                onStatusChange={handleStatusChange}
-                                                                                                onDeleteComment={handleDeleteComment}
-                                                                                                isOwnerOfComment={true}
-                                                                                                isAdmin={isAdmin}
-                                                                                        />
+                        <SectionReview
+                            section={sectionName}
+                            type="proposal"
+                            reviewComment={reviewComments[sectionName]}
+                            status={reviewStatus[sectionName]}
+                            isReviewEditable={isReviewer || proposalStatus === 'draft'}
+                            isAuthorizedToReply={false}
+                            onSaveReply={handleSaveResponse}
+                            onCommentChange={handleCommentChange}
+                            onStatusChange={handleStatusChange}
+                            onDeleteComment={handleDeleteComment}
+                            isOwnerOfComment={true}
+                            isAdmin={isAdmin}
+                        />
                                                                                 )}
                                                                         </div> : ""}
 

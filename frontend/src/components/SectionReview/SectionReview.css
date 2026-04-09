@@ -133,6 +133,63 @@
     color: #444;
 }
 
+.severity-description-tooltip {
+    position: absolute;
+    background: #333;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    z-index: 1000;
+    max-width: 300px;
+    margin-top: -40px;
+    margin-left: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.severity-description-tooltip:after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 10px;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #333 transparent transparent transparent;
+}
+
+.SectionReview_type-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.SectionReview_type-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #666;
+}
+
+.SectionReview_type-select {
+    padding: 0.5rem;
+    border: 1px solid #dcdcdc;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.SectionReview_type-select:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+}
+
 .SectionReview_actions_footer {
     display: flex;
     justify-content: flex-end;

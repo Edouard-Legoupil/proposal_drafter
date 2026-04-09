@@ -54,8 +54,11 @@ from backend.models.schemas import (
     UpdateProposalStatusRequest,
     TransferOwnershipRequest,
     AuthorResponseRequest,
+    ReviewComment,
     SaveContributionIdRequest,
 )
+
+
 from backend.utils.proposal_logic import (
     regenerate_section_logic,
     resolve_form_data_labels,
@@ -2611,13 +2614,13 @@ async def add_proposal_comment(
     user_id = current_user["user_id"]
     try:
         with get_engine().begin() as connection:
-            # Upsert (insert or update) based on UNIQUE (proposal_id, reviewer_id, section_name, status='draft')
+            # Upsert (insert or update) based on UNIQUE (proposal_id, reviewer_id, section_name)
             # For safety, ensure only one draft comment per section for this user & proposal
             connection.execute(
                 text("""
-                    INSERT INTO proposal_peer_reviews (proposal_id, reviewer_id, section_name, review_text, type_of_comment, severity, status)
-                    VALUES (:pid, :rid, :section, :text, :type, :severity, 'draft')
-                    ON CONFLICT (proposal_id, reviewer_id, section_name, status)
+                    INSERT INTO proposal_peer_reviews (proposal_id, reviewer_id, section_name, review_text, type_of_comment, severity)
+                    VALUES (:pid, :rid, :section, :text, :type, :severity)
+                    ON CONFLICT (proposal_id, reviewer_id, section_name)
                     DO UPDATE SET
                         review_text = EXCLUDED.review_text,
                         type_of_comment = EXCLUDED.type_of_comment,
