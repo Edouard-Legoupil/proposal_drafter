@@ -12,6 +12,8 @@ import ResponsiveIllustration from '../../components/ResponsiveIllustration/Resp
 import OSSFooter from '../../components/OSSFooter/OSSFooter'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
+const ENABLE_SSO = import.meta.env.VITE_ENABLE_SSO !== 'false';
+const ENABLE_DIRECT = import.meta.env.VITE_ENABLE_DIRECT_LOGIN !== 'false';
 
 import logo from "../../assets/images/App_logo.svg"
 import show from "../../assets/images/login_showPassword.svg"
@@ -243,7 +245,7 @@ export default function Login(props) {
                                                         :
                                                         ""
                                                 }
-                                                {!props?.register && ssoEnabled && (
+                                                {!props?.register && ENABLE_SSO && ssoEnabled && (
                                                         <>
                                                                 <CommonButton
                                                                         label="LOG IN USING UNHCR SSO"
@@ -254,148 +256,160 @@ export default function Login(props) {
                                                                 <div style={{ fontSize: '12px', color: '#666', textAlign: 'center', marginTop: '16px', marginBottom: '8px' }}>
                                                                         Having trouble accessing SSO? <a href="mailto:legoupil@unhcr.org?subject=Access%20Proposal%20Gen" style={{ color: '#0072BC', textDecoration: 'underline' }}>Request access</a>
                                                                 </div>
-                                                                <div className='Login_divider' style={{ margin: "16px 0" }}>
-                                                                        <hr />
-                                                                        <span>OR</span>
-                                                                        <hr />
-                                                                </div>
+                                                                {ENABLE_DIRECT && (
+                                                                        <div className='Login_divider' style={{ margin: "16px 0" }}>
+                                                                                <hr />
+                                                                                <span>OR</span>
+                                                                                <hr />
+                                                                        </div>
+                                                                )}
                                                         </>
                                                 )}
-                                                <label className='Login-label' htmlFor='Login_identifierInput'>Username or Email</label>
-                                                <input
-                                                        type="text"
-                                                        id="Login_identifierInput"
-                                                        value={email}
-                                                        placeholder={props?.register ? 'example@email.com' : 'Enter your username or email'}
-                                                        onChange={e => setEmail(e.target.value)}
-                                                        data-testid="identifier-input"
-                                                />
-                                                <label className='Login-label' htmlFor='Login_passwordInput'>Password</label>
-                                                <input
-                                                        type={showPassword ? 'text' : 'password'}
-                                                        id="Login_passwordInput"
-                                                        className='Login_inputPassword'
-                                                        value={password}
-                                                        placeholder={props?.register ? 'At least 8 characters' : 'Enter your password here'}
-                                                        onChange={e => setPassword(e.target.value)}
-                                                        autoComplete="current-password"
-                                                        data-testid="password-input"
-                                                />
-                                                {password ? <div className="Login_showPasswordToggleContainer">
-                                                        <img className='Login_passwordShowToggle' src={showPassword ? hide : show} onClick={() => setShowPassword(p => !p)} data-testid="show-password-toggle" />
-                                                </div> : ""}
-                                                {props?.register ?
+                                                {ENABLE_DIRECT ? (
                                                         <>
-                                                                <label className='Login-label'>Roles</label>
-                                                                <Select
-                                                                        isMulti
-                                                                        options={roles}
-                                                                        value={selectedRoles}
-                                                                        onChange={setSelectedRoles}
-                                                                />
-
-                                                                {selectedRoles.some(r => r.label === 'knowledge manager donors') && (
-                                                                        <>
-                                                                                <label className='Login-label'>Donor Groups</label>
-                                                                                <Select
-                                                                                        isMulti
-                                                                                        options={donorGroups}
-                                                                                        value={selectedDonorGroups}
-                                                                                        onChange={setSelectedDonorGroups}
-                                                                                />
-                                                                        </>
-                                                                )}
-
-                                                                {selectedRoles.some(r => r.label === 'knowledge manager outcome') && (
-                                                                        <>
-                                                                                <label className='Login-label'>Outcomes</label>
-                                                                                <Select
-                                                                                        isMulti
-                                                                                        options={outcomes}
-                                                                                        value={selectedOutcomes}
-                                                                                        onChange={setSelectedOutcomes}
-                                                                                />
-                                                                        </>
-                                                                )}
-
-                                                                <label className='Login-label'>Geographic Coverage</label>
-                                                                <select value={geographicCoverageType} onChange={e => setGeographicCoverageType(e.target.value)}>
-                                                                        <option value="global">Global</option>
-                                                                        <option value="regional">Regional</option>
-                                                                        <option value="country">Country</option>
-                                                                </select>
-
-                                                                {geographicCoverageType === 'regional' && (
-                                                                        <input type="text" placeholder="Region" value={geographicCoverageRegion} onChange={e => setGeographicCoverageRegion(e.target.value)} />
-                                                                )}
-                                                                {geographicCoverageType === 'country' && (
-                                                                        <input type="text" placeholder="Country" value={geographicCoverageCountry} onChange={e => setGeographicCoverageCountry(e.target.value)} />
-                                                                )}
-                                                                <label className='Login-label' htmlFor='Login_securityQuestionInput'>Security Question</label>
-                                                                <select
-                                                                        id="Login_securityQuestionInput"
-                                                                        value={securityQuestion}
-                                                                        onChange={e => setSecurityQuestion(e.target.value)}
-                                                                        style={securityQuestion === "" ? { color: "rgb(117, 117, 117)" } : {}}
-                                                                        data-testid="security-question-select"
-                                                                >
-                                                                        <option value="" disabled>Select security question</option>
-                                                                        <option>Favourite animal?</option>
-                                                                        <option>Favourite sport?</option>
-                                                                        <option>Favourite movie?</option>
-                                                                        <option>Favourite song?</option>
-                                                                </select>
-                                                                <label className='Login-label' htmlFor='Login_securityAnswer'>Answer</label>
+                                                                <label className='Login-label' htmlFor='Login_identifierInput'>Username or Email</label>
                                                                 <input
                                                                         type="text"
-                                                                        id="Login_securityAnswer"
-                                                                        value={securityAnswer}
-                                                                        placeholder="Answer to the security question"
-                                                                        onChange={e => setSecurityAnswer(e.target.value)}
-                                                                        data-testid="security-answer-input"
+                                                                        id="Login_identifierInput"
+                                                                        value={email}
+                                                                        placeholder={props?.register ? 'example@email.com' : 'Enter your username or email'}
+                                                                        onChange={e => setEmail(e.target.value)}
+                                                                        data-testid="identifier-input"
                                                                 />
-                                                                <div style={{ display: 'flex', alignItems: 'flex-start', marginTop: '15px', gap: '10px' }}>
-                                                                        <input
-                                                                                type="checkbox"
-                                                                                id="Login_acknowledgement"
-                                                                                checked={acknowledged}
-                                                                                onChange={e => setAcknowledged(e.target.checked)}
-                                                                                required
-                                                                                data-testid="acknowledgement-checkbox"
-                                                                                style={{ marginTop: '4px' }}
-                                                                        />
-                                                                        <label htmlFor="Login_acknowledgement" style={{ fontSize: '12px', color: 'grey', textAlign: 'left' }}>
-                                                                                <p>I acknowledge that this system is intended for UNHCR staff and members of UNHCR national societies.</p>
-                                                                                <p>I understand that AI-generated content may contain inaccuracies or "hallucinations," and I commit to carefully reviewing all generated materials before use.</p>
-                                                                                <p>I will use this tool responsibly, mindful of the financial and environmental resources it consumes.</p>
-                                                                        </label>
+                                                                <label className='Login-label' htmlFor='Login_passwordInput'>Password</label>
+                                                                <input
+                                                                        type={showPassword ? 'text' : 'password'}
+                                                                        id="Login_passwordInput"
+                                                                        className='Login_inputPassword'
+                                                                        value={password}
+                                                                        placeholder={props?.register ? 'At least 8 characters' : 'Enter your password here'}
+                                                                        onChange={e => setPassword(e.target.value)}
+                                                                        autoComplete="current-password"
+                                                                        data-testid="password-input"
+                                                                />
+                                                                {password ? <div className="Login_showPasswordToggleContainer">
+                                                                        <img className='Login_passwordShowToggle' src={showPassword ? hide : show} onClick={() => setShowPassword(p => !p)} data-testid="show-password-toggle" />
+                                                                </div> : ""}
+                                                                {props?.register ?
+                                                                        <>
+                                                                                <label className='Login-label'>Roles</label>
+                                                                                <Select
+                                                                                        isMulti
+                                                                                        options={roles}
+                                                                                        value={selectedRoles}
+                                                                                        onChange={setSelectedRoles}
+                                                                                />
+
+                                                                                {selectedRoles.some(r => r.label === 'knowledge manager donors') && (
+                                                                                        <>
+                                                                                                <label className='Login-label'>Donor Groups</label>
+                                                                                                <Select
+                                                                                                        isMulti
+                                                                                                        options={donorGroups}
+                                                                                                        value={selectedDonorGroups}
+                                                                                                        onChange={setSelectedDonorGroups}
+                                                                                                />
+                                                                                        </>
+                                                                                )}
+
+                                                                                {selectedRoles.some(r => r.label === 'knowledge manager outcome') && (
+                                                                                        <>
+                                                                                                <label className='Login-label'>Outcomes</label>
+                                                                                                <Select
+                                                                                                        isMulti
+                                                                                                        options={outcomes}
+                                                                                                        value={selectedOutcomes}
+                                                                                                        onChange={setSelectedOutcomes}
+                                                                                                />
+                                                                                        </>
+                                                                                )}
+
+                                                                                <label className='Login-label'>Geographic Coverage</label>
+                                                                                <select value={geographicCoverageType} onChange={e => setGeographicCoverageType(e.target.value)}>
+                                                                                        <option value="global">Global</option>
+                                                                                        <option value="regional">Regional</option>
+                                                                                        <option value="country">Country</option>
+                                                                                </select>
+
+                                                                                {geographicCoverageType === 'regional' && (
+                                                                                        <input type="text" placeholder="Region" value={geographicCoverageRegion} onChange={e => setGeographicCoverageRegion(e.target.value)} />
+                                                                                )}
+                                                                                {geographicCoverageType === 'country' && (
+                                                                                        <input type="text" placeholder="Country" value={geographicCoverageCountry} onChange={e => setGeographicCoverageCountry(e.target.value)} />
+                                                                                )}
+                                                                                <label className='Login-label' htmlFor='Login_securityQuestionInput'>Security Question</label>
+                                                                                <select
+                                                                                        id="Login_securityQuestionInput"
+                                                                                        value={securityQuestion}
+                                                                                        onChange={e => setSecurityQuestion(e.target.value)}
+                                                                                        style={securityQuestion === "" ? { color: "rgb(117, 117, 117)" } : {}}
+                                                                                        data-testid="security-question-select"
+                                                                                >
+                                                                                        <option value="" disabled>Select security question</option>
+                                                                                        <option>Favourite animal?</option>
+                                                                                        <option>Favourite sport?</option>
+                                                                                        <option>Favourite movie?</option>
+                                                                                        <option>Favourite song?</option>
+                                                                                </select>
+                                                                                <label className='Login-label' htmlFor='Login_securityAnswer'>Answer</label>
+                                                                                <input
+                                                                                        type="text"
+                                                                                        id="Login_securityAnswer"
+                                                                                        value={securityAnswer}
+                                                                                        placeholder="Answer to the security question"
+                                                                                        onChange={e => setSecurityAnswer(e.target.value)}
+                                                                                        data-testid="security-answer-input"
+                                                                                />
+                                                                                <div style={{ display: 'flex', alignItems: 'flex-start', marginTop: '15px', gap: '10px' }}>
+                                                                                        <input
+                                                                                                type="checkbox"
+                                                                                                id="Login_acknowledgement"
+                                                                                                checked={acknowledged}
+                                                                                                onChange={e => setAcknowledged(e.target.checked)}
+                                                                                                required
+                                                                                                data-testid="acknowledgement-checkbox"
+                                                                                                style={{ marginTop: '4px' }}
+                                                                                        />
+                                                                                        <label htmlFor="Login_acknowledgement" style={{ fontSize: '12px', color: 'grey', textAlign: 'left' }}>
+                                                                                                <p>I acknowledge that this system is intended for UNHCR staff and members of UNHCR national societies.</p>
+                                                                                                <p>I understand that AI-generated content may contain inaccuracies or "hallucinations," and I commit to carefully reviewing all generated materials before use.</p>
+                                                                                                <p>I will use this tool responsibly, mindful of the financial and environmental resources it consumes.</p>
+                                                                                        </label>
+                                                                                </div>
+                                                                        </>
+                                                                        :
+                                                                        ""
+                                                                }
+                                                                {!props?.register ? <a href='/forgotpassword' className='Login-forgotpw' data-testid="forgot-password-link">Forgot Password?</a> : ""}
+                                                                <CommonButton
+                                                                        type="submit"
+                                                                        disabled={(props?.register && !username) || (props?.register ? !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) : !email) || email.length >= 255 || password.length < 8 || (props?.register && !securityAnswer) || (props?.register && !acknowledged)}
+                                                                        label={submitButtonText}
+                                                                        loading={loading}
+                                                                        style={{ marginTop: "10px" }}
+                                                                        data-testid="submit-button"
+                                                                />
+                                                                <div className='Login-register'>
+                                                                        {props?.register ?
+                                                                                <>
+                                                                                        Already have an account?
+                                                                                        <a href="/login" data-testid="login-link"> Log in</a>
+                                                                                </>
+                                                                                :
+                                                                                <>
+                                                                                        Don't have an account?
+                                                                                        <a href="/register" data-testid="register-link"> Sign up</a>
+                                                                                </>
+                                                                        }
                                                                 </div>
                                                         </>
-                                                        :
-                                                        ""
-                                                }
-                                                {!props?.register ? <a href='/forgotpassword' className='Login-forgotpw' data-testid="forgot-password-link">Forgot Password?</a> : ""}
-                                                <CommonButton
-                                                        type="submit"
-                                                        disabled={(props?.register && !username) || (props?.register ? !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) : !email) || email.length >= 255 || password.length < 8 || (props?.register && !securityAnswer) || (props?.register && !acknowledged)}
-                                                        label={submitButtonText}
-                                                        loading={loading}
-                                                        style={{ marginTop: "10px" }}
-                                                        data-testid="submit-button"
-                                                />
-                                                <div className='Login-register'>
-                                                        {props?.register ?
-                                                                <>
-                                                                        Already have an account?
-                                                                        <a href="/login" data-testid="login-link"> Log in</a>
-                                                                </>
-                                                                :
-                                                                <>
-                                                                        Don't have an account?
-                                                                        <a href="/register" data-testid="register-link"> Sign up</a>
-                                                                </>
-                                                        }
-                                                </div>
+                                                ) : (
+                                                        !props?.register && !ssoEnabled && (
+                                                                <div style={{ textAlign: 'center', color: 'grey', marginTop: '20px' }}>
+                                                                        Direct login is currently disabled.
+                                                                </div>
+                                                        )
+                                                )}
                                         </form>
                                 }
                                 <div className='Login-motto'>
