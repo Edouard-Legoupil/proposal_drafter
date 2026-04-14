@@ -34,7 +34,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 #  Internal Modules
-from backend.api import auth, proposals, session, documents, health, users, knowledge, metrics, admin, templates
+from backend.api import auth, proposals, session, documents, health, users, knowledge, metrics, admin, templates, incident
 from backend.core.middleware import (
     setup_cors_middleware,
     custom_http_exception_handler,
@@ -42,6 +42,7 @@ from backend.core.middleware import (
 )
 
 from backend.core.db import test_connection
+
 
 # This is the main application file. It brings together all the different
 # parts of the application: API routers, middleware, and event handlers.
@@ -100,6 +101,7 @@ app.include_router(knowledge.router, prefix="/api", tags=["Knowledge"])
 app.include_router(metrics.router, prefix="/api", tags=["Metrics"])
 app.include_router(admin.router, prefix="/api", tags=["Admin"])
 app.include_router(templates.router, prefix="/api/templates", tags=["Donor Templates"])
+app.include_router(incident.router, prefix="/api", tags=["Incidents"])
 app.include_router(health.router, tags=["Health & Debugging"])
 
 # --- Root Endpoint: Health Check + SPA ---

@@ -5,6 +5,7 @@ python-dotenv
 fastapi
 fastapi-sso
 msal
+fastapi-limiter
 
 # In-memory data structure store used as database, cache, and message broker
 redis

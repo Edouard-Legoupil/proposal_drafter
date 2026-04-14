@@ -157,6 +157,22 @@ TEMPLATE_SUB_DIRS = [
 ]
 
 
+
+class Settings:
+    """Configuration settings for the application"""
+    SECRET_KEY = SECRET_KEY
+    ENTRA_TENANT_ID = ENTRA_TENANT_ID
+    ENTRA_CLIENT_ID = ENTRA_CLIENT_ID
+    ENTRA_CLIENT_SECRET = ENTRA_CLIENT_SECRET
+    ENTRA_REDIRECT_URI = ENTRA_REDIRECT_URI
+    BACKEND_DIR = BACKEND_DIR
+    TEMPLATES_DIR = TEMPLATES_DIR
+    TEMPLATE_SUB_DIRS = TEMPLATE_SUB_DIRS
+
+# Create a settings instance for easy access
+settings = Settings()
+
+
 def _find_template_path(filename: str) -> str | None:
     """
     Searches all known template sub-directories for a given filename.
@@ -254,4 +270,4 @@ def load_proposal_template(template_name: str):
 # during module initialization. Endpoints or functions that need the list of sections
 # should now load a specific template on-demand.
 
- 
+

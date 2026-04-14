@@ -2688,3 +2688,47 @@ async def save_author_response(
     except Exception as e:
         logger.error(f"[SAVE AUTHOR RESPONSE ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to save author response.")
+
+
+@router.post("/proposals/{proposal_id}/reply-to-feedback")
+async def reply_to_feedback(
+    proposal_id: uuid.UUID,
+    request: AuthorResponseRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Saves a reply to a peer review feedback.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().begin() as connection:
+            # Verify that the user is the author of the proposal
+            proposal_owner = connection.execute(
+                text("SELECT user_id FROM proposals WHERE id = :pid"),
+                {"pid": str(proposal_id)},
+            ).scalar()
+
+            if not proposal_owner or str(proposal_owner) != str(user_id):
+                raise HTTPException(
+                    status_code=403,
+                    detail="You do not have permission to reply to this feedback.",
+                )
+
+            # Update the author_response and status
+            connection.execute(
+                text(
+                    "UPDATE proposal_peer_reviews SET author_response = :response, status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :rid"
+                ),
+                {
+                    "response": request.author_response,
+                    "status": request.status,
+                    "rid": str(request.feedback_id)
+                },
+            )
+
+        return {"message": "Reply to feedback saved successfully."}
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        logger.error(f"[REPLY TO FEEDBACK ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to save reply to feedback.")

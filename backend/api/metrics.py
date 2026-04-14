@@ -995,7 +995,8 @@ async def get_quality_incidents(
 ):
     q = """
     (SELECT 
-        pr.id::text, 
+        pr.id::text as incident_id,
+        p.id::text as source_id, 
         'Proposal' as source_type,
         substring(p.project_description from 1 for 100) as source_name,
         pr.section_name,
@@ -1012,7 +1013,8 @@ async def get_quality_incidents(
     UNION ALL
     
     (SELECT 
-        kcr.id::text, 
+        kcr.id::text as incident_id,
+        kc.id::text as source_id,
         kc.template_name as source_type,
         COALESCE(d.name, o.name, fc.name) as source_name,
         kcr.section_name,
@@ -1036,7 +1038,8 @@ async def get_quality_incidents(
     UNION ALL
     
     (SELECT 
-        tc.id::text, 
+        tc.id::text as incident_id,
+        COALESCE(tr.id::text, tc.template_name) as source_id,
         'Donor Template' as source_type,
         COALESCE(tr.name, tc.template_name) as source_name,
         tc.section_name,

@@ -1845,7 +1845,8 @@ async def save_knowledge_card_author_response(review_id: uuid.UUID, request: Aut
         logger.error(f"[SAVE KC AUTHOR RESPONSE ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to save author response.")
 
-@router.get("/knowledge-cards/{card_id}/all-reviews", dependencies=[Depends(authorize_knowledge_manager)])
+## Remove , dependencies=[Depends(authorize_knowledge_manager)]
+@router.get("/knowledge-cards/{card_id}/all-reviews")
 async def get_all_knowledge_card_reviews(card_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
     """
     Fetches all reviews for a given knowledge card.
@@ -1864,6 +1865,8 @@ async def get_all_knowledge_card_reviews(card_id: uuid.UUID, current_user: dict 
                     kcr.created_at,
                     kcr.author_response,
                     kcr.rating,
+                    kcr.status,
+                    kcr.reviewer_id as reviewer_id,
                     u.name as reviewer_name
                 FROM
                     knowledge_card_reviews kcr
@@ -1885,6 +1888,8 @@ async def get_all_knowledge_card_reviews(card_id: uuid.UUID, current_user: dict 
                     "created_at": row.created_at,
                     "author_response": row.author_response,
                     "rating": row.rating,
+                    "status": row.status,
+                    "reviewer_id": row.reviewer_id,
                     "reviewer_name": row.reviewer_name
                 }
                 for row in result.mappings()

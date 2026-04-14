@@ -176,6 +176,8 @@ class TransferOwnershipRequest(BaseModel):
 
 class AuthorResponseRequest(BaseModel):
     author_response: str
+    feedback_id: Optional[uuid.UUID] = None
+    status: Optional[str] = None
 
 
 class SaveContributionIdRequest(BaseModel):
@@ -203,4 +205,254 @@ class DonorTemplateCommentCreate(BaseModel):
 
 class DonorTemplateStatusUpdate(BaseModel):
     status: str  # pending, approved, rejected, published
+
+
+### new class for incident
+
+from enum import Enum
+
+
+class ArtifactType(str, Enum):
+    proposal = "proposal"
+    knowledge_card = "knowledge_card"
+    template = "template"
+
+
+class Severity(str, Enum):
+    P0 = "P0"
+    P1 = "P1"
+    P2 = "P2"
+    P3 = "P3"
+
+
+TYPE_OF_COMMENT_OPTIONS = {
+    "proposal": {
+        "P0": ["Factual Error", "Compliance Violation", "Security Risk"],
+        "P1": ["Major Content Gap", "Structural Issue", "Quality Concern"],
+        "P2": ["Clarity Issue", "Tone Mismatch", "Minor Gap"],
+        "P3": ["Formatting Issue", "Typo", "Style Suggestion"],
+    },
+    "knowledge_card": {
+        "P0": ["Data Integrity", "Source Error", "Critical Omission"],
+        "P1": ["Metadata Issue", "Duplicate Content", "Outdated Information"],
+        "P2": ["Relevance Issue", "Traceability Gap", "Generic Content"],
+        "P3": ["Formatting Issue", "Minor Error", "Style Suggestion"],
+    },
+    "template": {
+        "P0": ["Compliance Issue", "Structural Problem", "Critical Error"],
+        "P1": ["Major Quality Issue", "Content Gap", "Format Problem"],
+        "P2": ["Clarity Issue", "Tone Mismatch", "Minor Improvement"],
+        "P3": ["Formatting Issue", "Typo", "Style Suggestion"],
+    },
+}
+
+
+ROOT_CAUSE_PRIORS = {
+    "proposal": {
+        "Factual Error": ["grounding_failure", "outdated_knowledge", "retrieval_failure"],
+        "Compliance Violation": ["policy_guardrail_failure", "template_mapping_failure", "citation_traceability_failure"],
+        "Security Risk": ["policy_guardrail_failure", "retrieval_failure", "prompt_instruction_failure"],
+        "Major Content Gap": ["template_mapping_failure", "retrieval_failure", "missing_source_content"],
+        "Structural Issue": ["template_mapping_failure", "prompt_instruction_failure"],
+        "Quality Concern": ["prompt_instruction_failure", "section_planning_failure"],
+        "Clarity Issue": ["prompt_instruction_failure"],
+        "Tone Mismatch": ["prompt_instruction_failure", "template_mapping_failure"],
+        "Minor Gap": ["retrieval_failure", "section_planning_failure"],
+        "Formatting Issue": ["post_processing_failure"],
+        "Typo": ["post_processing_failure"],
+        "Style Suggestion": ["post_processing_failure", "template_mapping_failure"],
+    },
+    "knowledge_card": {
+        "Data Integrity": ["metadata_quality_issue", "missing_source_content"],
+        "Source Error": ["citation_traceability_failure", "metadata_quality_issue"],
+        "Critical Omission": ["missing_source_content", "outdated_knowledge"],
+        "Metadata Issue": ["metadata_quality_issue"],
+        "Duplicate Content": ["metadata_quality_issue"],
+        "Outdated Information": ["outdated_knowledge"],
+        "Relevance Issue": ["retrieval_failure"],
+        "Traceability Gap": ["citation_traceability_failure"],
+        "Generic Content": ["prompt_instruction_failure"],
+        "Formatting Issue": ["post_processing_failure"],
+        "Minor Error": ["post_processing_failure"],
+        "Style Suggestion": ["post_processing_failure"],
+    },
+    "template": {
+        "Compliance Issue": ["template_mapping_failure", "policy_guardrail_failure"],
+        "Structural Problem": ["template_mapping_failure"],
+        "Critical Error": ["template_mapping_failure", "validation_failure"],
+        "Major Quality Issue": ["template_mapping_failure", "prompt_instruction_failure"],
+        "Content Gap": ["template_mapping_failure", "missing_source_content"],
+        "Format Problem": ["post_processing_failure", "template_mapping_failure"],
+        "Clarity Issue": ["prompt_instruction_failure"],
+        "Tone Mismatch": ["prompt_instruction_failure"],
+        "Minor Improvement": ["prompt_instruction_failure"],
+        "Formatting Issue": ["post_processing_failure"],
+        "Typo": ["post_processing_failure"],
+        "Style Suggestion": ["post_processing_failure"],
+    },
+}
+
+from typing import Any, Literal
+from pydantic import BaseModel, Field, model_validator
+
+# Local imports - these are defined earlier in this same file
+
+
+class IncidentAnalyzeRequest(BaseModel):
+    artifact_type: ArtifactType
+    severity: Severity
+    incident_type: str
+    source_review_id: str | None = None
+
+    # direct/manual payload mode
+    proposal_id: str | None = None
+    knowledge_card_id: str | None = None
+    template_request_id: str | None = None
+
+    section_name: str | None = None
+    user_comment: str | None = None
+
+    # optional extra context
+    generator_run_id: str | None = None
+    related_requirement_ids: list[str] = Field(default_factory=list)
+    related_knowledge_card_ids: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_incident_type(self):
+        allowed = TYPE_OF_COMMENT_OPTIONS[self.artifact_type.value][self.severity.value]
+        if self.incident_type not in allowed:
+            raise ValueError(
+                f"incident_type '{self.incident_type}' is not valid for "
+                f"{self.artifact_type.value}/{self.severity.value}. "
+                f"Allowed: {allowed}"
+            )
+        return self
+
+
+class EvidenceRef(BaseModel):
+    id: str
+    type: str | None = None
+    title: str | None = None
+    excerpt: str | None = None
+    uri: str | None = None
+
+
+class TextPatch(BaseModel):
+    section_id: str | None = None
+    before: str | None = None
+    after: str
+
+
+class AlternativeSuggestion(BaseModel):
+    label: Literal["minimal_safe", "preferred", "fallback"]
+    summary: str | None = None
+    proposed_action: str
+    patch: TextPatch | None = None
+    confidence: float
+
+
+class UserSuggestion(BaseModel):
+    summary: str
+    why: str | None = None
+    proposed_action: str
+    proposed_replacement: str | None = None
+    patch: TextPatch | None = None
+    alternatives: list[AlternativeSuggestion] = Field(default_factory=list)
+    supporting_evidence: list[str] = Field(default_factory=list)
+    evidence_refs: list[EvidenceRef] = Field(default_factory=list)
+    confidence: float
+
+
+class BlastRadius(BaseModel):
+    scope: Literal[
+        "single_run", "single_proposal", "multiple_proposals",
+        "template_wide", "knowledge_base_wide", "unknown"
+    ] = "unknown"
+    estimated_count: int | None = None
+    notes: str | None = None
+
+
+class Hypothesis(BaseModel):
+    cause: str
+    reason: str | None = None
+    confidence: float
+
+
+class RootCauseAnalysis(BaseModel):
+    primary_cause: str
+    secondary_causes: list[str] = Field(default_factory=list)
+    explanation: str
+    immediate_cause: str | None = None
+    systemic_cause: str | None = None
+    hypotheses: list[Hypothesis] = Field(default_factory=list)
+    blast_radius: BlastRadius | None = None
+    confidence: float
+
+
+class ImplementationTask(BaseModel):
+    description: str
+    owner: str | None = None
+    eta_days: int | None = None
+
+
+class SuggestedSystemFix(BaseModel):
+    category: Literal[
+        "prompt_instruction",
+        "retrieval_ranking",
+        "knowledge_curation",
+        "template_design",
+        "validation_guardrail",
+        "workflow_ux",
+        "monitoring_observability",
+        "data_pipeline",
+        "other",
+    ]
+    priority: Literal["low", "medium", "high", "critical"]
+    owner: str | None = None
+    recommendation: str
+    implementation_notes: list[str] = Field(default_factory=list)
+    implementation_tasks: list[ImplementationTask] = Field(default_factory=list)
+    expected_impact: str | None = None
+    prevention_type: Literal["preventive", "detective", "corrective", "mixed"] = "mixed"
+    confidence: float
+
+
+class ConsistencyCheck(BaseModel):
+    passed: bool = True
+    issues: list[str] = Field(default_factory=list)
+    policy_flags: list[str] = Field(default_factory=list)
+
+
+class IncidentAnalysisResponse(BaseModel):
+    incident_id: str
+    artifact_type: ArtifactType
+    severity: Severity
+    incident_type: str
+    status: str
+    source_review_id: str | None = None
+
+    proposal_id: str | None = None
+    knowledge_card_id: str | None = None
+    template_request_id: str | None = None
+
+    section_name: str | None = None
+    user_comment: str | None = None
+    normalized_summary: str | None = None
+
+    evidence: dict[str, Any] = Field(default_factory=dict)
+
+    user_suggestion: UserSuggestion
+    root_cause_analysis: RootCauseAnalysis
+    suggested_system_fix: SuggestedSystemFix
+
+    consistency_check: ConsistencyCheck = Field(default_factory=ConsistencyCheck)
+
+    needs_human_review: bool
+    human_review_reason: str | None = None
+
+    routing: dict[str, Any] = Field(default_factory=dict)
+    agent_versions: dict[str, str] = Field(default_factory=dict)
+    created_at: str
+    updated_at: str | None = None
+
 
