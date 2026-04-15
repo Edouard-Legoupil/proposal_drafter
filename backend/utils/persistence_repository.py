@@ -71,12 +71,14 @@ class PersistenceRepository:
                 },
             )
             row = result.first()
-            self.connection.commit()
-            logger.info(f"Saved incident analysis for {artifact_type}/{source_review_id}")
+            logger.info(
+                f"Saved incident analysis for {artifact_type}/{source_review_id}"
+            )
             return row[0]
         except Exception as e:
-            logger.error(f"Error saving incident analysis for {artifact_type}/{source_review_id}: {e}")
-            self.connection.rollback()
+            logger.error(
+                f"Error saving incident analysis for {artifact_type}/{source_review_id}: {e}"
+            )
             raise
 
     def get_analysis_result(self, analysis_id: str) -> dict[str, Any] | None:

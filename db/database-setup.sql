@@ -172,6 +172,7 @@ CREATE TABLE IF NOT EXISTS proposal_peer_reviews (
     deadline TIMESTAMPTZ,
     review_text TEXT,
     author_response TEXT,
+    author_response_by TEXT,
     type_of_comment TEXT,
     severity TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -218,6 +219,7 @@ CREATE TABLE IF NOT EXISTS knowledge_card_reviews (
     rating VARCHAR(10),
     review_text TEXT,
     author_response TEXT,
+    author_response_by TEXT,
     type_of_comment TEXT,
     severity TEXT,
     status VARCHAR(50) DEFAULT 'pending',
@@ -329,6 +331,7 @@ CREATE TABLE IF NOT EXISTS donor_template_comments (
     severity TEXT,
     type_of_comment TEXT DEFAULT 'Donor Template',
     author_response TEXT,
+    author_response_by TEXT,
     status VARCHAR(50) DEFAULT 'pending',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
@@ -362,7 +365,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO <DB_USERN
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO <DB_USERNAME>;
 
 
-============================================================================
+-- ============================================================================
 -- - Incident Analysis + Template Qualification 
 -- ============================================================================
 -- PURPOSE
@@ -1002,85 +1005,251 @@ LEFT JOIN rag_evaluation_logs rel
 WHERE kc.template_version_id IS NOT NULL
 GROUP BY kc.template_version_id;
 
--- --------------------------------------------------------------------------
--- 18) OPTIONAL SEED DATA TEMPLATES 
--- --------------------------------------------------------------------------
--- NOTE:
--- Replace <ADMIN_USER_ID> and <RULE_SET_ID> manually if you want to seed defaults.
---
--- INSERT INTO qualification_rule_sets (
---     id, name, template_type, version_label, description, created_by, updated_by
--- ) VALUES (
---     gen_random_uuid(),
---     'Proposal Template Qualification Rules',
---     'proposal',
---     'v1',
---     'Default UAT-to-Prod qualification rules for proposal templates.',
---     '<ADMIN_USER_ID>',
---     '<ADMIN_USER_ID>'
--- ) ON CONFLICT (name) DO NOTHING;
---
--- INSERT INTO qualification_rule_sets (
---     id, name, template_type, version_label, description, created_by, updated_by
--- ) VALUES (
---     gen_random_uuid(),
---     'Knowledge Card Template Qualification Rules',
---     'knowledge_card',
---     'v1',
---     'Default UAT-to-Prod qualification rules for knowledge-card templates.',
---     '<ADMIN_USER_ID>',
---     '<ADMIN_USER_ID>'
--- ) ON CONFLICT (name) DO NOTHING;
---
--- Example proposal rules:
--- INSERT INTO qualification_rules (
---     id, rule_set_id, rule_code, rule_name, category, severity, applies_to,
---     evaluation_mode, metric_name, comparator, threshold_numeric, description, remediation_guidance
--- ) VALUES
--- (
---     gen_random_uuid(), '<RULE_SET_ID>', 'PROPOSAL_NO_UNRESOLVED_P0',
---     'No unresolved P0 incidents',
---     'blocker', 'blocker', 'proposal',
---     'hard_blocker', 'unresolved_p0_count', '=', 0,
---     'Any unresolved P0 in UAT disqualifies promotion.',
---     'Resolve all critical incidents before promotion.'
--- ),
--- (
---     gen_random_uuid(), '<RULE_SET_ID>', 'PROPOSAL_MIN_SAMPLE_SIZE',
---     'Minimum UAT sample size',
---     'coverage', 'major', 'proposal',
---     'threshold', 'uat_sample_size', '>=', 10,
---     'At least 10 UAT outputs are required.',
---     'Generate additional UAT outputs across scenarios.'
--- );
---
--- Example knowledge-card rules:
--- INSERT INTO qualification_rules (
---     id, rule_set_id, rule_code, rule_name, category, severity, applies_to,
---     evaluation_mode, metric_name, comparator, threshold_numeric, description, remediation_guidance
--- ) VALUES
--- (
---     gen_random_uuid(), '<RULE_SET_ID>', 'KC_NO_UNRESOLVED_P0',
---     'No unresolved P0 incidents',
---     'blocker', 'blocker', 'knowledge_card',
---     'hard_blocker', 'unresolved_p0_count', '=', 0,
---     'Any unresolved Data Integrity, Source Error, or Critical Omission blocks promotion.',
---     'Resolve all critical source and integrity failures.'
--- ),
--- (
---     gen_random_uuid(), '<RULE_SET_ID>', 'KC_CRITICAL_TRACEABILITY',
---     'Critical claim traceability',
---     'traceability', 'blocker', 'knowledge_card',
---     'hard_blocker', 'critical_claim_traceability_pct', '>=', 100,
---     'All critical claims must be traceable.',
---     'Fix source linking and citation extraction.'
--- );
-
--- --------------------------------------------------------------------------
--- 19) OPTIONAL PERMISSIONS
--- --------------------------------------------------------------------------
--- Uncomment and replace <DB_USERNAME> if you want to grant access immediately.
--- GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO <DB_USERNAME>;
--- GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO <DB_USERNAME>;
 
 COMMIT;
+
+
+-- automatically maintains template registry and version
+
+CREATE OR REPLACE FUNCTION ensure_template_registry_and_version(
+    p_template_name TEXT,
+    p_template_type managed_template_type,
+    p_user_id UUID
+)
+RETURNS TABLE (
+    template_registry_id UUID,
+    template_version_id  UUID
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_template_key TEXT;
+    v_registry_id  UUID;
+    v_version_id   UUID;
+    v_next_version INTEGER;
+BEGIN
+    IF p_template_name IS NULL OR trim(p_template_name) = '' THEN
+        RETURN;
+    END IF;
+
+    -- Normalize template key
+    v_template_key :=
+        lower(regexp_replace(p_template_name, '[^a-zA-Z0-9]+', '_', 'g'));
+
+    -- Ensure template_registry
+    SELECT tr.id
+    INTO v_registry_id
+    FROM template_registry tr
+    WHERE tr.template_key = v_template_key
+      AND tr.template_type = p_template_type;
+
+    IF v_registry_id IS NULL THEN
+        INSERT INTO template_registry (
+            template_key,
+            template_name,
+            template_type,
+            owner_user_id,
+            description
+        )
+        VALUES (
+            v_template_key,
+            p_template_name,
+            p_template_type,
+            p_user_id,
+            'Auto-registered from usage'
+        )
+        RETURNING id INTO v_registry_id;
+    END IF;
+
+    -- Ensure at least one UAT version
+    SELECT tv.id
+    INTO v_version_id
+    FROM template_versions tv
+    WHERE tv.template_registry_id = v_registry_id
+      AND tv.environment = 'uat'
+    ORDER BY tv.version_number DESC
+    LIMIT 1;
+
+    IF v_version_id IS NULL THEN
+        SELECT COALESCE(MAX(tv.version_number), 0) + 1
+        INTO v_next_version
+        FROM template_versions tv
+        WHERE tv.template_registry_id = v_registry_id;
+
+        INSERT INTO template_versions (
+            template_registry_id,
+            version_label,
+            version_number,
+            environment,
+            status,
+            release_notes,
+            created_by,
+            updated_by
+        )
+        VALUES (
+            v_registry_id,
+            'auto-uat-v' || v_next_version,
+            v_next_version,
+            'uat'::release_environment,
+            'in_uat'::template_version_status,
+            'Auto-created from existing usage',
+            p_user_id,
+            p_user_id
+        )
+        RETURNING id INTO v_version_id;
+    END IF;
+
+    -- ✅ Explicitly assign output variables
+    template_registry_id := v_registry_id;
+    template_version_id  := v_version_id;
+
+    RETURN NEXT;
+END;
+$$;
+ 
+
+-------------
+
+CREATE OR REPLACE FUNCTION trg_proposals_template_autoregister()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_result RECORD;
+BEGIN
+    IF NEW.template_name IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    -- Only act if not already populated or template changed
+    IF NEW.template_registry_id IS NULL
+       OR NEW.template_version_id IS NULL
+       OR NEW.template_name IS DISTINCT FROM OLD.template_name THEN
+
+        SELECT *
+        INTO v_result
+        FROM ensure_template_registry_and_version(
+            NEW.template_name,
+            'proposal',
+            NEW.created_by
+        );
+
+        NEW.template_registry_id := v_result.template_registry_id;
+        NEW.template_version_id := v_result.template_version_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS proposals_template_autoregister
+ON proposals;
+
+CREATE TRIGGER proposals_template_autoregister
+BEFORE INSERT OR UPDATE OF template_name
+ON proposals
+FOR EACH ROW
+EXECUTE FUNCTION trg_proposals_template_autoregister();
+
+
+CREATE OR REPLACE FUNCTION trg_knowledge_cards_template_autoregister()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_result RECORD;
+BEGIN
+    IF NEW.template_name IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    IF NEW.template_registry_id IS NULL
+       OR NEW.template_version_id IS NULL
+       OR NEW.template_name IS DISTINCT FROM OLD.template_name THEN
+
+        SELECT *
+        INTO v_result
+        FROM ensure_template_registry_and_version(
+            NEW.template_name,
+            'knowledge_card',
+            NEW.created_by
+        );
+
+        NEW.template_registry_id := v_result.template_registry_id;
+        NEW.template_version_id := v_result.template_version_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS knowledge_cards_template_autoregister
+ON knowledge_cards;
+
+CREATE TRIGGER knowledge_cards_template_autoregister
+BEFORE INSERT OR UPDATE OF template_name
+ON knowledge_cards
+FOR EACH ROW
+EXECUTE FUNCTION trg_knowledge_cards_template_autoregister();
+
+
+----------------
+-- ## One-time backfill for existing data
+UPDATE proposals p
+SET
+    template_registry_id = src.template_registry_id,
+    template_version_id  = src.template_version_id
+FROM (
+    SELECT
+        p2.id AS proposal_id,
+        r.template_registry_id,
+        r.template_version_id
+    FROM proposals p2
+    JOIN LATERAL ensure_template_registry_and_version(
+        p2.template_name,
+        'proposal'::managed_template_type,
+        p2.created_by
+    ) r ON TRUE
+    WHERE p2.template_name IS NOT NULL
+      AND (
+          p2.template_registry_id IS NULL
+          OR p2.template_version_id IS NULL
+      )
+) src
+WHERE p.id = src.proposal_id;
+
+
+
+
+
+UPDATE knowledge_cards kc
+SET
+    template_registry_id = src.template_registry_id,
+    template_version_id  = src.template_version_id
+FROM (
+    SELECT
+        kc2.id AS knowledge_card_id,
+        r.template_registry_id,
+        r.template_version_id
+    FROM knowledge_cards kc2
+    JOIN LATERAL ensure_template_registry_and_version(
+        kc2.template_name,
+        'knowledge_card'::managed_template_type,
+        kc2.created_by
+    ) r ON TRUE
+    WHERE kc2.template_name IS NOT NULL
+      AND (
+          kc2.template_registry_id IS NULL
+          OR kc2.template_version_id IS NULL
+      )
+) src
+WHERE kc.id = src.knowledge_card_id;
+
+
+---
+ CREATE UNIQUE INDEX IF NOT EXISTS uq_template_registry_key_type
+ON template_registry(template_key, template_type);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_single_prod_version
+ON template_versions(template_registry_id)
+WHERE environment = 'prod' AND status = 'promoted_to_prod'; 

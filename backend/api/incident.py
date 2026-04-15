@@ -26,7 +26,7 @@ from backend.models.schemas import IncidentAnalyzeRequest, IncidentAnalysisRespo
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/incidents", tags=["incidents"])
+router = APIRouter(prefix="/api/incidents", tags=["Incidents"])
 
 
 @router.post("/analyze", response_model=IncidentAnalysisResponse)

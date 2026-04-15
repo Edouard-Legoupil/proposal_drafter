@@ -249,6 +249,7 @@ export default function Chat(props) {
         useEffect(() => {
                 getUsers()
                 getTransferUsers()
+                getProfile()
         }, [])
 
         useEffect(() => {
@@ -756,17 +757,35 @@ export default function Chat(props) {
         }
 
         const [isCopied, setIsCopied] = useState(false)
+        const copyResetTimerRef = useRef(null)
+
         async function handleCopyClick(section, content) {
                 setSelectedSection(section)
-                setIsCopied(true)
-                // await navigator.clipboard.writeText(content)
 
-                const timeoutId = setTimeout(() => {
-                        setIsCopied(false)
-                }, [3000])
+                try {
+                        await navigator.clipboard.writeText(content)
+                        setIsCopied(true)
 
-                return () => clearTimeout(timeoutId)
+                        if (copyResetTimerRef.current) {
+                                clearTimeout(copyResetTimerRef.current)
+                        }
+
+                        copyResetTimerRef.current = setTimeout(() => {
+                                setIsCopied(false)
+                        }, 3000)
+                } catch (error) {
+                        console.error('Failed to copy section content:', error)
+                        setNotif({ open: true, message: 'Unable to copy the section content.', severity: 'error' })
+                }
         }
+
+        useEffect(() => {
+                return () => {
+                        if (copyResetTimerRef.current) {
+                                clearTimeout(copyResetTimerRef.current)
+                        }
+                }
+        }, [])
 
         const dialogRef = useRef()
         const [regenerateInput, setRegenerateInput] = useState("")
@@ -950,6 +969,7 @@ export default function Chat(props) {
                                 if (profileRes.ok) {
                                         const profileData = await profileRes.json();
                                         const curUser = profileData.user;
+                                        setCurrentUser(curUser);
                                         const ownerId = data.user_id;
                                         const isOwner = curUser.id === ownerId || curUser.user_id === ownerId;
                                         const _isAdmin = curUser.is_admin || (curUser.roles || []).some(r => r === 'admin' || (r && r.name === 'admin'));
@@ -999,25 +1019,29 @@ export default function Chat(props) {
                                 setContributionId(data.contribution_id || "")
                                 setSidebarOpen(true)
                                 getStatusHistory()
-                                if (data.status === 'pre_submission' || data.status === 'in_review') {
-                                        getPeerReviews()
-                                }
+                                // Always fetch peer reviews for all users
+                                getPeerReviews()
 
                                 const storedTemplate = sessionStorage.getItem("proposal_template");
                                 if (storedTemplate) {
                                         setProposalTemplate(JSON.parse(storedTemplate));
                                 }
-                        }
-                        else if (response.status === 401) {
+                        } else if (response.status === 404) {
+                                // Draft not found - clear the invalid proposal_id and start fresh
+                                console.warn("Draft not found, starting with a new proposal");
+                                sessionStorage.removeItem("proposal_id");
+                                sessionStorage.removeItem("session_id");
+                                return;
+                        } else if (response.status === 401) {
                                 sessionStorage.setItem("session_expired", "Session expired. Please login again.")
                                 navigate("/login")
-                        }
-                        else if (response.status === 403 || response.status === 404) {
+                        } else if (response.status === 403 || response.status === 404) {
                                 // May be a reviewer: try loading via the review endpoint
                                 const profileRes2 = await fetch(`${API_BASE_URL}/profile`, { credentials: 'include' });
                                 if (profileRes2.ok) {
                                         const profileData2 = await profileRes2.json();
                                         const curUser2 = profileData2.user;
+                                        setCurrentUser(curUser2);
                                         const _isAdmin2 = curUser2.is_admin || (curUser2.roles || []).some(r => r === 'admin' || (r && r.name === 'admin'));
                                         setIsAdmin(_isAdmin2);
                                         setIsReviewer(true);
@@ -1058,7 +1082,78 @@ export default function Chat(props) {
 
                                         // Load template so section list renders correctly
                                         try {
-                                                const tplRes = await fetch(`${API_BASE_URL}/templates/unhcr_proposal_template.json/sections`, { credentials: 'include' });
+                                                const tplRes = await fetch(`${API_BASE_URL}/templates/proposal_template_unhcr.json/sections`, { credentials: 'include' });
+                                                if (tplRes.ok) {
+                                                        const tplData = await tplRes.json();
+                                                        // tplData is { sections: [...] }
+                                                        setProposalTemplate(tplData);
+                                                } else {
+                                                        // Fallback: build template from section keys
+                                                        const syntheticSections = Object.keys(reviewData.generated_sections || {}).map(name => ({ section_name: name }));
+                                                        setProposalTemplate({ sections: syntheticSections });
+                                                }
+                                        } catch (e) {
+                                                // Fallback: build template from section keys
+                                                const syntheticSections = Object.keys(reviewData.generated_sections || {}).map(name => ({ section_name: name }));
+                                                setProposalTemplate({ sections: syntheticSections });
+                                        }
+                                } else if (reviewRes.status === 401) {
+                                        sessionStorage.setItem('session_expired', 'Session expired. Please login again.');
+                                        navigate('/login');
+                                }
+                        }
+                        else if (response.status === 401) {
+                                sessionStorage.setItem("session_expired", "Session expired. Please login again.")
+                                navigate("/login")
+                        }
+                        else if (response.status === 403 || response.status === 404) {
+                                // May be a reviewer: try loading via the review endpoint
+                                const profileRes2 = await fetch(`${API_BASE_URL}/profile`, { credentials: 'include' });
+                                if (profileRes2.ok) {
+                                        const profileData2 = await profileRes2.json();
+                                        const curUser2 = profileData2.user;
+                                        setCurrentUser(curUser2);
+                                        const _isAdmin2 = curUser2.is_admin || (curUser2.roles || []).some(r => r === 'admin' || (r && r.name === 'admin'));
+                                        setIsAdmin(_isAdmin2);
+                                        setIsReviewer(true);
+                                }
+                                const proposalIdFromParam = id || sessionStorage.getItem('proposal_id');
+                                if (!proposalIdFromParam) return;
+                                const reviewRes = await fetch(`${API_BASE_URL}/review-proposal/${proposalIdFromParam}`, { credentials: 'include' });
+                                if (reviewRes.ok) {
+                                        const reviewData = await reviewRes.json();
+                                        sessionStorage.setItem('proposal_id', proposalIdFromParam);
+
+                                        setUserPrompt(reviewData.project_description || '');
+
+                                        const sectionState = {};
+                                        Object.entries(reviewData.generated_sections || {}).forEach(([key, value]) => {
+                                                sectionState[key] = { content: value, open: true };
+                                        });
+                                        setProposal(sectionState);
+                                        setProposalStatus(reviewData.status);
+
+                                        const initialComments = {};
+                                        const initialStatus = {};
+                                        Object.keys(reviewData.generated_sections || {}).forEach(section => {
+                                                const existing = reviewData.draft_comments?.[section] || {};
+                                                initialComments[section] = {
+                                                        id: existing.id || null,
+                                                        review_text: existing.review_text || '',
+                                                        type_of_comment: existing.type_of_comment || 'P2',
+                                                        severity: existing.severity || 'P2',
+                                                        author_response: existing.author_response || '',
+                                                        rating: existing.rating || null
+                                                };
+                                                initialStatus[section] = existing.rating || null;
+                                        });
+                                        setReviewComments(initialComments);
+                                        setReviewStatus(initialStatus);
+                                        setSidebarOpen(true);
+
+                                        // Load template so section list renders correctly
+                                        try {
+                                                const tplRes = await fetch(`${API_BASE_URL}/templates/proposal_template_unhcr.json/sections`, { credentials: 'include' });
                                                 if (tplRes.ok) {
                                                         const tplData = await tplRes.json();
                                                         // tplData is { sections: [...] }
@@ -1083,13 +1178,18 @@ export default function Chat(props) {
 
         // ── Review handler functions ────────────────────────────────────────
         async function handleCommentChange(section, field, value) {
-                if (field === 'save') {
+                if (field === "save") {
                         const proposalId = id || sessionStorage.getItem('proposal_id');
                         if (!proposalId) {
                                 console.error("No proposal ID found in params");
                                 return;
                         }
-                        const commentData = { ...reviewComments[section], section_name: section, review_text: value };
+                        const commentData = {
+                                section_name: section,
+                                review_text: value,
+                                severity: reviewComments[section]?.severity || 'P2',
+                                type_of_comment: reviewComments[section]?.type_of_comment || 'General'
+                        };
                         try {
                                 const res = await fetch(`${API_BASE_URL}/proposals/${proposalId}/comment`, {
                                         method: 'POST',
@@ -1098,9 +1198,25 @@ export default function Chat(props) {
                                         credentials: 'include'
                                 });
                                 if (res.ok) {
-                                        setReviewComments(prev => ({ ...prev, [section]: { ...(prev[section] || {}), review_text: value } }));
+                                        // Clear local draft state for this section
+                                        setReviewComments(prev => {
+                                                const next = { ...prev };
+                                                delete next[section];
+                                                return next;
+                                        });
+                                        // Reset status to show as previous feedback
+                                        handleStatusChange(section, null);
+                                        // Refresh all reviews from backend
+                                        await getPeerReviews();
+                                } else {
+                                        const error = await res.json();
+                                        console.error('Save failed:', error);
+                                        alert('Failed to save comment: ' + (error.detail || 'Unknown error'));
                                 }
-                        } catch (e) { console.error("Error saving comment", e); }
+                        } catch (e) {
+                                console.error("Error saving comment", e);
+                                alert('Error connecting to server. Please try again.');
+                        }
                         return;
                 }
                 setReviewComments(prev => {
@@ -1139,19 +1255,33 @@ export default function Chat(props) {
                 }, 800);
         }, []);
 
-        async function handleDeleteComment(section) {
+        async function handleDeleteComment(commentOrSection) {
                 if (!window.confirm('Remove this comment?')) return;
                 const proposalId = sessionStorage.getItem('proposal_id');
+
+                // Handle both cases: commentId or section name
+                let commentId = null;
+                let sectionName = null;
                 
-                // Try from local draft state first
-                let commentId = reviewComments[section]?.id;
-                
-                // If not there, try from reviews array
-                if (!commentId) {
-                        const existing = reviews.find(r => r.section_name === section && (r.reviewer_id === currentUser?.id || r.reviewer_id === currentUser?.user_id));
-                        commentId = existing?.id;
+                if (typeof commentOrSection === 'string' && commentOrSection.includes('-')) {
+                    // This is likely a UUID (comment ID)
+                    commentId = commentOrSection;
+                    // Find the section name for this comment ID
+                    const existing = reviews.find(r => r.id === commentId);
+                    sectionName = existing?.section_name;
+                } else {
+                    // This is a section name
+                    sectionName = commentOrSection;
+                    // Try from local draft state first
+                    commentId = reviewComments[sectionName]?.id;
+
+                    // If not there, try from reviews array
+                    if (!commentId) {
+                            const existing = reviews.find(r => r.section_name === sectionName && (r.reviewer_id === currentUser?.id || r.reviewer_id === currentUser?.user_id));
+                            commentId = existing?.id;
+                    }
                 }
-                
+
                 if (commentId && proposalId) {
                         try {
                                 const res = await fetch(`${API_BASE_URL}/proposals/${proposalId}/comment/${commentId}`, {
@@ -1159,15 +1289,23 @@ export default function Chat(props) {
                                         credentials: 'include'
                                 });
                                 if (res.ok) {
-                                        getPeerReviews();
+                                        // Refresh the reviews to get the updated status
+                                        await getPeerReviews();
                                         // Also refresh draft comments if we are in review mode
-                                        if (isReviewer) getContent();
+                                        if (isReviewer) await getContent();
+                                        
+                                        // Force re-render by updating local state
+                                        if (sectionName) {
+                                                setReviewComments(prev => {
+                                                        const next = { ...prev };
+                                                        delete next[sectionName];
+                                                        return next;
+                                                });
+                                                handleStatusChange(sectionName, null);
+                                        }
                                 }
                         } catch (err) { console.error('Error deleting comment', err); }
                 }
-
-                setReviewComments(prev => ({ ...prev, [section]: { review_text: '', severity: 'Medium', type_of_comment: 'General' } }));
-                handleStatusChange(section, null);
         }
 
         const handleSaveResponse = async (section, responseText) => {
@@ -1182,6 +1320,24 @@ export default function Chat(props) {
                         });
                         if (res.ok) getPeerReviews();
                 } catch (error) { console.error('Error saving author response:', error); }
+        };
+
+        const handleReplyToFeedback = async (feedbackId, replyText, replyStatus) => {
+                const proposalId = sessionStorage.getItem('proposal_id');
+                if (!proposalId) return;
+                try {
+                        const res = await fetch(`${API_BASE_URL}/proposals/${proposalId}/reply-to-feedback`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                        feedback_id: feedbackId,
+                                        author_response: replyText,
+                                        status: replyStatus
+                                }),
+                                credentials: 'include'
+                        });
+                        if (res.ok) getPeerReviews();
+                } catch (error) { console.error('Error replying to feedback:', error); }
         };
 
         async function handleSubmitReview() {
@@ -1385,505 +1541,520 @@ export default function Chat(props) {
                 setAssociatedKnowledgeCards(selectedCards);
         }
 
-        return <Base>
-                <div className={`Chat ${isMobile && isMobileMenuOpen ? 'mobile-menu-open' : ''}`} data-testid="chat-container">
+        return (
+                <Base>
+                        <div className={`Chat ${isMobile && isMobileMenuOpen ? 'mobile-menu-open' : ''}`} data-testid="chat-container">
+                                <Snackbar
+                                        open={notif.open}
+                                        autoHideDuration={notif.severity === "info" ? 1400 : 5000}
+                                        onClose={() => setNotif(v => ({ ...v, open: false }))}
+                                        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+                                >
+                                        <Alert severity={notif.severity} onClose={() => setNotif(v => ({ ...v, open: false }))} sx={{ width: '100%' }}>
+                                                {notif.message}
+                                        </Alert>
+                                </Snackbar>
+                                <ProgressModal
+                                        isOpen={isProgressModalOpen}
+                                        onClose={() => setIsProgressModalOpen(false)}
+                                        progress={generationProgress}
+                                        message={generationMessage}
+                                />
 
-                        <Snackbar
-                                open={notif.open}
-                                autoHideDuration={notif.severity === "info" ? 1400 : 5000}
-                                onClose={() => setNotif(v => ({ ...v, open: false }))}
-                                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-                        >
-                                <Alert severity={notif.severity} onClose={() => setNotif(v => ({ ...v, open: false }))} sx={{ width: '100%' }}>
-                                        {notif.message}
-                                </Alert>
-                        </Snackbar>
-                        <ProgressModal
-                                isOpen={isProgressModalOpen}
-                                onClose={() => setIsProgressModalOpen(false)}
-                                progress={generationProgress}
-                                message={generationMessage}
-                        />
+                                <MultiSelectModal
+                                        isOpen={isPeerReviewModalOpen}
+                                        onClose={() => setIsPeerReviewModalOpen(false)}
+                                        options={users}
+                                        selectedOptions={selectedUsers}
+                                        onSelectionChange={setSelectedUsers}
+                                        onConfirm={handleSubmitForPeerReview}
+                                        title="Select Users for Peer Review"
+                                        showDeadline={true}
+                                />
+                                <SingleSelectUserModal
+                                        isOpen={isTransferModalOpen}
+                                        onClose={() => setIsTransferModalOpen(false)}
+                                        options={transferUsers}
+                                        title="Transfer Proposal Ownership to another Focal Point"
+                                        onConfirm={confirmTransfer}
+                                />
+                                <AssociateKnowledgeModal
+                                        isOpen={isAssociateKnowledgeModalOpen}
+                                        onClose={() => setIsAssociateKnowledgeModalOpen(false)}
+                                        onConfirm={handleAssociateKnowledgeConfirm}
+                                        donorId={formData["Targeted Donor"]?.value}
+                                        outcomeId={formData["Main Outcome"]?.value}
+                                        fieldContextId={formData["Country / Location(s)"]?.value}
+                                        initialSelection={associatedKnowledgeCards}
+                                />
+                                <PdfUploadModal
+                                        isOpen={isPdfUploadModalOpen}
+                                        onClose={() => setIsPdfUploadModalOpen(false)}
+                                        onConfirm={handlePdfUpload}
+                                />
 
-                        <MultiSelectModal
-                                isOpen={isPeerReviewModalOpen}
-                                onClose={() => setIsPeerReviewModalOpen(false)}
-                                options={users}
-                                selectedOptions={selectedUsers}
-                                onSelectionChange={setSelectedUsers}
-                                onConfirm={handleSubmitForPeerReview}
-                                title="Select Users for Peer Review"
-                                showDeadline={true}
-                        />
-                        <SingleSelectUserModal
-                                isOpen={isTransferModalOpen}
-                                onClose={() => setIsTransferModalOpen(false)}
-                                options={transferUsers}
-                                title="Transfer Proposal Ownership to another Focal Point"
-                                onConfirm={confirmTransfer}
-                        />
-                        <AssociateKnowledgeModal
-                                isOpen={isAssociateKnowledgeModalOpen}
-                                onClose={() => setIsAssociateKnowledgeModalOpen(false)}
-                                onConfirm={handleAssociateKnowledgeConfirm}
-                                donorId={formData["Targeted Donor"]?.value}
-                                outcomeId={formData["Main Outcome"]?.value}
-                                fieldContextId={formData["Country / Location(s)"]?.value}
-                                initialSelection={associatedKnowledgeCards}
-                        />
-                        <PdfUploadModal
-                                isOpen={isPdfUploadModalOpen}
-                                onClose={() => setIsPdfUploadModalOpen(false)}
-                                onConfirm={handlePdfUpload}
-                        />
-
-                        {/* Validation Modal */}
-                        <dialog open={isValidationModalOpen} className="Chat_regenerate" style={{ height: 'auto', maxHeight: '80vh', top: '10%' }}>
-                                <header className="Chat_regenerate_header">
-                                        Data Missing
-                                        <img src={regenerateClose} alt="" onClick={() => setIsValidationModalOpen(false)} style={{ cursor: 'pointer' }} />
-                                </header>
-                                <main className="Chat_right" style={{ padding: '20px' }}>
-                                        <p style={{ marginBottom: '15px' }}>The following mandatory parameters are missing:</p>
-                                        <ul style={{ listStyleType: 'disc', paddingLeft: '20px', marginBottom: '20px', color: '#141419' }}>
-                                                {validationMissingFields.map((field, index) => (
-                                                        <li key={index} style={{ marginBottom: '5px' }}>{field}</li>
-                                                ))}
-                                        </ul>
-                                        <div className="Chat_inputArea_buttonContainer">
-                                                <CommonButton onClick={() => setIsValidationModalOpen(false)} label="Close" />
-                                        </div>
-                                </main>
-                        </dialog>
-                        {((!isMobile && sidebarOpen) || (isMobile && isMobileMenuOpen)) && <aside>
-                                <ul className='Chat_sidebar' data-testid="chat-sidebar">
-                                        <li
-                                                className={`Chat_sidebarOption ${selectedSection === -1 ? "selectedSection" : ""}`}
-                                                onClick={() => handleSidebarSectionClick(-1)}
-                                                data-testid="sidebar-option-proposal-prompt"
-                                        >
-                                                Proposal Prompt
-                                        </li>
-
-                                        {proposalTemplate ? proposalTemplate.sections.map((section, i) =>
-                                                <li
-                                                        key={i}
-                                                        className={`Chat_sidebarOption ${selectedSection === i ? "selectedSection" : ""}`}
-                                                        onClick={() => handleSidebarSectionClick(i)}
-                                                        data-testid={`sidebar-option-${toKebabCase(section.section_name)}`}
-                                                >
-                                                        {section.section_name}
-                                                </li>
-                                        ) : Object.keys(proposal).map((section, i) =>
-                                                <li
-                                                        key={i}
-                                                        className={`Chat_sidebarOption ${selectedSection === i ? "selectedSection" : ""}`}
-                                                        onClick={() => handleSidebarSectionClick(i)}
-                                                        data-testid={`sidebar-option-${toKebabCase(section)}`}
-                                                >
-                                                        {section}
-                                                </li>
-                                        )}
-                                </ul>
-                        </aside>}
-
-                        <main className="Chat_right" ref={topRef} data-testid="chat-main">
-                                <button className="Chat_menuButton" onClick={() => setIsMobileMenuOpen(p => !p)} data-testid="mobile-menu-button">
-                                        <i className="fa-solid fa-bars"></i>
-                                </button>
-                                {proposalStatus !== 'submitted' ?
-                                        <>
-                                                <div className='Dashboard_top'>
-                                                        <div className='Dashboard_label' data-testid="chat-title">
-                                                                <img className='Dashboard_label_fileIcon' src={fileIcon} alt="" />
-                                                                {titleName}
-                                                        </div>
+                                {/* Validation Modal */}
+                                <dialog open={isValidationModalOpen} className="Chat_regenerate" style={{ height: 'auto', maxHeight: '80vh', top: '10%' }}>
+                                        <header className="Chat_regenerate_header">
+                                                Data Missing
+                                                <img src={regenerateClose} alt="" onClick={() => setIsValidationModalOpen(false)} style={{ cursor: 'pointer' }} />
+                                        </header>
+                                        <main className="Chat_right" style={{ padding: '20px' }}>
+                                                <p style={{ marginBottom: '15px' }}>The following mandatory parameters are missing:</p>
+                                                <ul style={{ listStyleType: 'disc', paddingLeft: '20px', marginBottom: '20px', color: '#141419' }}>
+                                                        {validationMissingFields.map((field, index) => (
+                                                                <li key={index} style={{ marginBottom: '5px' }}>{field}</li>
+                                                        ))}
+                                                </ul>
+                                                <div className="Chat_inputArea_buttonContainer">
+                                                        <CommonButton onClick={() => setIsValidationModalOpen(false)} label="Close" />
                                                 </div>
+                                        </main>
+                                </dialog>
 
-                                                <div className="Chat_inputArea">
-                                                        <div className="Chat_docTypeSwitcher" data-testid="doc-type-switcher">
-                                                                <button
-                                                                        type="button"
-                                                                        className={`Chat_docTypeButton ${documentType === 'proposal' ? 'active' : ''}`}
-                                                                        onClick={() => proposalStatus === 'draft' && setDocumentType('proposal')}
-                                                                        disabled={proposalStatus !== 'draft'}
-                                                                        data-testid="doc-type-proposal-button"
-                                                                >
-                                                                        Proposal
-                                                                </button>
-                                                                <button
-                                                                        type="button"
-                                                                        className={`Chat_docTypeButton ${documentType === 'concept note' ? 'active' : ''}`}
-                                                                        onClick={() => proposalStatus === 'draft' && setDocumentType('concept note')}
-                                                                        disabled={proposalStatus !== 'draft'}
-                                                                        data-testid="doc-type-concept-note-button"
-                                                                >
-                                                                        Concept Note
-                                                                </button>
-                                                        </div>
-                                                        {renderFormField("Project Draft Short name", proposalStatus !== 'draft')}
-                                                        <textarea id="main-prompt" name="main-prompt" value={userPrompt} onChange={e => setUserPrompt(e.target.value)} placeholder='Provide as much details as possible on your initial project idea!' className='Chat_inputArea_prompt' disabled={proposalStatus !== 'draft'} data-testid="main-prompt" />
-
-                                                        <span
-                                                                onClick={() => proposalStatus === 'draft' && setFormExpanded(p => !p)}
-                                                                className={`Chat_inputArea_additionalDetails ${form_expanded && "expanded"} ${proposalStatus !== 'draft' ? 'disabled' : ''}`}
-                                                                data-testid="specify-parameters-expander"
+                                {((!isMobile && sidebarOpen) || (isMobile && isMobileMenuOpen)) && (
+                                        <aside>
+                                                <ul className='Chat_sidebar' data-testid="chat-sidebar">
+                                                        <li
+                                                                className={`Chat_sidebarOption ${selectedSection === -1 ? "selectedSection" : ""}`}
+                                                                onClick={() => handleSidebarSectionClick(-1)}
+                                                                data-testid="sidebar-option-proposal-prompt"
                                                         >
-                                                                Specify Parameters
-                                                                <img src={arrow} alt="Arrow" />
-                                                        </span>
+                                                                Proposal Prompt
+                                                        </li>
 
-                                                        {form_expanded ?
-                                                                <form className='Chat_form' data-testid="chat-form">
-                                                                        <div className='Chat_form_group'>
-                                                                                <div className="tooltip-container">
-                                                                                        <h3 className='Chat_form_group_title'>Identify Potential Interventions</h3>
-                                                                                        <span className="tooltip-text">surface Relevant Policies, Strategies and past Evaluation Recommendations</span>
-                                                                                </div>
-                                                                                {renderFormField("Main Outcome", proposalStatus !== 'draft')}
-                                                                                {renderFormField("Beneficiaries Profile", proposalStatus !== 'draft')}
-                                                                                {renderFormField("Potential Implementing Partner", proposalStatus !== 'draft')}
-                                                                        </div>
-                                                                        <div className='Chat_form_group'>
-                                                                                <div className="tooltip-container">
-                                                                                        <h3 className='Chat_form_group_title'>Define Field Context</h3>
-                                                                                        <span className="tooltip-text">surface Situation Analysis and Needs Assessment</span>
-                                                                                </div>
-                                                                                {renderFormField("Geographical Scope", proposalStatus !== 'draft')}
-                                                                                <div className="Chat_form_inputContainer" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
-                                                                                        <input
-                                                                                                type="checkbox"
-                                                                                                id="multiple-countries"
-                                                                                                checked={formData["multiple countries"]?.value || false}
-                                                                                                onChange={e => {
-                                                                                                        const isChecked = e.target.checked;
-                                                                                                        setFormData(prev => ({
-                                                                                                                ...prev,
-                                                                                                                "multiple countries": { ...prev["multiple countries"], value: isChecked },
-                                                                                                                "Country / Location(s)": { ...prev["Country / Location(s)"], value: isChecked ? [] : "" }
-                                                                                                        }));
-                                                                                                }}
-                                                                                                disabled={proposalStatus !== 'draft'}
-                                                                                        />
-                                                                                        <label htmlFor="multiple-countries" className="Chat_form_inputLabel" style={{ marginBottom: 0 }}>Multiple Countries</label>
-                                                                                </div>
-                                                                                {renderFormField("Country / Location(s)", proposalStatus !== 'draft')}
-                                                                        </div>
-                                                                        <div className='Chat_form_group'>
-                                                                                <div className="tooltip-container">
-                                                                                        <h3 className='Chat_form_group_title'>Tailor Funding Request</h3>
-                                                                                        <span className="tooltip-text">surface Donor profile and apply Formal Requirement for Submission</span>
-                                                                                </div>
-                                                                                {renderFormField("Budget Range", proposalStatus !== 'draft')}
-                                                                                {renderFormField("Duration", proposalStatus !== 'draft')}
-                                                                                <div className="Chat_form_inputContainer" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
-                                                                                        <input
-                                                                                                type="checkbox"
-                                                                                                id="multiple-donors"
-                                                                                                checked={formData["multiple donors"]?.value || false}
-                                                                                                onChange={e => {
-                                                                                                        const isChecked = e.target.checked;
-                                                                                                        setFormData(prev => ({
-                                                                                                                ...prev,
-                                                                                                                "multiple donors": { ...prev["multiple donors"], value: isChecked },
-                                                                                                                "Targeted Donor": { ...prev["Targeted Donor"], value: isChecked ? [] : (prev["Targeted Donor"]?.value || "") }
-                                                                                                        }));
-                                                                                                }}
-                                                                                                disabled={proposalStatus !== 'draft'}
-                                                                                        />
-                                                                                        <label htmlFor="multiple-donors" className="Chat_form_inputLabel" style={{ marginBottom: 0 }}>Multiple Donors</label>
-                                                                                </div>
-                                                                                {renderFormField("Targeted Donor", proposalStatus !== 'draft')}
-                                                                        </div>
-                                                                </form> : ""
-                                                        }
+                                                        {proposalTemplate ? proposalTemplate.sections.map((section, i) => (
+                                                                <li
+                                                                        key={i}
+                                                                        className={`Chat_sidebarOption ${selectedSection === i ? "selectedSection" : ""}`}
+                                                                        onClick={() => handleSidebarSectionClick(i)}
+                                                                        data-testid={`sidebar-option-${toKebabCase(section.section_name)}`}
+                                                                >
+                                                                        {section.section_name}
+                                                                </li>
+                                                        )) : Object.keys(proposal).map((section, i) => (
+                                                                <li
+                                                                        key={i}
+                                                                        className={`Chat_sidebarOption ${selectedSection === i ? "selectedSection" : ""}`}
+                                                                        onClick={() => handleSidebarSectionClick(i)}
+                                                                        data-testid={`sidebar-option-${toKebabCase(section)}`}
+                                                                >
+                                                                        {section}
+                                                                </li>
+                                                        ))}
+                                                </ul>
+                                        </aside>
+                                )}
 
-                                                        <div className="Chat_inputArea_buttonContainer">
-                                                                <div style={{ position: 'relative' }}>
-                                                                        <CommonButton
-                                                                                onClick={() => {
-                                                                                        const missing = getMissingFields();
-                                                                                        if (missing.length > 0) {
-                                                                                                setValidationMissingFields(missing);
-                                                                                                setIsValidationModalOpen(true);
-                                                                                        } else {
-                                                                                                setIsAssociateKnowledgeModalOpen(true);
-                                                                                        }
-                                                                                }}
-                                                                                label="Manage Knowledge"
-                                                                                disabled={proposalStatus !== 'draft' || !buttonEnable}
-                                                                                className={!buttonEnable ? "inactive" : ""}
-                                                                                icon={knowIcon}
-                                                                                data-testid="manage-knowledge-button"
-                                                                        />
-                                                                        {associatedKnowledgeCards.length > 0 && (
-                                                                                <div className="associated-knowledge-display" data-testid="associated-knowledge-cards">
-                                                                                        <h4>Associated Knowledge Cards:</h4>
-                                                                                        <ul>
-                                                                                                {associatedKnowledgeCards.map(card => {
-                                                                                                        const title = [
-                                                                                                                card.title,
-                                                                                                                card.donor_name,
-                                                                                                                card.outcome_name,
-                                                                                                                card.field_context_name,
-                                                                                                        ].filter(Boolean).join(' - ');
-                                                                                                        return (
-                                                                                                                <li key={card.id}>
-                                                                                                                        <a href={`/knowledge-card/${card.id}`} target="_blank" rel="noopener noreferrer">
-                                                                                                                                {title}
-                                                                                                                        </a>
-                                                                                                                </li>
-                                                                                                        );
-                                                                                                })}
-                                                                                        </ul>
-                                                                                </div>
-                                                                        )}
-                                                                </div>
+                                <main className="Chat_right" ref={topRef} data-testid="chat-main">
+                                        <button className="Chat_menuButton" onClick={() => setIsMobileMenuOpen(p => !p)} data-testid="mobile-menu-button">
+                                                <i className="fa-solid fa-bars"></i>
+                                        </button>
 
-                                                                <div style={{ marginLeft: 'auto' }}>
-                                                                        <CommonButton
-                                                                                onClick={handleGenerateClick}
-                                                                                icon={generateIcon}
-                                                                                label={generateLabel}
-                                                                                loading={generateLoading}
-                                                                                loadingLabel={generateLabel === "Generate" ? "Generating (~ 2 mins of patience...) " : "Regenerating (~ 2 mins of patience...)"}
-                                                                                disabled={proposalStatus !== 'draft' || !buttonEnable}
-                                                                                className={!buttonEnable ? "inactive" : ""}
-                                                                                data-testid="generate-button"
-                                                                        />
+                                        {proposalStatus !== 'submitted' ? (
+                                                <>
+                                                        <div className='Dashboard_top'>
+                                                                <div className='Dashboard_label' data-testid="chat-title">
+                                                                        <img className='Dashboard_label_fileIcon' src={fileIcon} alt="" />
+                                                                        {titleName}
                                                                 </div>
                                                         </div>
-                                                </div>
-                                        </>
-                                        :
-                                        ""
-                                }
 
-                                {sidebarOpen ? <>
-                                        <div className='Dashboard_top'>
-                                                <div className='Dashboard_label'>
-                                                        <img className='Dashboard_label_fileIcon' src={resultsIcon} alt="" />
-                                                        Results
-                                                </div>
-
-                                                {Object.keys(proposal).length > 0 ? <div className='Chat_exportButtons'>
-                                                        <button type="button" onClick={() => handleExport("docx")} data-testid="export-word-button">
-                                                                <img src={word_icon} alt="" />
-                                                                Download Document
-                                                        </button>
-
-                                                        <button type="button" onClick={() => handleExportTables()} data-testid="export-excel-button">
-                                                                <img src={excel_icon} alt="" />
-                                                                Download Tables
-                                                        </button>
-                                                        <button type="button" onClick={() => setIsTransferModalOpen(true)} data-testid="transfer-ownership-button" style={{ marginLeft: '10px', background: '#f5f5f5', color: '#333' }}>
-                                                                Transfer Ownership
-                                                        </button>
-                                                        <div className="Chat_workflow_status_container">
-                                                                <div className="workflow-stage-box">
-                                                                        <span className="workflow-stage-label">Workflow Stage</span>
-                                                                        <div className="workflow-badges">
-                                                                                {['draft', 'in_review', 'pre_submission', 'submitted'].map(status => {
-                                                                                        const statusDetails = {
-                                                                                                draft: { text: 'Drafting', className: 'status-draft', message: "Initial drafting stage - Author + AI" },
-                                                                                                in_review: { text: 'Peer Review', className: 'status-review', message: "Wait while proposal sent for quality review to other users" },
-                                                                                                pre_submission: { text: 'Pre-Submission', className: 'status-submission', message: "Edit to address the comments from all your reviewers" },
-                                                                                                submitted: { text: 'Submitted', className: 'status-submitted', message: "Non editable Record of Initial version as submitted to donor" }
-                                                                                        };
-                                                                                        const isActive = proposalStatus === status;
-                                                                                        const isClickable = (proposalStatus === 'draft' && (status === 'in_review' || status === 'submitted')) ||
-                                                                                                (proposalStatus === 'in_review' && (status === 'pre_submission' || status === 'draft')) ||
-                                                                                                (proposalStatus === 'pre_submission' && status === 'submitted');
-
-                                                                                        return (
-                                                                                                <div key={status} className="status-badge-container">
-                                                                                                        <button
-                                                                                                                type="button"
-                                                                                                                title={statusDetails[status].message}
-                                                                                                                className={`status-badge ${statusDetails[status].className} ${isActive ? 'active' : 'inactive'}`}
-                                                                                                                onClick={() => {
-                                                                                                                        if (status === 'in_review' && proposalStatus === 'draft') setIsPeerReviewModalOpen(true);
-                                                                                                                        if (status === 'draft' && proposalStatus === 'in_review') handleSetStatus('draft');
-                                                                                                                        if (status === 'submitted' && (proposalStatus === 'pre_submission' || proposalStatus === 'draft')) handleSubmit();
-                                                                                                                }}
-                                                                                                                disabled={!isClickable && !isActive}
-                                                                                                                data-testid={`workflow-status-badge-${status}`}
-                                                                                                        >
-                                                                                                                {statusDetails[status].text}
-                                                                                                        </button>
-                                                                                                        {statusHistory.includes(status) && !isActive && (
-                                                                                                                <button className="revert-btn" onClick={() => handleRevert(status)} data-testid={`revert-button-${status}`}>
-                                                                                                                        Revert
-                                                                                                                </button>
-                                                                                                        )}
-                                                                                                </div>
-                                                                                        );
-                                                                                })}
-                                                                        </div>
-                                                                        {proposalStatus === 'pre_submission' && (
-                                                                                <button className="revert-btn" onClick={() => handleRevert('draft')} data-testid="revert-to-draft-button">
-                                                                                        Revert to Draft
-                                                                                </button>
-                                                                        )}
+                                                        <div className="Chat_inputArea">
+                                                                <div className="Chat_docTypeSwitcher" data-testid="doc-type-switcher">
+                                                                        <button
+                                                                                type="button"
+                                                                                className={`Chat_docTypeButton ${documentType === 'proposal' ? 'active' : ''}`}
+                                                                                onClick={() => proposalStatus === 'draft' && setDocumentType('proposal')}
+                                                                                disabled={proposalStatus !== 'draft'}
+                                                                                data-testid="doc-type-proposal-button"
+                                                                        >
+                                                                                Proposal
+                                                                        </button>
+                                                                        <button
+                                                                                type="button"
+                                                                                className={`Chat_docTypeButton ${documentType === 'concept note' ? 'active' : ''}`}
+                                                                                onClick={() => proposalStatus === 'draft' && setDocumentType('concept note')}
+                                                                                disabled={proposalStatus !== 'draft'}
+                                                                                data-testid="doc-type-concept-note-button"
+                                                                        >
+                                                                                Concept Note
+                                                                        </button>
                                                                 </div>
-                                                        </div>
-                                                </div> : ""}
-                                        </div>
 
-                                        {proposalStatus === 'submitted' && (
-                                                <div className="contribution-id-container">
-                                                        <label htmlFor="contribution-id">Contribution ID:</label>
-                                                        <p>Only submitted proposal with a confirmed ContributionID are counted as approved</p>
-                                                        <input
-                                                                type="text"
-                                                                id="contribution-id"
-                                                                value={contributionId}
-                                                                onChange={(e) => setContributionId(e.target.value)}
-                                                                data-testid="contribution-id-input"
-                                                        />
-                                                        <CommonButton onClick={handleSaveContributionId} label="Save ID" data-testid="save-contribution-id-button" />
-                                                </div>
-                                        )}
+                                                                {renderFormField("Project Draft Short name", proposalStatus !== 'draft')}
 
-                                        <div ref={proposalRef} className="Chat_proposalContainer" data-testid="proposal-container">
-                                                {(proposalTemplate ? proposalTemplate.sections.map(s => s.section_name) : Object.keys(proposal)).map((sectionName, i) => {
-                                                        const sectionObj = proposal[sectionName];
-                                                        const sectionReviews = reviews.filter(r => r.section_name === sectionName);
+                                                                <textarea
+                                                                        id="main-prompt"
+                                                                        name="main-prompt"
+                                                                        value={userPrompt}
+                                                                        onChange={e => setUserPrompt(e.target.value)}
+                                                                        placeholder='Provide as much details as possible on your initial project idea!'
+                                                                        className='Chat_inputArea_prompt'
+                                                                        disabled={proposalStatus !== 'draft'}
+                                                                        data-testid="main-prompt"
+                                                                />
 
-                                                        if (!sectionObj) return null;
-                                                        const kebabSectionName = toKebabCase(sectionName);
+                                                                <span
+                                                                        onClick={() => proposalStatus === 'draft' && setFormExpanded(p => !p)}
+                                                                        className={`Chat_inputArea_additionalDetails ${form_expanded && "expanded"} ${proposalStatus !== 'draft' ? 'disabled' : ''}`}
+                                                                        data-testid="specify-parameters-expander"
+                                                                >
+                                                                        Specify Parameters
+                                                                        <img src={arrow} alt="Arrow" />
+                                                                </span>
 
-                                                        return (
-                                                                <div key={i} className="Chat_proposalSection" data-testid={`proposal-section-${kebabSectionName}`}>
-                                                                        <div className="Chat_sectionHeader" data-testid={`section-header-${kebabSectionName}`}>
-                                                                                <div className="Chat_sectionTitle" data-testid={`section-title-${kebabSectionName}`}>{sectionName}</div>
-
-                                                                                {!generateLoading && sectionObj.content && sectionObj.open && proposalStatus !== 'submitted' ? <div className="Chat_sectionOptions" data-testid={`section-options-${kebabSectionName}`}>
-                                                                                        {!isEdit || (selectedSection === i && isEdit) ? <button type="button" onClick={() => handleEditClick(i)} style={(selectedSection === i && isEdit && regenerateSectionLoading) ? { pointerEvents: "none" } : {}} aria-label={`edit-section-${i}`} disabled={isReviewer || proposalStatus === 'in_review'} data-testid={`edit-save-button-${kebabSectionName}`}>
-                                                                                                <img src={(selectedSection === i && isEdit) ? save : edit} alt="" />
-                                                                                                <span>{(selectedSection === i && isEdit) ? "Save" : "Edit"}</span>
-                                                                                        </button> : ""}
-
-                                                                                        {selectedSection === i && isEdit ? <button type="button" onClick={() => setIsEdit(false)} data-testid={`cancel-edit-button-${kebabSectionName}`}>
-                                                                                                <img src={cancel} alt="" />
-                                                                                                <span>Cancel</span>
-                                                                                        </button> : ""}
-
-                                                                                        {!isEdit ?
-                                                                                                <>
-                                                                                                        <button type="button" onClick={() => handleCopyClick(i, sectionObj.content)} data-testid={`copy-button-${kebabSectionName}`}>
-                                                                                                                <img src={(selectedSection === i && isCopied) ? tick : copy} alt="" />
-                                                                                                                <span>{(selectedSection === i && isCopied) ? "Copied" : "Copy"}</span>
-                                                                                                        </button>
-
-                                                                                                        {!isReviewer && <button type="button" className='Chat_sectionOptions_regenerate' onClick={() => handleRegenerateIconClick(i)} disabled={proposalStatus !== 'draft'} data-testid={`regenerate-button-${kebabSectionName}`}>
-                                                                                                                <img src={regenerate} alt="" />
-                                                                                                                <span>Regenerate</span>
-                                                                                                        </button>}
-                                                                                                </>
-                                                                                                : ""}
-                                                                                </div> : ""}
-
-                                                                                {sectionObj.content && !(isEdit && selectedSection === i) ? <div className={`Chat_expanderArrow ${sectionObj.open ? "" : "closed"}`} onClick={() => handleExpanderToggle(i)} data-testid={`section-expander-${kebabSectionName}`}>
-                                                                                        <img src={arrow} alt="" />
-                                                                                </div> : ""}
-                                                                        </div>
-
-                                                                        {(sectionObj.open || !sectionObj.content) ? <div className='Chat_sectionContent' data-testid={`section-content-${kebabSectionName}`}>
-                                                                                {sectionObj.content ?
-                                                                                        (selectedSection === i && isEdit) ?
-                                                                                                <textarea value={editorContent} onChange={e => setEditorContent(e.target.value)} aria-label={`editor for ${sectionName}`} data-testid={`section-editor-${kebabSectionName}`} />
-                                                                                                :
-                                                                                                <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>{sectionObj.content}</Markdown>
-                                                                                        :
-                                                                                        <div className='Chat_sectionContent_loading'>
-                                                                                                <span className='submitButtonSpinner' />
-                                                                                                <span className='Chat_sectionContent_loading'>Loading</span>
+                                                                {form_expanded && (
+                                                                        <form className='Chat_form' data-testid="chat-form">
+                                                                                <div className='Chat_form_group'>
+                                                                                        <div className="tooltip-container">
+                                                                                                <h3 className='Chat_form_group_title'>Identify Potential Interventions</h3>
+                                                                                                <span className="tooltip-text">surface Relevant Policies, Strategies and past Evaluation Recommendations</span>
                                                                                         </div>
-                                                                                }
-                                                                                {/* SectionReview Integrated */}
-                                                                                {(proposalStatus === 'draft' || proposalStatus === 'in_review') && (
-                        <SectionReview
-                            section={sectionName}
-                            type="proposal"
-                            reviewComment={reviewComments[sectionName]}
-                            status={reviewStatus[sectionName]}
-                            isReviewEditable={isReviewer || proposalStatus === 'draft'}
-                            isAuthorizedToReply={false}
-                            onSaveReply={handleSaveResponse}
-                            onCommentChange={handleCommentChange}
-                            onStatusChange={handleStatusChange}
-                            onDeleteComment={handleDeleteComment}
-                            isOwnerOfComment={true}
-                            isAdmin={isAdmin}
-                        />
-                                                                                )}
-                                                                        </div> : ""}
+                                                                                        {renderFormField("Main Outcome", proposalStatus !== 'draft')}
+                                                                                        {renderFormField("Beneficiaries Profile", proposalStatus !== 'draft')}
+                                                                                        {renderFormField("Potential Implementing Partner", proposalStatus !== 'draft')}
+                                                                                </div>
+                                                                                <div className='Chat_form_group'>
+                                                                                        <div className="tooltip-container">
+                                                                                                <h3 className='Chat_form_group_title'>Define Field Context</h3>
+                                                                                                <span className="tooltip-text">surface Situation Analysis and Needs Assessment</span>
+                                                                                        </div>
+                                                                                        {renderFormField("Geographical Scope", proposalStatus !== 'draft')}
+                                                                                        <div className="Chat_form_inputContainer" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
+                                                                                                <input
+                                                                                                        type="checkbox"
+                                                                                                        id="multiple-countries"
+                                                                                                        checked={formData["multiple countries"]?.value || false}
+                                                                                                        onChange={e => {
+                                                                                                                const isChecked = e.target.checked;
+                                                                                                                setFormData(prev => ({
+                                                                                                                        ...prev,
+                                                                                                                        "multiple countries": { ...prev["multiple countries"], value: isChecked },
+                                                                                                                        "Country / Location(s)": { ...prev["Country / Location(s)"], value: isChecked ? [] : "" }
+                                                                                                                }));
+                                                                                                        }}
+                                                                                                        disabled={proposalStatus !== 'draft'}
+                                                                                                />
+                                                                                                <label htmlFor="multiple-countries" className="Chat_form_inputLabel" style={{ marginBottom: 0 }}>Multiple Countries</label>
+                                                                                        </div>
+                                                                                        {renderFormField("Country / Location(s)", proposalStatus !== 'draft')}
+                                                                                </div>
+                                                                                <div className='Chat_form_group'>
+                                                                                        <div className="tooltip-container">
+                                                                                                <h3 className='Chat_form_group_title'>Tailor Funding Request</h3>
+                                                                                                <span className="tooltip-text">surface Donor profile and apply Formal Requirement for Submission</span>
+                                                                                        </div>
+                                                                                        {renderFormField("Budget Range", proposalStatus !== 'draft')}
+                                                                                        {renderFormField("Duration", proposalStatus !== 'draft')}
+                                                                                        <div className="Chat_form_inputContainer" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
+                                                                                                <input
+                                                                                                        type="checkbox"
+                                                                                                        id="multiple-donors"
+                                                                                                        checked={formData["multiple donors"]?.value || false}
+                                                                                                        onChange={e => {
+                                                                                                                const isChecked = e.target.checked;
+                                                                                                                setFormData(prev => ({
+                                                                                                                        ...prev,
+                                                                                                                        "multiple donors": { ...prev["multiple donors"], value: isChecked },
+                                                                                                                        "Targeted Donor": { ...prev["Targeted Donor"], value: isChecked ? [] : (prev["Targeted Donor"]?.value || "") }
+                                                                                                                }));
+                                                                                                        }}
+                                                                                                        disabled={proposalStatus !== 'draft'}
+                                                                                                />
+                                                                                                <label htmlFor="multiple-donors" className="Chat_form_inputLabel" style={{ marginBottom: 0 }}>Multiple Donors</label>
+                                                                                        </div>
+                                                                                        {renderFormField("Targeted Donor", proposalStatus !== 'draft')}
+                                                                                </div>
+                                                                        </form>
+                                                                )}
 
-                                                                        {(proposalStatus === 'pre_submission' || proposalStatus === 'submission') && (
-                                                                                <div className="reviews-container" data-testid={`reviews-container-${kebabSectionName}`}>
-                                                                                        {reviews.filter(r => r.section_name === sectionName).length > 0 && (
-                                                                                                <>
-                                                                                                        <h4>Peer Reviews</h4>
-                                                                                                        {reviews.filter(r => r.section_name === sectionName).map(review => {
-                                                                                                                let mappedComment = {
-                                                                                                                        id: review.id,
-                                                                                                                        review_text: review.review_text,
-                                                                                                                        type_of_comment: review.type_of_comment,
-                                                                                                                        severity: review.severity,
-                                                                                                                        author_response: review.author_response,
-                                                                                                                        rating: null
-                                                                                                                };
+                                                                <div className="Chat_inputArea_buttonContainer">
+                                                                        <div style={{ position: 'relative' }}>
+                                                                                <CommonButton
+                                                                                        onClick={() => {
+                                                                                                const missing = getMissingFields();
+                                                                                                if (missing.length > 0) {
+                                                                                                        setValidationMissingFields(missing);
+                                                                                                        setIsValidationModalOpen(true);
+                                                                                                } else {
+                                                                                                        setIsAssociateKnowledgeModalOpen(true);
+                                                                                                }
+                                                                                        }}
+                                                                                        label="Manage Knowledge"
+                                                                                        disabled={proposalStatus !== 'draft' || !buttonEnable}
+                                                                                        className={!buttonEnable ? "inactive" : ""}
+                                                                                        icon={knowIcon}
+                                                                                        data-testid="manage-knowledge-button"
+                                                                                />
+                                                                                {associatedKnowledgeCards.length > 0 && (
+                                                                                        <div className="associated-knowledge-display" data-testid="associated-knowledge-cards">
+                                                                                                <h4>Associated Knowledge Cards:</h4>
+                                                                                                <ul>
+                                                                                                        {associatedKnowledgeCards.map(card => {
+                                                                                                                const title = [
+                                                                                                                        card.title,
+                                                                                                                        card.donor_name,
+                                                                                                                        card.outcome_name,
+                                                                                                                        card.field_context_name,
+                                                                                                                ].filter(Boolean).join(' - ');
                                                                                                                 return (
-                                                                                                                        <SectionReview
-                                                                                                                                key={review.id}
-                                                                                                                                section={sectionName}
-                                                                                                                                type="proposal"
-                                                                                                                                reviewComment={mappedComment}
-                                                                                                                                status={null}
-                                                                                                                                isReviewEditable={false}
-                                                                                                                                isAuthorizedToReply={!isReviewer || isAdmin}
-                                                                                                                                onCommentChange={handleCommentChange}
-                                                                                                                                onStatusChange={handleStatusChange}
-                                                                                                                                onDeleteComment={handleDeleteComment}
-                                                                                                                                onSaveReply={handleSaveResponse}
-                                                                                                                                isOwnerOfComment={review.reviewer_id === currentUser?.id || review.reviewer_id === currentUser?.user_id}
-                                                                                                                                isAdmin={isAdmin}
-                                                                                                                        />
+                                                                                                                        <li key={card.id}>
+                                                                                                                                <a href={`/knowledge-card/${card.id}`} target="_blank" rel="noopener noreferrer">
+                                                                                                                                        {title}
+                                                                                                                                </a>
+                                                                                                                        </li>
                                                                                                                 );
                                                                                                         })}
-                                                                                                </>
+                                                                                                </ul>
+                                                                                        </div>
+                                                                                )}
+                                                                        </div>
+
+                                                                        <div style={{ marginLeft: 'auto' }}>
+                                                                                <CommonButton
+                                                                                        onClick={handleGenerateClick}
+                                                                                        icon={generateIcon}
+                                                                                        label={generateLabel}
+                                                                                        loading={generateLoading}
+                                                                                        loadingLabel={generateLabel === "Generate" ? "Generating (~ 2 mins of patience...) " : "Regenerating (~ 2 mins of patience...)"}
+                                                                                        disabled={proposalStatus !== 'draft' || !buttonEnable}
+                                                                                        className={!buttonEnable ? "inactive" : ""}
+                                                                                        data-testid="generate-button"
+                                                                                />
+                                                                        </div>
+                                                                </div>
+                                                        </div>
+                                                </>
+                                        ) : null}
+
+                                        {sidebarOpen && (
+                                                <>
+                                                        <div className='Dashboard_top'>
+                                                                <div className='Dashboard_label'>
+                                                                        <img className='Dashboard_label_fileIcon' src={resultsIcon} alt="" />
+                                                                        Results
+                                                                </div>
+
+                                                                {Object.keys(proposal).length > 0 && (
+                                                                        <div className='Chat_exportButtons'>
+                                                                                <button type="button" onClick={() => handleExport("docx")} data-testid="export-word-button">
+                                                                                        <img src={word_icon} alt="" />
+                                                                                        Download Document
+                                                                                </button>
+
+                                                                                <button type="button" onClick={() => handleExportTables()} data-testid="export-excel-button">
+                                                                                        <img src={excel_icon} alt="" />
+                                                                                        Download Tables
+                                                                                </button>
+                                                                                <button type="button" onClick={() => setIsTransferModalOpen(true)} data-testid="transfer-ownership-button" style={{ marginLeft: '10px', background: '#f5f5f5', color: '#333' }}>
+                                                                                        Transfer Ownership
+                                                                                </button>
+                                                                                <div className="Chat_workflow_status_container">
+                                                                                        <div className="workflow-stage-box">
+                                                                                                <span className="workflow-stage-label">Workflow Stage</span>
+                                                                                                <div className="workflow-badges">
+                                                                                                        {['draft', 'in_review', 'pre_submission', 'submitted'].map(status => {
+                                                                                                                const statusDetails = {
+                                                                                                                        draft: { text: 'Drafting', className: 'status-draft', message: "Initial drafting stage - Author + AI" },
+                                                                                                                        in_review: { text: 'Peer Review', className: 'status-review', message: "Wait while proposal sent for quality review to other users" },
+                                                                                                                        pre_submission: { text: 'Pre-Submission', className: 'status-submission', message: "Edit to address the comments from all your reviewers" },
+                                                                                                                        submitted: { text: 'Submitted', className: 'status-submitted', message: "Non editable Record of Initial version as submitted to donor" }
+                                                                                                                };
+                                                                                                                const isActive = proposalStatus === status;
+                                                                                                                const isClickable = (proposalStatus === 'draft' && (status === 'in_review' || status === 'submitted')) ||
+                                                                                                                        (proposalStatus === 'in_review' && (status === 'pre_submission' || status === 'draft')) ||
+                                                                                                                        (proposalStatus === 'pre_submission' && status === 'submitted');
+
+                                                                                                                return (
+                                                                                                                        <div key={status} className="status-badge-container">
+                                                                                                                                <button
+                                                                                                                                        type="button"
+                                                                                                                                        title={statusDetails[status].message}
+                                                                                                                                        className={`status-badge ${statusDetails[status].className} ${isActive ? 'active' : 'inactive'}`}
+                                                                                                                                        onClick={() => {
+                                                                                                                                                if (status === 'in_review' && proposalStatus === 'draft') setIsPeerReviewModalOpen(true);
+                                                                                                                                                if (status === 'draft' && proposalStatus === 'in_review') handleSetStatus('draft');
+                                                                                                                                                if (status === 'submitted' && (proposalStatus === 'pre_submission' || proposalStatus === 'draft')) handleSubmit();
+                                                                                                                                        }}
+                                                                                                                                        disabled={!isClickable && !isActive}
+                                                                                                                                        data-testid={`workflow-status-badge-${status}`}
+                                                                                                                                >
+                                                                                                                                        {statusDetails[status].text}
+                                                                                                                                </button>
+                                                                                                                                {statusHistory.includes(status) && !isActive && (
+                                                                                                                                        <button className="revert-btn" onClick={() => handleRevert(status)} data-testid={`revert-button-${status}`}>
+                                                                                                                                                Revert
+                                                                                                                                        </button>
+                                                                                                                                )}
+                                                                                                                        </div>
+                                                                                                                );
+                                                                                                        })}
+                                                                                                </div>
+                                                                                                {proposalStatus === 'pre_submission' && (
+                                                                                                        <button className="revert-btn" onClick={() => handleRevert('draft')} data-testid="revert-to-draft-button">
+                                                                                                                Revert to Draft
+                                                                                                        </button>
+                                                                                                )}
+                                                                                        </div>
+                                                                                </div>
+                                                                        </div>
+                                                                )}
+                                                        </div>
+
+                                                        {proposalStatus === 'submitted' && (
+                                                                <div className="contribution-id-container">
+                                                                        <label htmlFor="contribution-id">Contribution ID:</label>
+                                                                        <p>Only submitted proposal with a confirmed ContributionID are counted as approved</p>
+                                                                        <input
+                                                                                type="text"
+                                                                                id="contribution-id"
+                                                                                value={contributionId}
+                                                                                onChange={(e) => setContributionId(e.target.value)}
+                                                                                data-testid="contribution-id-input"
+                                                                        />
+                                                                        <CommonButton onClick={handleSaveContributionId} label="Save ID" data-testid="save-contribution-id-button" />
+                                                                </div>
+                                                        )}
+
+                                                        <div ref={proposalRef} className="Chat_proposalContainer" data-testid="proposal-container">
+                                                                {(proposalTemplate ? proposalTemplate.sections.map(s => s.section_name) : Object.keys(proposal)).map((sectionName, i) => {
+                                                                        const sectionObj = proposal[sectionName];
+                                                                        const sectionReviews = reviews.filter(r => r.section_name === sectionName);
+
+                                                                        if (!sectionObj) return null;
+                                                                        const kebabSectionName = toKebabCase(sectionName);
+
+                                                                        return (
+                                                                                <div key={i} className="Chat_proposalSection" data-testid={`proposal-section-${kebabSectionName}`}>
+                                                                                        <div className="Chat_sectionHeader" data-testid={`section-header-${kebabSectionName}`}>
+                                                                                                <div className="Chat_sectionTitle" data-testid={`section-title-${kebabSectionName}`}>{sectionName}</div>
+
+                                                                                                {!generateLoading && sectionObj.content && sectionObj.open && proposalStatus !== 'submitted' && (
+                                                                                                        <div className="Chat_sectionOptions" data-testid={`section-options-${kebabSectionName}`}>
+                                                                                                                {!isEdit || (selectedSection === i && isEdit) ? (
+                                                                                                                        <button
+                                                                                                                                type="button"
+                                                                                                                                onClick={() => handleEditClick(i)}
+                                                                                                                                style={(selectedSection === i && isEdit && regenerateSectionLoading) ? { pointerEvents: "none" } : {}}
+                                                                                                                                aria-label={`edit-section-${i}`}
+                                                                                                                                disabled={isReviewer || proposalStatus === 'in_review'}
+                                                                                                                                data-testid={`edit-save-button-${kebabSectionName}`}
+                                                                                                                        >
+                                                                                                                                <img src={(selectedSection === i && isEdit) ? save : edit} alt="" />
+                                                                                                                                <span>{(selectedSection === i && isEdit) ? "Save" : "Edit"}</span>
+                                                                                                                        </button>
+                                                                                                                ) : null}
+
+                                                                                                                {selectedSection === i && isEdit && (
+                                                                                                                        <button type="button" onClick={() => setIsEdit(false)} data-testid={`cancel-edit-button-${kebabSectionName}`}>
+                                                                                                                                <img src={cancel} alt="" />
+                                                                                                                                <span>Cancel</span>
+                                                                                                                        </button>
+                                                                                                                )}
+
+                                                                                                                {!isEdit && (
+                                                                                                                        <>
+                                                                                                                                <button type="button" onClick={() => handleCopyClick(i, sectionObj.content)} data-testid={`copy-button-${kebabSectionName}`}>
+                                                                                                                                        <img src={(selectedSection === i && isCopied) ? tick : copy} alt="" />
+                                                                                                                                        <span>{(selectedSection === i && isCopied) ? "Copied" : "Copy"}</span>
+                                                                                                                                </button>
+
+                                                                                                                                {!isReviewer && (
+                                                                                                                                        <button type="button" className='Chat_sectionOptions_regenerate' onClick={() => handleRegenerateIconClick(i)} disabled={proposalStatus !== 'draft'} data-testid={`regenerate-button-${kebabSectionName}`}>
+                                                                                                                                                <img src={regenerate} alt="" />
+                                                                                                                                                <span>Regenerate</span>
+                                                                                                                                        </button>
+                                                                                                                                )}
+                                                                                                                        </>
+                                                                                                                )}
+                                                                                                        </div>
+                                                                                                )}
+
+                                                                                                {sectionObj.content && !(isEdit && selectedSection === i) && (
+                                                                                                        <div className={`Chat_expanderArrow ${sectionObj.open ? "" : "closed"}`} onClick={() => handleExpanderToggle(i)} data-testid={`section-expander-${kebabSectionName}`}>
+                                                                                                                <img src={arrow} alt="" />
+                                                                                                        </div>
+                                                                                                )}
+                                                        </div>
+
+                                                                                        {(sectionObj.open || !sectionObj.content) && (
+                                                                                                <div className='Chat_sectionContent' data-testid={`section-content-${kebabSectionName}`}>
+                                                                                                        {sectionObj.content ? (
+                                                                                                                (selectedSection === i && isEdit) ? (
+                                                                                                                        <textarea value={editorContent} onChange={e => setEditorContent(e.target.value)} aria-label={`editor for ${sectionName}`} data-testid={`section-editor-${kebabSectionName}`} />
+                                                                                                                ) : (
+                                                                                                                        <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>{sectionObj.content}</Markdown>
+                                                                                                                )
+                                                                                                        ) : (
+                                                                                                                <div className='Chat_sectionContent_loading'>
+                                                                                                                        <span className='submitButtonSpinner' />
+                                                                                                                        <span className='Chat_sectionContent_loading'>Loading</span>
+                                                                                                                </div>
+                                                                                                        )}
+
+                                                                                                        {/* Unified SectionReview - handles both current user editing and peer reviews */}
+                                                <SectionReview
+                                                        key={`${sectionName}-${reviews.filter(r => r.section_name === sectionName).length}`}
+                                                        section={sectionName}
+                                                        type="proposal"
+                                                        reviewComment={reviewComments[sectionName]}
+                                                         status={reviewStatus[sectionName]}
+                                                         isReviewEditable={isReviewer || proposalStatus === 'draft'}
+                                                         isAuthorizedToReply={false}
+                                                         onCommentChange={handleCommentChange}
+                                                         onStatusChange={handleStatusChange}
+                                                         onDeleteComment={handleDeleteComment}
+                                                         isOwnerOfComment={true}
+                                                         isAdmin={isAdmin}
+                                                         previousFeedback={(reviews || []).filter(r => r.section_name === sectionName && !['removed', 'resolved', 'draft'].includes(r.status)).map(review => ({
+                                                                                                                          id: review.id,
+                                                                                                                          author: review.reviewer_name,
+                                                                                                                          review_text: review.review_text,
+                                                                                                                          severity: review.severity,
+                                                                                                                          type_of_comment: review.type_of_comment,
+                                                                                                                          status: review.status,
+                                                                                                                          created_at: review.created_at,
+                                                                                                                          isOwnedByCurrentUser: review.reviewer_id === currentUser?.id || review.reviewer_id === currentUser?.user_id,
+                                                        replies: review.author_response ? [
+                                                            {
+                                                                author: review.response_author || review.proposal_owner_name || 'Author',
+                                                                text: review.author_response,
+                                                                status: review.status,
+                                                                created_at: review.updated_at || review.created_at,
+                                                            }
+                                                        ] : []
+                                                                                                                  }))}
+                                                                                                                onReplyToFeedback={handleReplyToFeedback}
+                                                                                                                onSaveReply={handleSaveResponse}
+                                                                                                        />
+                                                                                                </div>
                                                                                         )}
                                                                                 </div>
-                                                                        )}
-                                                                </div>
-                                                        )
-                                                })}
-                                        </div>
-                                        {isReviewer && proposalStatus === 'in_review' && (
-                                                <div className="Chat_submitReviewBar">
-                                                        <CommonButton onClick={handleSubmitReview} label="Submit Peer Review" data-testid="submit-peer-review-button" />
-                                                </div>
+                                                                        );
+                                                                })}
+                                                        </div>
+                                                </>
                                         )}
-                                </> : ""}
-                        </main>
-
-                        <dialog ref={dialogRef} className='Chat_regenerate' data-testid="regenerate-dialog">
-                                <header className='Chat_regenerate_header'>
-                                        Regenerate — {proposalTemplate ? proposalTemplate.sections[selectedSection]?.section_name : Object.keys(proposal)[selectedSection]}
-                                        <img src={regenerateClose} alt="" onClick={() => { setRegenerateSectionLoading(false); setRegenerateInput(""); dialogRef.current.close() }} data-testid="regenerate-dialog-close-button" />
-                                </header>
-
-                                <main className='Chat_right'>
-                                        <section className='Chat_inputArea'>
-                                                <textarea id="regenerate-prompt" name="regenerate-prompt" value={regenerateInput} onChange={e => setRegenerateInput(e.target.value)} className='Chat_inputArea_prompt' data-testid="regenerate-dialog-prompt-input" />
-
-                                                <div className="Chat_inputArea_buttonContainer" style={{ marginTop: "20px" }}>
-                                                        <CommonButton icon={generateIcon} onClick={() => handleRegenerateButtonClick()} label="Regenerate" loading={regenerateSectionLoading} loadingLabel="Regenerating" disabled={!regenerateInput} data-testid="regenerate-dialog-regenerate-button" />
-                                                </div>
-                                        </section>
                                 </main>
-                        </dialog>
-                </div>
-        </Base>
+
+                                <dialog ref={dialogRef} className='Chat_regenerate' data-testid="regenerate-dialog">
+                                        <header className='Chat_regenerate_header'>
+                                                Regenerate — {proposalTemplate ? proposalTemplate.sections[selectedSection]?.section_name : Object.keys(proposal)[selectedSection]}
+                                                <img src={regenerateClose} alt="" onClick={() => { setRegenerateSectionLoading(false); setRegenerateInput(""); dialogRef.current.close() }} data-testid="regenerate-dialog-close-button" />
+                                        </header>
+
+                                        <main className='Chat_right'>
+                                                <section className='Chat_inputArea'>
+                                                        <textarea id="regenerate-prompt" name="regenerate-prompt" value={regenerateInput} onChange={e => setRegenerateInput(e.target.value)} className='Chat_inputArea_prompt' data-testid="regenerate-dialog-prompt-input" />
+
+                                                        <div className="Chat_inputArea_buttonContainer" style={{ marginTop: "20px" }}>
+                                                                <CommonButton icon={generateIcon} onClick={() => handleRegenerateButtonClick()} label="Regenerate" loading={regenerateSectionLoading} loadingLabel="Regenerating" disabled={!regenerateInput} data-testid="regenerate-dialog-regenerate-button" />
+                                                        </div>
+                                                </section>
+                                        </main>
+                                </dialog>
+                        </div>
+                </Base>
+        );
 }

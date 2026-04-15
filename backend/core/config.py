@@ -6,6 +6,8 @@ import json
 import logging
 
 from fastapi import HTTPException
+import os
+from backend.core.llm import llm as crew_llm
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -13,28 +15,28 @@ logger = logging.getLogger(__name__)
 # --- Install Configuration ---
 
 # Print Python version
-#logger.info("Python Version:")
-#logger.info(sys.version)
-#logger.info("-----")
+# logger.info("Python Version:")
+# logger.info(sys.version)
+# logger.info("-----")
 
 # Print Python Install Directory
-#logger.info("Python Install Directory:")
-#logger.info(sys.prefix)
-#logger.info("-----")
+# logger.info("Python Install Directory:")
+# logger.info(sys.prefix)
+# logger.info("-----")
 
 # Print the PATH environment variable
-#logger.info("PATH Environment Variable:")
-#logger.info(os.getenv("PATH"))
-#logger.info("-----")
+# logger.info("PATH Environment Variable:")
+# logger.info(os.getenv("PATH"))
+# logger.info("-----")
 
 # Print PYTHONPATH if it's set
-#logger.info("PYTHONPATH Environment Variable:")
-#pythonpath = os.getenv("PYTHONPATH")
-#if pythonpath:
+# logger.info("PYTHONPATH Environment Variable:")
+# pythonpath = os.getenv("PYTHONPATH")
+# if pythonpath:
 #    logger.info(pythonpath)
-#else:
+# else:
 #    logger.info("Not Set")
-#logger.info("-----")
+# logger.info("-----")
 
 # Print PYTHONHOME if it's set
 # logger.info("PYTHONHOME Environment Variable:")
@@ -49,7 +51,7 @@ logger = logging.getLogger(__name__)
 # try:
 #     # Importing the openai module
 #     import openai
-    
+
 #     # Print openai module version if available
 #     logger.info("OpenAI Module Version:")
 #     if hasattr(openai, '__version__'):
@@ -68,7 +70,6 @@ logger = logging.getLogger(__name__)
 #     logger.info("-----")
 
 
-
 # --- Application Configuration ---
 
 # Secret key for JWT encoding and decoding.
@@ -84,17 +85,17 @@ ENTRA_REDIRECT_URI = os.getenv("ENTRA_REDIRECT_URI")
 # --- Database Configuration ---
 
 # Load database credentials and settings from environment variables.
-db_username = os.getenv('DB_USERNAME')
-db_password = os.getenv('DB_PASSWORD')
+db_username = os.getenv("DB_USERNAME")
+db_password = os.getenv("DB_PASSWORD")
 
 
-db_host = os.getenv('DB_HOST')
-db_port = os.getenv('DB_PORT', '5432')
-db_name = os.getenv('DB_NAME')
+db_host = os.getenv("DB_HOST")
+db_port = os.getenv("DB_PORT", "5432")
+db_name = os.getenv("DB_NAME")
 
- 
+
 # Flag to enable/disable Google Cloud IAM database authentication.
-enable_iam_auth = os.getenv('ENABLE_IAM_AUTH', 'true').lower() == 'true'
+enable_iam_auth = os.getenv("ENABLE_IAM_AUTH", "true").lower() == "true"
 
 # Log the loaded database configuration for debugging purposes.
 # Note: Be cautious about logging sensitive information in production.
@@ -111,7 +112,9 @@ if not db_username:
     logger.error("db_username environment variable is missing or empty.")
     raise ValueError("db_username environment variable is missing or empty.")
 if not db_password:
-    logger.error("db_password environment variable is missing or empty. Cannot authenticate with database.")
+    logger.error(
+        "db_password environment variable is missing or empty. Cannot authenticate with database."
+    )
     raise ValueError("db_password environment variable is missing or empty.")
 if not db_host:
     logger.error("db_host environment variable is missing. Cannot connect to database.")
@@ -120,14 +123,16 @@ if not db_name:
     logger.error("db_name environment variable is missing. Cannot select database.")
     raise ValueError("db_name environment variable is missing.")
 if not db_password and not enable_iam_auth:
-    logger.warning("DB_PASSWORD is missing but ENABLE_IAM_AUTH is false. Connection may fail without credentials.")
+    logger.warning(
+        "DB_PASSWORD is missing but ENABLE_IAM_AUTH is false. Connection may fail without credentials."
+    )
 
 # --- Environment Detection ---
 
 # Determine if the application is running in a Google Cloud Platform environment.
 # This is used to decide whether to use the Cloud SQL Connector that leverage the Cloud SQL socket .
-on_gcp = os.getenv('DB_HOST') != 'localhost'
-#logger.info(f"Running on GCP: {on_gcp}")
+on_gcp = os.getenv("DB_HOST") != "localhost"
+# logger.info(f"Running on GCP: {on_gcp}")
 
 
 # --- CORS Configuration ---
@@ -135,11 +140,11 @@ on_gcp = os.getenv('DB_HOST') != 'localhost'
 # List of allowed origins for Cross-Origin Resource Sharing (CORS).
 # This controls which frontend URLs can make requests to the API.
 origins = [
-    #"https://edouard-legoupil.github.io", # Client in github page
-    "http://localhost:8503",      
-    "http://localhost:8503",          # Client for local dev 
-    "https://localhost:8080",               
-    "https://proposalgen-290826171799.europe-west9.run.app/" ## GCP deployment
+    # "https://edouard-legoupil.github.io", # Client in github page
+    "http://localhost:8503",
+    "http://localhost:8503",  # Client for local dev
+    "https://localhost:8080",
+    "https://proposalgen-290826171799.europe-west9.run.app/",  ## GCP deployment
 ]
 
 
@@ -157,9 +162,9 @@ TEMPLATE_SUB_DIRS = [
 ]
 
 
-
 class Settings:
     """Configuration settings for the application"""
+
     SECRET_KEY = SECRET_KEY
     ENTRA_TENANT_ID = ENTRA_TENANT_ID
     ENTRA_CLIENT_ID = ENTRA_CLIENT_ID
@@ -168,6 +173,13 @@ class Settings:
     BACKEND_DIR = BACKEND_DIR
     TEMPLATES_DIR = TEMPLATES_DIR
     TEMPLATE_SUB_DIRS = TEMPLATE_SUB_DIRS
+    llm_model = crew_llm
+    debug: bool = os.getenv("DEBUG", "false").lower() in ("1", "true")
+    # Persist incident analysis results to database/storage
+    persist_analysis_results: bool = os.getenv(
+        "PERSIST_ANALYSIS_RESULTS", "false"
+    ).lower() in ("1", "true")
+
 
 # Create a settings instance for easy access
 settings = Settings()
@@ -196,7 +208,7 @@ def get_available_templates():
     dirs_to_scan = [
         os.path.join(TEMPLATES_DIR, "proposal_template"),
         os.path.join(TEMPLATES_DIR, "concept_note_template"),
-        TEMPLATES_DIR, # Include knowledge card templates in root templates dir
+        TEMPLATES_DIR,  # Include knowledge card templates in root templates dir
     ]
 
     for scan_dir in dirs_to_scan:
@@ -207,7 +219,7 @@ def get_available_templates():
         is_concept_note_dir = scan_dir.endswith("concept_note_template")
 
         for filename in os.listdir(scan_dir):
-            if not filename.endswith('.json'):
+            if not filename.endswith(".json"):
                 continue
             template_path = os.path.join(scan_dir, filename)
             if not os.path.isfile(template_path):
@@ -231,7 +243,9 @@ def get_available_templates():
                 templates_map[filename] = filename
 
             except (json.JSONDecodeError, IOError) as e:
-                logger.error(f"Failed to read or parse template file: {filename}. Error: {e}")
+                logger.error(
+                    f"Failed to read or parse template file: {filename}. Error: {e}"
+                )
                 continue
 
     # Ensure "Not Yet Specified" option points to the default UNHCR template.
@@ -250,7 +264,9 @@ def load_proposal_template(template_name: str):
     available_templates = get_available_templates()
     if template_name not in available_templates.values():
         logger.error(f"Invalid or non-existent template requested: {template_name}")
-        raise HTTPException(status_code=400, detail=f"Template '{template_name}' not found.")
+        raise HTTPException(
+            status_code=400, detail=f"Template '{template_name}' not found."
+        )
 
     template_path = _find_template_path(template_name)
     if not template_path:
@@ -263,11 +279,14 @@ def load_proposal_template(template_name: str):
             logger.info(f"Proposal template loaded successfully from {template_path}")
             return proposal_data
     except json.JSONDecodeError:
-        logger.error(f"Error decoding JSON from proposal template file: {template_path}")
-        raise HTTPException(status_code=500, detail="Error parsing proposal template file.")
+        logger.error(
+            f"Error decoding JSON from proposal template file: {template_path}"
+        )
+        raise HTTPException(
+            status_code=500, detail="Error parsing proposal template file."
+        )
+
 
 # The global SECTIONS variable has been removed to prevent circular dependencies
 # during module initialization. Endpoints or functions that need the list of sections
 # should now load a specific template on-demand.
-
-

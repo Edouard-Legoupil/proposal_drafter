@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faThumbsDown, faTrash, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
+import { faThumbsDown, faTrash, faInfoCircle, faReply, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { Chip } from '@mui/material';
 import './SectionReview.css';
 
 const SEVERITY_OPTIONS = {
@@ -24,6 +25,9 @@ const SEVERITY_OPTIONS = {
     ],
 };
 
+// I have a system generating proposals based on requirements and knowledge cards and aliging with templates. I have a process to collect user feedback based on predifine incident types.
+// desing an agentic system that will turn them into 1. suggestions made to the user to quickly correct the proposal. 2. analysis of root cause of the issue. 3. suggested fix to the issue. 
+// here are the type of incident par criticality level.     
 const TYPE_OF_COMMENT_OPTIONS = {
     proposal: {
         P0: ['Factual Error', 'Compliance Violation', 'Security Risk'],
@@ -45,6 +49,34 @@ const TYPE_OF_COMMENT_OPTIONS = {
     }
 };
 
+// Helper functions for severity styling (consistent with QualityGate)
+const getSeverityColor = (sev) => {
+    switch (sev) {
+        case 'P0': return '#c0392b' // Red
+        case 'P1': return '#e67e22' // Orange  
+        case 'P2': return '#2980b9' // Blue
+        case 'P3': return '#27ae60' // Green
+        default: return '#7f8c8d' // Gray
+    }
+};
+
+const getSeverityIcon = (sev) => {
+    switch (sev) {
+        case 'P0': return faThumbsDown;
+        case 'P1': return faThumbsDown;
+        case 'P2': return faInfoCircle;
+        case 'P3': return faThumbsDown;
+        default: return faInfoCircle;
+    }
+};
+
+const formatDateTime = (value) => {
+    if (!value) return null;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+};
+
 export default function SectionReview({
     section,
     type,
@@ -57,18 +89,53 @@ export default function SectionReview({
     isOwnerOfComment,
     isAdmin,
     isAuthorizedToReply,
-    onSaveReply
+    onSaveReply,
+    previousFeedback = [], // Add previous feedback prop
+    onReplyToFeedback, // Function to handle replies to previous feedback
+    isExpanded = false // Control whether the comment section is expanded
 }) {
+    
+    // Debug logging
+    console.log(`SectionReview[${section}] - Props:`, {
+        section,
+        type,
+        reviewComment,
+        status,
+        isReviewEditable,
+        previousFeedback,
+        isExpanded
+    });
     const severityOptions = SEVERITY_OPTIONS[type] || SEVERITY_OPTIONS.proposal;
     const selectedSeverity = reviewComment?.severity || reviewComment?.type_of_comment || 'P2';
     const selectedTypeOfComment = reviewComment?.type_of_comment || '';
     const [hoveredSeverity, setHoveredSeverity] = useState(null);
-    
+    const [replyModalOpen, setReplyModalOpen] = useState(null);
+    const [replyText, setReplyText] = useState('');
+    const [replyStatus, setReplyStatus] = useState('pending');
+    const [localExpanded, setLocalExpanded] = useState(isExpanded);
+
     // Get available type_of_comment options based on selected severity
     const typeOfCommentOptions = TYPE_OF_COMMENT_OPTIONS[type]?.[selectedSeverity] || [];
-    
+
     // Validation: check if all required fields are filled
     const isSaveEnabled = reviewComment?.review_text?.trim() && selectedSeverity && selectedTypeOfComment;
+
+    const handleReplySubmit = (feedbackId) => {
+        if (replyText.trim() && onReplyToFeedback) {
+            onReplyToFeedback(feedbackId, replyText, replyStatus);
+            setReplyModalOpen(null);
+            setReplyText('');
+            setReplyStatus('pending');
+        }
+    };
+
+    const toggleExpand = () => {
+        const newExpanded = !localExpanded;
+        setLocalExpanded(newExpanded);
+        if (onStatusChange) {
+            onStatusChange(section, newExpanded ? 'down' : null);
+        }
+    };
 
     return (
         <div className="SectionReview_container">
@@ -76,106 +143,297 @@ export default function SectionReview({
                 <h3>{isReviewEditable ? "Review Feedback" : "Previous Feedback:"}</h3>
                 <div className="SectionReview_thumbs">
                     <button
-                        className={`thumb-btn down ${status === 'down' ? 'active' : ''}`}
-                        onClick={() => isReviewEditable && onStatusChange(section, 'down')}
-                        title="Report Issue"
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: status === 'down' ? '#d32f2f' : '#555', fontSize: '1.2rem', display: 'flex', alignItems: 'center', transition: 'color 0.2s' }}
+                        className={`thumb-btn down ${(status === 'down' || localExpanded) ? 'active' : ''}`}
+                        onClick={toggleExpand}
+                        title={localExpanded ? "Collapse" : "Report Issue"}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: (status === 'down' || localExpanded) ? '#d32f2f' : '#555', fontSize: '1.2rem', display: 'flex', alignItems: 'center', transition: 'color 0.2s' }}
                         type="button"
                     >
                         <FontAwesomeIcon icon={faThumbsDown} />
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600, marginLeft: 6 }}>Report Issue</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, marginLeft: 6 }}>
+                            {localExpanded ? 'Collapse' : 'Report Issue'}
+                        </span>
                     </button>
                 </div>
             </div>
 
-            {(status === 'down' || (reviewComment && reviewComment.review_text)) && (
-                <div className="SectionReview_comment_section">
+            {/* Always show previous feedback first, at the top */}
+            {console.log('SectionReview previousFeedback:', previousFeedback)}
+            {previousFeedback.length > 0 && (
+                <div className="SectionReview_previous_feedback_container">
+                    <h4>Previous Feedback:</h4>
+                    <div className="SectionReview_previous_feedback">
+                        {previousFeedback.map((feedback, index) => (
+                            <div key={index} className="SectionReview_previous_feedback_item">
+                                <div className="SectionReview_previous_feedback_header">
+                                    <div className="SectionReview_previous_feedback_info">
+                                        <span className="SectionReview_previous_feedback_author">{feedback.author || 'Anonymous'}</span>
+                                        {formatDateTime(feedback.created_at) && (
+                                            <span className="SectionReview_previous_feedback_date">
+                                                {formatDateTime(feedback.created_at)}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="SectionReview_previous_feedback_badges">
+                                        {/* Severity Chip - consistent with QualityGate */}
+                                        <Chip 
+                                            icon={<FontAwesomeIcon icon={getSeverityIcon(feedback.severity)} style={{ color: '#fff', fontSize: '0.8rem' }} />}
+                                            label={feedback.severity}
+                                            size="small"
+                                            sx={{
+                                                bgcolor: getSeverityColor(feedback.severity), 
+                                                color: '#fff',
+                                                fontWeight: 'bold',
+                                                marginRight: '8px'
+                                            }}
+                                        />
+                                        {/* Comment Type Chip */}
+                                        {feedback.type_of_comment && (
+                                            <Chip 
+                                                label={feedback.type_of_comment}
+                                                variant="outlined"
+                                                size="small"
+                                                sx={{
+                                                    borderColor: getSeverityColor(feedback.severity),
+                                                    color: getSeverityColor(feedback.severity),
+                                                    fontWeight: 'bold'
+                                                }}
+                                            />
+                                        )}
+                                        {/* Status Chip */}
+                                        {feedback.status && (
+                                            <Chip 
+                                                label={feedback.status}
+                                                size="small"
+                                                sx={{
+                                                    bgcolor: feedback.status === 'resolved' ? '#4caf50' : 
+                                                           feedback.status === 'acknowledged' ? '#2196f3' :
+                                                           feedback.status === 'needs-more-info' ? '#ff9800' :
+                                                           '#9e9e9e',
+                                                    color: '#fff',
+                                                    fontWeight: 'bold'
+                                                }}
+                                            />
+                                        )}
+                                    </div>
+                                    <div className="SectionReview_previous_feedback_actions">
+                                        {feedback.isOwnedByCurrentUser && (
+                                            <button
+                                                className="SectionReview_previous_feedback_remove"
+                                                onClick={() => onDeleteComment(feedback.id)}
+                                                title="Remove feedback"
+                                            >
+                                                <FontAwesomeIcon icon={faTrash} />
+                                            </button>
+                                        )}
+                                        <button
+                                            className="SectionReview_previous_feedback_reply"
+                                            onClick={() => setReplyModalOpen(feedback.id)}
+                                            title="Reply to feedback"
+                                        >
+                                            <FontAwesomeIcon icon={faReply} />
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="SectionReview_previous_feedback_content">
+                                    {feedback.review_text}
+                                </div>
+                                {/* Display replies in compact chat style */}
+                                {feedback.replies && feedback.replies.length > 0 && (
+                                    <div className="SectionReview_previous_feedback_replies">
+                                        {feedback.replies.map((reply, replyIndex) => {
+                                            const replyDate = formatDateTime(reply.created_at);
+                                            return (
+                                                <div key={replyIndex} className="SectionReview_previous_feedback_reply_item">
+                                                    <div className="SectionReview_previous_feedback_reply_header">
+                                                        <div className="SectionReview_previous_feedback_reply_meta">
+                                                            <span className="SectionReview_previous_feedback_reply_author">
+                                                                {reply.author || 'Author'}
+                                                            </span>
+                                                            {replyDate && (
+                                                                <span className="SectionReview_previous_feedback_reply_date">
+                                                                    {replyDate}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        {reply.status && (
+                                                            <div className={`SectionReview_previous_feedback_reply_status status-${reply.status}`}>
+                                                                {reply.status}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="SectionReview_previous_feedback_reply_content">
+                                                        {reply.text}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Current feedback section - only visible when editable and expanded */}
+            {(localExpanded || (isReviewEditable && status === 'down')) && (
+                <div
+                    className="SectionReview_comment_section"
+                    onClick={(e) => {
+                        // Don't trigger when clicking on buttons or inputs
+                        if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'TEXTAREA') {
+                            if (reviewComment?.review_text && status !== 'down' && isReviewEditable) {
+                                onStatusChange(section, 'down');
+                            }
+                        }
+                    }}
+                >
+                    {/* Comment input */}
                     <textarea
                         className="SectionReview_comment_textarea"
-                        placeholder={isReviewEditable ? `Enter your detailed feedback for ${section}...` : "No comments provided."}
+                        placeholder={`Enter your detailed feedback for ${section}...`}
                         value={reviewComment?.review_text || ""}
                         onChange={e => onCommentChange(section, 'review_text', e.target.value)}
                         disabled={!isReviewEditable}
                         id={`section-review-textarea-${section}`}
                     />
-                    
-                    <div className="SectionReview_severity-selector">
-                        <label className="SectionReview_severity-label">Incident Severity</label>
-                        <div className="SectionReview_severity-options">
-                            {severityOptions.map(opt => (
-                                <label
-                                    key={opt.value}
-                                    className={`SectionReview_severity-option ${selectedSeverity === opt.value ? 'selected' : ''} severity-${opt.value}`}
-                                    onMouseEnter={() => setHoveredSeverity(opt.value)}
-                                    onMouseLeave={() => setHoveredSeverity(null)}
-                                >
-                                    <input
-                                        type="radio"
-                                        name={`severity-${section}`}
-                                        value={opt.value}
-                                        checked={selectedSeverity === opt.value}
-                                        onChange={() => {
-                                            onCommentChange(section, 'severity', opt.value);
-                                            onCommentChange(section, 'type_of_comment', opt.value);
-                                        }}
-                                        disabled={!isReviewEditable}
-                                    />
-                                    <span className="SectionReview_severity-badge">{opt.value}</span>
-                                    <span className="SectionReview_severity-text">{opt.label.replace(`${opt.value} – `, '')}</span>
-                                    {hoveredSeverity === opt.value && (
-                                        <div className="severity-description-tooltip">
-                                            <FontAwesomeIcon icon={faInfoCircle} style={{ marginRight: '6px' }} />
-                                            {opt.description}
-                                        </div>
-                                    )}
-                                </label>
-                            ))}
-                        </div>
-                    </div>
 
-                    {/* Type of Comment Selection */}
-                    {typeOfCommentOptions.length > 0 && (
-                        <div className="SectionReview_type-selector">
-                            <label className="SectionReview_type-label">Type of Comment</label>
-                            <select
-                                className="SectionReview_type-select"
-                                value={selectedTypeOfComment}
+                    {/* Quick type-selector grid mapped by severity */}
+                    <div className="SectionReview_type-grid">
+                        <table>
+                            <thead>
+                                <tr>
+                                    {severityOptions.map(opt => {
+                                        const [, shortLabel] = opt.label.split('–').map(s => s.trim())
+                                        const headerText = shortLabel.split(':')[0]?.trim() || opt.value
+                                        return (
+                                            <th
+                                                key={opt.value}
+                                                title={opt.description}
+                                                className={`severity-${opt.value}`}
+                                            >
+                                                <FontAwesomeIcon
+                                                    icon={getSeverityIcon(opt.value)}
+                                                    style={{ marginRight: '4px' }}
+                                                />
+                                                {`${opt.value}-${headerText}`}
+                                            </th>
+                                        )
+                                    })}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {Array.from({ length: Math.max(...severityOptions.map(o => TYPE_OF_COMMENT_OPTIONS[type]?.[o.value]?.length || 0)) }).map((_, rowIndex) => (
+                                    <tr key={rowIndex}>
+                                        {severityOptions.map(opt => {
+                                            const choices = TYPE_OF_COMMENT_OPTIONS[type]?.[opt.value] || [];
+                                            const choice = choices[rowIndex];
+                                            return (
+                                                <td key={opt.value + rowIndex}>
+                                                    {choice && (
+                                                        <label className="SectionReview_grid-option">
+                                                            <input
+                                                                type="radio"
+                                                                name={`type-${section}`}
+                                                                value={choice}
+                                                                checked={selectedTypeOfComment === choice}
+                                                                onChange={() => {
+                                                                    onCommentChange(section, 'type_of_comment', choice);
+                                                                    onCommentChange(section, 'severity', opt.value);
+                                                                }}
+                                                                disabled={!isReviewEditable}
+                                                            />
+                                                            <span>{choice}</span>
+                                                        </label>
+                                                    )}
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        {/* Other type free-form input */}
+                        <div className="SectionReview_other-field">
+                            <label>Other:</label>
+                            <input
+                                type="text"
+                                className="SectionReview_other-input"
+                                placeholder="Custom comment type"
+                                value={reviewComment?.type_of_comment === 'Other' ? '' : reviewComment?.type_of_comment || ''}
                                 onChange={e => onCommentChange(section, 'type_of_comment', e.target.value)}
                                 disabled={!isReviewEditable}
-                            >
-                                <option value="">Select comment type...</option>
-                                {typeOfCommentOptions.map(option => (
-                                    <option key={option} value={option}>{option}</option>
-                                ))}
-                            </select>
+                            />
                         </div>
-                    )}
-
-                    {isReviewEditable && (isOwnerOfComment || isAdmin) && (
-                        <div className="SectionReview_actions_footer">
-                            <button
-                                className="btn btn--primary btn--small"
-                                onClick={() => onCommentChange(section, 'save', reviewComment?.review_text || '')}
-                                title="Save comment"
-                                type="button"
-                                disabled={!isSaveEnabled}
-                            >
-                                Save Comment
-                            </button>
-                            {reviewComment?.id && (
-                                <button
-                                    className="SectionReview_delete_comment_btn"
-                                    onClick={() => onDeleteComment(section)}
-                                    title="Delete comment"
-                                    type="button"
-                                >
-                                    <FontAwesomeIcon icon={faTrash} /> Remove
-                                </button>
-                            )}
                         </div>
-                    )}
+                    <div className="SectionReview_actions_footer">
+                        <button
+                            className="btn btn--primary btn--small"
+                            onClick={() => onCommentChange(section, 'save', reviewComment?.review_text || '')}
+                            title="Save comment"
+                            type="button"
+                            disabled={!isSaveEnabled}
+                        >
+                            Save Comment
+                        </button>
+                    </div>
                 </div>
             )}
+
+            {/* Reply Modal */}
+            {replyModalOpen !== null && (
+                <div className="SectionReview_reply_modal_overlay">
+                    <div className="SectionReview_reply_modal">
+                        <div className="SectionReview_reply_modal_header">
+                            <h4>Reply to Feedback</h4>
+                            <button
+                                className="SectionReview_reply_modal_close"
+                                onClick={() => setReplyModalOpen(null)}
+                            >
+                                <FontAwesomeIcon icon={faTimes} />
+                            </button>
+                        </div>
+                        <div className="SectionReview_reply_modal_body">
+                            <textarea
+                                className="SectionReview_reply_modal_textarea"
+                                placeholder="Write your reply..."
+                                value={replyText}
+                                onChange={(e) => setReplyText(e.target.value)}
+                            />
+                            <div className="SectionReview_reply_modal_status">
+                                <label>Status:</label>
+                                <select
+                                    value={replyStatus}
+                                    onChange={(e) => setReplyStatus(e.target.value)}
+                                >
+                                    <option value="pending">Pending</option>
+                                    <option value="resolved">Resolved</option>
+                                    <option value="acknowledged">Acknowledged</option>
+                                    <option value="needs-more-info">Needs More Info</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div className="SectionReview_reply_modal_footer">
+                            <button
+                                className="btn btn--secondary btn--small"
+                                onClick={() => setReplyModalOpen(null)}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="btn btn--primary btn--small"
+                                onClick={() => handleReplySubmit(replyModalOpen)}
+                                disabled={!replyText.trim()}
+                            >
+                                Save Reply
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+
 
             {/* Author Response Section */}
             {!isReviewEditable && isAuthorizedToReply && (

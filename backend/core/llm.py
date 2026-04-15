@@ -8,14 +8,8 @@ load_dotenv()
 
 #--- Azure OpenAI Configuration ---
 # Third-Party Libraries
-from langchain_openai import AzureChatOpenAI
 
-# Set environment variables required by the Azure OpenAI client.
-os.environ["AZURE_API_TYPE"] = "azure"
-os.environ["AZURE_API_BASE"] = os.getenv("AZURE_OPENAI_ENDPOINT")
-os.environ["AZURE_API_KEY"] = os.getenv("AZURE_OPENAI_API_KEY")
-os.environ["AZURE_API_VERSION"] = os.getenv("OPENAI_API_VERSION")
-os.environ["AZURE_DEPLOYMENT_NAME"] = os.getenv("AZURE_DEPLOYMENT_NAME")
+# Note: We now use CrewAI's native Azure LLM support instead of LangChain
 
 # Validate that all required environment variables are set.
 required_vars = [
@@ -30,15 +24,15 @@ if missing_vars:
 
 # --- Language Model Initialization ---
 
-# Initialize the AzureChatOpenAI language model.
+# Initialize the CrewAI LLM for Azure OpenAI
 # This object will be used by the CrewAI agents to interact with the Azure OpenAI service.
-llm = AzureChatOpenAI(
-    azure_deployment=os.getenv("AZURE_DEPLOYMENT_NAME"),
-    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+from crewai import LLM
+
+llm = LLM(
+    model=f"azure/{os.getenv('AZURE_DEPLOYMENT_NAME')}",
+    api_base=os.getenv("AZURE_OPENAI_ENDPOINT"),
     api_key=os.getenv("AZURE_OPENAI_API_KEY"),
     api_version=os.getenv("OPENAI_API_VERSION"),
-    model=f"azure/{os.getenv('AZURE_DEPLOYMENT_NAME')}",
-    max_retries=3,
     timeout=30
 )
 

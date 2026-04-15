@@ -58,11 +58,12 @@ export default function KnowledgeCard() {
     const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
     const [alertModalMessage, setAlertModalMessage] = useState('');
     const [currentUser, setCurrentUser] = useState(null);
-    const [sectionReviews, setSectionReviews] = useState({});
+    const [reviewComments, setReviewComments] = useState({});
+    const [reviews, setReviews] = useState([]);
     const [isReviewer, setIsReviewer] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
     const [reviewStatus, setReviewStatus] = useState({});
-    const autoSaveTimers = useRef({});
+
 
 
     // Use refs to track current state without stale closures
@@ -89,8 +90,44 @@ export default function KnowledgeCard() {
 
 
     function handleCommentChange(section, field, value) {
-        setSectionReviews(prev => {
-            const currentSectionReview = Array.isArray(prev[section]) ? {} : (prev[section] || {});
+        if (field === 'save') {
+            // Clear the draft after saving
+            setReviewComments(prev => {
+                const next = { ...prev };
+                delete next[section];
+                return next;
+            });
+            const commentData = {
+                ...reviewComments[section],
+                section_name: section,
+                review_text: value,
+                severity: reviewComments[section]?.severity || 'P2',
+                type_of_comment: reviewComments[section]?.type_of_comment || ''
+            };
+            const endpoint = `${API_BASE_URL}/knowledge-cards/${id}/review`;
+            try {
+                authenticatedFetch(endpoint, {
+                    method: "POST",
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ comments: [commentData] })
+                }).then(async res => {
+                    if (res.ok) {
+                        // Refresh all data to get the complete updated comment with ID and status
+                        await fetchData();
+                        // Reset status to show as previous feedback
+                        handleStatusChange(section, null);
+                    } else {
+                        const error = await res.json();
+                        console.error('Save failed:', error);
+                        alert('Failed to save comment: ' + (error.detail || 'Unknown error'));
+                    }
+                });
+            } catch (e) { console.error("Error saving comment", e); }
+            return;
+        }
+
+        setReviewComments(prev => {
+            const currentSectionReview = prev[section] || {};
             const updated = {
                 ...prev,
                 [section]: {
@@ -98,9 +135,6 @@ export default function KnowledgeCard() {
                     [field]: value
                 }
             };
-            if (field === 'review_text' || field === 'type_of_comment' || field === 'severity') {
-                autoSaveSection(section, updated[section]);
-            }
             return updated;
         });
     }
@@ -110,36 +144,56 @@ export default function KnowledgeCard() {
         handleCommentChange(section, 'rating', status);
     }
 
-    const autoSaveSection = useCallback((section, commentData) => {
-        if (autoSaveTimers.current[section]) clearTimeout(autoSaveTimers.current[section]);
-        autoSaveTimers.current[section] = setTimeout(async () => {
-            const endpoint = `${API_BASE_URL}/knowledge-cards/${id}/save-draft-review`;
-            try {
-                await authenticatedFetch(endpoint, {
-                    method: "POST",
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ comments: [{ section_name: section, ...commentData }] })
-                });
-            } catch (e) { void e; }
-        }, 800);
-    }, [id, authenticatedFetch]);
+
 
     async function handleDeleteComment(section) {
-        handleCommentChange(section, 'review_text', '');
-        handleCommentChange(section, 'rating', null);
-        handleStatusChange(section, null);
+        if (!window.confirm('Remove this comment?')) return;
+
+        try {
+            const commentData = reviewComments[section];
+            if (!commentData?.id) {
+                // If no ID, just clear local state (comment wasn't saved yet)
+                handleCommentChange(section, 'review_text', '');
+                handleCommentChange(section, 'rating', null);
+                handleStatusChange(section, null);
+                return;
+            }
+
+            // Change status to 'removed' instead of deleting
+            const endpoint = `${API_BASE_URL}/knowledge-cards/${id}/comment/${commentData.id}/status`;
+            const res = await authenticatedFetch(endpoint, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'removed' }),
+                credentials: 'include'
+            });
+
+            if (res.ok) {
+                // Refresh data to get updated status
+                await fetchData();
+                // Clear local state for this section
+                setReviewComments(prev => {
+                    const next = { ...prev };
+                    delete next[section];
+                    return next;
+                });
+                handleStatusChange(section, null);
+            } else {
+                console.error('Failed to remove comment');
+                alert('Failed to remove comment. Please try again.');
+            }
+        } catch (e) {
+            console.error('Error removing comment:', e);
+            alert('Error connecting to server. Please try again.');
+        }
     }
 
     async function handleSubmitReview() {
-        let comments = [];
-        if (!Array.isArray(sectionReviews)) {
-            comments = Object.entries(sectionReviews)
-                .filter(([k, v]) => !Array.isArray(v))
-                .map(([section_name, comment_data]) => ({
-                    section_name,
-                    ...comment_data
-                }));
-        }
+        const comments = Object.entries(reviewComments)
+            .map(([section_name, comment_data]) => ({
+                section_name,
+                ...comment_data
+            }));
 
         const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${id}/review`, {
             method: "POST",
@@ -152,19 +206,55 @@ export default function KnowledgeCard() {
     }
 
     const handleSaveResponse = async (section, responseText) => {
-        const endpoint = `${API_BASE_URL}/knowledge-cards/${id}/author-response`;
         try {
+            const commentData = reviewComments[section];
+            if (!commentData?.id) {
+                console.error('No comment ID found for author response');
+                return;
+            }
+
+            const endpoint = `${API_BASE_URL}/knowledge-cards/${id}/comment/${commentData.id}/response`;
             const res = await authenticatedFetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ section_name: section, author_response: responseText })
+                body: JSON.stringify({ author_response: responseText })
             });
+
             if (res.ok) {
-                // Reload data
-                fetchData();
+                // Refresh data to show the response
+                await fetchData();
+            } else {
+                console.error('Failed to save author response');
+                alert('Failed to save response. Please try again.');
             }
         } catch (error) {
             console.error('Error saving author response:', error);
+            alert('Error connecting to server. Please try again.');
+        }
+    };
+
+    const handleReplyToFeedback = async (feedbackId, replyText, replyStatus) => {
+        try {
+            const endpoint = `${API_BASE_URL}/knowledge-card-reviews/${feedbackId}/response`;
+            const res = await authenticatedFetch(endpoint, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    author_response: replyText,
+                    status: replyStatus
+                })
+            });
+
+            if (res.ok) {
+                // Refresh data to show the reply
+                await fetchData();
+            } else {
+                console.error('Failed to save reply to feedback');
+                alert('Failed to save reply. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error replying to feedback:', error);
+            alert('Error saving reply. Please try again.');
         }
     };
 
@@ -252,44 +342,29 @@ export default function KnowledgeCard() {
                     });
                     setIsAdmin(_isAdmin);
 
-                    if (!hasSpecificRole) {
-                        setIsReviewer(true);
+                    // Fetch all knowledge card reviews
+                    try {
+                        const reviewsEndpoint = `${API_BASE_URL}/knowledge-cards/${id}/all-reviews`;
+                        const prRes = await authenticatedFetch(reviewsEndpoint);
+                        if (prRes.ok) {
+                            const prData = await prRes.json();
+                            const allReviews = Array.isArray(prData.reviews) ? prData.reviews : [];
+                            setReviews(allReviews);
 
-                        try {
-                            const reviewRes = await authenticatedFetch(`${API_BASE_URL}/review-knowledge-card/${id}`);
-                            if (reviewRes.ok) {
-                                const reviewData = await reviewRes.json();
-                                const initialComments = {};
-                                const initialStatus = {};
-                                Object.keys(card.generated_sections || {}).forEach(section => {
-                                    const existing = reviewData.draft_comments?.[section] || {};
-                                    initialComments[section] = {
-                                        review_text: existing.review_text || "",
-                                        type_of_comment: existing.type_of_comment || "P2",
-                                        severity: existing.severity || "P2",
-                                        author_response: existing.author_response || "",
-                                        rating: existing.rating || null
-                                    };
-                                    initialStatus[section] = existing.rating || null;
-                                });
-                                setSectionReviews(initialComments);
-                                setReviewStatus(initialStatus);
+                            if (!hasSpecificRole) {
+                                setIsReviewer(true);
                             }
-                        } catch (e) { console.error("fetch review error", e) }
-                    } else {
-                        // fetch peer reviews normally if we are the owner
-                        try {
-                            const prRes = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${id}/all-reviews`);
-                            if (prRes.ok) {
-                                const prData = await prRes.json();
-                                const grouped = {};
-                                (prData.reviews || []).forEach(r => {
-                                    if (!grouped[r.section_name]) grouped[r.section_name] = [];
-                                    grouped[r.section_name].push(r);
-                                });
-                                setSectionReviews(grouped);
-                            }
-                        } catch (e) { }
+
+                            // We no longer pre-fill draft comments from history
+                            // to allow for multiple comments and avoid confusion with saved feedback.
+                            setReviewComments({});
+                        }
+                    } catch (e) {
+                        console.error("Failed to fetch knowledge card reviews:", e);
+                    }
+
+                    if (card.generated_sections) {
+                        setGeneratedSections(card.generated_sections);
                     }
 
                     setSummary(card.summary || '');
@@ -309,35 +384,6 @@ export default function KnowledgeCard() {
                     }
                     setReferences(card.references || []);
 
-                    // Properly handle generated sections
-                    if (card.generated_sections && typeof card.generated_sections === 'object') {
-                        // Ensure it's a non-empty object
-                        const sections = card.generated_sections;
-                        if (Object.keys(sections).length > 0) {
-                            setGeneratedSections(sections);
-                            // --- Fetch reviews for each section ---
-                            try {
-                                const reviewsRes = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${id}/all-reviews`, { credentials: 'include' });
-                                if (reviewsRes.ok) {
-                                    const { reviews } = await reviewsRes.json();
-                                    const bySection = {};
-                                    for (const review of reviews) {
-                                        if (review.section_name) {
-                                            if (!bySection[review.section_name]) bySection[review.section_name] = [];
-                                            bySection[review.section_name].push(review);
-                                        }
-                                    }
-                                    setSectionReviews(bySection);
-                                }
-                            } catch (err) {
-                                console.error('Failed to load knowledge card section reviews', err);
-                            }
-                        } else {
-                            setGeneratedSections(null);
-                        }
-                    } else {
-                        setGeneratedSections(null);
-                    }
 
                     // Fetch the template using the DERIVED linkType, not from the card data
                     if (determinedLinkType) {
@@ -1308,31 +1354,22 @@ export default function KnowledgeCard() {
                         <div className="kc-content-header">
                             <h2>Generated Content</h2>
                             <div className="kc-content-header-actions">
-                                <button
-                                    type="button"
-                                    className="review-mode-btn"
-                                    onClick={() => navigate(`/review/knowledge-card/${id}`)}
-                                    data-testid="switch-to-review-button"
-                                    title="Open the review interface for this knowledge card"
-                                >
-                                    🔍 Switch to Review Mode
-                                </button>
                                 <button type="button" onClick={() => handleExport("docx")} className="download-word-btn" data-testid="export-word-button">
                                     <img src={word_icon} alt="Download as Word" />
                                     Download as Word
                                 </button>
                             </div>
                         </div>
-                        {isReviewer && (
-                            <div style={{ marginBottom: "1rem", display: "flex", justifyContent: "flex-end" }}>
-                                <CommonButton onClick={handleSubmitReview} label="Submit Peer Review" />
-                            </div>
-                        )}
                         {proposal_template.sections.map(sectionInfo => {
                             const section = sectionInfo.section_name;
                             const content = generatedSections[section];
                             // Only show sections that have content
                             if (!content) return null;
+
+                            // Filter reviews for this specific section
+                            const sectionReviews = reviews.filter(r => r.section_name === section);
+                            const sectionReviewsCount = sectionReviews.length;
+                            console.log(`Rendering section [${section}]: has ${sectionReviewsCount} reviews`);
 
                             return (
                                 <div key={section} className={`kc-section ${editingSection === section ? 'kc-section-editing' : ''}`} data-testid={`generated-section-${section}`}>
@@ -1350,51 +1387,36 @@ export default function KnowledgeCard() {
                                             <div style={{ whiteSpace: 'pre-wrap' }}>{content}</div>
                                             {/* --- Knowledge Card Review Comments display --- */}
                                             <div className="kc-reviews-container">
-                                                {isReviewer ? (
-                                                    <SectionReview
-                                                        section={section}
-                                                        type="knowledge_card"
-                                                        reviewComment={Array.isArray(sectionReviews[section]) ? null : sectionReviews[section]}
-                                                        status={reviewStatus[section]}
-                                                        isReviewEditable={true}
-                                                        isAuthorizedToReply={false}
-                                                        onCommentChange={handleCommentChange}
-                                                        onStatusChange={handleStatusChange}
-                                                        onDeleteComment={handleDeleteComment}
-                                                        onSaveReply={handleSaveResponse}
-                                                        isOwnerOfComment={true}
-                                                        isAdmin={isAdmin}
-                                                    />
-                                                ) : (
-                                                    Array.isArray(sectionReviews[section]) && sectionReviews[section].length > 0 && (
-                                                        <>
-                                                            <h4>Peer Reviews</h4>
-                                                            {sectionReviews[section].map((comment, idx) => (
-                                                                <SectionReview
-                                                                    key={idx}
-                                                                    section={section}
-                                                                    type="knowledge_card"
-                                                                    reviewComment={{
-                                                                        review_text: comment.review_text,
-                                                                        type_of_comment: comment.type_of_comment,
-                                                                        severity: comment.severity,
-                                                                        author_response: comment.author_response,
-                                                                        rating: null
-                                                                    }}
-                                                                    status={null}
-                                                                    isReviewEditable={false}
-                                                                    isAuthorizedToReply={isAdmin || true} // Admin or Owner
-                                                                    onCommentChange={handleCommentChange}
-                                                                    onStatusChange={handleStatusChange}
-                                                                    onDeleteComment={handleDeleteComment}
-                                                                    onSaveReply={handleSaveResponse}
-                                                                    isOwnerOfComment={false}
-                                                                    isAdmin={isAdmin}
-                                                                />
-                                                            ))}
-                                                        </>
-                                                    )
-                                                )}
+                                                <SectionReview
+                                                    key={`${section}-${reviews.filter(r => r.section_name === section).length}`}
+                                                    section={section}
+                                                    type="knowledge_card"
+                                                    reviewComment={reviewComments[section]}
+                                                    status={reviewStatus[section]}
+                                                    isReviewEditable={isReviewer}
+                                                    isAuthorizedToReply={false}
+                                                    onCommentChange={handleCommentChange}
+                                                    onStatusChange={handleStatusChange}
+                                                    onDeleteComment={handleDeleteComment}
+                                                    onSaveReply={handleSaveResponse}
+                                                    isOwnerOfComment={true}
+                                                    isAdmin={isAdmin}
+                                                    previousFeedback={(reviews || []).filter(r => r.section_name === section && !['removed'].includes(r.status)).map(comment => ({
+                                                        id: comment.id,
+                                                        author: comment.reviewer_name || 'Reviewer',
+                                                        review_text: comment.review_text,
+                                                        severity: comment.severity,
+                                                        type_of_comment: comment.type_of_comment,
+                                                        status: comment.status,
+                                                        isOwnedByCurrentUser: comment.reviewer_id === (currentUser?.id || currentUser?.user_id),
+                                                         replies: comment.author_response ? [{
+                                                             author: comment.response_author || 'Author',
+                                                             text: comment.author_response,
+                                                             status: comment.status
+                                                         }] : []
+                                                    }))}
+                                                    onReplyToFeedback={handleReplyToFeedback}
+                                                />
                                             </div>
                                         </div>
                                     )}

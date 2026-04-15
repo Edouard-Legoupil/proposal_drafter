@@ -1,9 +1,10 @@
 import logging
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy import text
 from typing import Optional
 from backend.core.db import get_engine
-from backend.core.security import get_current_user
+from backend.core.security import get_current_user, is_system_admin
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -55,13 +56,19 @@ def _get_filter_clauses(
         where_clauses.append("p.user_id = :author_id")
         params["author_id"] = author_id
     if team_id:
-        where_clauses.append("p.user_id IN (SELECT id FROM users WHERE team_id = :team_id)")
+        where_clauses.append(
+            "p.user_id IN (SELECT id FROM users WHERE team_id = :team_id)"
+        )
         params["team_id"] = team_id
     if donor_id:
-        where_clauses.append("p.id IN (SELECT proposal_id FROM proposal_donors WHERE donor_id = :donor_id)")
+        where_clauses.append(
+            "p.id IN (SELECT proposal_id FROM proposal_donors WHERE donor_id = :donor_id)"
+        )
         params["donor_id"] = donor_id
     if donor_group:
-        where_clauses.append("p.id IN (SELECT pd.proposal_id FROM proposal_donors pd JOIN donors d ON pd.donor_id = d.id WHERE d.donor_group = :donor_group)")
+        where_clauses.append(
+            "p.id IN (SELECT pd.proposal_id FROM proposal_donors pd JOIN donors d ON pd.donor_id = d.id WHERE d.donor_group = :donor_group)"
+        )
         params["donor_group"] = donor_group
     if template_name:
         where_clauses.append("p.template_name = :template_name")
@@ -176,17 +183,23 @@ async def get_pipeline_kpis(
         COALESCE((SELECT AVG(seconds_to_submit) FROM cycle_times WHERE seconds_to_submit IS NOT NULL), 0) as avg_cycle_time
     FROM counts
     """
-    
+
     return robust_query(
-        q, 
-        params, 
+        q,
+        params,
         {
-            "total_funding": 0, "total_proposals": 0, "avg_value": 0, 
-            "total_donors": 0, "total_teams": 0, "total_users": 0,
-            "pct_under_review": 0, "pct_submitted": 0, "pct_deleted": 0,
-            "avg_cycle_time": 0
+            "total_funding": 0,
+            "total_proposals": 0,
+            "avg_value": 0,
+            "total_donors": 0,
+            "total_teams": 0,
+            "total_users": 0,
+            "pct_under_review": 0,
+            "pct_submitted": 0,
+            "pct_deleted": 0,
+            "avg_cycle_time": 0,
         },
-        lambda rows: rows[0]
+        lambda rows: rows[0],
     )
 
 
@@ -208,9 +221,18 @@ async def get_proposals_by_donor(
     template_name: Optional[str] = Query(None),
 ):
     where_clause, params = _get_filter_clauses(
-        current_user, filter_by, status, date_start, date_end, author_id, team_id, donor_id, donor_group, template_name
+        current_user,
+        filter_by,
+        status,
+        date_start,
+        date_end,
+        author_id,
+        team_id,
+        donor_id,
+        donor_group,
+        template_name,
     )
-    
+
     # Add exclusion for deleted unless explicitly requested
     if "status =" not in where_clause:
         if where_clause:
@@ -260,7 +282,16 @@ async def get_proposals_by_outcome(
     template_name: Optional[str] = Query(None),
 ):
     where_clause, params = _get_filter_clauses(
-        current_user, filter_by, status, date_start, date_end, author_id, team_id, donor_id, donor_group, template_name
+        current_user,
+        filter_by,
+        status,
+        date_start,
+        date_end,
+        author_id,
+        team_id,
+        donor_id,
+        donor_group,
+        template_name,
     )
 
     # Add exclusion for deleted unless explicitly requested
@@ -305,9 +336,18 @@ async def get_proposals_by_context(
     template_name: Optional[str] = Query(None),
 ):
     where_clause, params = _get_filter_clauses(
-        current_user, filter_by, status, date_start, date_end, author_id, team_id, donor_id, donor_group, template_name
+        current_user,
+        filter_by,
+        status,
+        date_start,
+        date_end,
+        author_id,
+        team_id,
+        donor_id,
+        donor_group,
+        template_name,
     )
-    
+
     if "status =" not in where_clause:
         if where_clause:
             where_clause += " AND p.status != 'deleted'"
@@ -357,9 +397,18 @@ async def get_proposals_by_team(
     template_name: Optional[str] = Query(None),
 ):
     where_clause, params = _get_filter_clauses(
-        current_user, filter_by, status, date_start, date_end, author_id, team_id, donor_id, donor_group, template_name
+        current_user,
+        filter_by,
+        status,
+        date_start,
+        date_end,
+        author_id,
+        team_id,
+        donor_id,
+        donor_group,
+        template_name,
     )
-    
+
     if "status =" not in where_clause:
         if where_clause:
             where_clause += " AND p.status != 'deleted'"
@@ -432,11 +481,20 @@ async def get_proposals_by_time(
         "year": "TO_CHAR(p.created_at, 'YYYY')",
     }
     period_expr = periods.get(period, periods["month"])
-    
+
     where_clause, params = _get_filter_clauses(
-        current_user, filter_by, status, date_start, date_end, author_id, team_id, donor_id, donor_group, template_name
+        current_user,
+        filter_by,
+        status,
+        date_start,
+        date_end,
+        author_id,
+        team_id,
+        donor_id,
+        donor_group,
+        template_name,
     )
-    
+
     if "status =" not in where_clause:
         if where_clause:
             where_clause += " AND p.status != 'deleted'"
@@ -468,6 +526,7 @@ async def get_proposals_by_time(
 # PROPOSAL PIPELINE METRICS
 #######################################
 # Each endpoint below includes: SQL aggregation, docstrings, filter support, sample output, and error/edge case handling
+
 
 @router.get(
     "/metrics/average-funding-amount",
@@ -522,6 +581,7 @@ async def get_proposal_volume(
             ],
         },
     )
+
 
 @router.get(
     "/metrics/funding-by-category",
@@ -635,6 +695,7 @@ async def get_proposal_trends(
         },
     )
 
+
 @router.get(
     "/metrics/conversion-rate",
     summary="Proposal Conversion Rate",
@@ -660,7 +721,8 @@ async def get_conversion_rate(
         return {"rate": 0}
 
 
-@router.get("/metrics/abandonment-rate",
+@router.get(
+    "/metrics/abandonment-rate",
     summary="Proposal Abandonment Rate",
     description="""
     Shows rate of proposals started but never submitted/funded.
@@ -668,7 +730,7 @@ async def get_conversion_rate(
     Sample: { "rate": 0.12, "total_abandoned": 4 }
     Always present.
     Returns zeroes if no abandoned proposals.
-    """
+    """,
 )
 async def get_abandonment_rate(
     current_user: dict = Depends(get_current_user),
@@ -692,14 +754,15 @@ async def get_abandonment_rate(
         return {"rate": 0, "total_abandoned": 0}
 
 
-@router.get("/metrics/edit-activity",
+@router.get(
+    "/metrics/edit-activity",
     summary="Proposal Edit Activity",
     description="""
     Tracks frequency of edits by team/author/time for proposals.
     - Use for identifying collaboration or bottlenecks.
     Output: { "authors": ["TeamA"], "edit_counts": [53] }
     Keys always present.
-    """
+    """,
 )
 async def get_edit_activity(
     current_user: dict = Depends(get_current_user),
@@ -726,19 +789,22 @@ async def get_edit_activity(
         params,
         {"labels": [], "data": []},
         lambda rows: {
-            "labels": [f"{row['edit_count']} Edits" for row in rows if "edit_count" in row],
+            "labels": [
+                f"{row['edit_count']} Edits" for row in rows if "edit_count" in row
+            ],
             "data": [row["proposal_count"] for row in rows if "proposal_count" in row],
         },
     )
 
 
-@router.get("/metrics/reviewer-activity",
+@router.get(
+    "/metrics/reviewer-activity",
     summary="Reviewer Activity Stats",
     description="""
     Shows number of reviews per team/member, identifying top reviewers and coverage.
     Output: { "reviewers": ["ReviewerA"], "reviews": [19] }
     Keys always present; empty arrays if none.
-    """
+    """,
 )
 async def get_reviewer_activity(
     current_user: dict = Depends(get_current_user),
@@ -763,14 +829,18 @@ async def get_reviewer_activity(
         where_clause += " AND psh.status = 'in_review'"
     else:
         where_clause = "WHERE psh.status = 'in_review'"
-    
+
     query = q.format(where_clause=where_clause)
     return robust_query(
         query,
         params,
         {"labels": [], "data": []},
         lambda rows: {
-            "labels": [f"{row['review_count']} Reviews" for row in rows if "review_count" in row],
+            "labels": [
+                f"{row['review_count']} Reviews"
+                for row in rows
+                if "review_count" in row
+            ],
             "data": [row["proposal_count"] for row in rows if "proposal_count" in row],
         },
     )
@@ -780,9 +850,11 @@ async def get_reviewer_activity(
 # KNOWLEDGE METRICS
 #######################################
 
-@router.get("/metrics/knowledge-cards",
+
+@router.get(
+    "/metrics/knowledge-cards",
     summary="Knowledge Card Counts",
-    description="Count of knowledge cards grouped by type/time/user/team. Keys always present."
+    description="Count of knowledge cards grouped by type/time/user/team. Keys always present.",
 )
 async def get_knowledge_cards(
     current_user: dict = Depends(get_current_user),
@@ -813,9 +885,10 @@ async def get_knowledge_cards(
     )
 
 
-@router.get("/metrics/knowledge-cards-history",
+@router.get(
+    "/metrics/knowledge-cards-history",
     summary="Knowledge Card Revision Counts",
-    description="Shows total revision count for each card, plus distribution. Output keys always present."
+    description="Shows total revision count for each card, plus distribution. Output keys always present.",
 )
 async def get_knowledge_cards_history(
     current_user: dict = Depends(get_current_user),
@@ -835,9 +908,10 @@ async def get_knowledge_cards_history(
     )
 
 
-@router.get("/metrics/reference",
+@router.get(
+    "/metrics/reference",
     summary="Reference Counts",
-    description="Shows number of external URLs referenced per card/type. Keys always present."
+    description="Shows number of external URLs referenced per card/type. Keys always present.",
 )
 async def get_reference_metrics(
     current_user: dict = Depends(get_current_user),
@@ -870,9 +944,10 @@ async def get_reference_metrics(
     )
 
 
-@router.get("/metrics/reference-usage",
+@router.get(
+    "/metrics/reference-usage",
     summary="Reference Usage Across Cards",
-    description="Shows count of URLs reused in multiple cards. Keys always present."
+    description="Shows count of URLs reused in multiple cards. Keys always present.",
 )
 async def get_reference_usage_metrics(
     current_user: dict = Depends(get_current_user),
@@ -894,9 +969,10 @@ async def get_reference_usage_metrics(
     )
 
 
-@router.get("/metrics/reference-issue",
+@router.get(
+    "/metrics/reference-issue",
     summary="Reference Issues/Errors",
-    description="Shows number of references that are broken/missing/with errors by error type. Returns empty if table missing."
+    description="Shows number of references that are broken/missing/with errors by error type. Returns empty if table missing.",
 )
 async def get_reference_issue_metrics(
     current_user: dict = Depends(get_current_user),
@@ -908,9 +984,10 @@ async def get_reference_issue_metrics(
     return {"error_types": [], "counts": []}
 
 
-@router.get("/metrics/card-edit-frequency",
+@router.get(
+    "/metrics/card-edit-frequency",
     summary="Knowledge Card Edit Frequency",
-    description="Shows the editing cadence/frequency for cards, useful for maintenance tracking. Output keys always present."
+    description="Shows the editing cadence/frequency for cards, useful for maintenance tracking. Output keys always present.",
 )
 async def get_card_edit_frequency(
     current_user: dict = Depends(get_current_user),
@@ -938,9 +1015,10 @@ async def get_card_edit_frequency(
     )
 
 
-@router.get("/metrics/card-impact-score",
+@router.get(
+    "/metrics/card-impact-score",
     summary="Knowledge Card Impact Score",
-    description="Shows aggregate usage/views/citations for each card. Returns empty if table missing."
+    description="Shows aggregate usage/views/citations for each card. Returns empty if table missing.",
 )
 async def get_card_impact_score(
     current_user: dict = Depends(get_current_user),
@@ -952,9 +1030,10 @@ async def get_card_impact_score(
     return {"card_ids": [], "impact_scores": []}
 
 
-@router.get("/metrics/knowledge-silos",
+@router.get(
+    "/metrics/knowledge-silos",
     summary="Knowledge Silos Across Teams",
-    description="Shows cards/references only used by one team (silo). Keys always present."
+    description="Shows cards/references only used by one team (silo). Keys always present.",
 )
 async def get_knowledge_silos(
     current_user: dict = Depends(get_current_user),
@@ -980,15 +1059,24 @@ async def get_knowledge_silos(
         {"isolated_card_ids": [], "silo_teams": []},
         lambda rows: {
             "isolated_card_ids": [
-                str(row["isolated_card_id"]) for row in rows if "isolated_card_id" in row
+                str(row["isolated_card_id"])
+                for row in rows
+                if "isolated_card_id" in row
             ],
             "silo_teams": [row["silo_team"] for row in rows if "silo_team" in row],
         },
     )
 
-@router.get("/metrics/quality-incidents",
+
+class IncidentRemovalRequest(BaseModel):
+    incident_id: str
+    artifact_type: str
+
+
+@router.get(
+    "/metrics/quality-incidents",
     summary="Consolidated Quality Incidents",
-    description="Returns all quality-related feedback (incidents) across Proposals, Knowledge Cards, and Donor Templates."
+    description="Returns all quality-related feedback (incidents) across Proposals, Knowledge Cards, and Donor Templates.",
 )
 async def get_quality_incidents(
     current_user: dict = Depends(get_current_user),
@@ -1003,12 +1091,16 @@ async def get_quality_incidents(
         pr.review_text,
         pr.type_of_comment,
         pr.severity,
+        pr.status,
         pr.created_at,
-        u.name as reviewer_name
+        u.name as reviewer_name,
+        creator.name as author_name,
+        'proposal' as artifact_type
     FROM proposal_peer_reviews pr
     JOIN proposals p ON pr.proposal_id = p.id
     JOIN users u ON pr.reviewer_id = u.id
-    WHERE pr.severity IS NOT NULL AND pr.severity != '')
+    JOIN users creator ON p.created_by = creator.id
+    WHERE pr.severity IS NOT NULL AND pr.severity != '' AND pr.status IS DISTINCT FROM 'removed')
     
     UNION ALL
     
@@ -1021,8 +1113,11 @@ async def get_quality_incidents(
         kcr.review_text,
         kcr.type_of_comment,
         kcr.severity,
+        kcr.status,
         kcr.created_at,
-        u.name as reviewer_name
+        u.name as reviewer_name,
+        creator.name as author_name,
+        'knowledge_card' as artifact_type
     FROM knowledge_card_reviews kcr
     JOIN knowledge_cards kc ON kcr.knowledge_card_id = kc.id
     LEFT JOIN
@@ -1033,7 +1128,8 @@ async def get_quality_incidents(
         field_contexts fc ON kc.field_context_id = fc.id
 
     JOIN users u ON kcr.reviewer_id = u.id
-    WHERE kcr.severity IS NOT NULL AND kcr.severity != '')
+    JOIN users creator ON kc.created_by = creator.id
+    WHERE kcr.severity IS NOT NULL AND kcr.severity != '' AND kcr.status IS DISTINCT FROM 'removed')
     
     UNION ALL
     
@@ -1046,26 +1142,66 @@ async def get_quality_incidents(
         tc.comment_text as review_text,
         tc.type_of_comment,
         tc.severity,
+        tc.status,
         tc.created_at,
-        u.name as reviewer_name
+        u.name as reviewer_name,
+        creator.name as author_name,
+        'donor_template' as artifact_type
     FROM donor_template_comments tc
     LEFT JOIN donor_template_requests tr ON tc.template_request_id = tr.id
     JOIN users u ON tc.user_id = u.id
-    WHERE tc.severity IS NOT NULL AND tc.severity != '')
+    JOIN users creator ON tr.created_by = creator.id
+    WHERE tc.severity IS NOT NULL AND tc.severity != '' AND tc.status IS DISTINCT FROM 'removed')
     
     ORDER BY created_at DESC
     """
-    
-    return robust_query(
-        q,
-        {},
-        [],
-        lambda rows: rows
-    )
 
-@router.get("/metrics/quality-kpis",
+    return robust_query(q, {}, [], lambda rows: rows)
+
+
+@router.post(
+    "/metrics/quality-incidents/remove",
+    summary="Remove a quality incident",
+    description="Marks the incident as removed so it disappears from all dashboards.",
+)
+async def remove_quality_incident(
+    payload: IncidentRemovalRequest,
+    current_user: dict = Depends(is_system_admin),
+):
+    artifact = payload.artifact_type
+    incident_id = payload.incident_id
+    table_map = {
+        "proposal": ("proposal_peer_reviews", True),
+        "knowledge_card": ("knowledge_card_reviews", True),
+        "donor_template": ("donor_template_comments", False),
+    }
+
+    if artifact not in table_map:
+        raise HTTPException(status_code=400, detail="Unsupported artifact type")
+
+    table_name, has_updated = table_map[artifact]
+    set_clause = "status = 'removed'"
+    if has_updated:
+        set_clause += ", updated_at = CURRENT_TIMESTAMP"
+    update_stmt = """
+        UPDATE {table_name}
+        SET {set_clause}
+        WHERE id = :incident_id
+    """
+    update_sql = text(update_stmt.format(table_name=table_name, set_clause=set_clause))
+
+    with get_engine().begin() as connection:
+        result = connection.execute(update_sql, {"incident_id": incident_id})
+        if result.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Incident not found")
+
+    return {"message": "Incident removed"}
+
+
+@router.get(
+    "/metrics/quality-kpis",
     summary="Quality KPIs",
-    description="Total incidents by type and severity."
+    description="Total incidents by type and severity.",
 )
 async def get_quality_kpis(
     current_user: dict = Depends(get_current_user),

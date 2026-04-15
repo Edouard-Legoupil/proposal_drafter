@@ -2,6 +2,7 @@
 import json
 import re
 import uuid
+import time
 from datetime import datetime
 import logging
 import tempfile
@@ -56,7 +57,9 @@ from backend.models.schemas import (
     AuthorResponseRequest,
     ReviewComment,
     SaveContributionIdRequest,
+    ArtifactType,
 )
+from backend.utils.incident_service import IncidentService
 
 
 from backend.utils.proposal_logic import (
@@ -69,16 +72,38 @@ from backend.api.knowledge import _save_knowledge_card_content_to_file
 # This router handles all endpoints related to the lifecycle of a proposal,
 
 
-
 # from creation and editing to listing and deletion.
 router = APIRouter()
-
 
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 FALLBACK_GENERATION_MESSAGE = "Generation issue: No content was generated for this section. You can try regenerating it or edit it manually."
+
+
+def _run_auto_analysis(artifact_type: ArtifactType, review_id: str):
+    try:
+        with get_engine().begin() as connection:
+            service = IncidentService(connection)
+            # 1. Immediate acknowledgment
+            initial_msg = "Your feedback has been received and is currently being analyzed by our AI agents. A detailed response will follow shortly."
+            service.repo.update_proposal_review(
+                review_id, initial_msg, "acknowledged", response_author="system"
+            )
+
+        # 2. Wait for 30 seconds
+        time.sleep(30)
+
+        # 3. Trigger full analysis
+        with get_engine().begin() as connection:
+            service = IncidentService(connection)
+            service.auto_analyze_review(artifact_type, review_id)
+    except Exception as e:
+        logger.error(
+            f"Background auto-analysis failed for {artifact_type}/{review_id}: {e}",
+            exc_info=True,
+        )
 
 
 @router.get("/templates")
@@ -1290,7 +1315,7 @@ async def get_sections():
     DEPRECATED: Use /templates/{template_name}/sections instead.
     """
     try:
-        default_template = load_proposal_template("unhcr_proposal_template.json")
+        default_template = load_proposal_template("proposal_template_unhcr.json")
         sections = [
             section.get("section_name")
             for section in default_template.get("sections", [])
@@ -1379,7 +1404,7 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
                 ]
 
                 template_name = (
-                    draft.template_name or "unhcr_proposal_template.json"
+                    draft.template_name or "proposal_template_unhcr.json"
                 )  # Default if null
                 proposal_template = load_proposal_template(template_name)
                 section_names = [
@@ -1419,7 +1444,7 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
             if not sample:
                 raise HTTPException(status_code=404, detail="Sample not found.")
 
-            template_name = sample.get("template_name", "unhcr_proposal_template.json")
+            template_name = sample.get("template_name", "proposal_template_unhcr.json")
             proposal_template = load_proposal_template(template_name)
 
             data_to_load = sample
@@ -1578,7 +1603,7 @@ async def upload_submitted_pdf(
                     text("SELECT template_name FROM proposals WHERE id = :id"),
                     {"id": proposal_id},
                 ).scalar()
-                or "unhcr_proposal_template.json"
+                or "proposal_template_unhcr.json"
             )
 
             proposal_template = load_proposal_template(template_name)
@@ -1730,6 +1755,7 @@ async def save_draft_review(
 async def submit_review(
     proposal_id: uuid.UUID,
     request: SubmitReviewRequest,
+    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
 ):
     """
@@ -1769,12 +1795,14 @@ async def submit_review(
             )
 
             # Insert each comment as a new row
+            new_review_ids = []
             for comment in request.comments:
                 if comment.review_text:  # Save if text exists
-                    connection.execute(
+                    result = connection.execute(
                         text("""
                             INSERT INTO proposal_peer_reviews (proposal_id, reviewer_id, proposal_status_history_id, section_name, review_text, type_of_comment, severity, status)
                             VALUES (:pid, :rid, :hid, :section, :text, :type, :severity, 'completed')
+                            RETURNING id::text
                         """),
                         {
                             "pid": str(proposal_id),
@@ -1786,6 +1814,11 @@ async def submit_review(
                             "severity": comment.severity,
                         },
                     )
+                    new_review_ids.append(result.scalar())
+
+        # Trigger analysis in background for each comment
+        for rid in new_review_ids:
+            background_tasks.add_task(_run_auto_analysis, ArtifactType.proposal, rid)
 
             # Check if all reviews are completed
             pending_reviews = connection.execute(
@@ -2088,7 +2121,7 @@ async def get_proposal_for_review(
                 }
 
             template_name = draft.template_name or "proposal_template_unhcr.json"
-            if template_name == "unhcr_proposal_template.json":
+            if template_name == "proposal_template_unhcr.json":
                 template_name = "proposal_template_unhcr.json"
 
             proposal_template = load_proposal_template(template_name)
@@ -2570,18 +2603,31 @@ async def get_peer_reviews(
                 )
 
             query = text("""
-                SELECT
-                    pr.id,
-                    pr.section_name,
-                    pr.review_text,
-                    pr.author_response,
-                    u.name as reviewer_name
+            SELECT
+                pr.id,
+                pr.section_name,
+                pr.review_text,
+                pr.author_response,
+                pr.author_response_by as response_author,
+                pr.status,
+                pr.severity,
+                pr.type_of_comment,
+                    pr.reviewer_id,
+                    pr.created_at,
+                    pr.updated_at,
+                    u.name as reviewer_name,
+                    owner.name as proposal_owner_name
                 FROM
                     proposal_peer_reviews pr
                 JOIN
                     users u ON pr.reviewer_id = u.id
+                JOIN
+                    proposals p ON pr.proposal_id = p.id
+                JOIN
+                    users owner ON p.user_id = owner.id
                 WHERE
                     pr.proposal_id = :pid
+                ORDER BY pr.created_at DESC
             """)
             result = connection.execute(query, {"pid": str(proposal_id)})
             reviews = [
@@ -2590,7 +2636,19 @@ async def get_peer_reviews(
                     "section_name": row.section_name,
                     "review_text": row.review_text,
                     "author_response": row.author_response,
+                    "response_author": row.response_author,
+                    "status": row.status,
+                    "severity": row.severity,
+                    "type_of_comment": row.type_of_comment,
+                    "reviewer_id": row.reviewer_id,
+                    "created_at": row.created_at.isoformat()
+                    if row.created_at
+                    else None,
+                    "updated_at": row.updated_at.isoformat()
+                    if row.updated_at
+                    else None,
                     "reviewer_name": row.reviewer_name,
+                    "proposal_owner_name": row.proposal_owner_name,
                 }
                 for row in result.mappings()
             ]
@@ -2606,6 +2664,7 @@ async def get_peer_reviews(
 async def add_proposal_comment(
     proposal_id: uuid.UUID,
     req: ReviewComment,
+    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
 ):
     """
@@ -2614,18 +2673,12 @@ async def add_proposal_comment(
     user_id = current_user["user_id"]
     try:
         with get_engine().begin() as connection:
-            # Upsert (insert or update) based on UNIQUE (proposal_id, reviewer_id, section_name)
-            # For safety, ensure only one draft comment per section for this user & proposal
-            connection.execute(
+            # We now allow multiple comments per section for the same user
+            result = connection.execute(
                 text("""
                     INSERT INTO proposal_peer_reviews (proposal_id, reviewer_id, section_name, review_text, type_of_comment, severity)
                     VALUES (:pid, :rid, :section, :text, :type, :severity)
-                    ON CONFLICT (proposal_id, reviewer_id, section_name)
-                    DO UPDATE SET
-                        review_text = EXCLUDED.review_text,
-                        type_of_comment = EXCLUDED.type_of_comment,
-                        severity = EXCLUDED.severity,
-                        updated_at = CURRENT_TIMESTAMP
+                    RETURNING id::text
                 """),
                 {
                     "pid": str(proposal_id),
@@ -2636,10 +2689,66 @@ async def add_proposal_comment(
                     "severity": req.severity or "Medium",
                 },
             )
-        return {"message": "Comment saved successfully."}
+            review_id = result.scalar()
+
+        # Trigger analysis in background
+        if review_id:
+            background_tasks.add_task(
+                _run_auto_analysis, ArtifactType.proposal, review_id
+            )
+
+        return {"message": "Comment saved successfully.", "comment_id": review_id}
     except Exception as e:
         logger.error(f"Error saving peer review comment: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to save comment.")
+
+
+@router.delete("/proposals/{proposal_id}/comment/{comment_id}")
+async def delete_proposal_comment(
+    proposal_id: uuid.UUID,
+    comment_id: uuid.UUID,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Delete (mark as removed) a comment for a proposal section.
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().begin() as connection:
+            # Check if the comment exists and belongs to the current user
+            existing_comment = connection.execute(
+                text("""
+                    SELECT id, reviewer_id FROM proposal_peer_reviews 
+                    WHERE id = :comment_id AND proposal_id = :proposal_id
+                """),
+                {"comment_id": str(comment_id), "proposal_id": str(proposal_id)},
+            ).fetchone()
+
+            if not existing_comment:
+                raise HTTPException(status_code=404, detail="Comment not found.")
+
+            # Convert to dict for clearer column access
+            existing_comment_dict = (
+                dict(existing_comment._mapping) if existing_comment else None
+            )
+            if str(existing_comment_dict["reviewer_id"]) != str(user_id):
+                raise HTTPException(
+                    status_code=403, detail="You can only delete your own comments."
+                )
+
+            # Mark the comment as removed instead of deleting it
+            connection.execute(
+                text("""
+                    UPDATE proposal_peer_reviews 
+                    SET status = 'removed', updated_at = CURRENT_TIMESTAMP
+                    WHERE id = :comment_id
+                """),
+                {"comment_id": str(comment_id)},
+            )
+        return {"message": "Comment marked as removed successfully."}
+    except Exception as e:
+        logger.error(f"Error deleting peer review comment: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to delete comment.")
 
 
 @router.put("/peer-reviews/{review_id}/response")
@@ -2674,12 +2783,17 @@ async def save_author_response(
                     detail="You do not have permission to respond to this review.",
                 )
 
-            # Update the author_response
+            # Update the author_response and status
             connection.execute(
                 text(
-                    "UPDATE proposal_peer_reviews SET author_response = :response, updated_at = CURRENT_TIMESTAMP WHERE id = :rid"
+                    "UPDATE proposal_peer_reviews SET author_response = :response, author_response_by = :author, status = COALESCE(:status, status), updated_at = CURRENT_TIMESTAMP WHERE id = :rid"
                 ),
-                {"response": request.author_response, "rid": str(review_id)},
+                {
+                    "response": request.author_response,
+                    "status": request.status,
+                    "rid": str(review_id),
+                    "author": current_user.get("name", ""),
+                },
             )
 
         return {"message": "Response saved successfully."}
@@ -2717,12 +2831,13 @@ async def reply_to_feedback(
             # Update the author_response and status
             connection.execute(
                 text(
-                    "UPDATE proposal_peer_reviews SET author_response = :response, status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :rid"
+                    "UPDATE proposal_peer_reviews SET author_response = :response, author_response_by = :author, status = :status, updated_at = CURRENT_TIMESTAMP WHERE id = :rid"
                 ),
                 {
                     "response": request.author_response,
                     "status": request.status,
-                    "rid": str(request.feedback_id)
+                    "rid": str(request.feedback_id),
+                    "author": current_user.get("name", ""),
                 },
             )
 

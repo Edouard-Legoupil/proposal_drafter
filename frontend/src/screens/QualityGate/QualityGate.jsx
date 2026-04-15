@@ -15,8 +15,17 @@ import {
     Paper,
     Chip,
     CircularProgress,
-    Alert
+    Alert,
+    TableSortLabel,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
+    Checkbox,
+    ListItemText,
+    OutlinedInput
 } from '@mui/material'
+import { useNavigate, Link } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTriangleExclamation, faCircleExclamation, faInfoCircle, faCheckCircle, faFilter } from '@fortawesome/free-solid-svg-icons'
 import './QualityGate.css'
@@ -24,36 +33,71 @@ import './QualityGate.css'
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
 
 export default function QualityGate() {
+    const navigate = useNavigate()
     const [incidents, setIncidents] = useState([])
-    const [kpis, setKpis] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
+    const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' })
+    const [isSystemAdmin, setIsSystemAdmin] = useState(false)
+    const [removingIncidentId, setRemovingIncidentId] = useState(null)
+    const defaultStatusFilters = ['submitted', 'pending', 'acknowledged', 'needs-more-info']
+    const [selectedStatuses, setSelectedStatuses] = useState(defaultStatusFilters)
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [incidentsRes, kpisRes] = await Promise.all([
-                    fetch(`${API_BASE_URL}/metrics/quality-incidents`, { credentials: 'include' }),
-                    fetch(`${API_BASE_URL}/metrics/quality-kpis`, { credentials: 'include' })
-                ])
+    const fetchQualityData = async (showLoader = true) => {
+        if (showLoader) {
+            setLoading(true)
+        }
+        try {
+            const incidentsRes = await fetch(`${API_BASE_URL}/metrics/quality-incidents`, { credentials: 'include' })
 
-                if (incidentsRes.ok && kpisRes.ok) {
-                    const incidentsData = await incidentsRes.json()
-                    const kpisData = await kpisRes.json()
-                    setIncidents(incidentsData)
-                    setKpis(kpisData)
-                } else {
-                    setError("Failed to fetch quality data")
-                }
-            } catch (err) {
-                console.error("Error fetching quality data:", err)
-                setError("Connection error")
-            } finally {
+            if (incidentsRes.ok) {
+                const incidentsData = await incidentsRes.json()
+                setIncidents(incidentsData)
+                setError(null)
+            } else {
+                setError("Failed to fetch quality data")
+            }
+        } catch (err) {
+            console.error("Error fetching quality data:", err)
+            setError("Connection error")
+        } finally {
+            if (showLoader) {
                 setLoading(false)
             }
         }
-        fetchData()
+    }
+
+    const fetchUserProfile = async () => {
+        try {
+            const profileRes = await fetch(`${API_BASE_URL}/profile`, { credentials: 'include' })
+            if (profileRes.ok) {
+                const profileData = await profileRes.json()
+                const roles = profileData.user?.roles || []
+                setIsSystemAdmin(roles.includes('system admin'))
+            }
+        } catch (err) {
+            console.error('Error fetching profile:', err)
+        }
+    }
+
+    useEffect(() => {
+        fetchQualityData()
+        fetchUserProfile()
     }, [])
+
+    const handleStatusFilterChange = (event) => {
+        const value = event.target.value
+        setSelectedStatuses(typeof value === 'string' ? value.split(',') : value)
+    }
+
+    // Sorting function
+    const requestSort = (key) => {
+        let direction = 'asc';
+        if (sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
 
     const getSeverityColor = (sev) => {
         switch (sev) {
@@ -75,19 +119,136 @@ export default function QualityGate() {
         }
     }
 
+    const getSourceLabel = (incident) => {
+        if (!incident.source_type) return 'Unknown source'
+        
+        const typeLabels = {
+            'proposal': 'Proposal',
+            'knowledge_card': 'Knowledge Card',
+            'template': 'Template'
+        }
+        
+        const typeLabel = typeLabels[incident.source_type] || incident.source_type
+        
+        if (incident.source_name) {
+            return `${typeLabel}: ${incident.source_name}`
+        }
+        
+        // Fallback when no name is available
+        return `${typeLabel} (ID: ${incident.source_id})`
+    }
+
+    const getSourceUrl = (incident) => {
+        try {
+            // Handle Donor Templates - use the incident ID to view the specific template
+            if (incident.source_type === 'Donor Template') {
+                if (incident.source_name) {
+                    // Keep the .json extension for donor templates
+                    return `/donor-templates/${incident.source_name}?type=file`;
+                }
+                return '/dashboard?tab=templates';
+            }
+            
+            // Handle Knowledge Cards - use the source ID to view the specific card
+            if (incident.source_type.includes('knowledge_card_') && incident.source_type.endsWith('_template.json')) {
+                // Extract the type from the filename (e.g., "knowledge_card_donor_template.json" -> "donor")
+                const typeMatch = incident.source_type.match(/knowledge_card_(\w+)_template\.json/);
+                const cardType = typeMatch ? typeMatch[1] : 'donor';
+                
+                // Use the source ID to construct a direct URL to the knowledge card
+                return `/knowledge-card/${incident.source_id}`;
+            }
+            
+            // Handle Proposals - use the source ID to view the specific proposal through chat
+            if (incident.source_type === 'Proposal') {
+                // Use the source ID to construct a URL to the chat interface for this proposal
+                return `/chat/${incident.source_id}`;
+            }
+            
+            // Fallback for unknown types
+            console.warn('Unknown source type pattern:', incident.source_type);
+            return '/dashboard';
+            
+        } catch (error) {
+            console.error('Error constructing URL for incident:', incident.incident_id || incident.id, error);
+            return '/dashboard';
+        }
+    }
+
+    const handleRemoveIncident = async (incident) => {
+        if (!window.confirm('Remove this incident and hide it from all dashboards?')) return
+        setRemovingIncidentId(incident.incident_id)
+        try {
+            const response = await fetch(`${API_BASE_URL}/metrics/quality-incidents/remove`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    incident_id: incident.incident_id,
+                    artifact_type: incident.artifact_type || 'proposal'
+                })
+            })
+
+            if (!response.ok) {
+                const payload = await response.json().catch(() => ({}))
+                throw new Error(payload.detail || 'Failed to remove incident')
+            }
+
+            await fetchQualityData(false)
+        } catch (err) {
+            console.error('Error removing incident:', err)
+            window.alert(err.message || 'Unable to remove this comment')
+        } finally {
+            setRemovingIncidentId(null)
+        }
+    }
+
     // Process KPI for total by type
-    const incidentsByType = kpis.reduce((acc, k) => {
-        if (!acc[k.type]) acc[k.type] = 0
-        acc[k.type] += parseInt(k.count)
+    const statusOptions = ['submitted','pending','acknowledged','needs-more-info','resolved','removed']
+
+    const formatStatusLabel = (status) => {
+        if (!status) return ''
+        return status
+            .split('-')
+            .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+            .join(' ')
+    }
+
+    const filteredIncidents = incidents.filter(incident => {
+        const status = incident.status ? incident.status.toLowerCase() : ''
+        if (selectedStatuses.length === 0) return true
+        return selectedStatuses.some(s => s.toLowerCase() === status)
+    })
+
+    const incidentsByType = filteredIncidents.reduce((acc, incident) => {
+        const type = incident.type_of_comment || 'Unknown'
+        acc[type] = (acc[type] || 0) + 1
         return acc
     }, {})
 
-    // Process KPI for total by severity
-    const incidentsBySeverity = kpis.reduce((acc, k) => {
-        if (!acc[k.severity]) acc[k.severity] = 0
-        acc[k.severity] += parseInt(k.count)
+    const incidentsBySeverity = filteredIncidents.reduce((acc, incident) => {
+        const severity = incident.severity || 'Unknown'
+        acc[severity] = (acc[severity] || 0) + 1
         return acc
     }, {})
+
+    const getSortedIncidents = () => {
+        const sortableIncidents = [...filteredIncidents]
+        if (sortConfig.key) {
+            sortableIncidents.sort((a, b) => {
+                const aValue = a[sortConfig.key]
+                const bValue = b[sortConfig.key]
+                if (aValue < bValue) {
+                    return sortConfig.direction === 'asc' ? -1 : 1
+                }
+                if (aValue > bValue) {
+                    return sortConfig.direction === 'asc' ? 1 : -1
+                }
+                return 0
+            })
+        }
+        return sortableIncidents
+    }
 
     if (loading) return (
         <Base>
@@ -145,27 +306,102 @@ export default function QualityGate() {
 
                 {/* Details Table */}
                 <TableContainer component={Paper} className="incidents-table-container glass">
-                    <div className="table-header">
-                        <Typography variant="h6">Incident Details</Typography>
-                        <div className="filter-group">
-                             <FontAwesomeIcon icon={faFilter} />
-                             <span>Latest {incidents.length} tickets</span>
+                        <div className="table-header">
+                            <Typography variant="h6">Incident Details</Typography>
+                            <div className="table-header-controls">
+                            <FormControl size="small" sx={{ minWidth: 240 }} className="StatusFilter">
+                                <InputLabel>Status</InputLabel>
+                                <Select
+                                    multiple
+                                    value={selectedStatuses}
+                                    onChange={handleStatusFilterChange}
+                                    input={<OutlinedInput label="Status" />}
+                                    renderValue={(selected) => (selected || []).map(formatStatusLabel).join(', ')}
+                                >
+                                    {statusOptions.map(option => (
+                                        <MenuItem key={option} value={option}>
+                                            <Checkbox checked={selectedStatuses.includes(option)} />
+                                            <ListItemText primary={formatStatusLabel(option)} />
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
                         </div>
                     </div>
                     <Table stickyHeader>
                         <TableHead>
                             <TableRow>
-                                <TableCell>Severity</TableCell>
-                                <TableCell>Source</TableCell>
-                                <TableCell>Section</TableCell>
-                                <TableCell>Type</TableCell>
+                                <TableCell>
+                                    <TableSortLabel
+                                        active={sortConfig.key === 'severity'}
+                                        direction={sortConfig.key === 'severity' ? sortConfig.direction : 'asc'}
+                                        onClick={() => requestSort('severity')}
+                                    >
+                                        Severity
+                                    </TableSortLabel>
+                                </TableCell>
+                                <TableCell>
+                                    <TableSortLabel
+                                        active={sortConfig.key === 'source_type'}
+                                        direction={sortConfig.key === 'source_type' ? sortConfig.direction : 'asc'}
+                                        onClick={() => requestSort('source_type')}
+                                    >
+                                        Source
+                                    </TableSortLabel>
+                                </TableCell>
+                                <TableCell>
+                                    <TableSortLabel
+                                        active={sortConfig.key === 'section_name'}
+                                        direction={sortConfig.key === 'section_name' ? sortConfig.direction : 'asc'}
+                                        onClick={() => requestSort('section_name')}
+                                    >
+                                        Section
+                                    </TableSortLabel>
+                                </TableCell>
+                                <TableCell>
+                                    <TableSortLabel
+                                        active={sortConfig.key === 'type_of_comment'}
+                                        direction={sortConfig.key === 'type_of_comment' ? sortConfig.direction : 'asc'}
+                                        onClick={() => requestSort('type_of_comment')}
+                                    >
+                                        Type
+                                    </TableSortLabel>
+                                </TableCell>
+                                <TableCell>
+                                    <TableSortLabel
+                                        active={sortConfig.key === 'status'}
+                                        direction={sortConfig.key === 'status' ? sortConfig.direction : 'asc'}
+                                        onClick={() => requestSort('status')}
+                                    >
+                                        Status
+                                    </TableSortLabel>
+                                </TableCell>
                                 <TableCell>Description</TableCell>
-                                <TableCell>Reviewer</TableCell>
-                                <TableCell>Date</TableCell>
+                                <TableCell>
+                                    <TableSortLabel
+                                        active={sortConfig.key === 'reviewer_name'}
+                                        direction={sortConfig.key === 'reviewer_name' ? sortConfig.direction : 'asc'}
+                                        onClick={() => requestSort('reviewer_name')}
+                                    >
+                                        Reviewer
+                                    </TableSortLabel>
+                                </TableCell>
+                                <TableCell>
+                                    <TableSortLabel
+                                        active={sortConfig.key === 'created_at'}
+                                        direction={sortConfig.key === 'created_at' ? sortConfig.direction : 'asc'}
+                                        onClick={() => requestSort('created_at')}
+                                    >
+                                        Date
+                                    </TableSortLabel>
+                                </TableCell>
+                                {isSystemAdmin && (
+                                    <TableCell align="center">Actions</TableCell>
+                                )}
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {incidents.map((incident) => (
+                            {getSortedIncidents().map((incident) => (
                                 <TableRow key={incident.id} hover>
                                     <TableCell>
                                         <Chip 
@@ -180,25 +416,74 @@ export default function QualityGate() {
                                         />
                                     </TableCell>
                                     <TableCell>
-                                        <Box>
-                                            <Typography variant="body2" fontWeight="bold">{incident.source_type}</Typography>
-                                            <Typography variant="caption" color="textSecondary">{incident.source_name}</Typography>
-                                        </Box>
+                                        {(() => {
+                                            const url = getSourceUrl(incident);
+                                            console.log('Source URL:', url, 'for incident:', incident);
+                                            
+                                            return (
+                                                <Link
+                                                    to={url}
+                                                    className="source-link"
+                                                    title={`View ${getSourceLabel(incident)}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    style={{ 
+                                                        display: 'block', 
+                                                        color: 'inherit', 
+                                                        textDecoration: 'none',
+                                                        width: '100%'
+                                                    }}
+                                                >
+                                                    <Typography variant="body2" sx={{ 
+                                                        '&:hover': {
+                                                            textDecoration: 'underline'
+                                                        }
+                                                    }}>
+                                                        {getSourceLabel(incident)}
+                                                    </Typography>
+                                                </Link>
+                                            );
+                                        })()}
                                     </TableCell>
                                     <TableCell>{incident.section_name || '-'}</TableCell>
                                     <TableCell>
                                         <Chip label={incident.type_of_comment} variant="outlined" size="small" />
                                     </TableCell>
+                                    <TableCell>
+                                        <Chip 
+                                            label={incident.status || 'active'}
+                                            size="small"
+                                            sx={{
+                                                bgcolor: incident.status === 'resolved' ? '#4caf50' : 
+                                                       incident.status === 'acknowledged' ? '#2196f3' :
+                                                       incident.status === 'needs-more-info' ? '#ff9800' :
+                                                       '#9e9e9e',
+                                                color: '#fff',
+                                                fontWeight: 'bold'
+                                            }}
+                                        />
+                                    </TableCell>
                                     <TableCell className="review-text-cell" title={incident.review_text}>
                                         {incident.review_text}
                                     </TableCell>
                                     <TableCell>{incident.reviewer_name}</TableCell>
-                                    <TableCell>{new Date(incident.created_at).toLocaleDateString()}</TableCell>
+                                    <TableCell>{new Date(incident.created_at).toLocaleString()}</TableCell>
+                                    {isSystemAdmin && (
+                                        <TableCell align="center">
+                                            <button
+                                                className="QualityGate_removeButton"
+                                                onClick={() => handleRemoveIncident(incident)}
+                                                disabled={removingIncidentId === incident.incident_id}
+                                            >
+                                                {removingIncidentId === incident.incident_id ? 'Removing…' : 'Remove'}
+                                            </button>
+                                        </TableCell>
+                                    )}
                                 </TableRow>
                             ))}
                             {incidents.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={7} align="center">No quality incidents logged.</TableCell>
+                                    <TableCell colSpan={isSystemAdmin ? 9 : 8} align="center">No quality incidents logged.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>

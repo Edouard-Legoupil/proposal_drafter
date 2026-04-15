@@ -15,9 +15,8 @@ export default function DonorTemplateDetail() {
     const navigate = useNavigate()
 
     const [template, setTemplate] = useState(null)
-    const [commentText, setCommentText] = useState('')
-    const [commentSection, setCommentSection] = useState('')
-    const [commentSeverity, setCommentSeverity] = useState('P2')
+    const [reviewComments, setReviewComments] = useState({})
+    const [reviewStatus, setReviewStatus] = useState({})
     const [isSubmittingComment, setIsSubmittingComment] = useState(false)
     const [error, setError] = useState(null)
     const [currentUser, setCurrentUser] = useState(null)
@@ -106,71 +105,71 @@ export default function DonorTemplateDetail() {
                     ))}
                 </ol>
 
-                {/* HLI Comments History */}
-                {template.comments?.filter(c => c.section_name === hliName).length > 0 && (
-                    <div className="section-comments-history" style={{ borderTop: 'none', marginTop: '0.5rem', paddingTop: 0 }}>
-                        <div className="shared-history-label">Previous Feedback:</div>
-                        {template.comments.filter(c => c.section_name === hliName).map(c => {
-                            const isOwnerOfComment = c.user_id && (c.user_id === currentUser?.id || c.user_id === currentUser?.user_id);
-                            const isAdmin = currentUser?.is_admin || currentUser?.roles?.some(r => r === 'admin' || r?.name === 'admin');
-                            return (
-                                <div key={c.id} className={`mini-comment ${c.rating === 'up' ? 'positive' : 'negative'}`}>
-                                    <div className="mini-comment-header">
-                                        <strong>{c.user}</strong>
-                                        {c.severity && <span className={`mini-severity-badge sev-${c.severity}`}>{c.severity}</span>}
-                                        <span className="mini-comment-date">{new Date(c.created_at).toLocaleDateString()}</span>
-                                        {(isOwnerOfComment || isAdmin) && (
-                                            <button
-                                                className="mini-delete-btn"
-                                                onClick={() => handleDeleteTemplateComment(c.id)}
-                                                title="Delete comment"
-                                            >
-                                                <FontAwesomeIcon icon={faTrash} />
-                                            </button>
-                                        )}
-                                    </div>
-                                    <div className="mini-comment-body">
-                                        <FontAwesomeIcon icon={c.rating === 'up' ? faCircleInfo : faThumbsDown} style={{ marginRight: '6px', opacity: 0.6 }} />
-                                        {c.text}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-
                 {/* HLI Inline Comment Form wrapped in SectionReview */}
                 {(() => {
-                    const existing = template.comments?.find(c => c.section_name === hliName && c.user === currentUser?.name);
+                    const existingSelf = template.comments?.find(c => c.section_name === hliName && (c.user_id === currentUser?.id || c.user_id === currentUser?.user_id));
+                    
                     return (
                         <SectionReview
                             section={hliName}
                             type="template"
-                            status={commentSection === hliName ? 'down' : rating}
-                            reviewComment={{
-                                id: existing?.id,
-                                review_text: commentSection === hliName ? commentText : comment,
-                                severity: commentSeverity
-                            }}
+                            status={reviewStatus[hliName]}
+                            reviewComment={reviewComments[hliName]}
                             isReviewEditable={true}
                             isAuthorizedToReply={false}
-                            onSaveReply={handleAddComment}
+                            onSaveReply={handleSaveResponse}
                             onStatusChange={(sec, stat) => {
-                                setCommentSection(sec);
-                                setCommentText(comment);
+                                setReviewStatus(prev => ({ ...prev, [sec]: stat }));
+                                if (stat === 'down' && !reviewComments[sec] && existingSelf) {
+                                    setReviewComments(prev => ({ 
+                                        ...prev, 
+                                        [sec]: { 
+                                            id: existingSelf.id,
+                                            review_text: existingSelf.text,
+                                            severity: existingSelf.severity || 'P2',
+                                            type_of_comment: existingSelf.type_of_comment || ''
+                                        } 
+                                    }));
+                                }
                             }}
                             onCommentChange={(sec, field, val) => {
-                                if (field === 'save') handleAddComment();
-                                else if (field === 'review_text') setCommentText(val);
-                                else if (field === 'severity' || field === 'type_of_comment') setCommentSeverity(val);
+                                if (field === 'save') {
+                                    handleSaveComment(sec, val);
+                                } else {
+                                    setReviewComments(prev => ({
+                                        ...prev,
+                                        [sec]: { ...prev[sec], [field]: val }
+                                    }));
+                                }
                             }}
-                            onDeleteComment={() => {
-                                if (existing) handleDeleteTemplateComment(existing.id);
-                                setCommentSection('');
-                                setCommentText('');
+                            onDeleteComment={(sec) => {
+                                const commentId = reviewComments[sec]?.id || existingSelf?.id;
+                                if (commentId) handleDeleteTemplateComment(commentId);
+                                setReviewComments(prev => {
+                                    const next = { ...prev };
+                                    delete next[sec];
+                                    return next;
+                                });
+                                setReviewStatus(prev => ({ ...prev, [sec]: null }));
                             }}
                             isOwnerOfComment={true}
                             isAdmin={currentUser?.is_admin}
+                            previousFeedback={template.comments?.filter(c => c.section_name === hliName && c.status !== 'removed').map(c => ({
+                                id: c.id,
+                                author: c.user,
+                                review_text: c.text,
+                                severity: c.severity || 'P2',
+                                type_of_comment: c.type_of_comment,
+                                status: c.status,
+                                isOwnedByCurrentUser: c.user_id === (currentUser?.id || currentUser?.user_id),
+                                replies: c.author_response ? [{
+                                    author: 'Author',
+                                    text: c.author_response,
+                                    status: c.status
+                                }] : []
+                            })) || []}
+                            onReplyToFeedback={handleReplyToFeedback}
+                            isExpanded={reviewStatus[hliName] === 'down'}
                         />
                     );
                 })()}
@@ -291,75 +290,71 @@ export default function DonorTemplateDetail() {
                                 </div>
                             )}
 
-                            {/* Section Comments History (Visible to all users) */}
-                            {template.comments?.filter(c => c.section_name === name).length > 0 && (
-                                <div className="section-comments-history">
-                                    <div className="shared-history-label">Previous Feedback:</div>
-                                    {template.comments.filter(c => c.section_name === name).map(c => {
-                                        const isOwnerOfComment = c.user_id && (c.user_id === currentUser?.id || c.user_id === currentUser?.user_id);
-                                        const isAdmin = currentUser?.is_admin || currentUser?.roles?.some(r => r === 'admin' || r?.name === 'admin');
-                                        return (
-                                            <div key={c.id} className={`mini-comment ${c.rating === 'up' ? 'positive' : 'negative'}`}>
-                                                <div className="mini-comment-header">
-                                                    <strong>{c.user}</strong>
-                                                    {c.severity && <span className={`mini-severity-badge sev-${c.severity}`}>{c.severity}</span>}
-                                                    <span className="mini-comment-date">{new Date(c.created_at).toLocaleDateString()}</span>
-                                                    {(isOwnerOfComment || isAdmin) && (
-                                                        <button
-                                                            className="mini-delete-btn"
-                                                            onClick={() => handleDeleteTemplateComment(c.id)}
-                                                            title="Delete comment"
-                                                        >
-                                                            <FontAwesomeIcon icon={faTrash} />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                                <div className="mini-comment-body">
-                                                    <FontAwesomeIcon
-                                                        icon={c.rating === 'up' ? faCircleInfo : faThumbsDown}
-                                                        style={{ marginRight: '6px', opacity: 0.6 }}
-                                                    />
-                                                    {c.text}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-
-                            {/* SectionReview Integrated */}
+                            {/* SectionReview Integrated - Single component per section */}
                             {(() => {
-                                const existing = template.comments?.find(c => c.section_name === name && c.user === currentUser?.name);
+                                const existingSelf = template.comments?.find(c => c.section_name === name && (c.user_id === currentUser?.id || c.user_id === currentUser?.user_id));
+                                
                                 return (
                                     <SectionReview
                                         section={name}
                                         type="template"
-                                        status={commentSection === name ? 'down' : sectionRating}
-                                        reviewComment={{
-                                            id: existing?.id,
-                                            review_text: commentSection === name ? commentText : sectionComment,
-                                            severity: commentSeverity
-                                        }}
+                                        status={reviewStatus[name]}
+                                        reviewComment={reviewComments[name]}
                                         isReviewEditable={true}
                                         onStatusChange={(sec, stat) => {
-                                            setCommentSection(sec);
-                                            setCommentText(sectionComment);
+                                            setReviewStatus(prev => ({ ...prev, [sec]: stat }));
+                                            if (stat === 'down' && !reviewComments[sec] && existingSelf) {
+                                                setReviewComments(prev => ({ 
+                                                    ...prev, 
+                                                    [sec]: { 
+                                                        id: existingSelf.id,
+                                                        review_text: existingSelf.text,
+                                                        severity: existingSelf.severity || 'P2',
+                                                        type_of_comment: existingSelf.type_of_comment || ''
+                                                    } 
+                                                }));
+                                            }
                                         }}
                                         onCommentChange={(sec, field, val) => {
-                                            if (field === 'save') handleAddComment();
-                                            else if (field === 'review_text') {
-                                                setCommentSection(sec);
-                                                setCommentText(val);
+                                            if (field === 'save') {
+                                                handleSaveComment(sec, val);
+                                            } else {
+                                                setReviewComments(prev => ({
+                                                    ...prev,
+                                                    [sec]: { ...prev[sec], [field]: val }
+                                                }));
                                             }
-                                            else if (field === 'severity' || field === 'type_of_comment') setCommentSeverity(val);
                                         }}
-                                        onDeleteComment={() => {
-                                            if (existing) handleDeleteTemplateComment(existing.id);
-                                            setCommentSection('');
-                                            setCommentText('');
+                                        onDeleteComment={(sec) => {
+                                            const commentId = reviewComments[sec]?.id || existingSelf?.id;
+                                            if (commentId) handleDeleteTemplateComment(commentId);
+                                            setReviewComments(prev => {
+                                                const next = { ...prev };
+                                                delete next[sec];
+                                                return next;
+                                            });
+                                            setReviewStatus(prev => ({ ...prev, [sec]: null }));
                                         }}
                                         isOwnerOfComment={true}
                                         isAdmin={currentUser?.is_admin}
+                                        isAuthorizedToReply={isAdmin}
+                                        onSaveReply={handleSaveResponse}
+                                        previousFeedback={template.comments?.filter(c => c.section_name === name && c.user_id !== currentUser?.id && c.user_id !== currentUser?.user_id).map(c => ({
+                                            id: c.id,
+                                            author: c.user,
+                                            review_text: c.text,
+                                            severity: c.severity || 'P2',
+                                            type_of_comment: c.type_of_comment,
+                                            status: c.status,
+                                            isOwnedByCurrentUser: false,
+                                            replies: c.author_response ? [{
+                                                author: 'Author',
+                                                text: c.author_response,
+                                                status: c.status
+                                            }] : []
+                                        })) || []}
+                                        onReplyToFeedback={handleReplyToFeedback}
+                                        isExpanded={reviewStatus[name] === 'down'}
                                     />
                                 );
                             })()}
@@ -404,29 +399,34 @@ export default function DonorTemplateDetail() {
     }
 
     // ── Comment handlers ───────────────────────────────────────────────────
-    const handleAddComment = async (e) => {
-        if (e && e.preventDefault) e.preventDefault()
-        if (!commentText.trim()) return
+    const handleSaveComment = async (section, textContent) => {
+        if (!textContent.trim()) return
         setIsSubmittingComment(true)
+
+        const reviewData = reviewComments[section] || {}
 
         try {
             const res = await fetch(`${API_BASE_URL}/templates/request/${id}/comment`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    comment_text: commentText,
-                    section_name: commentSection || null,
-                    rating: 'down',
-                    severity: commentSeverity,
+                    comment_text: textContent,
+                    section_name: section || null,
+                    severity: reviewData.severity || 'P2',
+                    type_of_comment: reviewData.type_of_comment || '',
+                    status: 'submitted'
                 }),
                 credentials: 'include'
             })
 
             if (res.ok) {
-                setCommentText('')
-                setCommentSection('')
-                setCommentSeverity('P2')
                 await fetchTemplate()
+                setReviewStatus(prev => ({ ...prev, [section]: null }))
+                setReviewComments(prev => {
+                    const next = { ...prev }
+                    delete next[section]
+                    return next
+                })
             }
         } catch (err) {
             console.error("Error adding comment", err)
@@ -436,19 +436,74 @@ export default function DonorTemplateDetail() {
     }
 
     const handleDeleteTemplateComment = async (commentId) => {
-        if (!window.confirm('Delete this comment?')) return
+        if (!window.confirm('Remove this comment?')) return
         try {
-            const res = await fetch(`${API_BASE_URL}/templates/request/${id}/comment/${commentId}`, {
-                method: 'DELETE',
+            // Change status to 'removed' instead of deleting
+            const res = await fetch(`${API_BASE_URL}/templates/request/${id}/comment/${commentId}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'removed' }),
                 credentials: 'include'
             })
-            if (res.ok || res.status === 404) {
+            
+            if (res.ok) {
                 await fetchTemplate()
             } else {
-                alert('Failed to delete comment.')
+                alert('Failed to remove comment. The comment may have already been removed.')
             }
         } catch (err) {
-            console.error('Error deleting comment', err)
+            console.error('Error removing comment', err)
+            alert('Error connecting to server. Please try again.')
+        }
+    }
+
+    const handleSaveResponse = async (section, responseText) => {
+        try {
+            const existing = template.comments?.find(c => c.section_name === section && c.user === currentUser?.name);
+            if (!existing?.id) {
+                console.error('No comment ID found for author response');
+                return;
+            }
+            
+            const res = await fetch(`${API_BASE_URL}/templates/request/${id}/comment/${existing.id}/response`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ author_response: responseText }),
+                credentials: 'include'
+            })
+            
+            if (res.ok) {
+                await fetchTemplate()
+            } else {
+                alert('Failed to save response. Please try again.')
+            }
+        } catch (err) {
+            console.error('Error saving author response', err)
+            alert('Error connecting to server. Please try again.')
+        }
+    }
+
+    const handleReplyToFeedback = async (feedbackId, replyText, replyStatus) => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/templates/request/${id}/reply`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    author_response: replyText,
+                    feedback_id: feedbackId,
+                    status: replyStatus
+                }),
+                credentials: 'include'
+            })
+            
+            if (res.ok) {
+                await fetchTemplate()
+            } else {
+                alert('Failed to save reply. Please try again.')
+            }
+        } catch (err) {
+            console.error('Error saving reply', err)
+            alert('Error connecting to server. Please try again.')
         }
     }
 

@@ -100,6 +100,8 @@ class IncidentRepository:
                 dtc.rating,
                 dtc.severity,
                 dtc.type_of_comment,
+                dtc.author_response,
+                dtc.status AS review_status,
                 dtc.created_at AS review_created_at,
                 dtr.name AS request_name,
                 dtr.template_type,
@@ -117,6 +119,72 @@ class IncidentRepository:
         result = self.connection.execute(query, {"review_id": review_id})
         row = result.mappings().first()
         return dict(row) if row else None
+
+    def update_proposal_review(
+        self,
+        review_id: str,
+        author_response: str,
+        status: str,
+        response_author: str = "system",
+    ):
+        query = text("""
+            UPDATE proposal_peer_reviews
+            SET author_response = :response, status = :status, author_response_by = :response_author, updated_at = CURRENT_TIMESTAMP
+            WHERE id = :id
+        """)
+        self.connection.execute(
+            query,
+            {
+                "id": review_id,
+                "response": author_response,
+                "status": status,
+                "response_author": response_author,
+            },
+        )
+
+    def update_knowledge_card_review(
+        self,
+        review_id: str,
+        author_response: str,
+        status: str,
+        response_author: str = "system",
+    ):
+        query = text("""
+            UPDATE knowledge_card_reviews
+            SET author_response = :response, status = :status, author_response_by = :response_author, updated_at = CURRENT_TIMESTAMP
+            WHERE id = :id
+        """)
+        self.connection.execute(
+            query,
+            {
+                "id": review_id,
+                "response": author_response,
+                "status": status,
+                "response_author": response_author,
+            },
+        )
+
+    def update_template_comment(
+        self,
+        review_id: str,
+        author_response: str,
+        status: str,
+        response_author: str = "system",
+    ):
+        query = text("""
+            UPDATE donor_template_comments
+            SET author_response = :response, status = :status, author_response_by = :response_author
+            WHERE id = :id
+        """)
+        self.connection.execute(
+            query,
+            {
+                "id": review_id,
+                "response": author_response,
+                "status": status,
+                "response_author": response_author,
+            },
+        )
 
     def fetch_latest_proposal_history(self, proposal_id: str) -> dict[str, Any] | None:
         query = text("""
@@ -155,9 +223,21 @@ class IncidentRepository:
             WHERE pfc.proposal_id = :proposal_id
         """)
 
-        donors = self.connection.execute(donors_q, {"proposal_id": proposal_id}).mappings().all()
-        outcomes = self.connection.execute(outcomes_q, {"proposal_id": proposal_id}).mappings().all()
-        fields = self.connection.execute(fields_q, {"proposal_id": proposal_id}).mappings().all()
+        donors = (
+            self.connection.execute(donors_q, {"proposal_id": proposal_id})
+            .mappings()
+            .all()
+        )
+        outcomes = (
+            self.connection.execute(outcomes_q, {"proposal_id": proposal_id})
+            .mappings()
+            .all()
+        )
+        fields = (
+            self.connection.execute(fields_q, {"proposal_id": proposal_id})
+            .mappings()
+            .all()
+        )
 
         return {
             "donors": [dict(x) for x in donors],
@@ -165,7 +245,9 @@ class IncidentRepository:
             "field_contexts": [dict(x) for x in fields],
         }
 
-    def fetch_knowledge_card_history(self, knowledge_card_id: str) -> list[dict[str, Any]]:
+    def fetch_knowledge_card_history(
+        self, knowledge_card_id: str
+    ) -> list[dict[str, Any]]:
         query = text("""
             SELECT
                 id::text AS history_id,
@@ -178,10 +260,14 @@ class IncidentRepository:
             ORDER BY created_at DESC
             LIMIT 5
         """)
-        result = self.connection.execute(query, {"knowledge_card_id": knowledge_card_id})
+        result = self.connection.execute(
+            query, {"knowledge_card_id": knowledge_card_id}
+        )
         return [dict(r) for r in result.mappings().all()]
 
-    def fetch_knowledge_card_references(self, knowledge_card_id: str) -> list[dict[str, Any]]:
+    def fetch_knowledge_card_references(
+        self, knowledge_card_id: str
+    ) -> list[dict[str, Any]]:
         query = text("""
             SELECT
                 r.id::text AS reference_id,
@@ -194,10 +280,14 @@ class IncidentRepository:
             JOIN knowledge_card_references r ON r.id = kctr.reference_id
             WHERE kctr.knowledge_card_id = :knowledge_card_id
         """)
-        result = self.connection.execute(query, {"knowledge_card_id": knowledge_card_id})
+        result = self.connection.execute(
+            query, {"knowledge_card_id": knowledge_card_id}
+        )
         return [dict(r) for r in result.mappings().all()]
 
-    def fetch_reference_chunks(self, knowledge_card_id: str, limit: int = 10) -> list[dict[str, Any]]:
+    def fetch_reference_chunks(
+        self, knowledge_card_id: str, limit: int = 10
+    ) -> list[dict[str, Any]]:
         query = text("""
             SELECT
                 r.id::text AS reference_id,
@@ -209,10 +299,14 @@ class IncidentRepository:
             WHERE kctr.knowledge_card_id = :knowledge_card_id
             LIMIT :limit
         """)
-        result = self.connection.execute(query, {"knowledge_card_id": knowledge_card_id, "limit": limit})
+        result = self.connection.execute(
+            query, {"knowledge_card_id": knowledge_card_id, "limit": limit}
+        )
         return [dict(r) for r in result.mappings().all()]
 
-    def fetch_rag_logs(self, knowledge_card_id: str, limit: int = 10) -> list[dict[str, Any]]:
+    def fetch_rag_logs(
+        self, knowledge_card_id: str, limit: int = 10
+    ) -> list[dict[str, Any]]:
         query = text("""
             SELECT
                 id::text AS log_id,
@@ -226,5 +320,7 @@ class IncidentRepository:
             ORDER BY created_at DESC
             LIMIT :limit
         """)
-        result = self.connection.execute(query, {"knowledge_card_id": knowledge_card_id, "limit": limit})
+        result = self.connection.execute(
+            query, {"knowledge_card_id": knowledge_card_id, "limit": limit}
+        )
         return [dict(r) for r in result.mappings().all()]

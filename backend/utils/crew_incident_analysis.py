@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 from crewai import Agent, Task, Crew, Process
+
+# Logging for incident analysis
+import logging
 from backend.core.config import settings
 from backend.utils.prompt_factory import (
     triage_prompt,
@@ -12,9 +15,7 @@ from backend.utils.prompt_factory import (
 )
 from backend.utils.json_utils import safe_load_json
 
-#import logging
-#logger = logging.getLogger(__name__)
-#logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class IncidentAnalysisCrew:
@@ -26,7 +27,7 @@ class IncidentAnalysisCrew:
             role=role,
             goal=goal,
             backstory=backstory,
-            verbose=settings.debug,
+            verbose=True,
             allow_delegation=False,
             llm=self.llm,
         )
@@ -41,41 +42,43 @@ class IncidentAnalysisCrew:
             agents=[agent],
             tasks=[task],
             process=Process.sequential,
-            verbose=settings.debug,
+            verbose=True,
         )
         result = crew.kickoff()
         raw = getattr(result, "raw", None) or str(result)
         return safe_load_json(raw)
 
-    def analyze(self, incident: dict[str, Any], evidence_pack: dict[str, Any]) -> dict[str, Any]:
+    def analyze(
+        self, incident: dict[str, Any], evidence_pack: dict[str, Any]
+    ) -> dict[str, Any]:
         triage_agent = self._build_agent(
             role="Incident Intake & Triage Agent",
             goal="Normalize incidents, route them correctly, and determine urgency.",
-            backstory="You specialize in classification, routing, and review gating for proposal-generation incidents."
+            backstory="You specialize in classification, routing, and review gating for proposal-generation incidents.",
         )
 
         correction_agent = self._build_agent(
             role="Proposal Correction Agent",
             goal="Produce the smallest safe correction for the current artifact.",
-            backstory="You help users quickly repair proposals, knowledge cards, and templates without inventing facts."
+            backstory="You help users quickly repair proposals, knowledge cards, and templates without inventing facts.",
         )
 
         rca_agent = self._build_agent(
             role="Root Cause Analysis Agent",
             goal="Determine why the issue occurred and whether it is systemic.",
-            backstory="You are expert at tracing proposal-generation failures to retrieval, grounding, template, or validation issues."
+            backstory="You are expert at tracing proposal-generation failures to retrieval, grounding, template, or validation issues.",
         )
 
         remediation_agent = self._build_agent(
             role="Remediation Agent",
             goal="Recommend durable system fixes to prevent recurrence.",
-            backstory="You turn RCA findings into concrete engineering, prompt, data, template, and workflow improvements."
+            backstory="You turn RCA findings into concrete engineering, prompt, data, template, and workflow improvements.",
         )
 
         consistency_agent = self._build_agent(
             role="Consistency & Policy Checker",
             goal="Ensure outputs are mutually consistent and evidence-grounded.",
-            backstory="You ensure that user suggestions, RCA findings, and remediation steps do not contradict each other."
+            backstory="You ensure that user suggestions, RCA findings, and remediation steps do not contradict each other.",
         )
 
         triage_output = self._run_single_task(
