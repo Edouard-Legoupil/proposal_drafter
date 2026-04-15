@@ -135,7 +135,7 @@ END$$;
 CREATE TABLE IF NOT EXISTS proposals (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id),
-    template_name VARCHAR(255) DEFAULT 'unhcr_proposal_template.json',
+    template_name VARCHAR(255) DEFAULT 'proposal_template_unhcr.json',
     form_data JSONB NOT NULL,
     project_description TEXT NOT NULL,
     generated_sections JSONB,
@@ -175,8 +175,7 @@ CREATE TABLE IF NOT EXISTS proposal_peer_reviews (
     type_of_comment TEXT,
     severity TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (proposal_id, reviewer_id, section_name)
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create Knowledge Cards table
@@ -223,8 +222,7 @@ CREATE TABLE IF NOT EXISTS knowledge_card_reviews (
     severity TEXT,
     status VARCHAR(50) DEFAULT 'pending',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (knowledge_card_id, reviewer_id, section_name)
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create Knowledge Card References table  
@@ -330,6 +328,8 @@ CREATE TABLE IF NOT EXISTS donor_template_comments (
     rating VARCHAR(10),
     severity TEXT,
     type_of_comment TEXT DEFAULT 'Donor Template',
+    author_response TEXT,
+    status VARCHAR(50) DEFAULT 'pending',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
