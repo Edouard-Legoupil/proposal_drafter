@@ -539,24 +539,4 @@
     gap: 4px;
 }
 
-.SectionReview_other-field {
-    margin-top: 0.75rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
 
-.SectionReview_other-input {
-    flex: 1;
-    padding: 0.3rem 0.5rem;
-    font-size: 0.85rem;
-    border: 1px solid #cbd5e1;
-    border-radius: 4px;
-}
-/* Align icons and text in grid headers */
-.SectionReview_type-grid th {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-}

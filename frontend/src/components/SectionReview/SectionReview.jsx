@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faThumbsDown, faTrash, faInfoCircle, faReply, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faThumbsDown, faTrash, faInfoCircle, faReply, faTimes, faSkullCrossbones, faExclamationTriangle, faExclamationCircle } from '@fortawesome/free-solid-svg-icons';
 import { Chip } from '@mui/material';
 import './SectionReview.css';
+import AnalysisModal from '../AnalysisModal/AnalysisModal';
+
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api";
 
 const SEVERITY_OPTIONS = {
     proposal: [
@@ -62,10 +65,10 @@ const getSeverityColor = (sev) => {
 
 const getSeverityIcon = (sev) => {
     switch (sev) {
-        case 'P0': return faThumbsDown;
-        case 'P1': return faThumbsDown;
-        case 'P2': return faInfoCircle;
-        case 'P3': return faThumbsDown;
+        case 'P0': return faSkullCrossbones;
+        case 'P1': return faExclamationTriangle;
+        case 'P2': return faExclamationCircle;
+        case 'P3': return faInfoCircle;
         default: return faInfoCircle;
     }
 };
@@ -86,39 +89,103 @@ export default function SectionReview({
     onCommentChange,
     onStatusChange,
     onDeleteComment,
-    isOwnerOfComment,
-    isAdmin,
     isAuthorizedToReply,
     onSaveReply,
     previousFeedback = [], // Add previous feedback prop
     onReplyToFeedback, // Function to handle replies to previous feedback
     isExpanded = false // Control whether the comment section is expanded
 }) {
-    
-    // Debug logging
-    console.log(`SectionReview[${section}] - Props:`, {
-        section,
-        type,
-        reviewComment,
-        status,
-        isReviewEditable,
-        previousFeedback,
-        isExpanded
-    });
+
     const severityOptions = SEVERITY_OPTIONS[type] || SEVERITY_OPTIONS.proposal;
     const selectedSeverity = reviewComment?.severity || reviewComment?.type_of_comment || 'P2';
     const selectedTypeOfComment = reviewComment?.type_of_comment || '';
-    const [hoveredSeverity, setHoveredSeverity] = useState(null);
     const [replyModalOpen, setReplyModalOpen] = useState(null);
     const [replyText, setReplyText] = useState('');
     const [replyStatus, setReplyStatus] = useState('pending');
+    const [analysis, setAnalysis] = useState(null);
+    const [analysisLoading, setAnalysisLoading] = useState(false);
+    const [analysisModalOpen, setAnalysisModalOpen] = useState(false);
+
+    const INITIAL_ANALYSIS_MSG = 'Your feedback has been received and is currently being analyzed by our AI agents. A detailed response will follow shortly.';
+    const CONSULT_ANALYSIS_MSG = 'Your feedback has been received. Consult the review from our AI agents.';
+
+    // Find feedback items that have a system reply still showing the "analyzing" message
+    const feedbackWithPendingAnalysis = previousFeedback.find(
+        f => f.replies?.some(r => r.author === 'system' && r.text === INITIAL_ANALYSIS_MSG)
+    );
+
+    useEffect(() => {
+        // Poll for analysis when a system reply with the initial message is present
+        if (!feedbackWithPendingAnalysis || analysis) return;
+        const reviewId = feedbackWithPendingAnalysis.id;
+        let retries = 0;
+        const MAX_RETRIES = 60; // 60 * 30s = 30 minutes max polling
+        let cancelled = false;
+
+        const interval = setInterval(async () => {
+            if (cancelled) return;
+            retries++;
+            if (retries > MAX_RETRIES) {
+                clearInterval(interval);
+                return;
+            }
+            try {
+                const resp = await fetch(`${API_BASE_URL}/reviews/${reviewId}/analysis`, { credentials: 'include' });
+                if (cancelled) return;
+                if (resp.ok) {
+                    const data = await resp.json();
+                    clearInterval(interval);
+                    setAnalysis(data);
+                } else if (resp.status !== 404) {
+                    // Stop polling on unexpected errors
+                    clearInterval(interval);
+                }
+                // 404 = not ready yet, keep polling
+            } catch {
+                // network error, keep trying
+            }
+        }, 30000);
+
+        return () => { cancelled = true; clearInterval(interval); };
+    }, [feedbackWithPendingAnalysis?.id, analysis]);
+
+    // Also check for feedback with the consult message (analysis already done)
+    const feedbackWithCompletedAnalysis = previousFeedback.find(
+        f => f.replies?.some(r => r.author === 'system' && r.text === CONSULT_ANALYSIS_MSG)
+    );
+
+    // Load analysis on mount if system reply already shows the consult message
+    useEffect(() => {
+        if (!feedbackWithCompletedAnalysis || analysis) return;
+        const reviewId = feedbackWithCompletedAnalysis.id;
+        let cancelled = false;
+        (async () => {
+            try {
+                const resp = await fetch(`${API_BASE_URL}/reviews/${reviewId}/analysis`, { credentials: 'include' });
+                if (!cancelled && resp.ok) {
+                    const data = await resp.json();
+                    setAnalysis(data);
+                }
+            } catch { /* ignore */ }
+        })();
+        return () => { cancelled = true; };
+    }, [feedbackWithCompletedAnalysis?.id]);
+
+    // Update system reply text when analysis is loaded, and keep original otherwise
+    const displayedFeedback = previousFeedback.map(f => ({
+        ...f,
+        replies: (f.replies || []).map(r => {
+            if (r.author === 'system' && analysis && r.text === INITIAL_ANALYSIS_MSG) {
+                return { ...r, text: CONSULT_ANALYSIS_MSG };
+            }
+            return r;
+        })
+    }));
     const [localExpanded, setLocalExpanded] = useState(isExpanded);
 
-    // Get available type_of_comment options based on selected severity
-    const typeOfCommentOptions = TYPE_OF_COMMENT_OPTIONS[type]?.[selectedSeverity] || [];
 
-    // Validation: check if all required fields are filled
-    const isSaveEnabled = reviewComment?.review_text?.trim() && selectedSeverity && selectedTypeOfComment;
+    // Validation: check if all required fields are filled (min 10 chars for review_text)
+    const isSaveEnabled = reviewComment?.review_text?.trim()?.length >= 10 && selectedSeverity && selectedTypeOfComment;
 
     const handleReplySubmit = (feedbackId) => {
         if (replyText.trim() && onReplyToFeedback) {
@@ -138,9 +205,10 @@ export default function SectionReview({
     };
 
     return (
+        <>
         <div className="SectionReview_container">
             <div className="SectionReview_header">
-                <h3>{isReviewEditable ? "Review Feedback" : "Previous Feedback:"}</h3>
+                <h3>Review Feedback</h3>
                 <div className="SectionReview_thumbs">
                     <button
                         className={`thumb-btn down ${(status === 'down' || localExpanded) ? 'active' : ''}`}
@@ -158,12 +226,11 @@ export default function SectionReview({
             </div>
 
             {/* Always show previous feedback first, at the top */}
-            {console.log('SectionReview previousFeedback:', previousFeedback)}
-            {previousFeedback.length > 0 && (
+            {displayedFeedback.length > 0 && (
                 <div className="SectionReview_previous_feedback_container">
                     <h4>Previous Feedback:</h4>
                     <div className="SectionReview_previous_feedback">
-                        {previousFeedback.map((feedback, index) => (
+                        {displayedFeedback.map((feedback, index) => (
                             <div key={index} className="SectionReview_previous_feedback_item">
                                 <div className="SectionReview_previous_feedback_header">
                                     <div className="SectionReview_previous_feedback_info">
@@ -176,12 +243,12 @@ export default function SectionReview({
                                     </div>
                                     <div className="SectionReview_previous_feedback_badges">
                                         {/* Severity Chip - consistent with QualityGate */}
-                                        <Chip 
+                                        <Chip
                                             icon={<FontAwesomeIcon icon={getSeverityIcon(feedback.severity)} style={{ color: '#fff', fontSize: '0.8rem' }} />}
                                             label={feedback.severity}
                                             size="small"
                                             sx={{
-                                                bgcolor: getSeverityColor(feedback.severity), 
+                                                bgcolor: getSeverityColor(feedback.severity),
                                                 color: '#fff',
                                                 fontWeight: 'bold',
                                                 marginRight: '8px'
@@ -189,7 +256,7 @@ export default function SectionReview({
                                         />
                                         {/* Comment Type Chip */}
                                         {feedback.type_of_comment && (
-                                            <Chip 
+                                            <Chip
                                                 label={feedback.type_of_comment}
                                                 variant="outlined"
                                                 size="small"
@@ -202,14 +269,14 @@ export default function SectionReview({
                                         )}
                                         {/* Status Chip */}
                                         {feedback.status && (
-                                            <Chip 
+                                            <Chip
                                                 label={feedback.status}
                                                 size="small"
                                                 sx={{
-                                                    bgcolor: feedback.status === 'resolved' ? '#4caf50' : 
-                                                           feedback.status === 'acknowledged' ? '#2196f3' :
-                                                           feedback.status === 'needs-more-info' ? '#ff9800' :
-                                                           '#9e9e9e',
+                                                    bgcolor: feedback.status === 'resolved' ? '#4caf50' :
+                                                        feedback.status === 'acknowledged' ? '#2196f3' :
+                                                            feedback.status === 'needs-more-info' ? '#ff9800' :
+                                                                '#9e9e9e',
                                                     color: '#fff',
                                                     fontWeight: 'bold'
                                                 }}
@@ -264,7 +331,20 @@ export default function SectionReview({
                                                     </div>
                                                     <div className="SectionReview_previous_feedback_reply_content">
                                                         {reply.text}
-                                                    </div>
+                                                        {reply.author === 'system' && analysis && (
+                                                            <button
+                                                                type="button"
+                                                                className="btn btn--secondary btn--small"
+                                                                style={{ marginTop: '8px' }}
+                                                                onClick={() => setAnalysisModalOpen(true)}
+                                                            >
+                                                                View Analysis
+                                                            </button>
+                                                        )}
+                                                        {reply.author === 'system' && !analysis && analysisLoading && (
+                                                            <span style={{ fontSize: '0.8rem', color: '#888', marginLeft: '8px' }}>Loading analysis…</span>
+                                                        )}
+                                                     </div>
                                                 </div>
                                             );
                                         })}
@@ -276,14 +356,14 @@ export default function SectionReview({
                 </div>
             )}
 
-            {/* Current feedback section - only visible when editable and expanded */}
-            {(localExpanded || (isReviewEditable && status === 'down')) && (
+            {/* Current feedback section - visible when expanded or status is down */}
+            {(localExpanded || status === 'down') && (
                 <div
                     className="SectionReview_comment_section"
                     onClick={(e) => {
                         // Don't trigger when clicking on buttons or inputs
                         if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'TEXTAREA') {
-                            if (reviewComment?.review_text && status !== 'down' && isReviewEditable) {
+                            if (reviewComment?.review_text && status !== 'down') {
                                 onStatusChange(section, 'down');
                             }
                         }
@@ -292,10 +372,9 @@ export default function SectionReview({
                     {/* Comment input */}
                     <textarea
                         className="SectionReview_comment_textarea"
-                        placeholder={`Enter your detailed feedback for ${section}...`}
+                        placeholder={`Enter your detailed feedback for ${section}... (at least 10 characters)`}
                         value={reviewComment?.review_text || ""}
                         onChange={e => onCommentChange(section, 'review_text', e.target.value)}
-                        disabled={!isReviewEditable}
                         id={`section-review-textarea-${section}`}
                     />
 
@@ -313,11 +392,12 @@ export default function SectionReview({
                                                 title={opt.description}
                                                 className={`severity-${opt.value}`}
                                             >
-                                                <FontAwesomeIcon
-                                                    icon={getSeverityIcon(opt.value)}
-                                                    style={{ marginRight: '4px' }}
-                                                />
-                                                {`${opt.value}-${headerText}`}
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                                                    <FontAwesomeIcon
+                                                        icon={getSeverityIcon(opt.value)}
+                                                    />
+                                                    <span>{`${opt.value}-${headerText}`}</span>
+                                                </div>
                                             </th>
                                         )
                                     })}
@@ -342,7 +422,6 @@ export default function SectionReview({
                                                                     onCommentChange(section, 'type_of_comment', choice);
                                                                     onCommentChange(section, 'severity', opt.value);
                                                                 }}
-                                                                disabled={!isReviewEditable}
                                                             />
                                                             <span>{choice}</span>
                                                         </label>
@@ -354,19 +433,7 @@ export default function SectionReview({
                                 ))}
                             </tbody>
                         </table>
-                        {/* Other type free-form input */}
-                        <div className="SectionReview_other-field">
-                            <label>Other:</label>
-                            <input
-                                type="text"
-                                className="SectionReview_other-input"
-                                placeholder="Custom comment type"
-                                value={reviewComment?.type_of_comment === 'Other' ? '' : reviewComment?.type_of_comment || ''}
-                                onChange={e => onCommentChange(section, 'type_of_comment', e.target.value)}
-                                disabled={!isReviewEditable}
-                            />
-                        </div>
-                        </div>
+                    </div>
                     <div className="SectionReview_actions_footer">
                         <button
                             className="btn btn--primary btn--small"
@@ -459,5 +526,11 @@ export default function SectionReview({
                 </div>
             )}
         </div>
+        <AnalysisModal
+            open={analysisModalOpen}
+            onClose={() => setAnalysisModalOpen(false)}
+            analysis={analysis}
+        />
+        </>
     );
 }

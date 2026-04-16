@@ -98,18 +98,17 @@ export default function KnowledgeCard() {
                 return next;
             });
             const commentData = {
-                ...reviewComments[section],
                 section_name: section,
                 review_text: value,
                 severity: reviewComments[section]?.severity || 'P2',
                 type_of_comment: reviewComments[section]?.type_of_comment || ''
             };
-            const endpoint = `${API_BASE_URL}/knowledge-cards/${id}/review`;
+            const endpoint = `${API_BASE_URL}/knowledge-cards/${id}/comment`;
             try {
                 authenticatedFetch(endpoint, {
                     method: "POST",
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ comments: [commentData] })
+                    body: JSON.stringify(commentData)
                 }).then(async res => {
                     if (res.ok) {
                         // Refresh all data to get the complete updated comment with ID and status
@@ -278,12 +277,10 @@ export default function KnowledgeCard() {
             // Cleanup EventSource on component unmount
             if (eventSourceRef.current) {
                 eventSourceRef.current.close();
-                console.log('EventSource cleaned up on unmount');
             }
             // Cleanup polling interval on unmount
             if (pollingRef.current.intervalId) {
                 clearInterval(pollingRef.current.intervalId);
-                console.log('Polling interval cleaned up on unmount');
             }
         };
     }, []);
@@ -327,14 +324,6 @@ export default function KnowledgeCard() {
                     else if (card.field_context_id) specificRequiredRole = "knowledge manager field context";
 
                     const hasSpecificRole = userRoles.includes(normalize(specificRequiredRole));
-
-                    console.log('Role Debug (Granular):', {
-                        currentUser: curUser,
-                        card,
-                        userRoles,
-                        specificRequiredRole,
-                        hasSpecificRole
-                    });
 
                     const _isAdmin = curUser.is_admin || (curUser.roles || []).some(r => {
                         const n = typeof r === 'string' ? r : r.name;
@@ -565,14 +554,12 @@ export default function KnowledgeCard() {
 
     useEffect(() => {
         if (!id && linkedId && linkType && initialDataLoaded) {
-            console.log(`Checking for duplicates. ID: ${id}, Linked ID: ${linkedId}, Link Type: ${linkType}, Loaded: ${initialDataLoaded}`);
             const existing = allKnowledgeCards.find(card => {
                 if (linkType === 'donor') return card.donor_id === linkedId;
                 if (linkType === 'outcome') return card.outcome_id === linkedId;
                 if (linkType === 'field_context') return card.field_context_id === linkedId;
                 return false;
             });
-            console.log('Existing card found:', existing);
 
             if (existing) {
                 setExistingCard(existing);
@@ -786,7 +773,6 @@ export default function KnowledgeCard() {
                 pollingRef.current.attempts = 0;
                 pollingRef.current.intervalId = setInterval(() => {
                     pollingRef.current.attempts += 1;
-                    console.log(`Polling for ingestion updates... Attempt: ${pollingRef.current.attempts + 1}`);
                     if (fetchDataRef.current) {
                         fetchDataRef.current();
                     }
@@ -1369,7 +1355,6 @@ export default function KnowledgeCard() {
                             // Filter reviews for this specific section
                             const sectionReviews = reviews.filter(r => r.section_name === section);
                             const sectionReviewsCount = sectionReviews.length;
-                            console.log(`Rendering section [${section}]: has ${sectionReviewsCount} reviews`);
 
                             return (
                                 <div key={section} className={`kc-section ${editingSection === section ? 'kc-section-editing' : ''}`} data-testid={`generated-section-${section}`}>

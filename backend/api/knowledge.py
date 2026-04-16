@@ -2206,7 +2206,7 @@ async def get_knowledge_card_for_review(
             reviews_query = text("""
                 SELECT id, section_name, review_text, type_of_comment, severity, rating, author_response, author_response_by
                 FROM knowledge_card_reviews
-                WHERE knowledge_card_id = :card_id AND reviewer_id = :user_id
+                WHERE knowledge_card_id = :card_id AND reviewer_id = :user_id AND status = 'draft'
             """)
             reviews = (
                 connection.execute(
@@ -2257,10 +2257,12 @@ async def submit_knowledge_card_review(
     user_id = current_user["user_id"]
     try:
         with get_engine().begin() as connection:
-            # Delete existing draft/pending comments for this user and card
+            # For bulk submission, we now prefer to append or update instead of total deletion 
+            # to respect the "multiple comments" requirement. 
+            # However, for transition to 'completed', we can clear previous 'draft' ones.
             connection.execute(
                 text(
-                    "DELETE FROM knowledge_card_reviews WHERE knowledge_card_id = :card_id AND reviewer_id = :user_id"
+                    "DELETE FROM knowledge_card_reviews WHERE knowledge_card_id = :card_id AND reviewer_id = :user_id AND status = 'draft'"
                 ),
                 {"card_id": str(card_id), "user_id": str(user_id)},
             )

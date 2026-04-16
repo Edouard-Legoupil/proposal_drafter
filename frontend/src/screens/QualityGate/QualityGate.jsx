@@ -23,12 +23,15 @@ import {
     MenuItem,
     Checkbox,
     ListItemText,
-    OutlinedInput
+    OutlinedInput,
+    TextField,
+    TablePagination
 } from '@mui/material'
 import { useNavigate, Link } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faTriangleExclamation, faCircleExclamation, faInfoCircle, faCheckCircle, faFilter } from '@fortawesome/free-solid-svg-icons'
+import { faTriangleExclamation, faCircleExclamation, faInfoCircle, faCheckCircle, faFilter, faSkullCrossbones, faExclamationTriangle, faExclamationCircle } from '@fortawesome/free-solid-svg-icons'
 import './QualityGate.css'
+import AnalysisModal from '../../components/AnalysisModal/AnalysisModal'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
 
@@ -42,6 +45,42 @@ export default function QualityGate() {
     const [removingIncidentId, setRemovingIncidentId] = useState(null)
     const defaultStatusFilters = ['submitted', 'pending', 'acknowledged', 'needs-more-info']
     const [selectedStatuses, setSelectedStatuses] = useState(defaultStatusFilters)
+    const [qualRules, setQualRules] = useState([])
+    const [qualData, setQualData] = useState([])
+    const [qualSortConfig, setQualSortConfig] = useState({ key: null, direction: 'asc' })
+    const [qualSearch, setQualSearch] = useState('')
+    const [qualPage, setQualPage] = useState(0)
+    const [qualRowsPerPage, setQualRowsPerPage] = useState(10)
+
+    const [analysis, setAnalysis] = useState(null)
+    const [analysisLoading, setAnalysisLoading] = useState(false)
+    const [loadingReviewId, setLoadingReviewId] = useState(null)
+    const [analysisModalOpen, setAnalysisModalOpen] = useState(false)
+
+    const loadAnalysis = async (reviewId) => {
+        setAnalysisLoading(true)
+        setLoadingReviewId(reviewId)
+        try {
+            const resp = await fetch(`${API_BASE_URL}/reviews/${reviewId}/analysis`, { credentials: 'include' })
+            if (!resp.ok) {
+                if (resp.status === 404) {
+                    window.alert('Analysis not completed yet.')
+                } else {
+                    window.alert('Failed to fetch analysis.')
+                }
+            } else {
+                const data = await resp.json()
+                setAnalysis(data)
+                setAnalysisModalOpen(true)
+            }
+        } catch (err) {
+            console.error('Error fetching analysis:', err)
+            window.alert('Error fetching analysis.')
+        } finally {
+            setAnalysisLoading(false)
+            setLoadingReviewId(null)
+        }
+    }
 
     const fetchQualityData = async (showLoader = true) => {
         if (showLoader) {
@@ -80,9 +119,23 @@ export default function QualityGate() {
         }
     }
 
+    const fetchQualificationStatus = async () => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/qualification/status?template_type=proposal`, { credentials: 'include' })
+            if (res.ok) {
+                const { rules, data } = await res.json()
+                setQualRules(rules)
+                setQualData(data)
+            }
+        } catch (err) {
+            console.error('Error fetching qualification status:', err)
+        }
+    }
+
     useEffect(() => {
         fetchQualityData()
         fetchUserProfile()
+        fetchQualificationStatus()
     }, [])
 
     const handleStatusFilterChange = (event) => {
@@ -99,6 +152,66 @@ export default function QualityGate() {
         setSortConfig({ key, direction });
     };
 
+    const requestQualSort = (key) => {
+        let direction = 'asc'
+        if (qualSortConfig.key === key && qualSortConfig.direction === 'asc') {
+            direction = 'desc'
+        }
+        setQualSortConfig({ key, direction })
+    }
+
+    const getFilteredAndSortedQualData = () => {
+        const arr = Array.isArray(qualData) ? [...qualData] : []
+        
+        // Filter by search term (template name)
+        let filtered = arr
+        if (qualSearch) {
+            const searchLower = qualSearch.toLowerCase()
+            filtered = arr.filter(row => 
+                (row.template_name || '').toLowerCase().includes(searchLower)
+            )
+        }
+        
+        // Sort
+        if (qualSortConfig.key) {
+            filtered.sort((a, b) => {
+                let av, bv;
+                if (qualSortConfig.key === 'overall') {
+                    av = a.overall ? 1 : 0;
+                    bv = b.overall ? 1 : 0;
+                } else if (qualSortConfig.key === 'template_name') {
+                    av = (a.template_name || '').toLowerCase();
+                    bv = (b.template_name || '').toLowerCase();
+                } else {
+                    av = a.results[qualSortConfig.key] ? 1 : 0;
+                    bv = b.results[qualSortConfig.key] ? 1 : 0;
+                }
+                
+                if (av < bv) return qualSortConfig.direction === 'asc' ? -1 : 1
+                if (av > bv) return qualSortConfig.direction === 'asc' ? 1 : -1
+                return 0
+            })
+        }
+        return filtered
+    }
+    
+    const getQualDataForDisplay = () => {
+        const filteredAndSorted = getFilteredAndSortedQualData()
+        return filteredAndSorted.slice(
+            qualPage * qualRowsPerPage,
+            qualPage * qualRowsPerPage + qualRowsPerPage
+        )
+    }
+    
+    const handleQualPageChange = (event, newPage) => {
+        setQualPage(newPage)
+    }
+    
+    const handleQualRowsPerPageChange = (event) => {
+        setQualRowsPerPage(parseInt(event.target.value, 10))
+        setQualPage(0)
+    }
+
     const getSeverityColor = (sev) => {
         switch (sev) {
             case 'P0': return '#c0392b'
@@ -111,11 +224,11 @@ export default function QualityGate() {
 
     const getSeverityIcon = (sev) => {
         switch (sev) {
-            case 'P0': return faTriangleExclamation
-            case 'P1': return faCircleExclamation
-            case 'P2': return faInfoCircle
-            case 'P3': return faCheckCircle
-            default: return faInfoCircle
+            case 'P0': return faSkullCrossbones;
+            case 'P1': return faExclamationTriangle;
+            case 'P2': return faExclamationCircle;
+            case 'P3': return faInfoCircle;
+            default: return faInfoCircle;
         }
     }
 
@@ -263,12 +376,111 @@ export default function QualityGate() {
             <div className="QualityGate">
                 <header className="page-header">
                     <h1>Quality Management Gate</h1>
-                    <Typography variant="body2" color="textSecondary">
-                        Unified monitoring of quality incidents across all proposal drafting workflows.
-                    </Typography>
                 </header>
 
                 {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+
+                {/* Qualification Summary */}
+                <Card className="qual-card glass" sx={{ mb: 4 }}>
+                    <CardContent>
+                        <Typography variant="h6" gutterBottom>Qualification Summary</Typography>
+                        <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                            Qualifications are automated structural and semantic rules evaluated against templates to guarantee compliance and quality standards.
+                        </Typography>
+                        <TextField
+                            fullWidth
+                            label="Search by Template Name"
+                            variant="outlined"
+                            size="small"
+                            value={qualSearch}
+                            onChange={(e) => {
+                                setQualSearch(e.target.value)
+                                setQualPage(0)
+                            }}
+                            sx={{ mb: 2 }}
+                            placeholder="Type to filter templates..."
+                        />
+                        <TableContainer>
+                            <Table size="small">
+                                <TableHead>
+                                    <TableRow>
+                                        <TableCell>
+                                            <TableSortLabel
+                                                active={qualSortConfig.key === 'template_name'}
+                                                direction={qualSortConfig.direction}
+                                                onClick={() => requestQualSort('template_name')}
+                                            >
+                                                Template Name
+                                            </TableSortLabel>
+                                        </TableCell>
+                                        <TableCell>
+                                            <TableSortLabel
+                                                active={qualSortConfig.key === 'overall'}
+                                                direction={qualSortConfig.direction}
+                                                onClick={() => requestQualSort('overall')}
+                                            >
+                                                Status
+                                            </TableSortLabel>
+                                        </TableCell>
+                                        {qualRules?.map(rule => (
+                                            <TableCell key={rule.rule_code} title={rule.description}>
+                                                <TableSortLabel
+                                                    active={qualSortConfig.key === rule.rule_code}
+                                                    direction={qualSortConfig.direction}
+                                                    onClick={() => requestQualSort(rule.rule_code)}
+                                                >
+                                                    {`${rule.rule_code} - ${rule.rule_name}`}
+                                                </TableSortLabel>
+                                            </TableCell>
+                                        ))}
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {getQualDataForDisplay()?.map(row => (
+                                        <TableRow key={row.artifact_id} hover>
+                                            <TableCell>
+                                                {row.template_name || 'Unknown'}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Chip
+                                                    label={row.overall ? 'PASS' : 'FAIL'}
+                                                    size="small"
+                                                    color={row.overall ? 'success' : 'error'}
+                                                />
+                                            </TableCell>
+                                            {qualRules?.map(rule => (
+                                                <TableCell key={rule.rule_code}>
+                                                    <Chip
+                                                        label={row.results[rule.rule_code] ? 'PASS' : 'FAIL'}
+                                                        size="small"
+                                                        color={row.results[rule.rule_code] ? 'success' : 'error'}
+                                                    />
+                                                </TableCell>
+                                            ))}
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                        <TablePagination
+                            rowsPerPageOptions={[5, 10, 25, 50, 100]}
+                            component="div"
+                            count={getFilteredAndSortedQualData().length}
+                            rowsPerPage={qualRowsPerPage}
+                            page={qualPage}
+                            onPageChange={handleQualPageChange}
+                            onRowsPerPageChange={handleQualRowsPerPageChange}
+                            sx={{ mt: 2 }}
+                        />
+                    </CardContent>
+                </Card>
+
+                <Box sx={{ mb: 4, mt: 4 }}>
+                    <Typography variant="h5" gutterBottom>Incident Monitoring</Typography>
+                    <Typography variant="body2" color="textSecondary">
+                        Unified monitoring of quality incidents across all proposal drafting workflows.
+                    </Typography>
+                </Box>
 
                 {/* KPI Section */}
                 <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -395,9 +607,7 @@ export default function QualityGate() {
                                         Date
                                     </TableSortLabel>
                                 </TableCell>
-                                {isSystemAdmin && (
-                                    <TableCell align="center">Actions</TableCell>
-                                )}
+                                <TableCell align="center">Actions</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -468,8 +678,8 @@ export default function QualityGate() {
                                     </TableCell>
                                     <TableCell>{incident.reviewer_name}</TableCell>
                                     <TableCell>{new Date(incident.created_at).toLocaleString()}</TableCell>
-                                    {isSystemAdmin && (
-                                        <TableCell align="center">
+                                    <TableCell align="center">
+                                        {isSystemAdmin && (
                                             <button
                                                 className="QualityGate_removeButton"
                                                 onClick={() => handleRemoveIncident(incident)}
@@ -477,19 +687,33 @@ export default function QualityGate() {
                                             >
                                                 {removingIncidentId === incident.incident_id ? 'Removing…' : 'Remove'}
                                             </button>
-                                        </TableCell>
-                                    )}
+                                        )}
+                                        <button
+                                            type="button"
+                                            className="QualityGate_viewAnalysisButton"
+                                            onClick={() => loadAnalysis(incident.incident_id)}
+                                            disabled={analysisLoading && loadingReviewId === incident.incident_id}
+                                            style={{ marginLeft: isSystemAdmin ? '8px' : '0' }}
+                                        >
+                                            {analysisLoading && loadingReviewId === incident.incident_id ? 'Loading…' : 'View Analysis'}
+                                        </button>
+                                    </TableCell>
                                 </TableRow>
                             ))}
                             {incidents.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={isSystemAdmin ? 9 : 8} align="center">No quality incidents logged.</TableCell>
+                                    <TableCell colSpan={9} align="center">No quality incidents logged.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
                     </Table>
                 </TableContainer>
             </div>
+            <AnalysisModal
+                open={analysisModalOpen}
+                onClose={() => setAnalysisModalOpen(false)}
+                analysis={analysis}
+            />
         </Base>
     )
 }

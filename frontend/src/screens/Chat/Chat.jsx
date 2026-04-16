@@ -25,7 +25,6 @@ import generateIcon from "../../assets/images/generateIcon.svg"
 import knowIcon from "../../assets/images/knowIcon.svg"
 import resultsIcon from "../../assets/images/Chat_resultsIcon.svg"
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faThumbsDown } from '@fortawesome/free-solid-svg-icons'
 import SectionReview from '../../components/SectionReview/SectionReview'
 import edit from "../../assets/images/Chat_edit.svg"
 import save from "../../assets/images/Chat_save.svg"
@@ -66,29 +65,25 @@ export default function Chat(props) {
 
         const [userPrompt, setUserPrompt] = useState("")
 
-        const [isModalOpen, setIsModalOpen] = useState(false)
         const [isPeerReviewModalOpen, setIsPeerReviewModalOpen] = useState(false)
         const [isAssociateKnowledgeModalOpen, setIsAssociateKnowledgeModalOpen] = useState(false)
         const [isPdfUploadModalOpen, setIsPdfUploadModalOpen] = useState(false)
         const [currentUser, setCurrentUser] = useState(null)
         const [users, setUsers] = useState([])
         const [selectedUsers, setSelectedUsers] = useState([])
-        const [associatedKnowledgeCards, setAssociatedKnowledgeCards] = useState([]);
-        const [validationMissingFields, setValidationMissingFields] = useState([]);
-        const [isValidationModalOpen, setIsValidationModalOpen] = useState(false);
-        const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
-        const [transferUsers, setTransferUsers] = useState([]);
+        const [associatedKnowledgeCards, setAssociatedKnowledgeCards] = useState([])
+        const [validationMissingFields, setValidationMissingFields] = useState([])
+        const [isValidationModalOpen, setIsValidationModalOpen] = useState(false)
+        const [isTransferModalOpen, setIsTransferModalOpen] = useState(false)
+        const [transferUsers, setTransferUsers] = useState([])
 
-        const [donors, setDonors] = useState([]);
-        const [outcomes, setOutcomes] = useState([]);
-        const [fieldContexts, setFieldContexts] = useState([]);
-        const [filteredFieldContexts, setFilteredFieldContexts] = useState([]);
-        const [newDonors, setNewDonors] = useState([]);
-        const [newOutcomes, setNewOutcomes] = useState([]);
-        const [newFieldContexts, setNewFieldContexts] = useState([]);
-        const [newBudgetRanges, setNewBudgetRanges] = useState([]);
-        const [newDurations, setNewDurations] = useState([]);
-        const [geographicCoverages, setGeographicCoverages] = useState([]);
+        const [donors, setDonors] = useState([])
+        const [outcomes, setOutcomes] = useState([])
+        const [fieldContexts, setFieldContexts] = useState([])
+        const [filteredFieldContexts, setFilteredFieldContexts] = useState([])
+        const [newBudgetRanges, setNewBudgetRanges] = useState([])
+        const [newDurations, setNewDurations] = useState([])
+        const [geographicCoverages, setGeographicCoverages] = useState([])
 
         async function fetchData() {
                 try {
@@ -350,8 +345,8 @@ export default function Chat(props) {
 
                 const getOptions = (label) => {
                         switch (label) {
-                                case "Main Outcome": {
-                                        const options = [...outcomes, ...newOutcomes].map(o => ({ value: o.id, label: o.name }));
+        case "Main Outcome": {
+                const options = outcomes.map(o => ({ value: o.id, label: o.name }));
                                         return options.sort((a, b) => {
                                                 const indexA = OUTCOME_ORDER.indexOf(a.label);
                                                 const indexB = OUTCOME_ORDER.indexOf(b.label);
@@ -361,10 +356,10 @@ export default function Chat(props) {
                                                 return a.label.localeCompare(b.label);
                                         });
                                 }
-                                case "Targeted Donor":
-                                        return [...donors, ...newDonors].map(d => ({ value: d.id, label: d.name })).sort((a, b) => a.label.localeCompare(b.label));
-                                case "Country / Location(s)":
-                                        return [...filteredFieldContexts, ...newFieldContexts].map(fc => ({ value: fc.id, label: fc.name })).sort((a, b) => a.label.localeCompare(b.label));
+        case "Targeted Donor":
+                return donors.map(d => ({ value: d.id, label: d.name })).sort((a, b) => a.label.localeCompare(b.label));
+        case "Country / Location(s)":
+                return filteredFieldContexts.map(fc => ({ value: fc.id, label: fc.name })).sort((a, b) => a.label.localeCompare(b.label));
                                 case "Geographical Scope":
                                         return geographicCoverages.map(gc => ({ value: gc, label: gc })).sort((a, b) => a.label.localeCompare(b.label));
                                 case "Duration": {
@@ -1026,12 +1021,6 @@ export default function Chat(props) {
                                 if (storedTemplate) {
                                         setProposalTemplate(JSON.parse(storedTemplate));
                                 }
-                        } else if (response.status === 404) {
-                                // Draft not found - clear the invalid proposal_id and start fresh
-                                console.warn("Draft not found, starting with a new proposal");
-                                sessionStorage.removeItem("proposal_id");
-                                sessionStorage.removeItem("session_id");
-                                return;
                         } else if (response.status === 401) {
                                 sessionStorage.setItem("session_expired", "Session expired. Please login again.")
                                 navigate("/login")
@@ -1100,77 +1089,11 @@ export default function Chat(props) {
                                 } else if (reviewRes.status === 401) {
                                         sessionStorage.setItem('session_expired', 'Session expired. Please login again.');
                                         navigate('/login');
-                                }
-                        }
-                        else if (response.status === 401) {
-                                sessionStorage.setItem("session_expired", "Session expired. Please login again.")
-                                navigate("/login")
-                        }
-                        else if (response.status === 403 || response.status === 404) {
-                                // May be a reviewer: try loading via the review endpoint
-                                const profileRes2 = await fetch(`${API_BASE_URL}/profile`, { credentials: 'include' });
-                                if (profileRes2.ok) {
-                                        const profileData2 = await profileRes2.json();
-                                        const curUser2 = profileData2.user;
-                                        setCurrentUser(curUser2);
-                                        const _isAdmin2 = curUser2.is_admin || (curUser2.roles || []).some(r => r === 'admin' || (r && r.name === 'admin'));
-                                        setIsAdmin(_isAdmin2);
-                                        setIsReviewer(true);
-                                }
-                                const proposalIdFromParam = id || sessionStorage.getItem('proposal_id');
-                                if (!proposalIdFromParam) return;
-                                const reviewRes = await fetch(`${API_BASE_URL}/review-proposal/${proposalIdFromParam}`, { credentials: 'include' });
-                                if (reviewRes.ok) {
-                                        const reviewData = await reviewRes.json();
-                                        sessionStorage.setItem('proposal_id', proposalIdFromParam);
-
-                                        setUserPrompt(reviewData.project_description || '');
-
-                                        const sectionState = {};
-                                        Object.entries(reviewData.generated_sections || {}).forEach(([key, value]) => {
-                                                sectionState[key] = { content: value, open: true };
-                                        });
-                                        setProposal(sectionState);
-                                        setProposalStatus(reviewData.status);
-
-                                        const initialComments = {};
-                                        const initialStatus = {};
-                                        Object.keys(reviewData.generated_sections || {}).forEach(section => {
-                                                const existing = reviewData.draft_comments?.[section] || {};
-                                                initialComments[section] = {
-                                                        id: existing.id || null,
-                                                        review_text: existing.review_text || '',
-                                                        type_of_comment: existing.type_of_comment || 'P2',
-                                                        severity: existing.severity || 'P2',
-                                                        author_response: existing.author_response || '',
-                                                        rating: existing.rating || null
-                                                };
-                                                initialStatus[section] = existing.rating || null;
-                                        });
-                                        setReviewComments(initialComments);
-                                        setReviewStatus(initialStatus);
-                                        setSidebarOpen(true);
-
-                                        // Load template so section list renders correctly
-                                        try {
-                                                const tplRes = await fetch(`${API_BASE_URL}/templates/proposal_template_unhcr.json/sections`, { credentials: 'include' });
-                                                if (tplRes.ok) {
-                                                        const tplData = await tplRes.json();
-                                                        // tplData is { sections: [...] }
-                                                        setProposalTemplate(tplData);
-                                                } else {
-                                                        // Fallback: build template from section keys
-                                                        const syntheticSections = Object.keys(reviewData.generated_sections || {}).map(name => ({ section_name: name }));
-                                                        setProposalTemplate({ sections: syntheticSections });
-                                                }
-                                        } catch (e) {
-                                                // Fallback: build template from section keys
-                                                const syntheticSections = Object.keys(reviewData.generated_sections || {}).map(name => ({ section_name: name }));
-                                                setProposalTemplate({ sections: syntheticSections });
-                                        }
-                                } else if (reviewRes.status === 401) {
-                                        sessionStorage.setItem('session_expired', 'Session expired. Please login again.');
-                                        navigate('/login');
+                                } else {
+                                        // Final fallback: truly not found or no access
+                                        console.warn("Draft not found or no access after trying review endpoint.");
+                                        sessionStorage.removeItem("proposal_id");
+                                        sessionStorage.removeItem("session_id");
                                 }
                         }
                 }

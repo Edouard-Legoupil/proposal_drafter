@@ -42,9 +42,46 @@
     "sections": [
         {
             "section_name": "Project Snapshot",
-            "word_limit": 180,
-            "format_type": "text",
-            "instructions": "Provide a compact opening snapshot that captures the front-matter information : country, project title, requested budget, sector or sectors, implementation period, number of beneficiaries, and contribution to Japan policy priorities such as relevant SDGs, Humanitarian-Development-Peace Nexus, Human Security, and Women, Peace and Security where applicable. Keep this section factual, concise, and presentation-ready.",
+            "format_type": "table",
+            "instructions": "Provide a compact opening snapshot that captures the front-matter information.",
+            "columns": [
+                {
+                    "name": "Field Context",
+                    "format_type": "text",
+                    "instructions": "Field context where the project will be implemented."
+                },
+                {
+                    "name": "Description",
+                    "format_type": "text",
+                    "instructions": "Project description."
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Country",
+                    "instructions": "Country where the project will be implemented."
+                },
+                {
+                    "row_title": "Project Title",
+                    "instructions": "Project title."
+                },
+                {
+                    "row_title": "Requested Budget",
+                    "instructions": "Amount requested for FY2027 only."
+                },
+                {
+                    "row_title": "Sector(s)",
+                    "instructions": "Sector or sectors."
+                },
+                {
+                    "row_title": "Implementation Period",
+                    "instructions": "Implementation period."
+                },
+                {
+                    "row_title": "Number of Beneficiaries",
+                    "instructions": "Number of beneficiaries."
+                }
+            ],
             "mandatory": true
         },
         {

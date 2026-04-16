@@ -60,6 +60,7 @@ from backend.models.schemas import (
     ArtifactType,
 )
 from backend.utils.incident_service import IncidentService
+from backend.utils.persistence_repository import PersistenceRepository
 
 
 from backend.utils.proposal_logic import (
@@ -87,10 +88,22 @@ def _run_auto_analysis(artifact_type: ArtifactType, review_id: str):
         with get_engine().begin() as connection:
             service = IncidentService(connection)
             # 1. Immediate acknowledgment
-            initial_msg = "Your feedback has been received and is currently being analyzed by our AI agents. A detailed response will follow shortly."
-            service.repo.update_proposal_review(
-                review_id, initial_msg, "acknowledged", response_author="system"
+            initial_msg = (
+                "Your feedback has been received and is currently being analyzed by our AI agents. "
+                "A detailed response will follow shortly."
             )
+            if artifact_type == ArtifactType.proposal:
+                service.repo.update_proposal_review(
+                    review_id, initial_msg, "acknowledged", response_author="system"
+                )
+            elif artifact_type == ArtifactType.knowledge_card:
+                service.repo.update_knowledge_card_review(
+                    review_id, initial_msg, "acknowledged", response_author="system"
+                )
+            elif artifact_type == ArtifactType.template:
+                service.repo.update_template_comment(
+                    review_id, initial_msg, "acknowledged", response_author="system"
+                )
 
         # 2. Wait for 30 seconds
         time.sleep(30)
@@ -99,11 +112,57 @@ def _run_auto_analysis(artifact_type: ArtifactType, review_id: str):
         with get_engine().begin() as connection:
             service = IncidentService(connection)
             service.auto_analyze_review(artifact_type, review_id)
+
+        # 4. Update system message to static consult-message after analysis completion
+        with get_engine().begin() as connection:
+            service = IncidentService(connection)
+            static_msg = "Your feedback has been received. Consult the review from our AI agents."
+            if artifact_type == ArtifactType.proposal:
+                service.repo.update_proposal_review(
+                    review_id, static_msg, "acknowledged", response_author="system"
+                )
+            elif artifact_type == ArtifactType.knowledge_card:
+                service.repo.update_knowledge_card_review(
+                    review_id, static_msg, "acknowledged", response_author="system"
+                )
+            elif artifact_type == ArtifactType.template:
+                service.repo.update_template_comment(
+                    review_id, static_msg, "acknowledged", response_author="system"
+                )
     except Exception as e:
         logger.error(
             f"Background auto-analysis failed for {artifact_type}/{review_id}: {e}",
             exc_info=True,
         )
+
+
+@router.get("/reviews/{review_id}/analysis")
+async def get_review_analysis(
+    review_id: str, current_user: dict = Depends(get_current_user)
+):
+    """
+    Fetch persisted incident analysis payload for a given review.
+    """
+    try:
+        with get_engine().begin() as connection:
+            query = text(
+                "SELECT analysis_payload FROM incident_analysis_results WHERE source_review_id = :review_id LIMIT 1"
+            )
+            result = (
+                connection.execute(query, {"review_id": review_id}).mappings().first()
+            )
+            if not result or not result.get("analysis_payload"):
+                raise HTTPException(
+                    status_code=404, detail="Analysis not completed yet."
+                )
+            return result["analysis_payload"]
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            f"Error fetching analysis for review {review_id}: {e}", exc_info=True
+        )
+        raise HTTPException(status_code=500, detail="Could not fetch analysis.")
 
 
 @router.get("/templates")
@@ -1767,7 +1826,7 @@ async def submit_review(
             # Check if the user is assigned to review this proposal
             reviewer_id_from_db = connection.execute(
                 text(
-                    "SELECT reviewer_id FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND (status = 'pending' OR status = 'draft')"
+                    "SELECT reviewer_id FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id LIMIT 1"
                 ),
                 {"proposal_id": str(proposal_id), "user_id": str(user_id)},
             ).scalar()
@@ -1786,10 +1845,11 @@ async def submit_review(
                 {"pid": str(proposal_id)},
             ).scalar()
 
-            # Delete existing draft/pending comments for this user and proposal
+            # Delete existing draft comments for this user and proposal
+            # We preserve 'pending' comments added individually
             connection.execute(
                 text(
-                    "DELETE FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND (status = 'pending' OR status = 'draft')"
+                    "DELETE FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id AND status = 'draft'"
                 ),
                 {"proposal_id": str(proposal_id), "user_id": str(user_id)},
             )

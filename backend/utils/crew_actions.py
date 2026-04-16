@@ -282,9 +282,14 @@ def handle_table_format(
                 )
                 return generated_content
 
-        section_data = table_data.get(section_name, {})
-        table_rows = section_data.get("table", [])
-        notes = section_data.get("notes", "")
+        section_data = table_data.get(section_name)
+        if isinstance(section_data, dict) and "table" in section_data:
+            table_rows = section_data.get("table", [])
+            notes = section_data.get("notes", "")
+        else:
+            # Fallback: check if table is at the top level (happens when LLM skips section name key)
+            table_rows = table_data.get("table", [])
+            notes = table_data.get("notes", "")
         
         # REMOVED AGGRESSIVE SANITISATION ON NOTES
         # Use LLM compliance for length control
