@@ -71,7 +71,82 @@ class IncidentService:
             else:
                 normalized_refs.append({"id": str(ref)})
         correction_output["evidence_refs"] = normalized_refs
+
+        # Normalize string fields that may contain dicts from LLM output
+        # Handle why
+        if "why" in correction_output and isinstance(correction_output["why"], dict):
+            correction_output["why"] = json.dumps(correction_output["why"])
+
+        # Handle proposed_replacement
+        if "proposed_replacement" in correction_output:
+            pr = correction_output["proposed_replacement"]
+            if isinstance(pr, dict):
+                correction_output["proposed_replacement"] = json.dumps(pr)
+
+        # Handle patch.before, patch.after, patch.section_id
+        if "patch" in correction_output and isinstance(correction_output["patch"], dict):
+            patch = correction_output["patch"]
+            if "before" in patch and isinstance(patch["before"], dict):
+                patch["before"] = json.dumps(patch["before"])
+            if "after" in patch and isinstance(patch["after"], dict):
+                patch["after"] = json.dumps(patch["after"])
+            if "section_id" in patch and isinstance(patch["section_id"], dict):
+                patch["section_id"] = json.dumps(patch["section_id"])
+
+        # Handle alternatives fields
+        if "alternatives" in correction_output:
+            for alt in correction_output["alternatives"]:
+                if isinstance(alt, dict):
+                    # Handle alternative string fields
+                    if "summary" in alt and isinstance(alt["summary"], dict):
+                        alt["summary"] = json.dumps(alt["summary"])
+                    if "proposed_action" in alt and isinstance(alt["proposed_action"], dict):
+                        alt["proposed_action"] = json.dumps(alt["proposed_action"])
+                    # Handle alternative patch fields
+                    if "patch" in alt and isinstance(alt["patch"], dict):
+                        patch = alt["patch"]
+                        if "before" in patch and isinstance(patch["before"], dict):
+                            patch["before"] = json.dumps(patch["before"])
+                        if "after" in patch and isinstance(patch["after"], dict):
+                            patch["after"] = json.dumps(patch["after"])
+                        if "section_id" in patch and isinstance(patch["section_id"], dict):
+                            patch["section_id"] = json.dumps(patch["section_id"])
+
         user_suggestion = UserSuggestion.model_validate(correction_output)
+
+        # Normalize string fields in rca_output that might contain dicts
+        def normalize_string_fields(data: dict, string_fields: list[str]) -> None:
+            for field in string_fields:
+                if field in data and isinstance(data[field], dict):
+                    data[field] = json.dumps(data[field])
+
+        # Normalize RootCauseAnalysis fields
+        if isinstance(rca_output, dict):
+            rca_string_fields = ["primary_cause", "explanation", "immediate_cause", "systemic_cause"]
+            normalize_string_fields(rca_output, rca_string_fields)
+            # Normalize hypotheses
+            if "hypotheses" in rca_output:
+                for hyp in rca_output["hypotheses"]:
+                    if isinstance(hyp, dict):
+                        normalize_string_fields(hyp, ["cause", "reason"])
+            # Normalize blast_radius
+            if "blast_radius" in rca_output and isinstance(rca_output["blast_radius"], dict):
+                normalize_string_fields(rca_output["blast_radius"], ["notes"])
+
+        # Normalize SuggestedSystemFix fields
+        if isinstance(remediation_output, dict):
+            fix_string_fields = ["recommendation", "expected_impact", "owner"]
+            normalize_string_fields(remediation_output, fix_string_fields)
+            if "implementation_notes" in remediation_output:
+                remediation_output["implementation_notes"] = [
+                    note if isinstance(note, str) else json.dumps(note)
+                    for note in remediation_output["implementation_notes"]
+                ]
+            if "implementation_tasks" in remediation_output:
+                for task in remediation_output["implementation_tasks"]:
+                    if isinstance(task, dict):
+                        normalize_string_fields(task, ["description", "owner"])
+
         root_cause_analysis = RootCauseAnalysis.model_validate(rca_output)
         suggested_system_fix = SuggestedSystemFix.model_validate(remediation_output)
         consistency_check = ConsistencyCheck.model_validate(consistency_output)
