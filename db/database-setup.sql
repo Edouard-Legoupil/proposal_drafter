@@ -365,6 +365,153 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO <DB_USERN
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO <DB_USERNAME>;
 
 
+
+-- Template in DB
+-- Create template_type enum type
+CREATE TYPE template_type AS ENUM (
+            'proposal',
+            'concept_note',
+            'knowledge_card'
+        );
+-- Create template_status enum type
+CREATE TYPE template_status AS ENUM (
+    'draft',
+    'active',
+    'deprecated',
+    'archived'
+);
+
+-- Create templates table
+CREATE TABLE IF NOT EXISTS templates (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    filename TEXT NOT NULL,
+    template_type template_type NOT NULL,
+    description TEXT,
+    status template_status DEFAULT 'draft',
+    is_default BOOLEAN DEFAULT FALSE,
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_by UUID REFERENCES users(id),
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_template_filename UNIQUE (filename),
+    CONSTRAINT unique_default_template UNIQUE (template_type) DEFERRABLE INITIALLY IMMEDIATE
+);
+
+-- Create template_versions table
+CREATE TABLE IF NOT EXISTS template_versions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    template_id UUID NOT NULL REFERENCES templates(id) ON DELETE CASCADE,
+    version_number TEXT NOT NULL,
+    version_notes TEXT,
+    template_data JSONB NOT NULL,
+    status template_status DEFAULT 'draft',
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_by UUID REFERENCES users(id),
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_template_version UNIQUE (template_id, version_number)
+);
+
+-- Create template_donors table for mapping templates to donors
+CREATE TABLE IF NOT EXISTS template_donors (
+    template_id UUID NOT NULL REFERENCES templates(id) ON DELETE CASCADE,
+    donor_id UUID NOT NULL REFERENCES donors(id) ON DELETE CASCADE,
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (template_id, donor_id)
+);
+
+-- Create template_audit_log table
+CREATE TABLE IF NOT EXISTS template_audit_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    template_id UUID REFERENCES templates(id) ON DELETE SET NULL,
+    template_version_id UUID REFERENCES template_versions(id) ON DELETE SET NULL,
+    action TEXT NOT NULL,
+    action_details JSONB,
+    performed_by UUID REFERENCES users(id),
+    performed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for query performance
+CREATE INDEX IF NOT EXISTS idx_templates_name ON templates(name);
+CREATE INDEX IF NOT EXISTS idx_templates_type ON templates(template_type);
+CREATE INDEX IF NOT EXISTS idx_templates_status ON templates(status);
+CREATE INDEX IF NOT EXISTS idx_template_versions_template_id ON template_versions(template_registry_id);
+CREATE INDEX IF NOT EXISTS idx_template_versions_status ON template_versions(status);
+CREATE INDEX IF NOT EXISTS idx_template_donors_template_id ON template_donors(template_id);
+CREATE INDEX IF NOT EXISTS idx_template_donors_donor_id ON template_donors(donor_id);
+CREATE INDEX IF NOT EXISTS idx_template_audit_log_template_id ON template_audit_log(template_id);
+CREATE INDEX IF NOT EXISTS idx_template_audit_log_version_id ON template_audit_log(template_version_id);
+
+-- Create a trigger to update the updated_at timestamp for templates
+CREATE OR REPLACE FUNCTION update_template_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_templates_updated_at
+BEFORE UPDATE ON templates
+FOR EACH ROW
+EXECUTE FUNCTION update_template_timestamp();
+
+-- Create a trigger to update the updated_at timestamp for template versions
+CREATE OR REPLACE FUNCTION update_template_version_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+--CREATE TRIGGER trg_template_versions_updated_at
+--BEFORE UPDATE ON template_versions
+--FOR EACH ROW
+--EXECUTE FUNCTION update_template_version_timestamp();
+
+-- Create views for querying template data
+CREATE OR REPLACE VIEW vw_template_summary AS
+SELECT 
+    t.id AS template_id,
+    t.name AS template_name,
+    t.filename,
+    t.template_type,
+    t.description,
+    t.status,
+    t.is_default,
+    t.created_by,
+    t.created_at,
+    t.updated_by,
+    t.updated_at,
+    tv.version_number AS latest_version,
+    tv.created_at AS latest_version_created,
+    tv.status AS latest_version_status,
+    COUNT(d.id) AS donor_count
+FROM templates t
+LEFT JOIN template_versions tv ON t.id = tv.template_registry_id -- AND tv.status = 'active'
+LEFT JOIN template_donors td ON t.id = td.template_id
+LEFT JOIN donors d ON td.donor_id = d.id
+GROUP BY t.id, tv.version_number, tv.created_at, tv.status;
+
+CREATE OR REPLACE VIEW vw_template_version_history AS
+SELECT 
+    tv.id AS version_id,
+    tv.template_registry_id,
+    t.name AS template_name,
+    tv.version_number,
+    tv.release_notes,
+    tv.status,
+    tv.created_by,
+    tv.created_at,
+    tv.updated_by,
+    tv.updated_at
+FROM template_versions tv
+JOIN templates t ON tv.template_registry_id = t.id
+ORDER BY tv.created_at DESC;
+
 -- ============================================================================
 -- - Incident Analysis + Template Qualification 
 -- ============================================================================
@@ -790,6 +937,8 @@ CREATE TABLE IF NOT EXISTS qualification_rule_evaluations (
     explanation TEXT,
     waived_by UUID NULL REFERENCES users(id),
     waiver_reason TEXT,
+    artifact_type TEXT,
+    artifact_id TEXT,
 
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (qualification_run_id, rule_id)

@@ -59,7 +59,7 @@ async def test_generate_document(authenticated_client, db_session, mocker):
                     "Budget": "Content",
                     "Annex 1. Risk Assessment Plan": "Content"
                 }),
-            "template_name": "unhcr_proposal_template.json", "is_accepted": False
+            "template_name": "proposal_template_unhcr.json", "is_accepted": False
         }
     )
 

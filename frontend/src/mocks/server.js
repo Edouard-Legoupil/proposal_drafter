@@ -3,6 +3,9 @@ import { http, HttpResponse } from 'msw'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
 
+// Minimal mock template for load-draft endpoint
+const proposalTemplate = { sections: [] };
+
 export const server = setupServer(
         http.get(`${API_BASE_URL}/profile`, () =>
                 HttpResponse.json({

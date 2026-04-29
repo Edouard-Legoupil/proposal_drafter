@@ -1024,7 +1024,7 @@ export default function Chat(props) {
                         } else if (response.status === 401) {
                                 sessionStorage.setItem("session_expired", "Session expired. Please login again.")
                                 navigate("/login")
-                        } else if (response.status === 403 || response.status === 404) {
+                        } else if (response.status === 400 || response.status === 403 || response.status === 404) {
                                 // May be a reviewer: try loading via the review endpoint
                                 const profileRes2 = await fetch(`${API_BASE_URL}/profile`, { credentials: 'include' });
                                 if (profileRes2.ok) {

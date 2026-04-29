@@ -31,55 +31,59 @@
         ]
     },
     "section_sequence": [
+        "Project Snapshot",
         "Project Objective",
         "Project Description",
         "Performance Targets",
         "Benefits to Japan",
         "Implementation Period",
-        "Budget Breakdown",
-        "Project Snapshot"
+        "Budget Breakdown"
     ],
     "sections": [
         {
             "section_name": "Project Snapshot",
             "format_type": "table",
-            "instructions": "Provide a compact opening snapshot that captures the front-matter information.",
+            "instructions": "Provide a compact opening snapshot aligned with the Government of Japan Regular Budget Concept Note front table, capturing country, project title, requested budget for FY2027, sector(s), implementation period, number and breakdown of beneficiaries where available, and explicit reference to contributions to Japan’s policy priorities such as SDGs, Human Security, and the Humanitarian-Development-Peace Nexus. If beneficiary disaggregation or policy alignment details are not available, state this explicitly.",
             "columns": [
                 {
                     "name": "Field Context",
                     "format_type": "text",
-                    "instructions": "Field context where the project will be implemented."
+                    "instructions": "Label or category corresponding to the snapshot field."
                 },
                 {
                     "name": "Description",
                     "format_type": "text",
-                    "instructions": "Project description."
+                    "instructions": "Concise description aligned with the Government of Japan concept note template."
                 }
             ],
             "rows": [
                 {
                     "row_title": "Country",
-                    "instructions": "Country where the project will be implemented."
+                    "instructions": "Country or countries where the project will be implemented."
                 },
                 {
                     "row_title": "Project Title",
-                    "instructions": "Project title."
+                    "instructions": "Clear project title reflecting key activities, target population, and location."
                 },
                 {
                     "row_title": "Requested Budget",
-                    "instructions": "Amount requested for FY2027 only."
+                    "instructions": "Amount requested for FY2027 only, in USD."
                 },
                 {
                     "row_title": "Sector(s)",
-                    "instructions": "Sector or sectors."
+                    "instructions": "Relevant sector or sectors such as Health, WASH, Education, Protection, Food, Digital, or other applicable categories."
                 },
                 {
                     "row_title": "Implementation Period",
-                    "instructions": "Implementation period."
+                    "instructions": "Total planned implementation duration, indicating start and end months and years."
                 },
                 {
                     "row_title": "Number of Beneficiaries",
-                    "instructions": "Number of beneficiaries."
+                    "instructions": "Total number of beneficiaries with disaggregation by population group where available; if not available, state this explicitly."
+                },
+                {
+                    "row_title": "Contribution to Japan's Policy Priorities",
+                    "instructions": "Reference applicable SDG numbers, Human Security, Humanitarian-Development-Peace Nexus, or other relevant policy priorities of the Government of Japan; if not applicable or not available, state this explicitly."
                 }
             ],
             "mandatory": true
@@ -88,56 +92,51 @@
             "section_name": "Project Objective",
             "word_limit": 420,
             "format_type": "text",
-            "instructions": "Summarize the crisis or operational context, the latest humanitarian needs, the target population, and the core value proposition of the project. State the project objective clearly within the narrative, explain why the response is needed now, and include the implementation period in concise form. State the objective of the proposed project clearly and concisely. Summarize the crisis or operational context, the latest humanitarian needs, the target population, and the core value proposition of the project. State the project objective clearly within the narrative, explain why the response is needed now, and include the implementation period in concise form. Open with quantified context, highlight the most vulnerable groups, and end with a clear statement of what the project will deliver. Indicate in narrative form whether the project falls under any of the following categories, and briefly justify each category that applies: food assistance, health, Green Transformation (GX), Digital Transformation (DX), Women Peace and Security (WPS), regional integration or connectivity, youth, public-private partnership (PPP), rule of law, and Sustainable Development Goals (SDGs). For SDGs, list all applicable goal numbers. If none apply or information is missing, state this explicitly.",
+            "instructions": "Summarize the operational or crisis context, the most recent identified needs, and the target population using quantified information where available. Clearly state the single overarching objective of the project within the narrative and explain why the proposed response is required at this time. Include the planned implementation period in concise form. Indicate in narrative form whether the project contributes to any of the following categories and briefly justify each that applies: food assistance, health, Green Transformation (GX), Digital Transformation (DX), Women Peace and Security (WPS), regional integration or connectivity, youth, public-private partnership (PPP), rule of law, and relevant Sustainable Development Goals by number. If none apply or information is not available, state this explicitly. Open with quantified context, highlight the most vulnerable groups, and end with a clear statement of what the project will deliver.",
             "mandatory": true
         },
         {
             "section_name": "Project Description",
             "word_limit": 400,
             "format_type": "text",
-            "instructions": "Describe the proposed activities as specifically as possible, including quantitative data where available. Address the following within one concise text section, where applicable and supported by the context: diplomatic significance or strategic importance of the project; partnerships or collaboration with Japanese companies or NGOs; coordination or synergy with projects implemented directly by MOFA or through JICA; whether the project is TICAD-related; whether the project promotes the Humanitarian-Development Nexus; and how the project includes verifiable performance targets under the PDCA cycle. If any element is not available in the context, state this explicitly.",
+            "instructions": "Describe the proposed activities in a single coherent narrative, aligned with the Government of Japan concept note requirements. Include quantitative details where available and address, within the same narrative, the strategic or diplomatic significance of the project, any partnerships with Japanese companies or NGOs, coordination with MOFA- or JICA-implemented initiatives, relevance to TICAD, contribution to the Humanitarian-Development Nexus, and inclusion of verifiable performance targets under the PDCA cycle. If any of these elements are not applicable or information is not available, state this explicitly.",
             "mandatory": true
         },
         {
             "section_name": "Performance Targets",
             "word_limit": 850,
             "format_type": "text",
-            "instructions": "Describe the overall impact, the expected outcomes, and the main outputs or activity streams in a concise but structured narrative. Embed performance targets directly in the text by specifying quantitative, verifiable results such as the number of beneficiaries, services delivered, institutions supported, or outputs produced. Link each outcome to a short explanation of the intervention logic, the population reached, and at least one concrete indicator or target that can be verified after implementation through the PDCA cycle. If the project aligns with any of Japan's 17 strategic fields, identify all applicable fields in the narrative and briefly explain the relevance. The strategic fields are AI or semiconductors, digital or cybersecurity, ICT, quantum, defense industry, aerospace, maritime, shipbuilding, materials including critical minerals, synthetic biology or bio, drug discovery or advanced medical care, resource and energy security or GX, fusion energy, foodtech, disaster prevention or national resilience, port logistics, and content. If no alignment is available in the context, state this explicitly.",
+            "instructions": "Present the expected outcomes and main outputs in a structured narrative without using subsections. Embed quantitative, verifiable targets directly in the text, such as numbers of beneficiaries reached, services delivered, or outputs produced, and explain briefly how these will be verified post-implementation through the PDCA cycle. Indicate within the narrative whether the project aligns with any of Japan’s 17 strategic fields and explain the relevance; if none apply or information is not available, state this explicitly. The strategic fields are AI or semiconductors, digital or cybersecurity, ICT, quantum, defense industry, aerospace, maritime, shipbuilding, materials including critical minerals, synthetic biology or bio, drug discovery or advanced medical care, resource and energy security or GX, fusion energy, foodtech, disaster prevention or national resilience, port logistics, and content.",
             "mandatory": true
         },
         {
             "section_name": "Benefits to Japan",
             "word_limit": 550,
             "format_type": "text",
-            "instructions": "xplain why the project is strategically relevant and why support from Japan adds value. Within one coherent section, address the response gap being filled, the humanitarian and protection rationale, and the benefits to Japan, including any supported relevance to Japanese diplomatic priorities, human security, the Humanitarian-Development-Peace Nexus, Women, Peace and Security, benefits to Japanese companies or the Japanese economy, and economic security considerations. If the project contributes to support for Japanese personnel, include the staff member name, current title or rank, duty station, type of support such as securing new posts, promotions, or regular recruitment of JPOs, and the expected impact. If this is not applicable or not available in the context, state this explicitly.",
+            "instructions": "Explain why the project is strategically relevant and why support from Japan adds value. Within one coherent section, address the response gap being filled, the humanitarian and protection rationale, and the benefits to Japan, including any supported relevance to Japanese diplomatic priorities, human security, the Humanitarian-Development-Peace Nexus, Women, Peace and Security, benefits to Japanese companies or the Japanese economy, and economic security considerations. If the project contributes to supporting Japanese personnel, include the required staff details and expected impact; if not applicable or information is not available, state this explicitly.",
             "mandatory": true
         },
         {
             "section_name": "Implementation Period",
             "word_limit": 100,
             "format_type": "text",
-            "instructions": "State the planned implementation period and confirm that the project will commence no later than March 2028.",
+            "instructions": "State the planned implementation period clearly and confirm that project implementation will commence no later than March 2028.",
             "mandatory": true
         },
         {
             "section_name": "Budget Breakdown",
             "format_type": "table",
-            "instructions": "Provide as much detail as possible. For multi-year projects, show only the FY2027 requested amount and include the indicative breakdown for subsequent fiscal years.",
+            "instructions": "Provide a detailed budget table showing requested amounts only with breakdown per high level activities. Include one row per high level activity by duplicating the Activity rows as needed. Ensure that indirect or support costs do not exceed 6.5% of the total requested budget and that evaluation has its own separate budget line.",
             "columns": [
                 {
                     "name": "Budget Category",
                     "format_type": "text",
-                    "instructions": "Major cost category, for example staffing, supplies, cash assistance, logistics, monitoring, or support costs."
+                    "instructions": "Major cost component per activity grouping. Include activity lines plus evaluation and indirect support costs."
                 },
                 {
-                    "name": "FY2027 Requested Amount (USD)",
+                    "name": "Requested Amount (USD)",
                     "format_type": "number",
-                    "instructions": "Amount requested for FY2027 only."
-                },
-                {
-                    "name": "Subsequent Fiscal Years Breakdown",
-                    "format_type": "text",
-                    "instructions": "If applicable, provide indicative cost breakdown for each subsequent fiscal year."
+                    "instructions": "Requested amount."
                 },
                 {
                     "name": "Notes",
@@ -147,16 +146,24 @@
             ],
             "rows": [
                 {
-                    "row_title": "Direct Program Costs",
-                    "instructions": "Estimated direct implementation costs."
+                    "row_title": "Activity 1",
+                    "instructions": "Direct program costs for the first high level activity."
                 },
                 {
-                    "row_title": "Operational / Support Costs",
-                    "instructions": "Estimated support or indirect costs. This should not be more than 6.6% of the total budget."
+                    "row_title": "Activity 2",
+                    "instructions": "Direct program costs for the second high level activity; duplicate or add additional Activity rows as needed."
+                },
+                {
+                    "row_title": "Evaluation",
+                    "instructions": "Costs for evaluation activities, clearly separated as its own line."
+                },
+                {
+                    "row_title": "Indirect Support Costs",
+                    "instructions": "Indirect Support costs, not exceeding 6.5% of the total requested budget."
                 },
                 {
                     "row_title": "Total",
-                    "instructions": "Grand total requested for FY2027."
+                    "instructions": "Total requested budget (sum of all lines)."
                 }
             ],
             "mandatory": true
