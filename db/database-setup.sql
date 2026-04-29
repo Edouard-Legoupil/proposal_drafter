@@ -444,6 +444,13 @@ CREATE INDEX IF NOT EXISTS idx_template_donors_donor_id ON template_donors(donor
 CREATE INDEX IF NOT EXISTS idx_template_audit_log_template_id ON template_audit_log(template_id);
 CREATE INDEX IF NOT EXISTS idx_template_audit_log_version_id ON template_audit_log(template_version_id);
 
+CREATE UNIQUE INDEX IF NOT EXISTS uq_template_registry_key_type
+ON template_registry(template_key, template_type);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_single_prod_version
+ON template_versions(template_registry_id)
+WHERE environment = 'prod' AND status = 'promoted_to_prod'; 
+
 -- Create a trigger to update the updated_at timestamp for templates
 CREATE OR REPLACE FUNCTION update_template_timestamp()
 RETURNS TRIGGER AS $$
@@ -511,6 +518,154 @@ SELECT
 FROM template_versions tv
 JOIN templates t ON tv.template_registry_id = t.id
 ORDER BY tv.created_at DESC;
+
+--- Logs in DB adds comprehensive logging for proposal generation runs
+
+
+CREATE TYPE run_status AS ENUM (
+    'drafting',
+    'completed', 
+    'failed',
+    'cancelled'
+);
+
+-- Create artifact_runs table (for both proposals and knowledge cards)
+CREATE TABLE IF NOT EXISTS artifact_runs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    artifact_type TEXT NOT NULL CHECK (artifact_type IN ('proposal', 'knowledge_card')),
+    artifact_id UUID NOT NULL,
+    user_id UUID NOT NULL REFERENCES users(id),
+    
+    -- Run metadata
+    run_status run_status NOT NULL DEFAULT 'drafting',
+    start_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    end_time TIMESTAMPTZ,
+    
+    -- Agent execution details
+    agents_executed TEXT[],  -- Array of agent names
+    model_deployment TEXT,    -- Model/deployment used
+    
+    -- Token usage and cost
+    tokens_input INTEGER DEFAULT 0,
+    tokens_output INTEGER DEFAULT 0,
+    estimated_cost NUMERIC(10,6) DEFAULT 0.0,
+    
+    -- Performance metrics
+    step_count INTEGER DEFAULT 0,
+    retry_count INTEGER DEFAULT 0,
+    failure_count INTEGER DEFAULT 0,
+    
+    -- Timing information
+    total_latency_ms INTEGER,  -- Total execution time in milliseconds
+    stage_latencies JSONB,     -- Latency per stage/agent
+    
+    -- Output metrics
+    sections_generated INTEGER DEFAULT 0,
+    pages_generated INTEGER DEFAULT 0,
+    words_generated INTEGER DEFAULT 0,
+    
+    -- Export events
+    export_events JSONB,  -- Word/PDF export events with timestamps
+    
+    -- Additional context
+    template_name TEXT,
+    template_version TEXT,
+    metadata JSONB,
+    
+    -- Timestamps
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for query performance
+CREATE INDEX IF NOT EXISTS idx_artifact_runs_artifact_type ON artifact_runs(artifact_type);
+CREATE INDEX IF NOT EXISTS idx_artifact_runs_artifact_id ON artifact_runs(artifact_id);
+CREATE INDEX IF NOT EXISTS idx_artifact_runs_user_id ON artifact_runs(user_id);
+CREATE INDEX IF NOT EXISTS idx_artifact_runs_status ON artifact_runs(run_status);
+CREATE INDEX IF NOT EXISTS idx_artifact_runs_start_time ON artifact_runs(start_time);
+CREATE INDEX IF NOT EXISTS idx_artifact_runs_end_time ON artifact_runs(end_time);
+
+-- Create a trigger to update the updated_at timestamp
+CREATE OR REPLACE FUNCTION update_artifact_run_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_artifact_runs_updated_at
+BEFORE UPDATE ON artifact_runs
+FOR EACH ROW
+EXECUTE FUNCTION update_artifact_run_timestamp();
+
+-- Create views for querying telemetry data
+CREATE OR REPLACE VIEW vw_proposal_run_telemetry AS
+SELECT 
+    ar.id AS run_id,
+    ar.artifact_id AS proposal_id,
+    ar.user_id,
+    u.name AS user_name,
+    ar.run_status,
+    ar.start_time,
+    ar.end_time,
+    ar.agents_executed,
+    ar.model_deployment,
+    ar.tokens_input,
+    ar.tokens_output,
+    ar.estimated_cost,
+    ar.step_count,
+    ar.retry_count,
+    ar.failure_count,
+    ar.total_latency_ms,
+    ar.sections_generated,
+    ar.pages_generated,
+    ar.words_generated,
+    ar.template_name,
+    ar.template_version,
+    EXTRACT(EPOCH FROM (ar.end_time - ar.start_time)) AS duration_seconds,
+    p.form_data,
+    p.project_description
+FROM artifact_runs ar
+JOIN users u ON ar.user_id = u.id
+JOIN proposals p ON ar.artifact_id = p.id
+WHERE ar.artifact_type = 'proposal';
+
+CREATE OR REPLACE VIEW vw_knowledge_card_run_telemetry AS
+SELECT 
+    ar.id AS run_id,
+    ar.artifact_id AS knowledge_card_id,
+    ar.user_id,
+    u.name AS user_name,
+    ar.run_status,
+    ar.start_time,
+    ar.end_time,
+    ar.agents_executed,
+    ar.model_deployment,
+    ar.tokens_input,
+    ar.tokens_output,
+    ar.estimated_cost,
+    ar.step_count,
+    ar.retry_count,
+    ar.failure_count,
+    ar.total_latency_ms,
+    ar.sections_generated,
+    ar.pages_generated,
+    ar.words_generated,
+    ar.template_name,
+    ar.template_version,
+    EXTRACT(EPOCH FROM (ar.end_time - ar.start_time)) AS duration_seconds,
+    kc.summary,
+    kc.created_at AS card_created_at
+FROM artifact_runs ar
+JOIN users u ON ar.user_id = u.id
+JOIN knowledge_cards kc ON ar.artifact_id = kc.id
+WHERE ar.artifact_type = 'knowledge_card';
+
+
+
+
+
 
 -- ============================================================================
 -- - Incident Analysis + Template Qualification 
@@ -1396,9 +1551,4 @@ WHERE kc.id = src.knowledge_card_id;
 
 
 ---
- CREATE UNIQUE INDEX IF NOT EXISTS uq_template_registry_key_type
-ON template_registry(template_key, template_type);
 
-CREATE UNIQUE INDEX IF NOT EXISTS uq_single_prod_version
-ON template_versions(template_registry_id)
-WHERE environment = 'prod' AND status = 'promoted_to_prod'; 
