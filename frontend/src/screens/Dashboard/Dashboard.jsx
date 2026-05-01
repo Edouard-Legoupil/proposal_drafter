@@ -176,18 +176,22 @@ export default function Dashboard() {
         useEffect(() => {
                 sessionStorage.removeItem("proposal_id")
                 getProfile();
-                getProjects()
-                getReviews()
-                getKnowledgeCards()
-                getUsers()
-                getAllProposals()
-                fetchTeams()
-                getDonorTemplates()
+                (async () => {
+                        await getProjects()
+                        await getReviews()
+                        await getKnowledgeCards()
+                        await getUsers()
+                        await getAllProposals()
+                        await fetchTeams()
+                        await getDonorTemplates()
+                })()
         }, [getProfile, getProjects, getReviews, getKnowledgeCards, getUsers, getAllProposals, fetchTeams, getDonorTemplates])
 
         useEffect(() => {
                 if (folder === 'proposals') {
-                        getProjects();
+                        (async () => {
+                                await getProjects();
+                        })()
                 }
         }, [folder, getProjects]);
 
@@ -227,9 +231,9 @@ export default function Dashboard() {
                 })
 
                 if (response.ok) {
-                        getProjects()
-                        getReviews()
-                        getAllProposals()
+                        await getProjects()
+                        await getReviews()
+                        await getAllProposals()
                 }
         }
 
@@ -241,8 +245,8 @@ export default function Dashboard() {
                 })
 
                 if (response.ok) {
-                        getProjects()
-                        getAllProposals()
+                        await getProjects()
+                        await getAllProposals()
                 }
         }
 
@@ -260,8 +264,8 @@ export default function Dashboard() {
                 })
 
                 if (response.ok) {
-                        getProjects()
-                        getReviews()
+                        await getProjects()
+                        await getReviews()
                         setIsTransferModalOpen(false)
                         setTransferProposalId(null)
                 }
@@ -381,7 +385,7 @@ export default function Dashboard() {
                 });
 
                 if (response.ok) {
-                        getKnowledgeCards();
+                        await getKnowledgeCards();
                 } else {
                         alert('Failed to delete knowledge card.');
                 }
