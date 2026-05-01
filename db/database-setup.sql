@@ -757,6 +757,180 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- ============================================================================
+-- SHAREPOINT SYNC TABLES (for tracking file changes)
+-- ============================================================================
+
+-- Create sharepoint_sync_status enum for tracking sync states
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'sharepoint_sync_status') THEN
+        CREATE TYPE sharepoint_sync_status AS ENUM (
+            'pending',
+            'started',
+            'completed',
+            'failed'
+        );
+    END IF;
+END$$;
+
+-- Create sync_change_type enum for tracking change types
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'sync_change_type') THEN
+        CREATE TYPE sync_change_type AS ENUM (
+            'created',
+            'modified',
+            'deleted',
+            'renamed'
+        );
+    END IF;
+END$$;
+
+-- Table for sync history
+CREATE TABLE IF NOT EXISTS sharepoint_sync_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sync_started_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    sync_completed_at TIMESTAMPTZ,
+    status sharepoint_sync_status NOT NULL DEFAULT 'started',
+    total_files_checked INTEGER DEFAULT 0,
+    files_changed INTEGER DEFAULT 0,
+    files_created INTEGER DEFAULT 0,
+    files_deleted INTEGER DEFAULT 0,
+    errors_encountered INTEGER DEFAULT 0,
+    error_summary JSONB,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table for file version history
+CREATE TABLE IF NOT EXISTS sharepoint_file_versions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    artifact_type TEXT NOT NULL CHECK (artifact_type IN ('proposal', 'knowledge_card')),
+    artifact_id UUID NOT NULL,
+    user_id UUID NOT NULL REFERENCES users(id),
+    sharepoint_link_id UUID NOT NULL,
+    version_number INTEGER NOT NULL,
+    sharepoint_url TEXT NOT NULL,
+    filename TEXT NOT NULL,
+    file_size BIGINT,
+    sharepoint_version TEXT,
+    last_modified_at TIMESTAMPTZ,
+    last_modified_by TEXT,
+    diff_from_previous TEXT,
+    change_type sync_change_type NOT NULL DEFAULT 'modified',
+    metadata JSONB DEFAULT '{}'::jsonb,
+    is_current BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (sharepoint_link_id, version_number)
+);
+
+-- Indexes for sync tables
+CREATE INDEX IF NOT EXISTS idx_sharepoint_sync_history_status 
+    ON sharepoint_sync_history(status);
+
+CREATE INDEX IF NOT EXISTS idx_sharepoint_sync_history_created 
+    ON sharepoint_sync_history(created_at);
+
+CREATE INDEX IF NOT EXISTS idx_sharepoint_file_versions_link 
+    ON sharepoint_file_versions(sharepoint_link_id);
+
+CREATE INDEX IF NOT EXISTS idx_sharepoint_file_versions_artifact 
+    ON sharepoint_file_versions(artifact_type, artifact_id);
+
+CREATE INDEX IF NOT EXISTS idx_sharepoint_file_versions_current 
+    ON sharepoint_file_versions(sharepoint_link_id, is_current) 
+    WHERE is_current = TRUE;
+
+-- View for file version history
+CREATE OR REPLACE VIEW vw_file_version_history AS
+SELECT 
+    sfv.id,
+    sfv.artifact_type,
+    sfv.artifact_id,
+    sfv.user_id,
+    u.name AS user_name,
+    sfv.sharepoint_link_id,
+    sfv.version_number,
+    sfv.sharepoint_url,
+    sfv.filename,
+    sfv.file_size,
+    sfv.sharepoint_version,
+    sfv.last_modified_at,
+    sfv.last_modified_by,
+    sfv.change_type,
+    sfv.is_current,
+    sfv.created_at,
+    -- Get artifact info
+    CASE 
+        WHEN sfv.artifact_type = 'proposal' THEN p.template_name
+        WHEN sfv.artifact_type = 'knowledge_card' THEN kc.template_name
+    END AS template_name,
+    CASE 
+        WHEN sfv.artifact_type = 'proposal' THEN p.status::TEXT
+        WHEN sfv.artifact_type = 'knowledge_card' THEN kc.status::TEXT
+    END AS artifact_status
+FROM sharepoint_file_versions sfv
+JOIN users u ON sfv.user_id = u.id
+LEFT JOIN proposals p ON sfv.artifact_type = 'proposal' AND sfv.artifact_id = p.id
+LEFT JOIN knowledge_cards kc ON sfv.artifact_type = 'knowledge_card' AND sfv.artifact_id = kc.id;
+
+-- View for sync history with details
+CREATE OR REPLACE VIEW vw_sync_history_details AS
+SELECT 
+    ssh.id,
+    ssh.sync_started_at,
+    ssh.sync_completed_at,
+    ssh.status,
+    ssh.total_files_checked,
+    ssh.files_changed,
+    ssh.files_created,
+    ssh.files_deleted,
+    ssh.errors_encountered,
+    ssh.error_summary,
+    ssh.created_at,
+    EXTRACT(EPOCH FROM (ssh.sync_completed_at - ssh.sync_started_at)) AS duration_seconds
+FROM sharepoint_sync_history ssh;
+
+-- Function to get file version history
+CREATE OR REPLACE FUNCTION get_file_version_history(
+    p_link_id UUID
+) RETURNS TABLE(
+    version_number INTEGER,
+    sharepoint_url TEXT,
+    filename TEXT,
+    file_size BIGINT,
+    sharepoint_version TEXT,
+    last_modified_at TIMESTAMPTZ,
+    last_modified_by TEXT,
+    change_type sync_change_type,
+    is_current BOOLEAN,
+    created_at TIMESTAMPTZ,
+    diff_preview TEXT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        sfv.version_number,
+        sfv.sharepoint_url,
+        sfv.filename,
+        sfv.file_size,
+        sfv.sharepoint_version,
+        sfv.last_modified_at,
+        sfv.last_modified_by,
+        sfv.change_type,
+        sfv.is_current,
+        sfv.created_at,
+        CASE 
+            WHEN sfv.diff_from_previous IS NOT NULL 
+            THEN LEFT(sfv.diff_from_previous, 500) || '...' 
+            ELSE NULL
+        END AS diff_preview
+    FROM sharepoint_file_versions sfv
+    WHERE sfv.sharepoint_link_id = p_link_id
+    ORDER BY sfv.version_number DESC;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Logs in DB adds comprehensive logging for proposal generation runs
 
 

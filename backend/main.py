@@ -40,6 +40,7 @@ from backend.core.middleware import (
     custom_http_exception_handler,
     setup_scheduler
 )
+from backend.utils.sharepoint_sync import setup_sharepoint_sync_scheduler, initialize_database
 
 from backend.core.db import test_connection
 
@@ -54,6 +55,20 @@ async def lifespan(app: FastAPI):
     Manages application startup and shutdown events.
     """
     logging.info("Application is starting up...")
+    
+    # Initialize SharePoint sync database tables
+    try:
+        initialize_database()
+        logging.info("SharePoint sync database initialized")
+    except Exception as e:
+        logging.error(f"Failed to initialize SharePoint sync database: {e}")
+    
+    # Start SharePoint sync scheduler (runs twice daily)
+    try:
+        setup_sharepoint_sync_scheduler()
+    except Exception as e:
+        logging.error(f"Failed to start SharePoint sync scheduler: {e}")
+    
    # setup_scheduler()
    # logging.info("Background scheduler has been started.")
     yield
