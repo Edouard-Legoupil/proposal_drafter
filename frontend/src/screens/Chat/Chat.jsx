@@ -762,9 +762,7 @@ export default function Chat(props) {
         const [isCopied, setIsCopied] = useState(false)
         const copyResetTimerRef = useRef(null)
 
-        async function handleCopyClick(section, content) {
-                setSelectedSection(section)
-
+        async function handleCopyClick(sectionName, content) {
                 try {
                         await navigator.clipboard.writeText(content)
                         setIsCopied(true)
@@ -792,14 +790,14 @@ export default function Chat(props) {
 
         const dialogRef = useRef()
         const [regenerateInput, setRegenerateInput] = useState("")
-        const handleRegenerateIconClick = sectionIndex => {
-                setSelectedSection(sectionIndex)
+        const handleRegenerateIconClick = sectionName => {
+                setSelectedSectionName(sectionName)
                 dialogRef.current.showModal()
         }
         const [regenerateSectionLoading, setRegenerateSectionLoading] = useState(false)
         async function handleRegenerateButtonClick(ip = regenerateInput) {
                 setRegenerateSectionLoading(true)
-                const sectionName = proposalTemplate ? proposalTemplate.sections[selectedSection].section_name : Object.keys(proposal)[selectedSection];
+                const sectionName = selectedSectionName;
 
                 const response = await fetch(`${API_BASE_URL}/regenerate_section/${sessionStorage.getItem("proposal_id")}`, {
                         method: 'POST',
@@ -841,8 +839,7 @@ export default function Chat(props) {
                         setIsEdit(false)
         }
 
-        function handleExpanderToggle(section) {
-                const sectionName = proposalTemplate ? proposalTemplate.sections[section].section_name : Object.keys(proposal)[section];
+        function handleExpanderToggle(sectionName) {
                 setProposal(p => {
                         return ({
                                 ...p,
@@ -857,17 +854,16 @@ export default function Chat(props) {
         const [isEdit, setIsEdit] = useState(false)
         const [editorContent, setEditorContent] = useState("")
         const [proposalTemplate, setProposalTemplate] = useState(null)
-        async function handleEditClick(section) {
+        const [selectedSectionName, setSelectedSectionName] = useState(null)
+        async function handleEditClick(sectionName) {
                 if (!isEdit) {
                         // Entering edit mode
-                        setSelectedSection(section);
+                        setSelectedSectionName(sectionName);
                         setIsEdit(true);
-                        setEditorContent(Object.values(proposal)[section].content);
+                        setEditorContent(proposal[sectionName]?.content || "");
                 }
                 else {
                         // Saving the edit
-                        const sectionName = proposalTemplate ? proposalTemplate.sections[selectedSection].section_name : Object.keys(proposal)[selectedSection];
-
                         try {
                                 const response = await fetch(`${API_BASE_URL}/update-section-content`, {
                                         method: 'POST',
@@ -899,6 +895,7 @@ export default function Chat(props) {
                         } finally {
                                 // Exit edit mode regardless of success or failure.
                                 setIsEdit(false);
+                                setSelectedSectionName(null);
                         }
                 }
         }
@@ -1865,21 +1862,21 @@ export default function Chat(props) {
 
                                                                                                 {!generateLoading && sectionObj.content && sectionObj.open && proposalStatus !== 'submitted' && (
                                                                                                         <div className="Chat_sectionOptions" data-testid={`section-options-${kebabSectionName}`}>
-                                                                                                                {!isEdit || (selectedSection === i && isEdit) ? (
+                                                                                                                {!isEdit || (selectedSectionName === sectionName && isEdit) ? (
                                                                                                                         <button
                                                                                                                                 type="button"
-                                                                                                                                onClick={() => handleEditClick(i)}
-                                                                                                                                style={(selectedSection === i && isEdit && regenerateSectionLoading) ? { pointerEvents: "none" } : {}}
-                                                                                                                                aria-label={`edit-section-${i}`}
+                                                                                                                                onClick={() => handleEditClick(sectionName)}
+                                                                                                                                style={(selectedSectionName === sectionName && isEdit && regenerateSectionLoading) ? { pointerEvents: "none" } : {}}
+                                                                                                                                aria-label={`edit-section-${kebabSectionName}`}
                                                                                                                                 disabled={isReviewer || proposalStatus === 'in_review'}
                                                                                                                                 data-testid={`edit-save-button-${kebabSectionName}`}
                                                                                                                         >
-                                                                                                                                <img src={(selectedSection === i && isEdit) ? save : edit} alt="" />
-                                                                                                                                <span>{(selectedSection === i && isEdit) ? "Save" : "Edit"}</span>
+                                                                                                                                <img src={(selectedSectionName === sectionName && isEdit) ? save : edit} alt="" />
+                                                                                                                                <span>{(selectedSectionName === sectionName && isEdit) ? "Save" : "Edit"}</span>
                                                                                                                         </button>
                                                                                                                 ) : null}
 
-                                                                                                                {selectedSection === i && isEdit && (
+                                                                                                                {selectedSectionName === sectionName && isEdit && (
                                                                                                                         <button type="button" onClick={() => setIsEdit(false)} data-testid={`cancel-edit-button-${kebabSectionName}`}>
                                                                                                                                 <img src={cancel} alt="" />
                                                                                                                                 <span>Cancel</span>
@@ -1888,13 +1885,13 @@ export default function Chat(props) {
 
                                                                                                                 {!isEdit && (
                                                                                                                         <>
-                                                                                                                                <button type="button" onClick={() => handleCopyClick(i, sectionObj.content)} data-testid={`copy-button-${kebabSectionName}`}>
-                                                                                                                                        <img src={(selectedSection === i && isCopied) ? tick : copy} alt="" />
-                                                                                                                                        <span>{(selectedSection === i && isCopied) ? "Copied" : "Copy"}</span>
+                                                                                                                                <button type="button" onClick={() => handleCopyClick(sectionName, sectionObj.content)} data-testid={`copy-button-${kebabSectionName}`}>
+                                                                                                                                        <img src={(selectedSectionName === sectionName && isCopied) ? tick : copy} alt="" />
+                                                                                                                                        <span>{(selectedSectionName === sectionName && isCopied) ? "Copied" : "Copy"}</span>
                                                                                                                                 </button>
 
                                                                                                                                 {!isReviewer && (
-                                                                                                                                        <button type="button" className='Chat_sectionOptions_regenerate' onClick={() => handleRegenerateIconClick(i)} disabled={proposalStatus !== 'draft'} data-testid={`regenerate-button-${kebabSectionName}`}>
+                                                                                                                                        <button type="button" className='Chat_sectionOptions_regenerate' onClick={() => handleRegenerateIconClick(sectionName)} disabled={proposalStatus !== 'draft'} data-testid={`regenerate-button-${kebabSectionName}`}>
                                                                                                                                                 <img src={regenerate} alt="" />
                                                                                                                                                 <span>Regenerate</span>
                                                                                                                                         </button>
@@ -1904,8 +1901,8 @@ export default function Chat(props) {
                                                                                                         </div>
                                                                                                 )}
 
-                                                                                                {sectionObj.content && !(isEdit && selectedSection === i) && (
-                                                                                                        <div className={`Chat_expanderArrow ${sectionObj.open ? "" : "closed"}`} onClick={() => handleExpanderToggle(i)} data-testid={`section-expander-${kebabSectionName}`}>
+                                                                                                {sectionObj.content && !(isEdit && selectedSectionName === sectionName) && (
+                                                                                                        <div className={`Chat_expanderArrow ${sectionObj.open ? "" : "closed"}`} onClick={() => handleExpanderToggle(sectionName)} data-testid={`section-expander-${kebabSectionName}`}>
                                                                                                                 <img src={arrow} alt="" />
                                                                                                         </div>
                                                                                                 )}
@@ -1914,12 +1911,12 @@ export default function Chat(props) {
                                                                                         {(sectionObj.open || !sectionObj.content) && (
                                                                                                 <div className='Chat_sectionContent' data-testid={`section-content-${kebabSectionName}`}>
                                                                                                         {sectionObj.content ? (
-                                                                                                                (selectedSection === i && isEdit) ? (
+                                                                                                                (selectedSectionName === sectionName && isEdit) ? (
                                                                                                                         <textarea value={editorContent} onChange={e => setEditorContent(e.target.value)} aria-label={`editor for ${sectionName}`} data-testid={`section-editor-${kebabSectionName}`} />
                                                                                                                 ) : (
                                                                                                                         <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>{sectionObj.content}</Markdown>
                                                                                                                 )
-                                                                                                        ) : (
+) : (
                                                                                                                 <div className='Chat_sectionContent_loading'>
                                                                                                                         <span className='submitButtonSpinner' />
                                                                                                                         <span className='Chat_sectionContent_loading'>Loading</span>
@@ -1973,7 +1970,7 @@ export default function Chat(props) {
 
                                 <dialog ref={dialogRef} className='Chat_regenerate' data-testid="regenerate-dialog">
                                         <header className='Chat_regenerate_header'>
-                                                Regenerate — {proposalTemplate ? proposalTemplate.sections[selectedSection]?.section_name : Object.keys(proposal)[selectedSection]}
+                                                Regenerate — {selectedSectionName || "Section"}
                                                 <img src={regenerateClose} alt="" onClick={() => { setRegenerateSectionLoading(false); setRegenerateInput(""); dialogRef.current.close() }} data-testid="regenerate-dialog-close-button" />
                                         </header>
 
