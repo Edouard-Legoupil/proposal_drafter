@@ -2055,7 +2055,7 @@ export default function Chat(props) {
                                                          onDeleteComment={handleDeleteComment}
                                                          isOwnerOfComment={true}
                                                          isAdmin={isAdmin}
-                                                         previousFeedback={(reviews || []).filter(r => r.section_name === sectionName && !['removed', 'resolved', 'draft'].includes(r.status)).map(review => ({
+                                                         previousFeedback={(reviews || []).filter(r => r.section_name === sectionName && !['removed', 'fixed'].includes(r.status)).map(review => ({
                                                                                                                           id: review.id,
                                                                                                                           author: review.reviewer_name,
                                                                                                                           review_text: review.review_text,

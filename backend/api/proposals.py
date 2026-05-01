@@ -3138,14 +3138,19 @@ async def get_peer_reviews(
     Fetches all peer reviews for a given proposal.
     """
     user_id = current_user["user_id"]
+    user_roles = current_user.get("roles", [])
     try:
         with get_engine().connect() as connection:
-            # Verify the user has access to the proposal (owner, reviewer, or admin)
+            # Verify the user has access to the proposal (owner, reviewer, admin, or project reviewer)
             proposal_owner = connection.execute(
                 text("SELECT user_id FROM proposals WHERE id = :id"),
                 {"id": str(proposal_id)},
             ).scalar()
 
+            if not proposal_owner:
+                raise HTTPException(status_code=404, detail="Proposal not found.")
+
+            # Check if user is a reviewer for this proposal
             is_reviewer = connection.execute(
                 text(
                     "SELECT 1 FROM proposal_peer_reviews WHERE proposal_id = :pid AND reviewer_id = :rid"
@@ -3153,14 +3158,25 @@ async def get_peer_reviews(
                 {"pid": str(proposal_id), "rid": str(user_id)},
             ).scalar()
 
-            if not proposal_owner:
-                raise HTTPException(status_code=404, detail="Proposal not found.")
+            # Check if user is admin or project reviewer (can view all feedback)
+            is_admin = any(
+                role in [
+                    "admin",
+                    "knowledge manager donors",
+                    "knowledge manager outcome",
+                    "knowledge manager field context",
+                ]
+                for role in user_roles
+            )
+            is_project_reviewer = "project reviewer" in user_roles
 
+            # Allow access if: owner, reviewer, admin, or project reviewer
             if str(proposal_owner) != str(user_id) and not is_reviewer:
-                raise HTTPException(
-                    status_code=403,
-                    detail="You do not have permission to view this proposal's reviews.",
-                )
+                if not is_admin and not is_project_reviewer:
+                    raise HTTPException(
+                        status_code=403,
+                        detail="You do not have permission to view this proposal's reviews.",
+                    )
 
             query = text("""
             SELECT
