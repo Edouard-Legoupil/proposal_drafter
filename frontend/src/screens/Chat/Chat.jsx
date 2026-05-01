@@ -1359,18 +1359,54 @@ export default function Chat(props) {
                 }
         }
         // ───────────────────────────────────────────────────────────────────
+        // SharePoint Link State Management
+        // ───────────────────────────────────────────────────────────────────
 
-        async function handleExport(format) {
-                const proposalId = sessionStorage.getItem("proposal_id");
+        // State for tracking SharePoint upload status
+        const [sharepointStatus, setSharepointStatus] = useState(null); // null, 'uploading', 'failed', 'uploaded'
+        const [sharepointLink, setSharepointLink] = useState(null);
+        const [sharepointError, setSharepointError] = useState(null);
+        const [isCheckingLink, setIsCheckingLink] = useState(false);
 
+        // Check for existing SharePoint link
+        async function checkSharepointLink(proposalId) {
                 if (!proposalId || proposalId === "undefined") {
-                        setNotif({ open: true, message: "No draft available to export. Please create or load a draft first.", severity: 'error' });
+                        return null;
+                }
+
+                try {
+                        setIsCheckingLink(true);
+                        const response = await fetch(`${API_BASE_URL}/sharepoint-link-status/proposal/${proposalId}`, {
+                                method: "GET",
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: "include"
+                        });
+
+                        if (response.ok) {
+                                const data = await response.json();
+                                return data;
+                        }
+                        return null;
+                } catch (error) {
+                        console.error("Error checking SharePoint link status:", error);
+                        return null;
+                } finally {
+                        setIsCheckingLink(false);
+                }
+        }
+
+        // Retry SharePoint upload
+        async function handleRetryUpload(proposalId) {
+                if (!proposalId || proposalId === "undefined") {
+                        setNotif({ open: true, message: "No draft available. Please create or load a draft first.", severity: 'error' });
                         return;
                 }
 
                 try {
-                        // Call the new SharePoint upload endpoint
-                        const response = await fetch(`${API_BASE_URL}/upload-proposal-to-sharepoint/${proposalId}?format=${format}`, {
+                        setSharepointStatus('uploading');
+                        setSharepointError(null);
+
+                        const response = await fetch(`${API_BASE_URL}/retry-sharepoint-upload/proposal/${proposalId}`, {
                                 method: "POST",
                                 headers: { 'Content-Type': 'application/json' },
                                 credentials: "include"
@@ -1379,7 +1415,8 @@ export default function Chat(props) {
                         if (response.ok) {
                                 const data = await response.json();
                                 if (data.success && data.url) {
-                                        // Open the document in Word Online in a new tab
+                                        setSharepointStatus('uploaded');
+                                        setSharepointLink(data);
                                         window.open(data.url, '_blank');
                                         setNotif({ open: true, message: "Document opened in Word Online", severity: 'success' });
                                 } else {
@@ -1390,11 +1427,113 @@ export default function Chat(props) {
                                 sessionStorage.setItem("session_expired", "Session expired. Please login again.")
                                 navigate("/login")
                         }
+                        else if (response.status === 429) {
+                                const errorData = await response.json();
+                                setSharepointStatus('failed');
+                                setSharepointError(errorData.detail || "Max retry attempts exceeded");
+                                setNotif({ open: true, message: errorData.detail || "Max retry attempts exceeded", severity: 'error' });
+                        }
+                        else {
+                                const errorData = await response.json();
+                                throw new Error(errorData.detail || `Retry failed: ${response.status} ${response.statusText}`);
+                        }
+                } catch (error) {
+                        setSharepointStatus('failed');
+                        setSharepointError(error.message);
+                        setNotif({ open: true, message: `Error: ${error.message}`, severity: 'error' });
+                        console.error("SharePoint retry error:", error);
+                }
+        }
+
+        // Handle export with SharePoint caching and retry logic
+        async function handleExport(format) {
+                const proposalId = sessionStorage.getItem("proposal_id");
+
+                if (!proposalId || proposalId === "undefined") {
+                        setNotif({ open: true, message: "No draft available to export. Please create or load a draft first.", severity: 'error' });
+                        return;
+                }
+
+                // Check for existing link first
+                const linkStatus = await checkSharepointLink(proposalId);
+
+                if (linkStatus && linkStatus.has_link) {
+                        if (linkStatus.status === 'uploaded' && !linkStatus.is_expired) {
+                                // Use cached link
+                                setSharepointStatus('uploaded');
+                                setSharepointLink(linkStatus);
+                                window.open(linkStatus.url, '_blank');
+                                setNotif({ open: true, message: "Document opened in Word Online (cached)", severity: 'success' });
+                                return;
+                        }
+                        else if (linkStatus.status === 'uploading') {
+                                setSharepointStatus('uploading');
+                                setNotif({ open: true, message: "Document is currently being uploaded to SharePoint. Please wait...", severity: 'info' });
+                                return;
+                        }
+                        else if (linkStatus.status === 'failed' && linkStatus.can_retry) {
+                                // Auto-retry
+                                setSharepointStatus('uploading');
+                                setNotif({ open: true, message: "Retrying SharePoint upload...", severity: 'info' });
+                                handleRetryUpload(proposalId);
+                                return;
+                        }
+                        else if (linkStatus.status === 'failed' && !linkStatus.can_retry) {
+                                setSharepointStatus('failed');
+                                setSharepointError(linkStatus.error_message || "Max retry attempts exceeded");
+                                setNotif({ open: true, message: linkStatus.error_message || "Max retry attempts exceeded. Please contact support.", severity: 'error' });
+                                return;
+                        }
+                }
+
+                // No existing link or needs new upload
+                try {
+                        setSharepointStatus('uploading');
+                        setSharepointError(null);
+
+                        // Call the new SharePoint upload endpoint
+                        const response = await fetch(`${API_BASE_URL}/upload-proposal-to-sharepoint/${proposalId}?format=${format}`, {
+                                method: "POST",
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: "include"
+                        });
+
+                        if (response.ok) {
+                                const data = await response.json();
+                                if (data.success && data.url) {
+                                        setSharepointStatus('uploaded');
+                                        setSharepointLink(data);
+                                        // Open the document in Word Online in a new tab
+                                        window.open(data.url, '_blank');
+                                        setNotif({ open: true, message: data.from_cache ? "Document opened in Word Online (cached)" : "Document opened in Word Online", severity: 'success' });
+                                } else {
+                                        throw new Error(data.message || "Failed to get SharePoint URL");
+                                }
+                        }
+                        else if (response.status === 401) {
+                                sessionStorage.setItem("session_expired", "Session expired. Please login again.")
+                                navigate("/login")
+                        }
+                        else if (response.status === 503) {
+                                // Service unavailable - upload failed but will retry
+                                const errorData = await response.json();
+                                setSharepointStatus('failed');
+                                setSharepointError(errorData.detail || "Upload failed");
+                                setNotif({ open: true, message: errorData.detail || "Upload failed. Will retry automatically.", severity: 'warning' });
+                        }
+                        else if (response.status === 429) {
+                                const errorData = await response.json();
+                                setSharepointStatus('failed');
+                                setSharepointError(errorData.detail || "Max retry attempts exceeded");
+                                setNotif({ open: true, message: errorData.detail || "Max retry attempts exceeded", severity: 'error' });
+                        }
                         else {
                                 const errorData = await response.json();
                                 throw new Error(errorData.detail || `Upload failed: ${response.status} ${response.statusText}`);
                         }
                 } catch (error) {
+                        setSharepointStatus('failed');
+                        setSharepointError(error.message);
                         setNotif({ open: true, message: `Error: ${error.message}`, severity: 'error' });
                         console.error("SharePoint upload error:", error);
                 }

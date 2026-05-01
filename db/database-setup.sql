@@ -520,7 +520,244 @@ FROM template_versions tv
 JOIN templates t ON tv.template_registry_id = t.id
 ORDER BY tv.created_at DESC;
 
---- Logs in DB adds comprehensive logging for proposal generation runs
+-- ============================================================================
+-- SHAREPOINT INTEGRATION TABLES
+-- ============================================================================
+
+-- Create sharepoint_status enum for tracking upload states
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'sharepoint_status') THEN
+        CREATE TYPE sharepoint_status AS ENUM (
+            'pending',
+            'uploading',
+            'uploaded',
+            'failed',
+            'expired'
+        );
+    END IF;
+END$$;
+
+-- Create error_type enum for SharePoint errors
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'sharepoint_error_type') THEN
+        CREATE TYPE sharepoint_error_type AS ENUM (
+            'authentication_error',
+            'connection_error',
+            'upload_error',
+            'metadata_error',
+            'quota_exceeded',
+            'permission_error',
+            'file_exists',
+            'unknown_error'
+        );
+    END IF;
+END$$;
+
+-- Table for storing SharePoint document links for proposals
+CREATE TABLE IF NOT EXISTS proposal_sharepoint_links (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    proposal_id UUID NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id),
+    sharepoint_url TEXT NOT NULL,
+    filename TEXT NOT NULL,
+    folder_path TEXT,
+    file_id TEXT,
+    file_version TEXT,
+    status sharepoint_status NOT NULL DEFAULT 'uploading',
+    error_type sharepoint_error_type,
+    error_message TEXT,
+    retry_count INTEGER DEFAULT 0,
+    last_attempt_at TIMESTAMPTZ,
+    uploaded_at TIMESTAMPTZ,
+    expires_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (proposal_id, user_id)
+);
+
+-- Table for storing SharePoint document links for knowledge cards
+CREATE TABLE IF NOT EXISTS knowledge_card_sharepoint_links (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    knowledge_card_id UUID NOT NULL REFERENCES knowledge_cards(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id),
+    sharepoint_url TEXT NOT NULL,
+    filename TEXT NOT NULL,
+    folder_path TEXT,
+    file_id TEXT,
+    file_version TEXT,
+    status sharepoint_status NOT NULL DEFAULT 'uploading',
+    error_type sharepoint_error_type,
+    error_message TEXT,
+    retry_count INTEGER DEFAULT 0,
+    last_attempt_at TIMESTAMPTZ,
+    uploaded_at TIMESTAMPTZ,
+    expires_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (knowledge_card_id, user_id)
+);
+
+-- Table for SharePoint upload events and logs
+CREATE TABLE IF NOT EXISTS sharepoint_upload_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_type TEXT NOT NULL CHECK (event_type IN ('upload_started', 'upload_success', 'upload_failed', 'retry_attempt', 'url_retrieved', 'access_error')),
+    artifact_type TEXT NOT NULL CHECK (artifact_type IN ('proposal', 'knowledge_card')),
+    artifact_id UUID NOT NULL,
+    user_id UUID NOT NULL REFERENCES users(id),
+    sharepoint_link_id UUID,
+    status sharepoint_status,
+    error_type sharepoint_error_type,
+    error_message TEXT,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes for SharePoint tables
+CREATE INDEX IF NOT EXISTS idx_proposal_sharepoint_links_proposal_id ON proposal_sharepoint_links(proposal_id);
+CREATE INDEX IF NOT EXISTS idx_proposal_sharepoint_links_user_id ON proposal_sharepoint_links(user_id);
+CREATE INDEX IF NOT EXISTS idx_proposal_sharepoint_links_status ON proposal_sharepoint_links(status);
+CREATE INDEX IF NOT EXISTS idx_knowledge_card_sharepoint_links_card_id ON knowledge_card_sharepoint_links(knowledge_card_id);
+CREATE INDEX IF NOT EXISTS idx_knowledge_card_sharepoint_links_user_id ON knowledge_card_sharepoint_links(user_id);
+CREATE INDEX IF NOT EXISTS idx_knowledge_card_sharepoint_links_status ON knowledge_card_sharepoint_links(status);
+CREATE INDEX IF NOT EXISTS idx_sharepoint_upload_events_artifact ON sharepoint_upload_events(artifact_type, artifact_id);
+CREATE INDEX IF NOT EXISTS idx_sharepoint_upload_events_user ON sharepoint_upload_events(user_id);
+CREATE INDEX IF NOT EXISTS idx_sharepoint_upload_events_created ON sharepoint_upload_events(created_at);
+
+-- Trigger to update updated_at for proposal_sharepoint_links
+CREATE OR REPLACE FUNCTION update_proposal_sharepoint_link_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_proposal_sharepoint_links_updated_at
+BEFORE UPDATE ON proposal_sharepoint_links
+FOR EACH ROW
+EXECUTE FUNCTION update_proposal_sharepoint_link_timestamp();
+
+-- Trigger to update updated_at for knowledge_card_sharepoint_links
+CREATE OR REPLACE FUNCTION update_knowledge_card_sharepoint_link_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_knowledge_card_sharepoint_links_updated_at
+BEFORE UPDATE ON knowledge_card_sharepoint_links
+FOR EACH ROW
+EXECUTE FUNCTION update_knowledge_card_sharepoint_link_timestamp();
+
+-- View for monitoring SharePoint upload status
+CREATE OR REPLACE VIEW vw_sharepoint_upload_status AS
+SELECT 
+    'proposal' AS artifact_type,
+    psl.proposal_id AS artifact_id,
+    p.id AS link_id,
+    p.user_id,
+    u.name AS user_name,
+    psl.sharepoint_url,
+    psl.filename,
+    psl.status,
+    psl.error_type,
+    psl.error_message,
+    psl.retry_count,
+    psl.last_attempt_at,
+    psl.uploaded_at,
+    psl.created_at,
+    COUNT(sue.id) AS event_count
+FROM proposal_sharepoint_links psl
+JOIN proposals p ON psl.proposal_id = p.id
+JOIN users u ON psl.user_id = u.id
+LEFT JOIN sharepoint_upload_events sue ON psl.id = sue.sharepoint_link_id
+GROUP BY psl.proposal_id, p.id, psl.user_id, u.name, psl.sharepoint_url, psl.filename, 
+         psl.status, psl.error_type, psl.error_message, psl.retry_count, 
+         psl.last_attempt_at, psl.uploaded_at, psl.created_at
+UNION ALL
+SELECT 
+    'knowledge_card' AS artifact_type,
+    kcsl.knowledge_card_id AS artifact_id,
+    kc.id AS link_id,
+    kcsl.user_id,
+    u.name AS user_name,
+    kcsl.sharepoint_url,
+    kcsl.filename,
+    kcsl.status,
+    kcsl.error_type,
+    kcsl.error_message,
+    kcsl.retry_count,
+    kcsl.last_attempt_at,
+    kcsl.uploaded_at,
+    kcsl.created_at,
+    COUNT(sue.id) AS event_count
+FROM knowledge_card_sharepoint_links kcsl
+JOIN knowledge_cards kc ON kcsl.knowledge_card_id = kc.id
+JOIN users u ON kcsl.user_id = u.id
+LEFT JOIN sharepoint_upload_events sue ON kcsl.id = sue.sharepoint_link_id
+GROUP BY kcsl.knowledge_card_id, kc.id, kcsl.user_id, u.name, kcsl.sharepoint_url, kcsl.filename, 
+         kcsl.status, kcsl.error_type, kcsl.error_message, kcsl.retry_count, 
+         kcsl.last_attempt_at, kcsl.uploaded_at, kcsl.created_at;
+
+-- Function to check if a SharePoint link exists and is valid for an artifact
+CREATE OR REPLACE FUNCTION get_valid_sharepoint_link(
+    p_artifact_type TEXT,
+    p_artifact_id UUID,
+    p_user_id UUID
+) RETURNS TABLE(
+    link_id UUID,
+    sharepoint_url TEXT,
+    filename TEXT,
+    status sharepoint_status,
+    needs_retry BOOLEAN
+) AS $$
+BEGIN
+    IF p_artifact_type = 'proposal' THEN
+        RETURN QUERY
+        SELECT 
+            psl.id,
+            psl.sharepoint_url,
+            psl.filename,
+            psl.status,
+            CASE 
+                WHEN psl.status = 'uploaded' THEN FALSE
+                WHEN psl.status = 'failed' AND psl.retry_count < 3 THEN TRUE
+                WHEN psl.status = 'expired' THEN TRUE
+                ELSE FALSE
+            END AS needs_retry
+        FROM proposal_sharepoint_links psl
+        WHERE psl.proposal_id = p_artifact_id 
+          AND psl.user_id = p_user_id
+        ORDER BY psl.created_at DESC
+        LIMIT 1;
+    ELSIF p_artifact_type = 'knowledge_card' THEN
+        RETURN QUERY
+        SELECT 
+            kcsl.id,
+            kcsl.sharepoint_url,
+            kcsl.filename,
+            kcsl.status,
+            CASE 
+                WHEN kcsl.status = 'uploaded' THEN FALSE
+                WHEN kcsl.status = 'failed' AND kcsl.retry_count < 3 THEN TRUE
+                WHEN kcsl.status = 'expired' THEN TRUE
+                ELSE FALSE
+            END AS needs_retry
+        FROM knowledge_card_sharepoint_links kcsl
+        WHERE kcsl.knowledge_card_id = p_artifact_id 
+          AND kcsl.user_id = p_user_id
+        ORDER BY kcsl.created_at DESC
+        LIMIT 1;
+    END IF;
+    RETURN;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Logs in DB adds comprehensive logging for proposal generation runs
 
 
 CREATE TYPE run_status AS ENUM (

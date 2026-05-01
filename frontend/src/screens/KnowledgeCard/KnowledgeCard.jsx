@@ -1077,6 +1077,93 @@ export default function KnowledgeCard() {
         }
     };
 
+    // SharePoint Link State Management
+    const [sharepointStatus, setSharepointStatus] = useState(null); // null, 'uploading', 'failed', 'uploaded'
+    const [sharepointLink, setSharepointLink] = useState(null);
+    const [sharepointError, setSharepointError] = useState(null);
+    const [isCheckingLink, setIsCheckingLink] = useState(false);
+
+    // Check for existing SharePoint link
+    async function checkSharepointLink(cardId) {
+        if (!cardId || cardId === "undefined") {
+            return null;
+        }
+
+        try {
+            setIsCheckingLink(true);
+            const response = await fetch(`${API_BASE_URL}/sharepoint-link-status/knowledge_card/${cardId}`, {
+                    method: "GET",
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: "include"
+            });
+
+            if (response.ok) {
+                    const data = await response.json();
+                    return data;
+            }
+            return null;
+        } catch (error) {
+            console.error("Error checking SharePoint link status:", error);
+            return null;
+        } finally {
+            setIsCheckingLink(false);
+        }
+    }
+
+    // Retry SharePoint upload
+    async function handleRetryUpload(cardId) {
+        if (!cardId || cardId === "undefined") {
+            setAlertModalMessage("No draft available. Please create or load a draft first.");
+            setIsAlertModalOpen(true);
+            return;
+        }
+
+        try {
+            setSharepointStatus('uploading');
+            setSharepointError(null);
+
+            const response = await fetch(`${API_BASE_URL}/retry-sharepoint-upload/knowledge_card/${cardId}`, {
+                    method: "POST",
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: "include"
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.url) {
+                    setSharepointStatus('uploaded');
+                    setSharepointLink(data);
+                    window.open(data.url, '_blank');
+                    setAlertModalMessage("Document opened in Word Online");
+                    setIsAlertModalOpen(true);
+                } else {
+                    throw new Error(data.message || "Failed to get SharePoint URL");
+                }
+            }
+            else if (response.status === 401) {
+                sessionStorage.setItem("session_expired", "Session expired. Please login again.")
+                navigate("/login")
+            }
+            else if (response.status === 429) {
+                const errorData = await response.json();
+                setSharepointStatus('failed');
+                setSharepointError(errorData.detail || "Max retry attempts exceeded");
+                setAlertModalMessage(errorData.detail || "Max retry attempts exceeded");
+                setIsAlertModalOpen(true);
+            }
+            else {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || `Retry failed: ${response.status} ${response.statusText}`);
+            }
+        } catch (error) {
+            setSharepointStatus('failed');
+            setSharepointError(error.message);
+            setAlertModalMessage(`Error: ${error.message}`);
+            setIsAlertModalOpen(true);
+            console.error("SharePoint retry error:", error);
+        }
+    }
+
     async function handleExport(format) {
         const cardId = id;
 
@@ -1086,20 +1173,62 @@ export default function KnowledgeCard() {
             return;
         }
 
+        // Check for existing link first
+        const linkStatus = await checkSharepointLink(cardId);
+
+        if (linkStatus && linkStatus.has_link) {
+            if (linkStatus.status === 'uploaded' && !linkStatus.is_expired) {
+                // Use cached link
+                setSharepointStatus('uploaded');
+                setSharepointLink(linkStatus);
+                window.open(linkStatus.url, '_blank');
+                setAlertModalMessage("Document opened in Word Online (cached)");
+                setIsAlertModalOpen(true);
+                return;
+            }
+            else if (linkStatus.status === 'uploading') {
+                setSharepointStatus('uploading');
+                setAlertModalMessage("Document is currently being uploaded to SharePoint. Please wait...");
+                setIsAlertModalOpen(true);
+                return;
+            }
+            else if (linkStatus.status === 'failed' && linkStatus.can_retry) {
+                // Auto-retry
+                setSharepointStatus('uploading');
+                setAlertModalMessage("Retrying SharePoint upload...");
+                setIsAlertModalOpen(true);
+                handleRetryUpload(cardId);
+                return;
+            }
+            else if (linkStatus.status === 'failed' && !linkStatus.can_retry) {
+                setSharepointStatus('failed');
+                setSharepointError(linkStatus.error_message || "Max retry attempts exceeded");
+                setAlertModalMessage(linkStatus.error_message || "Max retry attempts exceeded. Please contact support.");
+                setIsAlertModalOpen(true);
+                return;
+            }
+        }
+
         try {
+            setSharepointStatus('uploading');
+            setSharepointError(null);
+
             // Call the new SharePoint upload endpoint for knowledge cards
             const response = await fetch(`${API_BASE_URL}/upload-knowledge-card-to-sharepoint/${id}?format=${format}`, {
-                method: "POST",
-                headers: { 'Content-Type': 'application/json' },
-                credentials: "include"
+                    method: "POST",
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: "include"
             });
 
             if (response.ok) {
                 const data = await response.json();
                 if (data.success && data.url) {
+                    setSharepointStatus('uploaded');
+                    setSharepointLink(data);
                     // Open the document in Word Online in a new tab
                     window.open(data.url, '_blank');
-                    setNotif({ open: true, message: "Document opened in Word Online", severity: 'success' });
+                    setAlertModalMessage(data.from_cache ? "Document opened in Word Online (cached)" : "Document opened in Word Online");
+                    setIsAlertModalOpen(true);
                 } else {
                     throw new Error(data.message || "Failed to get SharePoint URL");
                 }
@@ -1108,11 +1237,28 @@ export default function KnowledgeCard() {
                 sessionStorage.setItem("session_expired", "Session expired. Please login again.")
                 navigate("/login")
             }
+            else if (response.status === 503) {
+                // Service unavailable - upload failed but will retry
+                const errorData = await response.json();
+                setSharepointStatus('failed');
+                setSharepointError(errorData.detail || "Upload failed");
+                setAlertModalMessage(errorData.detail || "Upload failed. Will retry automatically.");
+                setIsAlertModalOpen(true);
+            }
+            else if (response.status === 429) {
+                const errorData = await response.json();
+                setSharepointStatus('failed');
+                setSharepointError(errorData.detail || "Max retry attempts exceeded");
+                setAlertModalMessage(errorData.detail || "Max retry attempts exceeded");
+                setIsAlertModalOpen(true);
+            }
             else {
                 const errorData = await response.json();
                 throw new Error(errorData.detail || `Upload failed: ${response.status} ${response.statusText}`);
             }
         } catch (error) {
+            setSharepointStatus('failed');
+            setSharepointError(error.message);
             setAlertModalMessage(`Error: ${error.message}`);
             setIsAlertModalOpen(true);
             console.error("SharePoint upload error:", error);
