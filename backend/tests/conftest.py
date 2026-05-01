@@ -170,6 +170,15 @@ def test_engine():
             )
             connection.execute(
                 text("""
+                CREATE TABLE IF NOT EXISTS knowledge_card_to_references (
+                    knowledge_card_id TEXT NOT NULL REFERENCES knowledge_cards(id),
+                    reference_id TEXT NOT NULL REFERENCES knowledge_card_references(id),
+                    PRIMARY KEY (knowledge_card_id, reference_id)
+                )
+            """)
+            )
+            connection.execute(
+                text("""
                 CREATE TABLE IF NOT EXISTS donors (
                     id TEXT PRIMARY KEY,
                     name TEXT NOT NULL,

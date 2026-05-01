@@ -12,6 +12,9 @@ import litellm
 
 def log_rag_output(output):
     """Callback function to log the final answer of a RAG task."""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     # The raw_output from the tool is passed to the agent, which then forms its answer.
     # The final output of the task will be the agent's answer, not the tool's direct output.
     # We need to parse the log_id from the task's output if it's included,
@@ -28,23 +31,33 @@ def log_rag_output(output):
     # The actual tool output is in output.raw_output
     raw_tool_output = output.raw_output
     final_answer = output.exported_output
+    
+    logger.info(f"RAG callback triggered. Raw output length: {len(raw_tool_output) if raw_tool_output else 0}")
 
     match = re.search(r"\[RAG_LOG_ID=([^\]]+)\]", raw_tool_output)
 
     if match:
         log_id = match.group(1)
+        logger.info(f"Found RAG_LOG_ID: {log_id}, updating with answer")
 
-        with get_engine().connect() as connection:
-            query = text("""
-                UPDATE rag_evaluation_logs
-                SET generated_answer = :generated_answer
-                WHERE id = :log_id;
-            """)
-            connection.execute(query, {
-                "generated_answer": final_answer,
-                "log_id": log_id
-            })
-            connection.commit()
+        try:
+            with get_engine().connect() as connection:
+                query = text("""
+                    UPDATE rag_evaluation_logs
+                    SET generated_answer = :generated_answer,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = :log_id;
+                """)
+                connection.execute(query, {
+                    "generated_answer": final_answer,
+                    "log_id": log_id
+                })
+                connection.commit()
+                logger.info(f"Successfully updated RAG log {log_id} with answer")
+        except Exception as e:
+            logger.error(f"Failed to update RAG log with answer: {e}")
+    else:
+        logger.warning(f"No RAG_LOG_ID found in tool output. Output: {raw_tool_output[:200] if raw_tool_output else 'None'}")
 
 class VectorSearchTool(BaseTool):
     name: str = "Vector Search"
@@ -97,17 +110,26 @@ class VectorSearchTool(BaseTool):
 
             retrieved_context = "\n\n".join([f"Source: {row[1]}\nChunk: {row[0]}" for row in results])
 
-            log_query = text("""
-                INSERT INTO rag_evaluation_logs (knowledge_card_id, query, retrieved_context)
-                VALUES (:kc_id, :query, :retrieved_context)
-                RETURNING id;
-            """)
-            log_result = connection.execute(log_query, {
-                "kc_id": self.knowledge_card_id,
-                "query": search_query,
-                "retrieved_context": retrieved_context
-            }).fetchone()
-            log_id = log_result[0]
+            try:
+                log_query = text("""
+                    INSERT INTO rag_evaluation_logs (knowledge_card_id, query, retrieved_context)
+                    VALUES (:kc_id, :query, :retrieved_context)
+                    RETURNING id;
+                """)
+                log_result = connection.execute(log_query, {
+                    "kc_id": self.knowledge_card_id,
+                    "query": search_query,
+                    "retrieved_context": retrieved_context
+                }).fetchone()
+                log_id = log_result[0]
+                connection.commit()
+            except Exception as e:
+                connection.rollback()
+                # Log error but don't fail the tool - return context without log ID
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to log RAG evaluation: {e}")
+                log_id = "NONE"
 
             return f"[RAG_LOG_ID={log_id}]\n\n{retrieved_context}"
 

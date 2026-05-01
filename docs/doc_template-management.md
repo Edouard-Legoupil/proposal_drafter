@@ -219,12 +219,16 @@ Create a new version of a template
 Run the import script to migrate existing JSON templates to the database:
 
 ```bash
-python backend/scripts/import_templates_to_db.py
+python backend/scripts/seed_templates.py [--dry-run] [--verbose]
 ```
+
+**Options:**
+- `--dry-run`: Show what would be imported without making changes to the database
+- `--verbose`: Show detailed information about each template being processed
 
 ### How It Works
 
-1. **Scans template directories**: Looks in `backend/templates/proposal_template/`, `backend/templates/concept_note_template/`, and `backend/templates/`
+1. **Scans template directories**: Looks in `backend/templates/proposal_template/`, `backend/templates/concept_note_template/`, and `backend/templates/` recursively
 
 2. **Reads JSON files**: Parses each template JSON file
 
@@ -232,15 +236,18 @@ python backend/scripts/import_templates_to_db.py
    - Creates a record in the `templates` table
    - Creates version 1.0 in the `template_versions` table
    - Creates donor mappings in `template_donors` table if donors are specified
+   - Creates donors if they don't already exist
+   - Logs all actions to the `template_audit_log` table
 
 4. **Preserves compatibility**: Maintains original filenames for backward compatibility
 
 ### Important Notes
 
-- The script will **not** overwrite existing templates in the database
+- The script will **not** overwrite existing templates in the database (checked by filename)
 - It creates a system user (UUID `00000000-0000-0000-0000-000000000001`) as the creator
 - All imported templates are marked as `active` status
 - Templates without specific donors are marked as `is_default = true`
+- The script collects all errors and reports them at the end, continuing with other templates
 
 ## Backward Compatibility
 

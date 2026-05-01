@@ -3,7 +3,7 @@ import json
 import re
 import uuid
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 import tempfile
 import os
@@ -69,6 +69,9 @@ from backend.utils.proposal_logic import (
 )
 from backend.utils.crew_proposal import ProposalCrew
 from backend.api.knowledge import _save_knowledge_card_content_to_file
+
+# Import proposal run logger for telemetry
+from backend.utils.proposal_run_logger import artifact_run_logger as proposal_run_logger
 
 # This router handles all endpoints related to the lifecycle of a proposal,
 
@@ -368,6 +371,40 @@ def generate_all_sections_background(session_id: str, proposal_id: str, user_id:
     """
     logger.info(f"Starting background generation for proposal {proposal_id}")
     knowledge_file_paths = []
+    
+    # Initialize telemetry logging
+    from backend.utils.proposal_run_logger import artifact_run_logger as proposal_run_logger
+    
+    # Get template info for telemetry
+    template_name = "proposal_template_unhcr.json"  # Default
+    try:
+        with get_engine().connect() as connection:
+            template_result = connection.execute(
+                text("SELECT template_name FROM proposals WHERE id = :id"),
+                {"id": proposal_id}
+            ).fetchone()
+            if template_result:
+                template_name = template_result[0] or template_name
+    except Exception as e:
+        logger.warning(f"Could not fetch template name for telemetry: {e}")
+    
+        # Create run record
+    run_id = None
+    start_time = datetime.utcnow()
+    try:
+        run_id = proposal_run_logger.create_run_record(
+            artifact_type="proposal",
+            artifact_id=proposal_id,
+            user_id=user_id,
+            template_name=template_name,
+            model_deployment="default"
+        )
+        logger.info(f"Created telemetry run record {run_id} for proposal {proposal_id}")
+    except Exception as e:
+        logger.error(f"Failed to create telemetry run record: {e}", exc_info=True)
+        # Continue without telemetry rather than failing the whole process
+        run_id = None
+    
     try:
         with get_engine().begin() as connection:
             connection.execute(
@@ -553,43 +590,84 @@ def generate_all_sections_background(session_id: str, proposal_id: str, user_id:
             logger.info(
                 f"Generating section: {section_name} with format_type: {format_type} for proposal {proposal_id}"
             )
+            
+            # Track section generation timing
+            section_start_time = time.time()
 
             generated_text = ""
-            if format_type == "text":
-                generated_text = handle_text_format(
-                    section_config,
-                    crew_instance,
-                    form_data,
-                    project_description,
-                    session_id,
-                    proposal_id,
-                    special_requirements=special_requirements_str,
-                )
-            elif format_type == "fixed_text":
-                generated_text = handle_fixed_text_format(section_config)
-            elif format_type == "number":
-                generated_text = handle_number_format(
-                    section_config,
-                    crew_instance,
-                    form_data,
-                    project_description,
-                    special_requirements=special_requirements_str,
-                )
-            elif format_type == "table":
-                generated_text = handle_table_format(
-                    section_config,
-                    crew_instance,
-                    form_data,
-                    project_description,
-                    special_requirements=special_requirements_str,
-                )
+            agent_name = "unknown"
+            tokens_used = 0
+            
+            try:
+                if format_type == "text":
+                    agent_name = "content_generator"
+                    generated_text = handle_text_format(
+                        section_config,
+                        crew_instance,
+                        form_data,
+                        project_description,
+                        session_id,
+                        proposal_id,
+                        special_requirements=special_requirements_str,
+                    )
+                elif format_type == "fixed_text":
+                    agent_name = "fixed_text_generator"
+                    generated_text = handle_fixed_text_format(section_config)
+                elif format_type == "number":
+                    agent_name = "number_generator"
+                    generated_text = handle_number_format(
+                        section_config,
+                        crew_instance,
+                        form_data,
+                        project_description,
+                        special_requirements=special_requirements_str,
+                    )
+                elif format_type == "table":
+                    agent_name = "table_generator"
+                    generated_text = handle_table_format(
+                        section_config,
+                        crew_instance,
+                        form_data,
+                        project_description,
+                        special_requirements=special_requirements_str,
+                    )
 
-            if not generated_text:
-                logger.warning(
-                    f"Generation failed for section '{section_name}' in proposal {proposal_id}. Using fallback message."
-                )
+                if not generated_text:
+                    logger.warning(
+                        f"Generation failed for section '{section_name}' in proposal {proposal_id}. Using fallback message."
+                    )
+                    generated_text = FALLBACK_GENERATION_MESSAGE
+
+            except Exception as e:
+                logger.error(f"Error generating section {section_name}: {e}", exc_info=True)
                 generated_text = FALLBACK_GENERATION_MESSAGE
-
+                if run_id:
+                    try:
+                        proposal_run_logger.log_failure(
+                            run_id=run_id,
+                            agent_name=agent_name,
+                            error_message=str(e)
+                        )
+                    except Exception as telemetry_error:
+                        logger.error(f"Failed to log failure telemetry: {telemetry_error}")
+            
+            # Calculate section generation time
+            section_end_time = time.time()
+            section_latency_ms = int((section_end_time - section_start_time) * 1000)
+            
+            # Log agent execution telemetry
+            if run_id:
+                try:
+                    proposal_run_logger.log_agent_execution(
+                        run_id=run_id,
+                        agent_name=agent_name,
+                        stage_latency_ms=section_latency_ms,
+                        tokens_used=tokens_used,
+                        step_count=1
+                    )
+                except Exception as telemetry_error:
+                    logger.error(f"Failed to log agent execution telemetry: {telemetry_error}")
+            
             all_sections[section_name] = generated_text
 
             # --- PARTIAL SAVE: Update DB after each section ---
@@ -614,6 +692,37 @@ def generate_all_sections_background(session_id: str, proposal_id: str, user_id:
                 ),
                 {"sections": json.dumps(all_sections), "id": proposal_id},
             )
+        
+        # Calculate total run duration
+        end_time = datetime.utcnow()
+        total_latency_ms = int((end_time - start_time).total_seconds() * 1000)
+        
+        # Calculate output metrics
+        sections_generated = len(all_sections)
+        words_generated = sum(len(text.split()) for text in all_sections.values() if text)
+        pages_generated = max(1, (words_generated + 499) // 500)  # Approximate pages
+        
+        # Complete the telemetry run
+        if run_id:
+            try:
+                # Log output metrics
+                proposal_run_logger.log_output_metrics(
+                    run_id=run_id,
+                    sections_generated=sections_generated,
+                    words_generated=words_generated,
+                    pages_generated=pages_generated
+                )
+                
+                # Complete the run
+                proposal_run_logger.complete_run(
+                    run_id=run_id,
+                    total_latency_ms=total_latency_ms,
+                    success=True
+                )
+                logger.info(f"Completed telemetry logging for run {run_id}")
+            except Exception as telemetry_error:
+                logger.error(f"Failed to complete telemetry run: {telemetry_error}")
+        
         logger.info(f"Successfully generated all sections for proposal {proposal_id}")
 
     except Exception as e:
@@ -621,6 +730,23 @@ def generate_all_sections_background(session_id: str, proposal_id: str, user_id:
             f"Error during background proposal generation for {proposal_id}: {e}",
             exc_info=True,
         )
+        
+        # Calculate total run duration for error case
+        end_time = datetime.utcnow()
+        total_latency_ms = int((end_time - start_time).total_seconds() * 1000)
+        
+        # Mark run as failed in telemetry
+        if run_id:
+            try:
+                proposal_run_logger.complete_run(
+                    run_id=run_id,
+                    total_latency_ms=total_latency_ms,
+                    success=False
+                )
+                logger.info(f"Marked telemetry run {run_id} as failed")
+            except Exception as telemetry_error:
+                logger.error(f"Failed to mark telemetry run as failed: {telemetry_error}")
+        
         try:
             with get_engine().begin() as connection:
                 connection.execute(
@@ -2907,3 +3033,112 @@ async def reply_to_feedback(
     except Exception as e:
         logger.error(f"[REPLY TO FEEDBACK ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to save reply to feedback.")
+
+
+# ============================================================================
+# PROPOSAL RUN TELEMETRY ENDPOINTS
+# ============================================================================
+
+@router.get("/proposals/{proposal_id}/runs")
+async def get_proposal_runs(
+    proposal_id: uuid.UUID,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get all telemetry runs for a specific proposal.
+    """
+    try:
+        runs = proposal_run_logger.get_runs_by_artifact("proposal", str(proposal_id))
+        return {
+            "message": "Proposal runs fetched successfully",
+            "runs": runs
+        }
+    except Exception as e:
+        logger.error(f"[GET PROPOSAL RUNS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch proposal runs.")
+
+
+@router.get("/proposal-runs/{run_id}")
+async def get_proposal_run_details(
+    run_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get detailed information about a specific proposal run.
+    """
+    try:
+        run_details = proposal_run_logger.get_run_details(run_id)
+        return {
+            "message": "Proposal run details fetched successfully",
+            "run": run_details
+        }
+    except Exception as e:
+        logger.error(f"[GET PROPOSAL RUN DETAILS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch proposal run details.")
+
+
+@router.get("/users/{user_id}/runs")
+async def get_user_runs(
+    user_id: str,
+    limit: int = 100,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get recent proposal runs for a specific user.
+    """
+    # Add RBAC check here if needed
+    try:
+        runs = proposal_run_logger.get_runs_by_user(user_id, limit)
+        return {
+            "message": "User runs fetched successfully",
+            "runs": runs
+        }
+    except Exception as e:
+        logger.error(f"[GET USER RUNS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch user runs.")
+
+
+@router.get("/proposal-runs")
+async def get_all_runs(
+    limit: int = 100,
+    status: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get all proposal runs with optional filtering.
+    """
+    try:
+        # For now, just return recent runs. Add filtering by status later.
+        # In production, add RBAC to restrict access to appropriate runs
+        runs = proposal_run_logger.get_runs_by_date_range(
+            start_date=datetime.utcnow() - timedelta(days=30),
+            end_date=datetime.utcnow(),
+            limit=limit
+        )
+        return {
+            "message": "All runs fetched successfully",
+            "runs": runs
+        }
+    except Exception as e:
+        logger.error(f"[GET ALL RUNS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch all runs.")
+
+
+@router.get("/proposal-runs/agents/{agent_name}")
+async def get_runs_by_agent(
+    agent_name: str,
+    limit: int = 100,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get proposal runs that executed a specific agent.
+    """
+    try:
+        runs = proposal_run_logger.get_runs_by_agent(agent_name, limit)
+        return {
+            "message": "Agent runs fetched successfully",
+            "runs": runs
+        }
+    except Exception as e:
+        logger.error(f"[GET RUNS BY AGENT ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch runs by agent.")

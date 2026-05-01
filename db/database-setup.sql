@@ -263,8 +263,24 @@ CREATE TABLE IF NOT EXISTS rag_evaluation_logs (
     query TEXT NOT NULL,
     retrieved_context TEXT NOT NULL,
     generated_answer TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Add trigger to update updated_at on changes
+CREATE OR REPLACE FUNCTION update_rag_evaluation_logs_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_rag_evaluation_logs_updated_at ON rag_evaluation_logs;
+CREATE TRIGGER trg_rag_evaluation_logs_updated_at
+    BEFORE UPDATE ON rag_evaluation_logs
+    FOR EACH ROW
+    EXECUTE FUNCTION update_rag_evaluation_logs_updated_at();
 
 -- Create Knowledge Card Usage Tracking table
 CREATE TABLE IF NOT EXISTS knowledge_card_usage (
@@ -398,20 +414,7 @@ CREATE TABLE IF NOT EXISTS templates (
     CONSTRAINT unique_default_template UNIQUE (template_type) DEFERRABLE INITIALLY IMMEDIATE
 );
 
--- Create template_versions table
-CREATE TABLE IF NOT EXISTS template_versions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    template_id UUID NOT NULL REFERENCES templates(id) ON DELETE CASCADE,
-    version_number TEXT NOT NULL,
-    version_notes TEXT,
-    template_data JSONB NOT NULL,
-    status template_status DEFAULT 'draft',
-    created_by UUID REFERENCES users(id),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_by UUID REFERENCES users(id),
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT unique_template_version UNIQUE (template_id, version_number)
-);
+
 
 -- Create template_donors table for mapping templates to donors
 CREATE TABLE IF NOT EXISTS template_donors (
@@ -437,8 +440,6 @@ CREATE TABLE IF NOT EXISTS template_audit_log (
 CREATE INDEX IF NOT EXISTS idx_templates_name ON templates(name);
 CREATE INDEX IF NOT EXISTS idx_templates_type ON templates(template_type);
 CREATE INDEX IF NOT EXISTS idx_templates_status ON templates(status);
-CREATE INDEX IF NOT EXISTS idx_template_versions_template_id ON template_versions(template_registry_id);
-CREATE INDEX IF NOT EXISTS idx_template_versions_status ON template_versions(status);
 CREATE INDEX IF NOT EXISTS idx_template_donors_template_id ON template_donors(template_id);
 CREATE INDEX IF NOT EXISTS idx_template_donors_donor_id ON template_donors(donor_id);
 CREATE INDEX IF NOT EXISTS idx_template_audit_log_template_id ON template_audit_log(template_id);
@@ -729,8 +730,18 @@ END$$;
 
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'managed_template_type') THEN
-        CREATE TYPE managed_template_type AS ENUM ('proposal', 'knowledge_card');
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_type
+        WHERE typname = 'managed_template_type'
+    ) THEN
+        CREATE TYPE managed_template_type AS ENUM (
+            'proposal',
+            'knowledge_card',
+            'concept_note'
+        );
+    ELSE
+        ALTER TYPE managed_template_type ADD VALUE IF NOT EXISTS 'concept_note';
     END IF;
 END$$;
 
@@ -819,26 +830,30 @@ CREATE INDEX IF NOT EXISTS idx_template_registry_owning_team_id
 -- --------------------------------------------------------------------------
 -- 4) IMMUTABLE TEMPLATE VERSIONS
 -- --------------------------------------------------------------------------
+
+
+-- Create template_versions table
 CREATE TABLE IF NOT EXISTS template_versions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     template_registry_id UUID NOT NULL REFERENCES template_registry(id) ON DELETE CASCADE,
+    template_id UUID NOT NULL REFERENCES templates(id) ON DELETE CASCADE,
     version_label TEXT NOT NULL,
-    version_number INTEGER NOT NULL,
+    version_number TEXT NOT NULL,
+    version_notes TEXT,
     environment release_environment NOT NULL DEFAULT 'uat',
     status template_version_status NOT NULL DEFAULT 'draft',
+    cloned_from_version_id UUID NULL REFERENCES template_versions(id) ON DELETE SET NULL,
 
     configuration JSONB NOT NULL DEFAULT '{}'::jsonb,
     template_content JSONB,
     initial_file_content JSONB,
     release_notes TEXT,
-
-    cloned_from_version_id UUID NULL REFERENCES template_versions(id) ON DELETE SET NULL,
-
-    created_by UUID NOT NULL REFERENCES users(id),
+    template_data JSONB NOT NULL,
+    
+    created_by UUID REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_by UUID NOT NULL REFERENCES users(id),
+    updated_by UUID REFERENCES users(id),
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-
     promoted_at TIMESTAMPTZ,
     promoted_by UUID NULL REFERENCES users(id),
     suspended_at TIMESTAMPTZ,
@@ -846,6 +861,7 @@ CREATE TABLE IF NOT EXISTS template_versions (
 
     UNIQUE (template_registry_id, version_number),
     UNIQUE (template_registry_id, version_label)
+    CONSTRAINT unique_template_version UNIQUE (template_id, version_number)
 );
 
 CREATE INDEX IF NOT EXISTS idx_template_versions_registry
@@ -860,6 +876,10 @@ CREATE INDEX IF NOT EXISTS idx_template_versions_environment
 CREATE UNIQUE INDEX IF NOT EXISTS uq_template_versions_single_prod_per_registry
     ON template_versions(template_registry_id)
     WHERE environment = 'prod' AND status = 'promoted_to_prod';
+
+
+CREATE INDEX IF NOT EXISTS idx_template_versions_template_id ON template_versions(template_registry_id);
+CREATE INDEX IF NOT EXISTS idx_template_versions_status ON template_versions(status);
 
 -- --------------------------------------------------------------------------
 -- 5) LINK GENERATED OUTPUTS TO EXACT TEMPLATE REGISTRY / VERSION
@@ -1314,73 +1334,59 @@ COMMIT;
 
 
 -- automatically maintains template registry and version
-
-CREATE OR REPLACE FUNCTION ensure_template_registry_and_version(
-    p_template_name TEXT,
-    p_template_type managed_template_type,
-    p_user_id UUID
+CREATE OR REPLACE FUNCTION public.ensure_template_registry_and_version(
+    p_template_name text,
+    p_template_type public.managed_template_type,
+    p_user_id uuid
 )
-RETURNS TABLE (
-    template_registry_id UUID,
-    template_version_id  UUID
-)
+RETURNS TABLE(template_registry_id uuid, template_version_id uuid)
 LANGUAGE plpgsql
-AS $$
+AS $_$
 DECLARE
     v_template_key TEXT;
-    v_registry_id  UUID;
-    v_version_id   UUID;
+    v_registry_id UUID;
+    v_version_id UUID;
     v_next_version INTEGER;
 BEGIN
     IF p_template_name IS NULL OR trim(p_template_name) = '' THEN
         RETURN;
     END IF;
 
-    -- Normalize template key
-    v_template_key :=
-        lower(regexp_replace(p_template_name, '[^a-zA-Z0-9]+', '_', 'g'));
+    v_template_key := lower(regexp_replace(p_template_name, '[^a-zA-Z0-9]+', '_', 'g'));
 
-    -- Ensure template_registry
     SELECT tr.id
-    INTO v_registry_id
-    FROM template_registry tr
-    WHERE tr.template_key = v_template_key
-      AND tr.template_type = p_template_type;
+      INTO v_registry_id
+      FROM public.template_registry tr
+     WHERE tr.template_key = v_template_key
+       AND tr.template_type = p_template_type;
 
     IF v_registry_id IS NULL THEN
-        INSERT INTO template_registry (
-            template_key,
-            template_name,
-            template_type,
-            owner_user_id,
-            description
+        INSERT INTO public.template_registry (
+            template_key, template_name, template_type, owner_user_id, description
         )
         VALUES (
-            v_template_key,
-            p_template_name,
-            p_template_type,
-            p_user_id,
-            'Auto-registered from usage'
+            v_template_key, p_template_name, p_template_type, p_user_id, 'Auto-registered from usage'
         )
         RETURNING id INTO v_registry_id;
     END IF;
 
-    -- Ensure at least one UAT version
     SELECT tv.id
-    INTO v_version_id
-    FROM template_versions tv
-    WHERE tv.template_registry_id = v_registry_id
-      AND tv.environment = 'uat'
-    ORDER BY tv.version_number DESC
-    LIMIT 1;
+      INTO v_version_id
+      FROM public.template_versions tv
+     WHERE tv.template_registry_id = v_registry_id
+       AND tv.environment = 'uat'
+     ORDER BY
+       tv.version_number DESC NULLS LAST,
+       tv.created_at DESC
+     LIMIT 1;
 
     IF v_version_id IS NULL THEN
         SELECT COALESCE(MAX(tv.version_number), 0) + 1
-        INTO v_next_version
-        FROM template_versions tv
-        WHERE tv.template_registry_id = v_registry_id;
+          INTO v_next_version
+          FROM public.template_versions tv
+         WHERE tv.template_registry_id = v_registry_id;
 
-        INSERT INTO template_versions (
+        INSERT INTO public.template_versions (
             template_registry_id,
             version_label,
             version_number,
@@ -1394,8 +1400,8 @@ BEGIN
             v_registry_id,
             'auto-uat-v' || v_next_version,
             v_next_version,
-            'uat'::release_environment,
-            'in_uat'::template_version_status,
+            'uat'::public.release_environment,
+            'in_uat'::public.template_version_status,
             'Auto-created from existing usage',
             p_user_id,
             p_user_id
@@ -1403,13 +1409,11 @@ BEGIN
         RETURNING id INTO v_version_id;
     END IF;
 
-    -- ✅ Explicitly assign output variables
     template_registry_id := v_registry_id;
-    template_version_id  := v_version_id;
-
+    template_version_id := v_version_id;
     RETURN NEXT;
 END;
-$$;
+$_$;
  
 
 -------------

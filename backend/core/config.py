@@ -4,7 +4,9 @@ import sys
 import importlib
 import json
 import logging
+from typing import Dict, Any, Optional
 
+#  Third-Party Libraries
 from fastapi import HTTPException
 import os
 from backend.core.llm import llm as crew_llm
@@ -256,11 +258,22 @@ def get_available_templates():
     return templates_map
 
 
-def load_proposal_template(template_name: str):
+def load_proposal_template(template_name: str, use_db_first: bool = True):
     """
     Loads a specific proposal template by its filename.
-    Searches proposal_template/ and concept_note_template/ sub-directories.
+    First tries database (if use_db_first=True), then falls back to file system.
     """
+    # First try database if enabled
+    if use_db_first:
+        try:
+            template_data = _load_template_from_db(template_name)
+            if template_data:
+                logger.info(f"Proposal template loaded successfully from database: {template_name}")
+                return template_data
+        except Exception as e:
+            logger.warning(f"Database template loading failed, falling back to file system: {e}")
+
+    # Fall back to file system
     available_templates = get_available_templates()
     if template_name not in available_templates.values():
         logger.error(f"Invalid or non-existent template requested: {template_name}")
@@ -285,6 +298,41 @@ def load_proposal_template(template_name: str):
         raise HTTPException(
             status_code=500, detail="Error parsing proposal template file."
         )
+
+
+def _load_template_from_db(template_name: str) -> Optional[Dict[str, Any]]:
+    """
+    Attempt to load template from database.
+    Returns None if template not found in database.
+    """
+    try:
+        from backend.core.db import get_engine
+        from sqlalchemy import text
+        
+        engine = get_engine()
+        with engine.begin() as connection:
+            query = text("""
+                SELECT template_data
+                FROM template_versions tv
+                JOIN templates t ON tv.template_id = t.id
+                WHERE t.filename = :template_name AND tv.status = 'active'
+                ORDER BY tv.created_at DESC
+                LIMIT 1
+            """)
+            result = connection.execute(query, {"template_name": template_name})
+            row = result.fetchone()
+            
+            if row and row[0]:
+                template_data = row[0]
+                if isinstance(template_data, str):
+                    return json.loads(template_data)
+                return template_data
+            
+            return None
+            
+    except Exception as e:
+        logger.debug(f"Database template loading error: {e}")
+        return None
 
 
 # The global SECTIONS variable has been removed to prevent circular dependencies

@@ -127,3 +127,75 @@ def test_upload_pdf_reference_success(mock_pdf_reader, mock_process_and_store, a
     assert args[1] == extracted_text           # Check extracted text
     # args[2] is the connection object, which is harder to assert on directly, but we know it was passed
     assert args[2] is not None
+
+
+def test_identify_references_keeps_existing_links(authenticated_client: TestClient, db_session):
+    """Ensures identify-references keeps pre-existing reference links."""
+
+    user_id = authenticated_client.app.dependency_overrides[get_current_user]().get("user_id")
+    card_id = str(uuid.uuid4())
+    reference_id = str(uuid.uuid4())
+
+    db_session.execute(
+        text(
+            """
+            INSERT INTO knowledge_cards (id, summary, created_by, updated_by)
+            VALUES (:id, 'reference retention card', :user_id, :user_id)
+            """
+        ),
+        {"id": card_id, "user_id": user_id},
+    )
+    db_session.execute(
+        text(
+            """
+            INSERT INTO knowledge_card_references (
+                id, knowledge_card_id, url, reference_type, summary, created_by, updated_by
+            ) VALUES (
+                :id, :card_id, 'https://existing-reference.example', 'existing', 'pre-existing', :user_id, :user_id
+            )
+            """
+        ),
+        {"id": reference_id, "card_id": card_id, "user_id": user_id},
+    )
+    db_session.execute(
+        text(
+            """
+            INSERT INTO knowledge_card_to_references (knowledge_card_id, reference_id)
+            VALUES (:card_id, :reference_id)
+            """
+        ),
+        {"card_id": card_id, "reference_id": reference_id},
+    )
+    db_session.commit()
+
+    mock_result = MagicMock()
+    mock_result.raw = json.dumps(
+        [
+            {
+                "url": "https://new-reference.example",
+                "reference_type": "article",
+                "summary": "auto-generated",
+            }
+        ]
+    )
+
+    with patch(
+        "backend.api.knowledge.ReferenceIdentificationCrew.kickoff",
+        return_value=mock_result,
+    ):
+        response = authenticated_client.post(
+            f"/api/knowledge-cards/{card_id}/identify-references",
+            json={"title": "test", "linked_element": "donor", "summary": ""},
+        )
+
+    assert response.status_code == 200, f"Expected status 200, got {response.status_code}. {response.text}"
+
+    links = db_session.execute(
+        text(
+            "SELECT reference_id FROM knowledge_card_to_references WHERE knowledge_card_id = :card_id"
+        ),
+        {"card_id": card_id},
+    ).fetchall()
+
+    reference_ids = {row.reference_id for row in links}
+    assert reference_id in reference_ids

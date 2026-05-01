@@ -1876,13 +1876,6 @@ async def identify_references(
 
         user_id = current_user["user_id"]
         with get_engine().begin() as connection:
-            # First, clear any existing associations for this card
-            connection.execute(
-                text(
-                    "DELETE FROM knowledge_card_to_references WHERE knowledge_card_id = :kcid"
-                ),
-                {"kcid": card_id},
-            )
             # Then, process the new references
             processed_urls = set()
             for ref in references:

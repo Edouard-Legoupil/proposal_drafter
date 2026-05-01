@@ -131,14 +131,14 @@ def test_get_runs_by_agent(authenticated_client):
 
 def test_proposal_run_telemetry_structure():
     """Test that telemetry data has the correct structure."""
-    from backend.utils.proposal_run_logger import artifact_run_logger
+    from backend.utils.proposal_run_logger import artifact_run_logger as proposal_run_logger
     
     # Test data
     test_proposal_id = str(uuid.uuid4())
     test_user_id = str(uuid.uuid4())
     
     # Create a test run
-    run_id = artifact_run_logger.create_run_record(
+    run_id = proposal_run_logger.create_run_record(
         artifact_type="proposal",
         artifact_id=test_proposal_id,
         user_id=test_user_id,
@@ -216,14 +216,14 @@ def test_proposal_run_telemetry_structure():
 
 def test_proposal_run_failure_logging():
     """Test logging of failed proposal runs."""
-    from backend.utils.proposal_run_logger import artifact_run_logger
+    from backend.utils.proposal_run_logger import artifact_run_logger as proposal_run_logger
     
     # Test data
     test_proposal_id = str(uuid.uuid4())
     test_user_id = str(uuid.uuid4())
     
     # Create a test run
-    run_id = artifact_run_logger.create_run_record(
+    run_id = proposal_run_logger.create_run_record(
         artifact_type="proposal",
         artifact_id=test_proposal_id,
         user_id=test_user_id,
@@ -266,14 +266,14 @@ def test_proposal_run_failure_logging():
 
 def test_knowledge_card_telemetry_structure():
     """Test that knowledge card telemetry data has the correct structure."""
-    from backend.utils.proposal_run_logger import artifact_run_logger
+    from backend.utils.proposal_run_logger import artifact_run_logger as proposal_run_logger
     
     # Test data
     test_card_id = str(uuid.uuid4())
     test_user_id = str(uuid.uuid4())
     
     # Create a test run for knowledge card
-    run_id = artifact_run_logger.create_run_record(
+    run_id = proposal_run_logger.create_run_record(
         artifact_type="knowledge_card",
         artifact_id=test_card_id,
         user_id=test_user_id,
@@ -282,7 +282,7 @@ def test_knowledge_card_telemetry_structure():
     )
     
     # Log some agent executions
-    artifact_run_logger.log_agent_execution(
+    proposal_run_logger.log_agent_execution(
         run_id=run_id,
         agent_name="content_generator",
         stage_latency_ms=2000,
@@ -291,7 +291,7 @@ def test_knowledge_card_telemetry_structure():
     )
     
     # Log output metrics
-    artifact_run_logger.log_output_metrics(
+    proposal_run_logger.log_output_metrics(
         run_id=run_id,
         sections_generated=3,
         words_generated=1800,
@@ -299,14 +299,14 @@ def test_knowledge_card_telemetry_structure():
     )
     
     # Complete the run
-    artifact_run_logger.complete_run(
+    proposal_run_logger.complete_run(
         run_id=run_id,
         total_latency_ms=6000,
         success=True
     )
     
     # Get run details
-    run_details = artifact_run_logger.get_run_details(run_id)
+    run_details = proposal_run_logger.get_run_details(run_id)
     
     # Verify structure
     assert "id" in run_details
