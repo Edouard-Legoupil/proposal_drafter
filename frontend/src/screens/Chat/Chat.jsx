@@ -488,6 +488,8 @@ export default function Chat(props) {
         const [proposal, setProposal] = useState({})
         const [generateLoading, setGenerateLoading] = useState(false)
         const [generateLabel, setGenerateLabel] = useState("Generate")
+        const [followUpInstruction, setFollowUpInstruction] = useState("")
+        const [showFollowUpModal, setShowFollowUpModal] = useState(false)
         const isGenerating = useRef(false);
 
         useEffect(() => {
@@ -566,13 +568,19 @@ export default function Chat(props) {
                                         
                                         if ((data.status !== 'generating_sections' && hasAllSections) || isFailed) {
                                                 setGenerateLoading(false);
-                                                setGenerateLabel("Regenerate");
                                                 setGenerationProgress(100);
                                                 setGenerationMessage(isFailed ? "Generation failed!" : "Generation completed!");
                                                 setNotif({ open: true, message: isFailed ? 'Proposal generation failed!' : 'Proposal generation completed!', severity: isFailed ? 'error' : 'success' });
                                                 pollingActive = false;
                                                 clearInterval(pollInterval);
                                                 setTimeout(() => setIsProgressModalOpen(false), 1000); // Small delay to show 100%
+                                                
+                                                // Show follow-up instruction modal for successful generation
+                                                if (!isFailed && hasAllSections) {
+                                                        setTimeout(() => {
+                                                                setShowFollowUpModal(true);
+                                                        }, 1500); // Show modal after progress modal closes
+                                                }
                                         }
                                 } else throw new Error('Non-200 response');
                         } catch (err) {
@@ -650,6 +658,15 @@ export default function Chat(props) {
                 }
         }
 
+        async function handleRegenerateWithFollowUp() {
+                // Regenerate entire proposal with follow-up instruction
+                if (!followUpInstruction) return;
+                
+                setShowFollowUpModal(false);
+                // Trigger the main generate/regenerate flow
+                await handleGenerateClick();
+        }
+
         async function handleGenerateClick() {
                 const missing = getMissingFields();
                 if (missing.length > 0) {
@@ -657,6 +674,62 @@ export default function Chat(props) {
                         setIsValidationModalOpen(true);
                         return;
                 }
+                
+                // Check if this is a regeneration (proposal already exists)
+                const existingProposalId = sessionStorage.getItem("proposal_id");
+                const existingSessionId = sessionStorage.getItem("session_id");
+                
+                if (existingProposalId && existingSessionId && followUpInstruction) {
+                        // This is a regeneration with follow-up instruction
+                        setGenerateLoading(true);
+                        setFormExpanded(false);
+                        
+                        try {
+                                // Get all current sections to pass as context
+                                const currentSections = proposal;
+                                
+                                // Call backend to regenerate with follow-up instruction
+                                const response = await fetch(`${API_BASE_URL}/regenerate-full-proposal/${existingSessionId}`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                                proposal_id: existingProposalId,
+                                                follow_up_instruction: followUpInstruction,
+                                                current_sections: currentSections,
+                                                form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])),
+                                                project_description: userPrompt
+                                        }),
+                                        credentials: 'include'
+                                });
+                                
+                                if (!response.ok) {
+                                        throw new Error('Failed to start proposal regeneration.');
+                                }
+                                
+                                const data = await response.json();
+                                // Update session with new IDs if needed
+                                if (data.session_id) {
+                                        sessionStorage.setItem("session_id", data.session_id);
+                                }
+                                
+                                // Reset state for polling
+                                setGenerationProgress(0);
+                                setGenerationMessage("Starting proposal regeneration...");
+                                setIsProgressModalOpen(true);
+                                
+                                // Keep generateLoading true so polling continues
+                                // The polling will be handled by the existing useEffect
+                                return;
+                                
+                        } catch (error) {
+                                console.error("Error during proposal regeneration:", error);
+                                setGenerateLoading(false);
+                                setNotif({ open: true, message: 'Failed to start proposal regeneration. Try again.', severity: 'error' });
+                                return;
+                        }
+                }
+                
+                // Initial generation flow
                 setGenerateLoading(true);
                 setFormExpanded(false);
                 sessionStorage.removeItem("proposal_id"); // Clear old ID to prevent polling it
@@ -1536,6 +1609,51 @@ export default function Chat(props) {
                                                 </ul>
                                                 <div className="Chat_inputArea_buttonContainer">
                                                         <CommonButton onClick={() => setIsValidationModalOpen(false)} label="Close" />
+                                                </div>
+                                        </main>
+                                </dialog>
+
+                                {/* Follow-up Instruction Modal - Shown after initial generation */}
+                                <dialog open={showFollowUpModal} className="Chat_regenerate" style={{ height: 'auto', maxHeight: '80vh', top: '10%', width: '60vw', maxWidth: '800px' }} data-testid="followup-modal">
+                                        <header className="Chat_regenerate_header">
+                                                Provide Follow-up Instructions
+                                                <img src={regenerateClose} alt="" onClick={() => setShowFollowUpModal(false)} style={{ cursor: 'pointer' }} />
+                                        </header>
+                                        <main className="Chat_right" style={{ padding: '20px' }}>
+                                                <p style={{ marginBottom: '15px', color: '#666' }}>
+                                                        The initial proposal has been generated. Please provide any follow-up instructions or refinements you'd like to make.
+                                                        The AI will use the existing content as context and apply your instructions to improve it.
+                                                </p>
+                                                <textarea
+                                                        id="followup-instruction"
+                                                        name="followup-instruction"
+                                                        value={followUpInstruction}
+                                                        onChange={e => setFollowUpInstruction(e.target.value)}
+                                                        className='Chat_inputArea_prompt'
+                                                        placeholder="e.g., 'Make the budget section more detailed', 'Focus more on gender equality', 'Revise the timeline to be more realistic'..."
+                                                        style={{ minHeight: '100px', marginBottom: '20px' }}
+                                                        data-testid="followup-instruction-input"
+                                                />
+                                                <div className="Chat_inputArea_buttonContainer" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                                                        <CommonButton onClick={() => {
+                                                                setShowFollowUpModal(false);
+                                                                setGenerateLabel("Regenerate");
+                                                        }} label="Skip" data-testid="followup-skip-button" />
+                                                        <CommonButton 
+                                                                onClick={() => {
+                                                                        setShowFollowUpModal(false);
+                                                                        setGenerateLabel("Regenerate");
+                                                                }} 
+                                                                label="Save for Later" 
+                                                                data-testid="followup-save-button"
+                                                        />
+                                                        <CommonButton 
+                                                                icon={generateIcon}
+                                                                onClick={() => handleRegenerateWithFollowUp()}
+                                                                label="Regenerate Now"
+                                                                disabled={!followUpInstruction}
+                                                                data-testid="followup-regenerate-button"
+                                                        />
                                                 </div>
                                         </main>
                                 </dialog>

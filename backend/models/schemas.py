@@ -89,6 +89,17 @@ class RegenerateRequest(BaseModel):
     form_data: Dict[str, Any]
     project_description: str
 
+class RegenerateFullProposalRequest(BaseModel):
+    """
+    Schema for regenerating a full proposal with follow-up instructions.
+    Includes all current sections to use as context for regeneration.
+    """
+    proposal_id: str
+    follow_up_instruction: str
+    current_sections: Dict[str, Any]
+    form_data: Dict[str, Any]
+    project_description: str
+
 class GeneratedSection(BaseModel):
     generated_content: Optional[str] = None
     evaluation_status: Optional[str] = None

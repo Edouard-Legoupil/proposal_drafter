@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import logging
 import tempfile
 import os
-from typing import Optional
+from typing import Optional, Dict, Any
 
 #  Third-Party Libraries
 import pdfplumber
@@ -43,6 +43,7 @@ from backend.utils.crew_actions import (
 from backend.models.schemas import (
     SectionRequest,
     RegenerateRequest,
+    RegenerateFullProposalRequest,
     SaveDraftRequest,
     FinalizeProposalRequest,
     CreateSessionRequest,
@@ -1114,6 +1115,283 @@ async def regenerate_section(
         "message": f"Content regenerated for {request.section}",
         "generated_text": generated_text,
     }
+
+
+@router.post("/regenerate-full-proposal/{session_id}", status_code=202)
+async def regenerate_full_proposal(
+    session_id: str,
+    request: RegenerateFullProposalRequest,
+    background_tasks: BackgroundTasks,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Regenerates a full proposal using follow-up instructions and previous content as context.
+    This creates a new background task to regenerate all sections with the additional context.
+    """
+    user_id = current_user["user_id"]
+    
+    # Initialize artifact run logging for full regeneration
+    from backend.utils.proposal_run_logger import artifact_run_logger as proposal_run_logger
+    run_id = None
+    start_time = datetime.utcnow()
+    
+    try:
+        run_id = proposal_run_logger.create_run_record(
+            artifact_type="proposal",
+            artifact_id=request.proposal_id,
+            user_id=user_id,
+            template_name="full_regeneration",
+            model_deployment="default"
+        )
+        # Mark this as a full regeneration run in metadata
+        if run_id:
+            try:
+                with get_engine().begin() as connection:
+                    connection.execute(
+                        text("UPDATE artifact_runs SET metadata = metadata || '{\"full_regeneration\": true, \"follow_up_instruction\": :instruction}' WHERE id = :run_id"),
+                        {"run_id": run_id, "instruction": request.follow_up_instruction[:100]}  # Truncate for metadata
+                    )
+            except Exception as e:
+                logger.error(f"Failed to mark run as full regeneration: {e}")
+        logger.info(f"Created full regeneration telemetry run record {run_id} for proposal {request.proposal_id}")
+    except Exception as e:
+        logger.error(f"Failed to create full regeneration telemetry run record: {e}", exc_info=True)
+        run_id = None
+    
+    # Store the follow-up instruction and previous content in Redis for the background task
+    try:
+        session_data_str = redis_client.get(session_id)
+        if session_data_str:
+            session_data = json.loads(session_data_str)
+        else:
+            session_data = {}
+        
+        # Update session with follow-up instruction and previous content
+        session_data["follow_up_instruction"] = request.follow_up_instruction
+        session_data["previous_sections"] = request.current_sections
+        session_data["is_regeneration"] = True
+        
+        redis_client.setex(session_id, 3600, json.dumps(session_data, default=str))
+        
+        # Add background task to regenerate all sections
+        background_tasks.add_task(
+            regenerate_all_sections_with_context,
+            session_id,
+            request.proposal_id,
+            user_id,
+            request.follow_up_instruction,
+            run_id
+        )
+        
+        return {
+            "message": "Full proposal regeneration started with follow-up instructions.",
+            "session_id": session_id,
+            "run_id": run_id
+        }
+    except Exception as e:
+        logger.error(f"[REGENERATE FULL PROPOSAL ERROR] {e}", exc_info=True)
+        # Mark run as failed if it exists
+        if run_id:
+            try:
+                end_time = datetime.utcnow()
+                total_latency_ms = int((end_time - start_time).total_seconds() * 1000)
+                proposal_run_logger.complete_run(
+                    run_id=run_id,
+                    total_latency_ms=total_latency_ms,
+                    success=False
+                )
+            except Exception:
+                pass
+        raise HTTPException(status_code=500, detail="Failed to start full proposal regeneration.")
+
+
+def regenerate_all_sections_with_context(session_id: str, proposal_id: str, user_id: str, follow_up_instruction: str, run_id: str = None):
+    """
+    Background task to regenerate all sections with follow-up instructions and previous content context.
+    """
+    from backend.utils.crew_actions import ProposalCrew
+    logger.info(f"Starting full proposal regeneration with context for proposal {proposal_id}")
+    
+    start_time = datetime.utcnow()
+    
+    try:
+        session_data_str = redis_client.get(session_id)
+        if not session_data_str:
+            raise Exception("Session data not found in Redis.")
+        
+        session_data = json.loads(session_data_str)
+        proposal_template = session_data.get("proposal_template")
+        if not proposal_template or "sections" not in proposal_template:
+            raise Exception("Proposal template or sections not found in session.")
+        
+        form_data = session_data.get("form_data", {})
+        project_description = session_data.get("project_description", "")
+        previous_sections = session_data.get("previous_sections", {})
+        
+        # Resolve labels for form_data before sending to CrewAI
+        with get_engine().connect() as connection:
+            form_data = resolve_form_data_labels(form_data, connection)
+        
+        # Update proposal status to regenerating
+        with get_engine().begin() as connection:
+            connection.execute(
+                text(
+                    "UPDATE proposals SET status = 'regenerating', updated_at = CURRENT_TIMESTAMP WHERE id = :id"
+                ),
+                {"id": proposal_id},
+            )
+        
+        # Get the absolute path to the knowledge directory
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        knowledge_dir = os.path.join(current_dir, "..", "knowledge")
+        os.makedirs(knowledge_dir, exist_ok=True)
+        
+        # Process knowledge cards if they exist
+        knowledge_file_paths = []
+        associated_knowledge_cards = session_data.get("associated_knowledge_cards", [])
+        
+        if associated_knowledge_cards:
+            with get_engine().connect() as connection:
+                for card in associated_knowledge_cards:
+                    # ... (same knowledge card processing as in generate_all_sections_background)
+                    pass
+        
+        crew_instance = ProposalCrew(knowledge_file_paths=knowledge_file_paths).generate_proposal_crew()
+        
+        # Extract special_requirements from the template
+        special_requirements_obj = proposal_template.get("special_requirements", {})
+        special_requirements_list = special_requirements_obj.get("instructions", [])
+        special_requirements_str = (
+            "\n".join([f"- {req}" for req in special_requirements_list])
+            if special_requirements_list
+            else "None"
+        )
+        
+        # Use section_sequence for generation order if available
+        section_sequence = proposal_template.get("section_sequence", [])
+        if not section_sequence:
+            section_sequence = [s["section_name"] for s in proposal_template["sections"]]
+        
+        sections_by_name = {s["section_name"]: s for s in proposal_template["sections"]}
+        all_sections = {}
+        
+        # Regenerate each section with context from previous content
+        for section_name in section_sequence:
+            section_config = sections_by_name.get(section_name)
+            if not section_config:
+                continue
+            
+            format_type = section_config.get("format_type", "text")
+            logger.info(f"Regenerating section: {section_name} with follow-up context")
+            
+            generated_text = ""
+            try:
+                # Pass follow-up instruction and previous content to the generation
+                if format_type == "text":
+                    generated_text = handle_text_format_with_context(
+                        section_config,
+                        crew_instance,
+                        form_data,
+                        project_description,
+                        session_id,
+                        proposal_id,
+                        special_requirements=special_requirements_str,
+                        follow_up_instruction=follow_up_instruction,
+                        previous_content=previous_sections.get(section_name)
+                    )
+                elif format_type == "fixed_text":
+                    # Fixed text doesn't need regeneration
+                    previous = previous_sections.get(section_name, "")
+                    generated_text = previous
+                elif format_type == "number":
+                    generated_text = handle_number_format(
+                        section_config,
+                        crew_instance,
+                        form_data,
+                        project_description,
+                        special_requirements=special_requirements_str,
+                    )
+                elif format_type == "table":
+                    generated_text = handle_table_format(
+                        section_config,
+                        crew_instance,
+                        form_data,
+                        project_description,
+                        special_requirements=special_requirements_str,
+                    )
+                
+                if not generated_text:
+                    logger.warning(f"Regeneration failed for section '{section_name}'. Using previous content.")
+                    generated_text = previous_sections.get(section_name, "")
+                    
+            except Exception as e:
+                logger.error(f"Error regenerating section {section_name}: {e}", exc_info=True)
+                generated_text = previous_sections.get(section_name, "")
+            
+            all_sections[section_name] = generated_text
+            
+            # Save partial progress
+            try:
+                with get_engine().begin() as connection:
+                    connection.execute(
+                        text(
+                            "UPDATE proposals SET generated_sections = :sections, updated_at = CURRENT_TIMESTAMP WHERE id = :id"
+                        ),
+                        {"sections": json.dumps(all_sections), "id": proposal_id},
+                    )
+            except Exception as db_save_error:
+                logger.error(f"Failed to save partial progress for section {section_name}: {db_save_error}")
+        
+        # Update final status
+        with get_engine().begin() as connection:
+            connection.execute(
+                text(
+                    "UPDATE proposals SET generated_sections = :sections, status = 'draft', updated_at = CURRENT_TIMESTAMP WHERE id = :id"
+                ),
+                {"sections": json.dumps(all_sections), "id": proposal_id},
+            )
+        
+        # Complete the telemetry run
+        end_time = datetime.utcnow()
+        total_latency_ms = int((end_time - start_time).total_seconds() * 1000)
+        sections_generated = len(all_sections)
+        words_generated = sum(len(text.split()) for text in all_sections.values() if text)
+        pages_generated = max(1, (words_generated + 499) // 500)
+        
+        if run_id:
+            try:
+                proposal_run_logger.log_output_metrics(
+                    run_id=run_id,
+                    sections_generated=sections_generated,
+                    words_generated=words_generated,
+                    pages_generated=pages_generated
+                )
+                proposal_run_logger.complete_run(
+                    run_id=run_id,
+                    total_latency_ms=total_latency_ms,
+                    success=True
+                )
+                logger.info(f"Completed full regeneration telemetry logging for run {run_id}")
+            except Exception as telemetry_error:
+                logger.error(f"Failed to complete full regeneration telemetry run: {telemetry_error}")
+        
+        logger.info(f"Successfully regenerated all sections for proposal {proposal_id}")
+        
+    except Exception as e:
+        logger.error(f"Error during full proposal regeneration for {proposal_id}: {e}", exc_info=True)
+        
+        end_time = datetime.utcnow()
+        total_latency_ms = int((end_time - start_time).total_seconds() * 1000)
+        
+        if run_id:
+            try:
+                proposal_run_logger.complete_run(
+                    run_id=run_id,
+                    total_latency_ms=total_latency_ms,
+                    success=False
+                )
+            except Exception as telemetry_error:
+                logger.error(f"Failed to mark full regeneration telemetry run as failed: {telemetry_error}")
 
 
 @router.post("/update-section-content")
