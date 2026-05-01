@@ -1361,8 +1361,6 @@ export default function Chat(props) {
         // ───────────────────────────────────────────────────────────────────
 
         async function handleExport(format) {
-
-
                 const proposalId = sessionStorage.getItem("proposal_id");
 
                 if (!proposalId || proposalId === "undefined") {
@@ -1370,38 +1368,36 @@ export default function Chat(props) {
                         return;
                 }
 
-                const response = await fetch(`${API_BASE_URL}/generate-document/${sessionStorage.getItem("proposal_id")}?format=${format}`, {
-                        method: "GET",
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: "include"
-                })
+                try {
+                        // Call the new SharePoint upload endpoint
+                        const response = await fetch(`${API_BASE_URL}/upload-proposal-to-sharepoint/${proposalId}?format=${format}`, {
+                                method: "POST",
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: "include"
+                        });
 
-                if (response.ok) {
-                        const contentDisposition = response.headers.get('Content-Disposition');
-                        let filename = "proposal.docx"; // Default filename
-                        if (contentDisposition) {
-                                const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
-                                if (filenameMatch && filenameMatch[1]) {
-                                        filename = filenameMatch[1];
+                        if (response.ok) {
+                                const data = await response.json();
+                                if (data.success && data.url) {
+                                        // Open the document in Word Online in a new tab
+                                        window.open(data.url, '_blank');
+                                        setNotif({ open: true, message: "Document opened in Word Online", severity: 'success' });
+                                } else {
+                                        throw new Error(data.message || "Failed to get SharePoint URL");
                                 }
                         }
-
-                        const blob = await response.blob();
-                        const link = document.createElement('a');
-                        link.href = URL.createObjectURL(blob);
-                        link.download = filename;
-                        document.body.appendChild(link);
-                        link.click();
-                        link.remove();
-
-                        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+                        else if (response.status === 401) {
+                                sessionStorage.setItem("session_expired", "Session expired. Please login again.")
+                                navigate("/login")
+                        }
+                        else {
+                                const errorData = await response.json();
+                                throw new Error(errorData.detail || `Upload failed: ${response.status} ${response.statusText}`);
+                        }
+                } catch (error) {
+                        setNotif({ open: true, message: `Error: ${error.message}`, severity: 'error' });
+                        console.error("SharePoint upload error:", error);
                 }
-                else if (response.status === 401) {
-                        sessionStorage.setItem("session_expired", "Session expired. Please login again.")
-                        navigate("/login")
-                }
-                else
-                        throw new Error(`Download failed: ${response.status} ${response.statusText}`);
         }
 
         async function handleExportTables() {
@@ -1888,7 +1884,7 @@ export default function Chat(props) {
                                                                         <div className='Chat_exportButtons'>
                                                                                 <button type="button" onClick={() => handleExport("docx")} data-testid="export-word-button">
                                                                                         <img src={word_icon} alt="" />
-                                                                                        Download Document
+                                                                                        Open in Word Online
                                                                                 </button>
 
                                                                                 <button type="button" onClick={() => handleExportTables()} data-testid="export-excel-button">

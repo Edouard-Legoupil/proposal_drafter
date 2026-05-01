@@ -34,7 +34,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 #  Internal Modules
-from backend.api import auth, proposals, session, documents, health, users, knowledge, metrics, admin, templates, incident, qualification, template_management
+from backend.api import auth, proposals, session, documents, health, users, knowledge, metrics, admin, templates, incident, qualification, template_management, sharepoint
 from backend.core.middleware import (
     setup_cors_middleware,
     custom_http_exception_handler,
@@ -105,6 +105,7 @@ app.include_router(template_management.router, prefix="/api/admin", tags=["Templ
 app.include_router(incident.router, prefix="/api", tags=["Incidents"])
 app.include_router(qualification.router, prefix="/api", tags=["Qualification"])
 app.include_router(health.router, tags=["Health & Debugging"])
+app.include_router(sharepoint.router, prefix="/api", tags=["SharePoint"])
 
 # --- Root Endpoint: Health Check + SPA ---
 # This MUST be defined before the SPA fallback to take priority
