@@ -971,11 +971,17 @@ async def regenerate_section(
     """
     Manually regenerates a section using concise user input.
     """
+    user_id = current_user["user_id"]
+    
+    # Initialize artifact run logging for regeneration
+    run_id = None
+    start_time = datetime.utcnow()
+    
     # Prevent editing of finalized proposals and check RBAC.
     with get_engine().connect() as connection:
         proposal_info = connection.execute(
             text("SELECT is_accepted FROM proposals WHERE id = :id AND user_id = :uid"),
-            {"id": proposal_id, "uid": current_user["user_id"]},
+            {"id": proposal_id, "uid": user_id},
         ).fetchone()
 
         if not proposal_info:
@@ -989,21 +995,68 @@ async def regenerate_section(
     # Create a temporary session for the regeneration process
     session_id = str(uuid.uuid4())
 
-    with get_engine().connect() as connection:
-        # Get the template name from the proposal
-        template_name = (
-            connection.execute(
+    # Initialize artifact run logging for regeneration
+    run_id = None
+    start_time = datetime.utcnow()
+    
+    # Get template name first for logging
+    template_name = "proposal_template_unhcr.json"
+    try:
+        with get_engine().connect() as connection:
+            template_result = connection.execute(
                 text("SELECT template_name FROM proposals WHERE id = :id"),
                 {"id": proposal_id},
             ).scalar()
-            or "proposal_template_unhcr.json"
+            if template_result:
+                template_name = template_result
+    except Exception as e:
+        logger.warning(f"Could not fetch template name for regeneration logging: {e}")
+    
+    # Create run record for regeneration
+    try:
+        run_id = proposal_run_logger.create_run_record(
+            artifact_type="proposal",
+            artifact_id=proposal_id,
+            user_id=user_id,
+            template_name=template_name,
+            model_deployment="default"
         )
+        # Mark this as a regeneration run in metadata
+        if run_id:
+            try:
+                with get_engine().begin() as connection:
+                    connection.execute(
+                        text("UPDATE artifact_runs SET metadata = metadata || '{\"regeneration\": true, \"regeneration_section\": :section}' WHERE id = :run_id"),
+                        {"run_id": run_id, "section": request.section}
+                    )
+            except Exception as e:
+                logger.error(f"Failed to mark run as regeneration: {e}")
+        logger.info(f"Created regeneration telemetry run record {run_id} for proposal {proposal_id}")
+    except Exception as e:
+        logger.error(f"Failed to create regeneration telemetry run record: {e}", exc_info=True)
+        run_id = None
 
     proposal_template = load_proposal_template(template_name)
 
+    # Fetch the previous content for this section to include in context
+    previous_content = None
+    try:
+        with get_engine().connect() as connection:
+            result = connection.execute(
+                text("SELECT generated_sections FROM proposals WHERE id = :id"),
+                {"id": proposal_id}
+            ).fetchone()
+            if result and result[0]:
+                generated_sections = result[0]
+                if isinstance(generated_sections, str):
+                    generated_sections = json.loads(generated_sections)
+                previous_content = generated_sections.get(request.section)
+    except Exception as e:
+        logger.warning(f"Failed to fetch previous content for regeneration: {e}")
+
     with get_engine().connect() as connection:
         session_data = {
-            "user_id": current_user["user_id"],
+            "user_id": user_id,
             "proposal_id": proposal_id,
             "form_data": resolve_form_data_labels(request.form_data, connection),
             "project_description": request.project_description,
@@ -1011,9 +1064,52 @@ async def regenerate_section(
         }
     redis_client.setex(session_id, 3600, json.dumps(session_data, default=str))
 
-    generated_text = regenerate_section_logic(
-        session_id, request.section, request.concise_input, proposal_id
-    )
+    try:
+        generated_text = regenerate_section_logic(
+            session_id, request.section, request.concise_input, proposal_id, previous_content
+        )
+        
+        # Calculate metrics for telemetry
+        end_time = datetime.utcnow()
+        total_latency_ms = int((end_time - start_time).total_seconds() * 1000)
+        words_generated = len(generated_text.split()) if generated_text else 0
+        
+        # Complete the telemetry run for regeneration
+        if run_id:
+            try:
+                # Log output metrics
+                proposal_run_logger.log_output_metrics(
+                    run_id=run_id,
+                    sections_generated=1,
+                    words_generated=words_generated,
+                    pages_generated=1
+                )
+                # Complete the run
+                proposal_run_logger.complete_run(
+                    run_id=run_id,
+                    total_latency_ms=total_latency_ms,
+                    success=True
+                )
+                logger.info(f"Completed regeneration telemetry logging for run {run_id}")
+            except Exception as telemetry_error:
+                logger.error(f"Failed to complete regeneration telemetry run: {telemetry_error}")
+        
+    except Exception as e:
+        # Mark run as failed if it exists
+        end_time = datetime.utcnow()
+        total_latency_ms = int((end_time - start_time).total_seconds() * 1000)
+        if run_id:
+            try:
+                proposal_run_logger.complete_run(
+                    run_id=run_id,
+                    total_latency_ms=total_latency_ms,
+                    success=False
+                )
+                logger.info(f"Marked regeneration telemetry run {run_id} as failed")
+            except Exception as telemetry_error:
+                logger.error(f"Failed to mark regeneration telemetry run as failed: {telemetry_error}")
+        raise
+
     return {
         "message": f"Content regenerated for {request.section}",
         "generated_text": generated_text,

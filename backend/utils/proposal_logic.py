@@ -108,7 +108,7 @@ def resolve_form_data_labels(form_data: dict, connection) -> dict:
 
 
 def regenerate_section_logic(
-    session_id: str, section: str, concise_input: str, proposal_id: str
+    session_id: str, section: str, concise_input: str, proposal_id: str, previous_content: str = None
 ) -> str:
     """
     Shared logic for regenerating a proposal section using custom input.
@@ -121,6 +121,7 @@ def regenerate_section_logic(
         section: The name of the section to regenerate.
         concise_input: The user-provided or evaluator-provided feedback for regeneration.
         proposal_id: The unique ID of the proposal being edited.
+        previous_content: The previously generated content for this section to use as context.
 
     Returns:
         The newly generated text for the section.
@@ -199,6 +200,7 @@ def regenerate_section_logic(
         "limit_term": limit_type,
         "limit_value": limit_value,
         "concise_input": concise_input,
+        "previous_content": previous_content,
     }
 
     result = crew_instance.kickoff(inputs=section_input)
