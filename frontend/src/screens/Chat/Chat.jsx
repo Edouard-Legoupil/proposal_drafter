@@ -556,12 +556,20 @@ export default function Chat(props) {
                                                 });
                                                 setProposal(sectionState);
                                         }
-                                        if (data.status !== 'generating_sections') {
+                                        // Check if generation is truly complete: status is not 'generating_sections' AND we have all expected sections
+                                        // Also handle edge case where expected_sections is 0 (template not loaded yet)
+                                        const generatedCount = Object.keys(data.generated_sections || {}).length;
+                                        const hasAllSections = data.expected_sections > 0 ? 
+                                              generatedCount >= data.expected_sections : 
+                                              generatedCount > 0;
+                                        const isFailed = data.status === 'failed';
+                                        
+                                        if ((data.status !== 'generating_sections' && hasAllSections) || isFailed) {
                                                 setGenerateLoading(false);
                                                 setGenerateLabel("Regenerate");
                                                 setGenerationProgress(100);
-                                                setGenerationMessage("Generation completed!");
-                                                setNotif({ open: true, message: 'Proposal generation completed!', severity: 'success' });
+                                                setGenerationMessage(isFailed ? "Generation failed!" : "Generation completed!");
+                                                setNotif({ open: true, message: isFailed ? 'Proposal generation failed!' : 'Proposal generation completed!', severity: isFailed ? 'error' : 'success' });
                                                 pollingActive = false;
                                                 clearInterval(pollInterval);
                                                 setTimeout(() => setIsProgressModalOpen(false), 1000); // Small delay to show 100%
