@@ -49,6 +49,9 @@ def _normalize_expires_at(expires_at: Optional[Any]) -> Optional[datetime]:
     if expires_at is None:
         return None
     if isinstance(expires_at, datetime):
+        # Strip timezone info if present to make it naive
+        if hasattr(expires_at, 'tzinfo') and expires_at.tzinfo is not None:
+            return expires_at.replace(tzinfo=None)
         return expires_at
     if isinstance(expires_at, str):
         try:
