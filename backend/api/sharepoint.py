@@ -93,6 +93,7 @@ def log_upload_event(
         metadata: Optional additional metadata
     """
     try:
+        import json
         with get_engine().connect() as connection:
             connection.execute(
                 text("""
@@ -111,7 +112,7 @@ def log_upload_event(
                     "status": status,
                     "error_type": error_type,
                     "error_message": error_message,
-                    "metadata": metadata
+                    "metadata": json.dumps(metadata) if metadata else None
                 }
             )
             connection.commit()
