@@ -163,7 +163,7 @@ def get_existing_link(artifact_type: str, artifact_id: UUID, user_id: UUID) -> O
             row = result.fetchone()
             
             if row:
-                return dict(row)
+                return dict(row._mapping) if hasattr(row, '_mapping') else dict(row)
             return None
     except Exception as e:
         logger.error(f"Error fetching existing link: {e}")
