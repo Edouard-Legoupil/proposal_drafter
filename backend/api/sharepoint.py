@@ -10,6 +10,7 @@ This module provides API endpoints for SharePoint integration, including:
 """
 
 import io
+import json
 import logging
 import os
 from datetime import datetime, timedelta
@@ -24,61 +25,11 @@ from backend.core.db import get_engine
 from backend.core.security import get_current_user
 from backend.utils.sharepoint_connector import SharePointConnector
 
-# CONSTANTS
-# =============================================================================
-=======
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
 # =============================================================================
-# HELPER FUNCTIONS
-# =============================================================================
-
-def _normalize_expires_at(expires_at: Optional[Any]) -> Optional[datetime]:
-    """
-    Normalize expires_at value to a datetime object.
-    Handles both string and datetime types from the database.
-    
-    Args:
-        expires_at: A datetime string or datetime object
-        
-    Returns:
-        A datetime object or None if input is None
-    """
-    if expires_at is None:
-        return None
-    if isinstance(expires_at, datetime):
-        return expires_at
-    if isinstance(expires_at, str):
-        # Handle ISO format strings with or without timezone
-        try:
-            return datetime.fromisoformat(expires_at.replace('T', ' ').replace('Z', ''))
-        except ValueError:
-            return datetime.fromisoformat(expires_at)
-    return None
-
-
-def _serialize_datetime_for_json(dt: Optional[Any]) -> Optional[str]:
-    """
-    Serialize a datetime object to an ISO format string for JSON.
-    
-    Args:
-        dt: A datetime object or None
-        
-    Returns:
-        ISO format string or None
-    """
-    if dt is None:
-        return None
-    if isinstance(dt, datetime):
-        return dt.isoformat()
-    return dt
-
-
-# =============================================================================
-# CONSTANTS
-# ==========================================================================================================================================================
 # CONSTANTS
 # =============================================================================
 
@@ -88,6 +39,33 @@ SHAREPOINT_URL_EXPIRY_HOURS = 24  # URLs are considered valid for 24 hours
 
 
 # =============================================================================
+
+# =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
+
+def _normalize_expires_at(expires_at: Optional[Any]) -> Optional[datetime]:
+    """Normalize expires_at value to a datetime object."""
+    if expires_at is None:
+        return None
+    if isinstance(expires_at, datetime):
+        return expires_at
+    if isinstance(expires_at, str):
+        try:
+            return datetime.fromisoformat(expires_at.replace('T', ' ').replace('Z', ''))
+        except ValueError:
+            return datetime.fromisoformat(expires_at)
+    return None
+
+
+def _serialize_datetime_for_json(dt: Optional[Any]) -> Optional[str]:
+    """Serialize a datetime object to an ISO format string for JSON."""
+    if dt is None:
+        return None
+    if isinstance(dt, datetime):
+        return dt.isoformat()
+    return dt
+
 # SHAREPOINT CONNECTOR MANAGEMENT
 # =============================================================================
 
@@ -143,7 +121,6 @@ def log_upload_event(
         metadata: Optional additional metadata
     """
     try:
-        import json
         with get_engine().connect() as connection:
             connection.execute(
                 text("""
@@ -527,7 +504,6 @@ async def upload_proposal_to_sharepoint(
                 expires_at = existing_link.get('expires_at')
                 expiry_dt = _normalize_expires_at(expires_at)
                 if expiry_dt and expiry_dt > datetime.utcnow():
-                    logger.info(f"Using existing SharePoint link for proposal {proposal_id}")
                     log_upload_event(
                         event_type='url_retrieved',
                         artifact_type='proposal',
@@ -833,7 +809,6 @@ async def upload_knowledge_card_to_sharepoint(
                 expires_at = existing_link.get('expires_at')
                 expiry_dt = _normalize_expires_at(expires_at)
                 if expiry_dt and expiry_dt > datetime.utcnow():
-                    logger.info(f"Using existing SharePoint link for knowledge card {card_id}")
                     log_upload_event(
                         event_type='url_retrieved',
                         artifact_type='knowledge_card',
