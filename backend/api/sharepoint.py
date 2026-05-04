@@ -24,11 +24,61 @@ from backend.core.db import get_engine
 from backend.core.security import get_current_user
 from backend.utils.sharepoint_connector import SharePointConnector
 
+# CONSTANTS
+# =============================================================================
+=======
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
 # =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
+
+def _normalize_expires_at(expires_at: Optional[Any]) -> Optional[datetime]:
+    """
+    Normalize expires_at value to a datetime object.
+    Handles both string and datetime types from the database.
+    
+    Args:
+        expires_at: A datetime string or datetime object
+        
+    Returns:
+        A datetime object or None if input is None
+    """
+    if expires_at is None:
+        return None
+    if isinstance(expires_at, datetime):
+        return expires_at
+    if isinstance(expires_at, str):
+        # Handle ISO format strings with or without timezone
+        try:
+            return datetime.fromisoformat(expires_at.replace('T', ' ').replace('Z', ''))
+        except ValueError:
+            return datetime.fromisoformat(expires_at)
+    return None
+
+
+def _serialize_datetime_for_json(dt: Optional[Any]) -> Optional[str]:
+    """
+    Serialize a datetime object to an ISO format string for JSON.
+    
+    Args:
+        dt: A datetime object or None
+        
+    Returns:
+        ISO format string or None
+    """
+    if dt is None:
+        return None
+    if isinstance(dt, datetime):
+        return dt.isoformat()
+    return dt
+
+
+# =============================================================================
+# CONSTANTS
+# ==========================================================================================================================================================
 # CONSTANTS
 # =============================================================================
 
@@ -475,7 +525,8 @@ async def upload_proposal_to_sharepoint(
             if existing_link['status'] == 'uploaded':
                 # Check if URL is still valid (not expired)
                 expires_at = existing_link.get('expires_at')
-                if expires_at and datetime.fromisoformat(expires_at.replace('T', ' ').replace('Z', '')) > datetime.utcnow():
+                expiry_dt = _normalize_expires_at(expires_at)
+                if expiry_dt and expiry_dt > datetime.utcnow():
                     logger.info(f"Using existing SharePoint link for proposal {proposal_id}")
                     log_upload_event(
                         event_type='url_retrieved',
@@ -780,7 +831,8 @@ async def upload_knowledge_card_to_sharepoint(
             if existing_link['status'] == 'uploaded':
                 # Check if URL is still valid (not expired)
                 expires_at = existing_link.get('expires_at')
-                if expires_at and datetime.fromisoformat(expires_at.replace('T', ' ').replace('Z', '')) > datetime.utcnow():
+                expiry_dt = _normalize_expires_at(expires_at)
+                if expiry_dt and expiry_dt > datetime.utcnow():
                     logger.info(f"Using existing SharePoint link for knowledge card {card_id}")
                     log_upload_event(
                         event_type='url_retrieved',
@@ -1169,13 +1221,8 @@ async def get_sharepoint_link_status(
     
     # Check if expired
     expires_at = existing_link.get('expires_at')
-    is_expired = False
-    if expires_at:
-        try:
-            expiry_dt = datetime.fromisoformat(expires_at.replace('T', ' ').replace('Z', ''))
-            is_expired = expiry_dt <= datetime.utcnow()
-        except:
-            is_expired = False
+    expiry_dt = _normalize_expires_at(expires_at)
+    is_expired = expiry_dt and expiry_dt <= datetime.utcnow()
     
     return JSONResponse(
         status_code=200,
@@ -1188,8 +1235,8 @@ async def get_sharepoint_link_status(
             "error_type": existing_link.get('error_type'),
             "error_message": existing_link.get('error_message'),
             "retry_count": existing_link.get('retry_count', 0),
-            "uploaded_at": existing_link.get('uploaded_at'),
-            "expires_at": existing_link.get('expires_at'),
+            "uploaded_at": _serialize_datetime_for_json(existing_link.get('uploaded_at')),
+            "expires_at": _serialize_datetime_for_json(existing_link.get('expires_at')),
             "is_expired": is_expired,
             "can_retry": existing_link['status'] == 'failed' and existing_link.get('retry_count', 0) < MAX_RETRY_ATTEMPTS,
             "max_retries": MAX_RETRY_ATTEMPTS
