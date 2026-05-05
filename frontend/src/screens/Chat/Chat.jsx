@@ -345,8 +345,8 @@ export default function Chat(props) {
 
                 const getOptions = (label) => {
                         switch (label) {
-        case "Main Outcome": {
-                const options = outcomes.map(o => ({ value: o.id, label: o.name }));
+                                case "Main Outcome": {
+                                        const options = outcomes.map(o => ({ value: o.id, label: o.name }));
                                         return options.sort((a, b) => {
                                                 const indexA = OUTCOME_ORDER.indexOf(a.label);
                                                 const indexB = OUTCOME_ORDER.indexOf(b.label);
@@ -356,10 +356,10 @@ export default function Chat(props) {
                                                 return a.label.localeCompare(b.label);
                                         });
                                 }
-        case "Targeted Donor":
-                return donors.map(d => ({ value: d.id, label: d.name })).sort((a, b) => a.label.localeCompare(b.label));
-        case "Country / Location(s)":
-                return filteredFieldContexts.map(fc => ({ value: fc.id, label: fc.name })).sort((a, b) => a.label.localeCompare(b.label));
+                                case "Targeted Donor":
+                                        return donors.map(d => ({ value: d.id, label: d.name })).sort((a, b) => a.label.localeCompare(b.label));
+                                case "Country / Location(s)":
+                                        return filteredFieldContexts.map(fc => ({ value: fc.id, label: fc.name })).sort((a, b) => a.label.localeCompare(b.label));
                                 case "Geographical Scope":
                                         return geographicCoverages.map(gc => ({ value: gc, label: gc })).sort((a, b) => a.label.localeCompare(b.label));
                                 case "Duration": {
@@ -561,11 +561,11 @@ export default function Chat(props) {
                                         // Check if generation is truly complete: status is not 'generating_sections' AND we have all expected sections
                                         // Also handle edge case where expected_sections is 0 (template not loaded yet)
                                         const generatedCount = Object.keys(data.generated_sections || {}).length;
-                                        const hasAllSections = data.expected_sections > 0 ? 
-                                              generatedCount >= data.expected_sections : 
-                                              generatedCount > 0;
+                                        const hasAllSections = data.expected_sections > 0 ?
+                                                generatedCount >= data.expected_sections :
+                                                generatedCount > 0;
                                         const isFailed = data.status === 'failed';
-                                        
+
                                         if ((data.status !== 'generating_sections' && hasAllSections) || isFailed) {
                                                 setGenerateLoading(false);
                                                 setGenerationProgress(100);
@@ -574,7 +574,7 @@ export default function Chat(props) {
                                                 pollingActive = false;
                                                 clearInterval(pollInterval);
                                                 setTimeout(() => setIsProgressModalOpen(false), 1000); // Small delay to show 100%
-                                                
+
                                                 // Show follow-up instruction modal for successful generation
                                                 if (!isFailed && hasAllSections) {
                                                         setTimeout(() => {
@@ -661,7 +661,7 @@ export default function Chat(props) {
         async function handleRegenerateWithFollowUp() {
                 // Regenerate entire proposal with follow-up instruction
                 if (!followUpInstruction) return;
-                
+
                 setShowFollowUpModal(false);
                 // Trigger the main generate/regenerate flow
                 await handleGenerateClick();
@@ -674,20 +674,20 @@ export default function Chat(props) {
                         setIsValidationModalOpen(true);
                         return;
                 }
-                
+
                 // Check if this is a regeneration (proposal already exists)
                 const existingProposalId = sessionStorage.getItem("proposal_id");
                 const existingSessionId = sessionStorage.getItem("session_id");
-                
+
                 if (existingProposalId && existingSessionId && followUpInstruction) {
                         // This is a regeneration with follow-up instruction
                         setGenerateLoading(true);
                         setFormExpanded(false);
-                        
+
                         try {
                                 // Get all current sections to pass as context
                                 const currentSections = proposal;
-                                
+
                                 // Call backend to regenerate with follow-up instruction
                                 const response = await fetch(`${API_BASE_URL}/regenerate-full-proposal/${existingSessionId}`, {
                                         method: 'POST',
@@ -701,26 +701,26 @@ export default function Chat(props) {
                                         }),
                                         credentials: 'include'
                                 });
-                                
+
                                 if (!response.ok) {
                                         throw new Error('Failed to start proposal regeneration.');
                                 }
-                                
+
                                 const data = await response.json();
                                 // Update session with new IDs if needed
                                 if (data.session_id) {
                                         sessionStorage.setItem("session_id", data.session_id);
                                 }
-                                
+
                                 // Reset state for polling
                                 setGenerationProgress(0);
                                 setGenerationMessage("Starting proposal regeneration...");
                                 setIsProgressModalOpen(true);
-                                
+
                                 // Keep generateLoading true so polling continues
                                 // The polling will be handled by the existing useEffect
                                 return;
-                                
+
                         } catch (error) {
                                 console.error("Error during proposal regeneration:", error);
                                 setGenerateLoading(false);
@@ -728,7 +728,7 @@ export default function Chat(props) {
                                 return;
                         }
                 }
-                
+
                 // Initial generation flow
                 setGenerateLoading(true);
                 setFormExpanded(false);
@@ -1263,24 +1263,24 @@ export default function Chat(props) {
                 // Handle both cases: commentId or section name
                 let commentId = null;
                 let sectionName = null;
-                
-                if (typeof commentOrSection === 'string' && commentOrSection.includes('-')) {
-                    // This is likely a UUID (comment ID)
-                    commentId = commentOrSection;
-                    // Find the section name for this comment ID
-                    const existing = reviews.find(r => r.id === commentId);
-                    sectionName = existing?.section_name;
-                } else {
-                    // This is a section name
-                    sectionName = commentOrSection;
-                    // Try from local draft state first
-                    commentId = reviewComments[sectionName]?.id;
 
-                    // If not there, try from reviews array
-                    if (!commentId) {
-                            const existing = reviews.find(r => r.section_name === sectionName && (r.reviewer_id === currentUser?.id || r.reviewer_id === currentUser?.user_id));
-                            commentId = existing?.id;
-                    }
+                if (typeof commentOrSection === 'string' && commentOrSection.includes('-')) {
+                        // This is likely a UUID (comment ID)
+                        commentId = commentOrSection;
+                        // Find the section name for this comment ID
+                        const existing = reviews.find(r => r.id === commentId);
+                        sectionName = existing?.section_name;
+                } else {
+                        // This is a section name
+                        sectionName = commentOrSection;
+                        // Try from local draft state first
+                        commentId = reviewComments[sectionName]?.id;
+
+                        // If not there, try from reviews array
+                        if (!commentId) {
+                                const existing = reviews.find(r => r.section_name === sectionName && (r.reviewer_id === currentUser?.id || r.reviewer_id === currentUser?.user_id));
+                                commentId = existing?.id;
+                        }
                 }
 
                 if (commentId && proposalId) {
@@ -1294,7 +1294,7 @@ export default function Chat(props) {
                                         await getPeerReviews();
                                         // Also refresh draft comments if we are in review mode
                                         if (isReviewer) await getContent();
-                                        
+
                                         // Force re-render by updating local state
                                         if (sectionName) {
                                                 setReviewComments(prev => {
@@ -1774,15 +1774,15 @@ export default function Chat(props) {
                                                                 setShowFollowUpModal(false);
                                                                 setGenerateLabel("Regenerate");
                                                         }} label="Skip" data-testid="followup-skip-button" />
-                                                        <CommonButton 
+                                                        <CommonButton
                                                                 onClick={() => {
                                                                         setShowFollowUpModal(false);
                                                                         setGenerateLabel("Regenerate");
-                                                                }} 
-                                                                label="Save for Later" 
+                                                                }}
+                                                                label="Save for Later"
                                                                 data-testid="followup-save-button"
                                                         />
-                                                        <CommonButton 
+                                                        <CommonButton
                                                                 icon={generateIcon}
                                                                 onClick={() => handleRegenerateWithFollowUp()}
                                                                 label="Regenerate Now"
@@ -2023,7 +2023,7 @@ export default function Chat(props) {
                                                                         <div className='Chat_exportButtons'>
                                                                                 <button type="button" onClick={() => handleExport("docx")} data-testid="export-word-button">
                                                                                         <img src={word_icon} alt="" />
-                                                                                        Open in Word Online
+                                                                                        Edit in Word
                                                                                 </button>
 
                                                                                 <button type="button" onClick={() => handleExportTables()} data-testid="export-excel-button">
@@ -2159,7 +2159,7 @@ export default function Chat(props) {
                                                                                                                 <img src={arrow} alt="" />
                                                                                                         </div>
                                                                                                 )}
-                                                        </div>
+                                                                                        </div>
 
                                                                                         {(sectionObj.open || !sectionObj.content) && (
                                                                                                 <div className='Chat_sectionContent' data-testid={`section-content-${kebabSectionName}`}>
@@ -2169,7 +2169,7 @@ export default function Chat(props) {
                                                                                                                 ) : (
                                                                                                                         <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>{sectionObj.content}</Markdown>
                                                                                                                 )
-) : (
+                                                                                                        ) : (
                                                                                                                 <div className='Chat_sectionContent_loading'>
                                                                                                                         <span className='submitButtonSpinner' />
                                                                                                                         <span className='Chat_sectionContent_loading'>Loading</span>
@@ -2177,37 +2177,37 @@ export default function Chat(props) {
                                                                                                         )}
 
                                                                                                         {/* Unified SectionReview - handles both current user editing and peer reviews */}
-                                                <SectionReview
-                                                        key={`${sectionName}-${reviews.filter(r => r.section_name === sectionName).length}`}
-                                                        section={sectionName}
-                                                        type="proposal"
-                                                        reviewComment={reviewComments[sectionName]}
-                                                         status={reviewStatus[sectionName]}
-                                                         isReviewEditable={isReviewer || proposalStatus === 'draft'}
-                                                         isAuthorizedToReply={false}
-                                                         onCommentChange={handleCommentChange}
-                                                         onStatusChange={handleStatusChange}
-                                                         onDeleteComment={handleDeleteComment}
-                                                         isOwnerOfComment={true}
-                                                         isAdmin={isAdmin}
-                                                         previousFeedback={(reviews || []).filter(r => r.section_name === sectionName && !['removed', 'fixed'].includes(r.status)).map(review => ({
-                                                                                                                          id: review.id,
-                                                                                                                          author: review.reviewer_name,
-                                                                                                                          review_text: review.review_text,
-                                                                                                                          severity: review.severity,
-                                                                                                                          type_of_comment: review.type_of_comment,
-                                                                                                                          status: review.status,
-                                                                                                                          created_at: review.created_at,
-                                                                                                                          isOwnedByCurrentUser: review.reviewer_id === currentUser?.id || review.reviewer_id === currentUser?.user_id,
-                                                        replies: review.author_response ? [
-                                                            {
-                                                                author: review.response_author || review.proposal_owner_name || 'Author',
-                                                                text: review.author_response,
-                                                                status: review.status,
-                                                                created_at: review.updated_at || review.created_at,
-                                                            }
-                                                        ] : []
-                                                                                                                  }))}
+                                                                                                        <SectionReview
+                                                                                                                key={`${sectionName}-${reviews.filter(r => r.section_name === sectionName).length}`}
+                                                                                                                section={sectionName}
+                                                                                                                type="proposal"
+                                                                                                                reviewComment={reviewComments[sectionName]}
+                                                                                                                status={reviewStatus[sectionName]}
+                                                                                                                isReviewEditable={isReviewer || proposalStatus === 'draft'}
+                                                                                                                isAuthorizedToReply={false}
+                                                                                                                onCommentChange={handleCommentChange}
+                                                                                                                onStatusChange={handleStatusChange}
+                                                                                                                onDeleteComment={handleDeleteComment}
+                                                                                                                isOwnerOfComment={true}
+                                                                                                                isAdmin={isAdmin}
+                                                                                                                previousFeedback={(reviews || []).filter(r => r.section_name === sectionName && !['removed', 'fixed'].includes(r.status)).map(review => ({
+                                                                                                                        id: review.id,
+                                                                                                                        author: review.reviewer_name,
+                                                                                                                        review_text: review.review_text,
+                                                                                                                        severity: review.severity,
+                                                                                                                        type_of_comment: review.type_of_comment,
+                                                                                                                        status: review.status,
+                                                                                                                        created_at: review.created_at,
+                                                                                                                        isOwnedByCurrentUser: review.reviewer_id === currentUser?.id || review.reviewer_id === currentUser?.user_id,
+                                                                                                                        replies: review.author_response ? [
+                                                                                                                                {
+                                                                                                                                        author: review.response_author || review.proposal_owner_name || 'Author',
+                                                                                                                                        text: review.author_response,
+                                                                                                                                        status: review.status,
+                                                                                                                                        created_at: review.updated_at || review.created_at,
+                                                                                                                                }
+                                                                                                                        ] : []
+                                                                                                                }))}
                                                                                                                 onReplyToFeedback={handleReplyToFeedback}
                                                                                                                 onSaveReply={handleSaveResponse}
                                                                                                         />

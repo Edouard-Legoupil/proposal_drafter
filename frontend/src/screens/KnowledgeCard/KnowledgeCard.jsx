@@ -1092,14 +1092,14 @@ export default function KnowledgeCard() {
         try {
             setIsCheckingLink(true);
             const response = await fetch(`${API_BASE_URL}/sharepoint-link-status/knowledge_card/${cardId}`, {
-                    method: "GET",
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: "include"
+                method: "GET",
+                headers: { 'Content-Type': 'application/json' },
+                credentials: "include"
             });
 
             if (response.ok) {
-                    const data = await response.json();
-                    return data;
+                const data = await response.json();
+                return data;
             }
             return null;
         } catch (error) {
@@ -1123,9 +1123,9 @@ export default function KnowledgeCard() {
             setSharepointError(null);
 
             const response = await fetch(`${API_BASE_URL}/retry-sharepoint-upload/knowledge_card/${cardId}`, {
-                    method: "POST",
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: "include"
+                method: "POST",
+                headers: { 'Content-Type': 'application/json' },
+                credentials: "include"
             });
 
             if (response.ok) {
@@ -1215,9 +1215,9 @@ export default function KnowledgeCard() {
 
             // Call the new SharePoint upload endpoint for knowledge cards
             const response = await fetch(`${API_BASE_URL}/upload-knowledge-card-to-sharepoint/${id}?format=${format}`, {
-                    method: "POST",
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: "include"
+                method: "POST",
+                headers: { 'Content-Type': 'application/json' },
+                credentials: "include"
             });
 
             if (response.ok) {
@@ -1484,7 +1484,7 @@ export default function KnowledgeCard() {
                             <h2>Generated Content</h2>
                             <div className="kc-content-header-actions">
                                 <button type="button" onClick={() => handleExport("docx")} className="download-word-btn" data-testid="export-word-button">
-                                    <img src={word_icon} alt="Open in Word Online" />
+                                    <img src={word_icon} alt="Edit in Word" />
                                     Open in Word Online
                                 </button>
                             </div>
@@ -1537,11 +1537,11 @@ export default function KnowledgeCard() {
                                                         type_of_comment: comment.type_of_comment,
                                                         status: comment.status,
                                                         isOwnedByCurrentUser: comment.reviewer_id === (currentUser?.id || currentUser?.user_id),
-                                                         replies: comment.author_response ? [{
-                                                             author: comment.response_author || 'Author',
-                                                             text: comment.author_response,
-                                                             status: comment.status
-                                                         }] : []
+                                                        replies: comment.author_response ? [{
+                                                            author: comment.response_author || 'Author',
+                                                            text: comment.author_response,
+                                                            status: comment.status
+                                                        }] : []
                                                     }))}
                                                     onReplyToFeedback={handleReplyToFeedback}
                                                 />
