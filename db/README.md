@@ -3,7 +3,7 @@
 
 ## Overview
 
-The Proposal Drafter application is designed to streamline the process of creating, reviewing, and managing project proposals for humanitarian and development organizations. This database schema supports a comprehensive workflow from proposal creation through peer review and knowledge management.
+The Proposal Drafter application is designed to streamline the process of creating, reviewing, and managing project proposals for humanitarian and development organizations. This database schema supports a comprehensive workflow from proposal creation through peer review and knowledge management, with integrated SharePoint document management and template qualification systems.
 
 
 ```mermaid
@@ -134,6 +134,7 @@ erDiagram
         timestamptz deadline
         text review_text
         text author_response
+        string author_response_by
         string type_of_comment
         string severity
         timestamptz created_at
@@ -175,6 +176,7 @@ erDiagram
         string rating
         text review_text
         text author_response
+        string author_response_by
         string type_of_comment
         string severity
         string status
@@ -243,9 +245,10 @@ erDiagram
         UUID id PK
         UUID knowledge_card_id FK
         text query
-        JSONB retrieved_context
+        text retrieved_context
         text generated_answer
         timestamptz created_at
+        timestamptz updated_at
     }
 
     donor_template_comments {
@@ -259,6 +262,7 @@ erDiagram
         string severity
         string type_of_comment
         string author_response
+        string author_response_by
         string status
         timestamptz created_at
     }
@@ -294,15 +298,18 @@ erDiagram
     template_versions {
         UUID id PK
         UUID template_registry_id FK
+        UUID template_id FK
         string version_label
-        INTEGER version_number
-        string environment
-        string status
+        string version_number
+        string version_notes
+        release_environment environment
+        template_version_status status
+        UUID cloned_from_version_id FK
         JSONB configuration
         JSONB template_content
         JSONB initial_file_content
         text release_notes
-        UUID cloned_from_version_id FK
+        JSONB template_data
         UUID created_by FK
         timestamptz created_at
         UUID updated_by FK
@@ -368,15 +375,15 @@ erDiagram
         UUID template_version_id FK
         UUID rule_set_id FK
         string run_name
-        string environment
-        string status
+        release_environment environment
+        qualification_run_status status
         INTEGER target_sample_size
         INTEGER actual_sample_size
         INTEGER required_reviewer_count
         timestamptz started_at
         timestamptz completed_at
         NUMERIC overall_score
-        string decision
+        qualification_decision decision
         text decision_reason
         UUID initiated_by FK
         UUID approved_by FK
@@ -415,12 +422,14 @@ erDiagram
         UUID id PK
         UUID qualification_run_id FK
         UUID rule_id FK
-        string result
+        qualification_rule_result result
         NUMERIC metric_value
         JSONB metric_payload
         text explanation
         UUID waived_by FK
         text waiver_reason
+        string artifact_type
+        string artifact_id
         timestamptz created_at
     }
 
@@ -439,10 +448,10 @@ erDiagram
         UUID template_version_id FK
         UUID qualification_run_id FK
         string action
-        string from_environment
-        string to_environment
-        string previous_status
-        string new_status
+        release_environment from_environment
+        release_environment to_environment
+        template_version_status previous_status
+        template_version_status new_status
         text reason
         UUID actioned_by FK
         timestamptz created_at
@@ -473,7 +482,155 @@ erDiagram
         UUID field_context_id FK
     }
 
-    users ||--o{ teams : belongs_to
+    templates {
+        UUID id PK
+        string name
+        string filename UK
+        template_type template_type
+        text description
+        template_status status
+        boolean is_default
+        UUID created_by FK
+        timestamptz created_at
+        UUID updated_by FK
+        timestamptz updated_at
+    }
+
+    template_donors {
+        UUID template_id FK
+        UUID donor_id FK
+        UUID created_by FK
+        timestamptz created_at
+    }
+
+    template_audit_log {
+        UUID id PK
+        UUID template_id FK
+        UUID template_version_id FK
+        string action
+        JSONB action_details
+        UUID performed_by FK
+        timestamptz performed_at
+    }
+
+    artifact_runs {
+        UUID id PK
+        string artifact_type
+        UUID artifact_id
+        UUID user_id FK
+        run_status run_status
+        timestamptz start_time
+        timestamptz end_time
+        TEXT[] agents_executed
+        string model_deployment
+        INTEGER tokens_input
+        INTEGER tokens_output
+        NUMERIC estimated_cost
+        INTEGER step_count
+        INTEGER retry_count
+        INTEGER failure_count
+        INTEGER total_latency_ms
+        JSONB stage_latencies
+        INTEGER sections_generated
+        INTEGER pages_generated
+        INTEGER words_generated
+        JSONB export_events
+        string template_name
+        string template_version
+        JSONB metadata
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    proposal_sharepoint_links {
+        UUID id PK
+        UUID proposal_id FK
+        UUID user_id FK
+        string sharepoint_url
+        string filename
+        string folder_path
+        string file_id
+        string file_version
+        sharepoint_status status
+        sharepoint_error_type error_type
+        string error_message
+        INTEGER retry_count
+        timestamptz last_attempt_at
+        timestamptz uploaded_at
+        timestamptz expires_at
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    knowledge_card_sharepoint_links {
+        UUID id PK
+        UUID knowledge_card_id FK
+        UUID user_id FK
+        string sharepoint_url
+        string filename
+        string folder_path
+        string file_id
+        string file_version
+        sharepoint_status status
+        sharepoint_error_type error_type
+        string error_message
+        INTEGER retry_count
+        timestamptz last_attempt_at
+        timestamptz uploaded_at
+        timestamptz expires_at
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    sharepoint_upload_events {
+        UUID id PK
+        string event_type
+        string artifact_type
+        UUID artifact_id
+        UUID user_id FK
+        UUID sharepoint_link_id
+        sharepoint_status status
+        sharepoint_error_type error_type
+        string error_message
+        JSONB metadata
+        timestamptz created_at
+    }
+
+    sharepoint_sync_history {
+        UUID id PK
+        timestamptz sync_started_at
+        timestamptz sync_completed_at
+        sharepoint_sync_status status
+        INTEGER total_files_checked
+        INTEGER files_changed
+        INTEGER files_created
+        INTEGER files_deleted
+        INTEGER errors_encountered
+        JSONB error_summary
+        timestamptz created_at
+    }
+
+    sharepoint_file_versions {
+        UUID id PK
+        string artifact_type
+        UUID artifact_id
+        UUID user_id FK
+        UUID sharepoint_link_id
+        INTEGER version_number
+        string sharepoint_url
+        string filename
+        BIGINT file_size
+        string sharepoint_version
+        timestamptz last_modified_at
+        string last_modified_by
+        text diff_from_previous
+        sync_change_type change_type
+        JSONB metadata
+        boolean is_current
+        timestamptz created_at
+    }
+
+    teams ||--o{ users : belongs_to
     users ||--o{ roles : "has many through user_roles"
     users ||--o{ donors : creates
     users ||--o{ outcomes : creates
@@ -490,12 +647,18 @@ erDiagram
     users ||--o{ donor_template_comments : creates
     users ||--o{ template_registry : owns
     users ||--o{ template_versions : creates
+    users ||--o{ templates : creates
     users ||--o{ qualification_rule_sets : creates
     users ||--o{ qualification_scenarios : creates
     users ||--o{ template_qualification_runs : initiates
     users ||--o{ template_qualification_signoffs : signs
     users ||--o{ template_release_history : actions
     users ||--o{ qualification_waivers : approves
+    users ||--o{ artifact_runs : executes
+    users ||--o{ proposal_sharepoint_links : uploads
+    users ||--o{ knowledge_card_sharepoint_links : uploads
+    users ||--o{ sharepoint_upload_events : triggers
+    users ||--o{ sharepoint_file_versions : modifies
 
     roles ||--o{ user_roles : "has many"
     roles ||--o{ user_role_requests : "has many"
@@ -518,28 +681,35 @@ erDiagram
 
     proposals ||--o{ proposal_status_history : has
     proposals ||--o{ proposal_peer_reviews : has
+    proposals ||--o{ artifact_runs : has
     proposals }o--o{ donors : "has many through proposal_donors"
     proposals }o--o{ outcomes : "has many through proposal_outcomes"
     proposals }o--o{ field_contexts : "has many through proposal_field_contexts"
     proposals }|--|| template_registry : "uses"
     proposals }|--|| template_versions : "uses"
+    proposals ||--o{ proposal_sharepoint_links : "has one per user"
+    proposals ||--o{ sharepoint_file_versions : "has many"
 
     knowledge_cards ||--o{ knowledge_card_history : has
     knowledge_cards ||--o{ knowledge_card_reviews : has
     knowledge_cards ||--o{ knowledge_card_references : "has many through knowledge_card_to_references"
+    knowledge_cards ||--o{ knowledge_card_usage : has
+    knowledge_cards ||--o{ rag_evaluation_logs : has
+    knowledge_cards ||--o{ artifact_runs : has
+    knowledge_cards }|--|| template_registry : "uses"
+    knowledge_cards }|--|| template_versions : "uses"
+    knowledge_cards ||--o{ knowledge_card_sharepoint_links : "has one per user"
+    knowledge_cards ||--o{ sharepoint_file_versions : "has many"
+
+    knowledge_cards }|--|| donors : "optional link to"
+    knowledge_cards }|--|| outcomes : "optional link to"
+    knowledge_cards }|--|| field_contexts : "optional link to"
+
     knowledge_card_references ||--o{ knowledge_card_reference_vectors : has
     knowledge_card_references ||--o{ knowledge_card_reference_errors : has
     knowledge_card_references ||--o{ knowledge_card_to_references : "has many"
     knowledge_card_to_references }|--|| knowledge_cards : "belongs to"
     knowledge_card_to_references }|--|| knowledge_card_references : "belongs to"
-    knowledge_cards ||--o{ knowledge_card_usage : has
-    knowledge_cards ||--o{ rag_evaluation_logs : has
-    knowledge_cards }|--|| template_registry : "uses"
-    knowledge_cards }|--|| template_versions : "uses"
-
-    knowledge_cards }|--|| donors : "optional link to"
-    knowledge_cards }|--|| outcomes : "optional link to"
-    knowledge_cards }|--|| field_contexts : "optional link to"
 
     proposal_status_history ||--o{ proposal_peer_reviews : references
 
@@ -556,6 +726,20 @@ erDiagram
 
     template_versions ||--o{ template_qualification_runs : has
     template_versions }|--|| template_versions : "cloned from"
+    template_versions }|--|| templates : "references"
+
+    templates ||--o{ template_donors : "has many"
+    templates ||--o{ template_audit_log : "has many"
+    templates }|--|| users : "created by"
+
+    template_donors }|--|| templates : "belongs to"
+    template_donors }|--|| donors : "belongs to"
+
+    template_audit_log }|--|| templates : "belongs to"
+    template_audit_log }|--|| template_versions : "optional version"
+    template_audit_log }|--|| users : "performed by"
+
+    artifact_runs }|--|| users : "executed by"
 
     qualification_rule_sets ||--o{ qualification_rules : has
 
@@ -609,6 +793,28 @@ erDiagram
     field_contexts ||--o{ proposal_field_contexts : "has many"
     proposal_field_contexts }|--|| proposals : "belongs to"
     proposal_field_contexts }|--|| field_contexts : "belongs to"
+
+    proposals ||--o{ proposal_sharepoint_links : "has many"
+    proposal_sharepoint_links }|--|| proposals : "belongs to"
+    proposal_sharepoint_links }|--|| users : "uploaded by"
+    proposal_sharepoint_links ||--o{ sharepoint_upload_events : "has many"
+    proposal_sharepoint_links ||--o{ sharepoint_file_versions : "has many"
+
+    knowledge_cards ||--o{ knowledge_card_sharepoint_links : "has many"
+    knowledge_card_sharepoint_links }|--|| knowledge_cards : "belongs to"
+    knowledge_card_sharepoint_links }|--|| users : "uploaded by"
+    knowledge_card_sharepoint_links ||--o{ sharepoint_upload_events : "has many"
+    knowledge_card_sharepoint_links ||--o{ sharepoint_file_versions : "has many"
+
+    sharepoint_upload_events }|--|| users : "triggered by"
+    sharepoint_upload_events }|--|| proposal_sharepoint_links : "optional link"
+    sharepoint_upload_events }|--|| knowledge_card_sharepoint_links : "optional link"
+
+    sharepoint_file_versions }|--|| users : "modified by"
+    sharepoint_file_versions }|--|| proposal_sharepoint_links : "belongs to"
+    sharepoint_file_versions }|--|| knowledge_card_sharepoint_links : "belongs to"
+
+    sharepoint_sync_history ||--o{ sharepoint_file_versions : "tracks"
 ```
 
 ## Core Entities
@@ -616,43 +822,59 @@ erDiagram
 ### Users & Teams
 
  * Users represent individual team members with authentication credentials and security questions
-
  * Teams group users together for organizational purposes
-
  * Each user belongs to one team, supporting collaborative work environments
-
  * Users can have multiple roles through the user_roles join table
-
  * Role requests are managed through user_role_requests for approval workflows
-
  * Users can be associated with donor groups, specific donors, outcomes, and field contexts for personalized content recommendations
 
-## Proposal Management
+### Templates System
 
-### Proposals
+The `templates` table provides a file-based template management system:
+ * **name**: Human-readable template name
+ * **filename**: Unique filename identifier (e.g., "proposal_template_unhcr.json")
+ * **template_type**: Enum (proposal, concept_note, knowledge_card)
+ * **status**: Enum (draft, active, deprecated, archived)
+ * **is_default**: Flag indicating if this is the default template for its type
+ * **description**: Template description
+ * Linked to donors through `template_donors` join table for donor-specific templates
+ * Audit logging through `template_audit_log` for all template modifications
+
+The `template_registry` and `template_versions` tables provide a canonical registry:
+ * **template_registry**: Canonical template definitions with unique keys
+ * **template_versions**: Immutable version tracking with environment (UAT/PROD) and status
+ * Supports cloning through `cloned_from_version_id`
+ * Tracks promotion, suspension, and retirement lifecycle
+
+### Proposal Management
+
+#### Proposals
 
 The central entity representing project proposals with:
-
  * Form data stored as JSON for flexible field structures
-
  * Generated sections containing AI-generated content
-
  * Status tracking through an enum type (draft, in_review, pre_submission, submitted, deleted, generating_sections, failed)
-
  * Review system with peer feedback mechanisms
-
  * Version control through status history snapshots
-
  * Template registry and versioning support for standardized proposal structures
 
-## Proposal Relationships
+#### Artifact Runs
+
+The `artifact_runs` table tracks execution metrics for both proposals and knowledge cards:
+ * **run_status**: Enum (drafting, completed, failed, cancelled)
+ * **agents_executed**: Array of agent names that ran
+ * **model_deployment**: Model/deployment identifier used
+ * **Token tracking**: Input/output tokens and estimated cost
+ * **Performance metrics**: Step count, retry count, failure count, latency
+ * **Output metrics**: Sections generated, pages generated, words generated
+ * **Export events**: JSONB tracking Word/PDF export events with timestamps
+ * **Timing**: Start/end times and stage-level latencies
+
+### Proposal Relationships
 
 Proposals can be linked to multiple:
-
  * Donors - funding organizations
-
  * Outcomes - desired results or impact areas
-
  * Field Contexts - geographical and thematic focus areas
 
 These many-to-many relationships are managed through join tables (proposal_donors, proposal_outcomes, proposal_field_contexts).
@@ -662,53 +884,45 @@ These many-to-many relationships are managed through join tables (proposal_donor
 ### Knowledge Cards
 
 Reusable content components that serve as a knowledge base:
-
  * Can be linked to one of: Donor, Outcome, or Field Context (enforced by constraint)
-
  * Store generated content sections for reuse across proposals
-
  * Maintain version history through snapshots
-
  * Support reference management with web scraping capabilities
-
  * Track usage patterns through knowledge_card_usage table
-
  * Support peer review workflows through knowledge_card_reviews
+ * Linked to template registry and versions for tracking
 
 ### Knowledge Card References
 
  * Store external references and resources
-
  * Support vector embeddings for semantic search (knowledge_card_reference_vectors)
-
  * Include scraping status and error tracking
-
  * Enable AI-powered content recommendations
-
  * Track reference errors through knowledge_card_reference_errors
-
  * Many-to-many relationship with knowledge cards through knowledge_card_to_references join table
+
+### RAG Evaluation Logs
+
+The `rag_evaluation_logs` table captures retrieval-augmented generation interactions:
+ * **Query Tracking**: Original user queries
+ * **Retrieved Context**: Source documents and references used
+ * **Generated Answers**: AI-produced responses
+ * **Knowledge Card Link**: Association with specific knowledge cards
 
 ## Workflow Support
 
 ### Peer Review System
 
  * Proposal Peer Reviews allow multiple reviewers to provide feedback
-
  * Section-specific comments with severity ratings
-
- * Author response tracking
-
+ * Author response tracking with `author_response_by` field
  * Deadline management for review cycles
-
  * Knowledge Card Reviews extend peer review to knowledge management
 
 ### Status Tracking
 
  * Proposal Status History maintains complete audit trails
-
  * Snapshots of generated sections at each status change
-
  * Supports rollback and version comparison
 
 ## Template Management System
@@ -716,370 +930,223 @@ Reusable content components that serve as a knowledge base:
 ### Template Registry
 
  * Centralized template management through template_registry table
-
  * Supports both proposal and knowledge card templates
-
  * Version control through template_versions with environment tracking (UAT/PROD)
-
  * Template cloning and evolution through cloned_from_version_id
-
  * Ownership and team management for collaborative template development
 
 ### Template Qualification Workflow
 
  * Quality assurance through qualification_rule_sets and qualification_rules
-
  * Scenario-based testing with qualification_scenarios
-
  * Comprehensive qualification runs tracked in template_qualification_runs
-
  * Evidence collection through qualification_evidence_items
-
  * Rule evaluation and compliance tracking via qualification_rule_evaluations
-
  * Multi-stakeholder signoff process with template_qualification_signoffs
-
  * Release management and promotion history in template_release_history
-
  * Waiver system for exceptions through qualification_waivers
+
+## SharePoint Integration
+
+The database includes comprehensive SharePoint integration for document management:
+
+### SharePoint Document Links
+
+ * **proposal_sharepoint_links**: Stores SharePoint URLs and metadata for proposals per user
+ * **knowledge_card_sharepoint_links**: Stores SharePoint URLs and metadata for knowledge cards per user
+ * **Status tracking**: sharepoint_status enum (pending, uploading, uploaded, failed, expired)
+ * **Error handling**: sharepoint_error_type enum with specific error categories
+ * **Retry mechanism**: Retry count and last attempt tracking
+ * **Expiration**: Document expiration tracking for temporary links
+
+### SharePoint Upload Events
+
+ * **sharepoint_upload_events**: Tracks all upload-related events
+ * **event_type**: upload_started, upload_success, upload_failed, retry_attempt, url_retrieved, access_error
+ * **artifact_type**: proposal or knowledge_card
+ * **Metadata**: JSONB field for additional event data
+
+### SharePoint Sync System
+
+ * **sharepoint_sync_history**: Tracks synchronization runs between database and SharePoint
+ * **sharepoint_sync_status**: pending, started, completed, failed
+ * **Metrics**: Files checked, changed, created, deleted, errors encountered
+ * **Error summary**: JSONB aggregation of sync errors
+
+### File Version History
+
+ * **sharepoint_file_versions**: Complete version history for SharePoint files
+ * **change_type**: sync_change_type enum (created, modified, deleted, renamed)
+ * **Version tracking**: version_number, sharepoint_version, is_current flag
+ * **Diff tracking**: diff_from_previous for content comparison
+ * **Metadata**: File size, last modified info, SharePoint metadata
+
+### SharePoint Views
+
+ * **vw_sharepoint_upload_status**: Unified view of upload status across proposals and knowledge cards
+ * **vw_file_version_history**: Complete history of file versions with artifact context
+ * **vw_sync_history_details**: Sync run details with duration calculations
+
+### SharePoint Functions
+
+ * **get_valid_sharepoint_link**: Returns the latest valid link for an artifact, with needs_retry flag
+ * **get_file_version_history**: Returns version history with diff previews
 
 ## Incident Management System
 
 ### Incident Analysis Results
 
 The `incident_analysis_results` table stores comprehensive analysis of quality issues and incidents:
-
  * **Artifact Types**: proposal, knowledge_card, template
-
  * **Severity Levels**: P0 (Critical), P1 (High), P2 (Medium), P3 (Low)
-
  * **Incident Types**: Taxonomy-based classification (Factual Error, Compliance Violation, etc.)
-
  * **Analysis Payload**: Complete JSON analysis including root cause, suggestions, and remediation
-
  * **Status Tracking**: Analysis lifecycle management
-
-### RAG Evaluation Logs
-
-The `rag_evaluation_logs` table captures retrieval-augmented generation interactions:
-
- * **Query Tracking**: Original user queries
-
- * **Retrieved Context**: Source documents and references used
-
- * **Generated Answers**: AI-produced responses
-
- * **Knowledge Card Link**: Association with specific knowledge cards
-
-### Template Management
-
-The `donor_template_requests` and `donor_template_comments` tables support template-based workflows:
-
- * **Template Requests**: Donor-specific template configurations
-
- * **Template Comments**: Review and feedback on templates
-
- * **Version Control**: Template evolution tracking
-
- * **Configuration Management**: Flexible template structures
-
-## Technical Features
-
-### Data Types & Extensions
-=======
-## Core Entities
-
-### Users & Teams
-
- * Users represent individual team members with authentication credentials and security questions
-
- * Teams group users together for organizational purposes
-
- * Each user belongs to one team, supporting collaborative work environments
-
- * Users can have multiple roles through the user_roles join table
-
- * Role requests are managed through user_role_requests for approval workflows
-
- * Users can be associated with donor groups, specific donors, outcomes, and field contexts for personalized content recommendations
-
-## Proposal Management
-
-### Proposals
-
-The central entity representing project proposals with:
-
- * Form data stored as JSON for flexible field structures
-
- * Generated sections containing AI-generated content
-
- * Status tracking through an enum type (draft, in_review, pre_submission, submitted, deleted, generating_sections, failed)
-
- * Review system with peer feedback mechanisms
-
- * Version control through status history snapshots
-
- * Template registry and versioning support for standardized proposal structures
-
-## Proposal Relationships
-
-Proposals can be linked to multiple:
-
- * Donors - funding organizations
-
- * Outcomes - desired results or impact areas
-
- * Field Contexts - geographical and thematic focus areas
-
-These many-to-many relationships are managed through join tables (proposal_donors, proposal_outcomes, proposal_field_contexts).
-
-## Knowledge Management
-
-### Knowledge Cards
-
-Reusable content components that serve as a knowledge base:
-
- * Can be linked to one of: Donor, Outcome, or Field Context (enforced by constraint)
-
- * Store generated content sections for reuse across proposals
-
- * Maintain version history through snapshots
-
- * Support reference management with web scraping capabilities
-
- * Track usage patterns through knowledge_card_usage table
-
- * Support peer review workflows through knowledge_card_reviews
-
-### Knowledge Card References
-
- * Store external references and resources
-
- * Support vector embeddings for semantic search (knowledge_card_reference_vectors)
-
- * Include scraping status and error tracking
-
- * Enable AI-powered content recommendations
-
- * Track reference errors through knowledge_card_reference_errors
-
- * Many-to-many relationship with knowledge cards through knowledge_card_to_references join table
-
-## Workflow Support
-
-### Peer Review System
-
- * Proposal Peer Reviews allow multiple reviewers to provide feedback
-
- * Section-specific comments with severity ratings
-
- * Author response tracking
-
- * Deadline management for review cycles
-
- * Knowledge Card Reviews extend peer review to knowledge management
-
-### Status Tracking
-
- * Proposal Status History maintains complete audit trails
-
- * Snapshots of generated sections at each status change
-
- * Supports rollback and version comparison
-
-## Template Management System
-
-### Template Registry
-
- * Centralized template management through template_registry table
-
- * Supports both proposal and knowledge card templates
-
- * Version control through template_versions with environment tracking (UAT/PROD)
-
- * Template cloning and evolution through cloned_from_version_id
-
- * Ownership and team management for collaborative template development
-
-### Template Qualification Workflow
-
- * Quality assurance through qualification_rule_sets and qualification_rules
-
- * Scenario-based testing with qualification_scenarios
-
- * Comprehensive qualification runs tracked in template_qualification_runs
-
- * Evidence collection through qualification_evidence_items
-
- * Rule evaluation and compliance tracking via qualification_rule_evaluations
-
- * Multi-stakeholder signoff process with template_qualification_signoffs
-
- * Release management and promotion history in template_release_history
-
- * Waiver system for exceptions through qualification_waivers
-
-## Incident Management System
-
-### Incident Analysis Results
-
-The `incident_analysis_results` table stores comprehensive analysis of quality issues and incidents:
-
- * **Artifact Types**: proposal, knowledge_card, template
-
- * **Severity Levels**: P0 (Critical), P1 (High), P2 (Medium), P3 (Low)
-
- * **Incident Types**: Taxonomy-based classification (Factual Error, Compliance Violation, etc.)
-
- * **Analysis Payload**: Complete JSON analysis including root cause, suggestions, and remediation
-
- * **Status Tracking**: Analysis lifecycle management
-
-### RAG Evaluation Logs
-
-The `rag_evaluation_logs` table captures retrieval-augmented generation interactions:
-
- * **Query Tracking**: Original user queries
-
- * **Retrieved Context**: Source documents and references used
-
- * **Generated Answers**: AI-produced responses
-
- * **Knowledge Card Link**: Association with specific knowledge cards
-
-### Template Management
-
-The `donor_template_requests` and `donor_template_comments` tables support template-based workflows:
-
- * **Template Requests**: Donor-specific template configurations
-
- * **Template Comments**: Review and feedback on templates
-
- * **Version Control**: Template evolution tracking
-
- * **Configuration Management**: Flexible template structures
+ * **Source Linkage**: Links to proposals, knowledge cards, or template requests
 
 ## Technical Features
 
 ### Data Types & Extensions
 
  * Vector extension for AI-powered semantic search (1536-dimensional embeddings)
-
  * JSONB for flexible schema-less data storage
-
  * UUID primary keys for distributed system compatibility
-
- * Enum types for controlled status values (proposal_status, release_environment, managed_template_type, etc.)
+ * Enum types for controlled status values:
+   - proposal_status: draft, in_review, pre_submission, submitted, deleted, generating_sections, failed
+   - template_type: proposal, concept_note, knowledge_card
+   - template_status: draft, active, deprecated, archived
+   - release_environment: uat, prod
+   - template_version_status: draft, in_uat, conditionally_qualified, qualified, disqualified, promoted_to_prod, suspended, retired
+   - run_status: drafting, completed, failed, cancelled
+   - sharepoint_status: pending, uploading, uploaded, failed, expired
+   - sharepoint_error_type: authentication_error, connection_error, upload_error, metadata_error, quota_exceeded, permission_error, file_exists, unknown_error
+   - sharepoint_sync_status: pending, started, completed, failed
+   - sync_change_type: created, modified, deleted, renamed
+   - qualification_run_status: draft, collecting_evidence, evaluating, pending_signoff, approved, rejected, cancelled
+   - qualification_rule_result: pass, fail, waived, not_applicable
+   - qualification_decision: qualified, conditionally_qualified, disqualified, suspended, rolled_back
+   - managed_template_type: proposal, knowledge_card, concept_note
 
 ### Constraints & Validation
 
  * Unique constraints prevent duplicate entities
-
  * Check constraints ensure data integrity (e.g., knowledge card linking rules, artifact type validation)
-
  * Foreign key constraints maintain referential integrity with appropriate cascade behaviors
-
  * Timestamp tracking for audit purposes with automated triggers
-
  * Complex validation rules for template qualification workflows
+ * Knowledge card constraint: Can link to at most one of donor, outcome, or field context
 
 ## Key Relationships
 
 ### One-to-Many
 
  * Team → Users
-
- * User → Created entities (proposals, knowledge cards, etc.)
-
+ * User → Created entities (proposals, knowledge cards, templates, etc.)
  * Proposal → Status History entries
-
  * Knowledge Card → Reference entries
-
  * Knowledge Card → Usage tracking
-
  * Knowledge Card → Reviews
-
  * Template Registry → Template Versions
-
  * Qualification Run → Evidence Items, Rule Evaluations, Signoffs
+ * Proposal → SharePoint Links (one per user)
+ * Knowledge Card → SharePoint Links (one per user)
+ * SharePoint Link → Upload Events
+ * SharePoint Link → File Versions
 
 ### Many-to-Many
 
  * Proposals ↔ Donors (through proposal_donors)
-
  * Proposals ↔ Outcomes (through proposal_outcomes)
-
  * Proposals ↔ Field Contexts (through proposal_field_contexts)
-
  * Users ↔ Roles (through user_roles)
-
  * Users ↔ Donor Groups (through user_donor_groups)
-
  * Users ↔ Specific Donors (through user_donors)
-
  * Users ↔ Outcomes (through user_outcomes)
-
  * Users ↔ Field Contexts (through user_field_contexts)
-
  * Knowledge Cards ↔ References (through knowledge_card_to_references)
-
  * Qualification Runs ↔ Scenarios (through template_qualification_run_scenarios)
+ * Templates ↔ Donors (through template_donors)
 
 ### Optional Links
 
  * Knowledge Cards can optionally link to one related entity (donor, outcome, or field context)
-
  * Proposals can optionally link to template registry and versions
-
  * Incident analysis can link to proposals, knowledge cards, or template requests
+ * Template versions can be cloned from other versions
+ * Template versions can reference templates
 
 ## Indexing Strategy
 
 The schema includes strategic indexes on:
-
  * User email for authentication
-
  * Foreign key columns for join performance
-
  * Proposal and knowledge card relationships
-
  * Review and status tracking tables
-
  * Template registry and version lookups
-
  * Qualification run and rule evaluation indexes
-
+ * SharePoint integration tables for performance
+ * Artifact runs for analytics queries
  * Full-text and vector search optimization
 
-## Incident Management System
+## View Summaries
 
-### Incident Analysis Results
+### Template Views
+ * **vw_template_summary**: Aggregated template information with donor counts
+ * **vw_template_version_history**: Version history with template details
 
-The `incident_analysis_results` table stores comprehensive analysis of quality issues and incidents:
+### SharePoint Views
+ * **vw_sharepoint_upload_status**: Unified upload status monitoring
+ * **vw_file_version_history**: File version tracking with artifact context
+ * **vw_sync_history_details**: Sync run analytics
 
- * **Artifact Types**: proposal, knowledge_card, template
- * **Severity Levels**: P0 (Critical), P1 (High), P2 (Medium), P3 (Low)
- * **Incident Types**: Taxonomy-based classification (Factual Error, Compliance Violation, etc.)
- * **Analysis Payload**: Complete JSON analysis including root cause, suggestions, and remediation
- * **Status Tracking**: Analysis lifecycle management
+### Telemetry Views
+ * **vw_proposal_run_telemetry**: Proposal generation metrics
+ * **vw_knowledge_card_run_telemetry**: Knowledge card generation metrics
 
-### RAG Evaluation Logs
+### Qualification Views
+ * **vw_proposal_template_quality_metrics**: Quality metrics by template version
+ * **vw_proposal_template_repeated_p1_sections**: Sections with repeated P1 issues
+ * **vw_knowledge_card_template_quality_metrics**: Knowledge card quality metrics
+ * **vw_knowledge_card_template_traceability**: Reference linkage tracking
 
-The `rag_evaluation_logs` table captures retrieval-augmented generation interactions:
+## Security Considerations
 
- * **Query Tracking**: Original user queries
- * **Retrieved Context**: Source documents and references used
- * **Generated Answers**: AI-produced responses
- * **Knowledge Card Link**: Association with specific knowledge cards
+ * User authentication with password hashing
+ * Security questions for account recovery
+ * Session management tracking
+ * Audit trails for all major operations
+ * Role-based access control through user_roles system
+ * Team-based resource ownership and permissions
 
-### Template Management
+## Template Qualification Features
 
-The `donor_template_requests` and `donor_template_comments` tables support template-based workflows:
+### Quality Assurance Framework
 
- * **Template Requests**: Donor-specific template configurations
- * **Template Comments**: Review and feedback on templates
- * **Version Control**: Template evolution tracking
- * **Configuration Management**: Flexible template structures
+ * **Rule Sets**: Organized collections of qualification rules by template type
+ * **Individual Rules**: Configurable validation rules with severity levels and evaluation modes
+ * **Scenarios**: Test scenarios with donor/outcome/field context associations
+ * **Qualification Runs**: Complete workflow tracking from evidence collection to final decision
+
+### Governance and Compliance
+
+ * **Multi-Stakeholder Signoff**: Role-based approval process
+ * **Waiver System**: Exception management with expiration
+ * **Release History**: Complete audit trail of template promotions and status changes
+ * **Metric Views**: Pre-computed quality metrics for proposal and knowledge card templates
+
+### Continuous Improvement
+
+ * **Evidence-Based Decision Making**: Structured evidence collection and analysis
+ * **Rule Evaluation Tracking**: Detailed compliance reporting
+ * **Performance Metrics**: Quality KPIs and trend analysis
+ * **Version Comparison**: Support for template evolution analysis
+
+### Integration Points
+
+ * **Proposal Workflow**: Template version tracking on proposals
+ * **Knowledge Management**: Template version tracking on knowledge cards
+ * **Incident Management**: Quality issue linkage to qualification evidence
+ * **User Feedback**: Template comment integration with qualification process
 
 ## Incident Analysis Workflow
 
@@ -1110,60 +1177,4 @@ flowchart TD
  * **Knowledge Cards → RAG Logs**: Tracks retrieval operations
  * **Template Requests → Comments**: Manages template feedback
 
-## Security Considerations
-
- * User authentication with password hashing
-
- * Security questions for account recovery
-
- * Session management tracking
-
- * Audit trails for all major operations
-
- * Role-based access control through user_roles system
-
- * Team-based resource ownership and permissions
-
-## Template Qualification Features
-
-### Quality Assurance Framework
-
- * **Rule Sets**: Organized collections of qualification rules by template type
-
- * **Individual Rules**: Configurable validation rules with severity levels and evaluation modes
-
- * **Scenarios**: Test scenarios with donor/outcome/field context associations
-
- * **Qualification Runs**: Complete workflow tracking from evidence collection to final decision
-
-### Governance and Compliance
-
- * **Multi-Stakeholder Signoff**: Role-based approval process
-
- * **Waiver System**: Exception management with expiration
-
- * **Release History**: Complete audit trail of template promotions and status changes
-
- * **Metric Views**: Pre-computed quality metrics for proposal and knowledge card templates
-
-### Continuous Improvement
-
- * **Evidence-Based Decision Making**: Structured evidence collection and analysis
-
- * **Rule Evaluation Tracking**: Detailed compliance reporting
-
- * **Performance Metrics**: Quality KPIs and trend analysis
-
- * **Version Comparison**: Support for template evolution analysis
-
-### Integration Points
-
- * **Proposal Workflow**: Template version tracking on proposals
-
- * **Knowledge Management**: Template version tracking on knowledge cards
-
- * **Incident Management**: Quality issue linkage to qualification evidence
-
- * **User Feedback**: Template comment integration with qualification process
-
-This schema supports a comprehensive, enterprise-grade proposal drafting system with advanced template management, quality assurance, and incident analysis capabilities while maintaining data integrity, audit trails, and performance optimization.
+This schema supports a comprehensive, enterprise-grade proposal drafting system with advanced template management, quality assurance, incident analysis, SharePoint integration, and execution telemetry capabilities while maintaining data integrity, audit trails, and performance optimization.
