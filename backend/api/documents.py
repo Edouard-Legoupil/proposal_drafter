@@ -174,7 +174,7 @@ async def generate_and_download_tables(
         generated_sections = generated_sections if isinstance(generated_sections, dict) else {}
 
         if not template_name:
-            template_name = "unhcr_proposal_template.json"
+            template_name = "proposal_template_unhcr.json"
             logger.warning(f"Proposal {proposal_id} has no template_name, falling back to default.")
 
         proposal_template = load_proposal_template(template_name)

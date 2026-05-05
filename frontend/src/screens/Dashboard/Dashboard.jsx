@@ -5,7 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 
 import Base from '../../components/Base/Base'
 import Project from './components/Project/Project'
-import KnowledgeCard from './components/KnowledgeCard/KnowledgeCard'
+import KnowledgeCardPreview from './components/KnowledgeCard/KnowledgeCardPreview'
 import DonorTemplate from './components/DonorTemplate/DonorTemplate'
 import MetricsDashboard from './components/MetricsDashboard/MetricsDashboard'
 import SingleSelectUserModal from '../../components/SingleSelectUserModal/SingleSelectUserModal'
@@ -176,18 +176,22 @@ export default function Dashboard() {
         useEffect(() => {
                 sessionStorage.removeItem("proposal_id")
                 getProfile();
-                getProjects()
-                getReviews()
-                getKnowledgeCards()
-                getUsers()
-                getAllProposals()
-                fetchTeams()
-                getDonorTemplates()
+                (async () => {
+                        await getProjects()
+                        await getReviews()
+                        await getKnowledgeCards()
+                        await getUsers()
+                        await getAllProposals()
+                        await fetchTeams()
+                        await getDonorTemplates()
+                })()
         }, [getProfile, getProjects, getReviews, getKnowledgeCards, getUsers, getAllProposals, fetchTeams, getDonorTemplates])
 
         useEffect(() => {
                 if (folder === 'proposals') {
-                        getProjects();
+                        (async () => {
+                                await getProjects();
+                        })()
                 }
         }, [folder, getProjects]);
 
@@ -213,7 +217,7 @@ export default function Dashboard() {
         async function handleProjectClick(e, proposal_id, isReview = false) {
                 sessionStorage.setItem("proposal_id", proposal_id)
                 if (isReview || selectedTab === 'other') {
-                        navigate(`/review/proposal/${proposal_id}`)
+                        navigate(`/chat/${proposal_id}`)
                 } else {
                         navigate(`/chat/${proposal_id}`)
                 }
@@ -227,9 +231,9 @@ export default function Dashboard() {
                 })
 
                 if (response.ok) {
-                        getProjects()
-                        getReviews()
-                        getAllProposals()
+                        await getProjects()
+                        await getReviews()
+                        await getAllProposals()
                 }
         }
 
@@ -241,8 +245,8 @@ export default function Dashboard() {
                 })
 
                 if (response.ok) {
-                        getProjects()
-                        getAllProposals()
+                        await getProjects()
+                        await getAllProposals()
                 }
         }
 
@@ -260,8 +264,8 @@ export default function Dashboard() {
                 })
 
                 if (response.ok) {
-                        getProjects()
-                        getReviews()
+                        await getProjects()
+                        await getReviews()
                         setIsTransferModalOpen(false)
                         setTransferProposalId(null)
                 }
@@ -381,7 +385,7 @@ export default function Dashboard() {
                 });
 
                 if (response.ok) {
-                        getKnowledgeCards();
+                        await getKnowledgeCards();
                 } else {
                         alert('Failed to delete knowledge card.');
                 }
@@ -558,16 +562,12 @@ export default function Dashboard() {
                                                         <button className="btn" type="button" aria-label="Start a new knowledge card" onClick={() => navigate("/knowledge-card/new")} data-testid="new-knowledge-card-button">Create New Knowledge Card</button>
                                                 </div>
                                                 {displayKnowledgeCards && displayKnowledgeCards.map((card) => {
-                                                        return <KnowledgeCard
+                                                        return <KnowledgeCardPreview
                                                                 key={card.id}
                                                                 card={card}
                                                                 date={cleanedDate(card.updated_at)}
                                                                 onClick={() => {
-                                                                         if (hasKnowledgeManagerRole) {
-                                                                                 navigate(`/knowledge-card/${card.id}`);
-                                                                         } else {
-                                                                                 navigate(`/review/knowledge-card/${card.id}`);
-                                                                         }
+                                                                        navigate(`/knowledge-card/${card.id}`);
                                                                 }}
                                                                 isDuplicate={duplicateCardIds.has(card.id)}
                                                                 onDelete={() => handleDeleteKnowledgeCard(card.id)}
@@ -595,11 +595,7 @@ export default function Dashboard() {
 
                                                                         return (
                                                                                 <tr key={card.id} onClick={() => {
-                                                                                         if (hasKnowledgeManagerRole) {
-                                                                                                navigate(`/knowledge-card/${card.id}`);
-                                                                                         } else {
-                                                                                                navigate(`/review/knowledge-card/${card.id}`);
-                                                                                         }
+                                                                                        navigate(`/knowledge-card/${card.id}`);
                                                                                 }} style={{ cursor: 'pointer' }}>
                                                                                         <td>
                                                                                                 {card.donor_name && <i className="fa-solid fa-money-bill-wave donor"></i>}

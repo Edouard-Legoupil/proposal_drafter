@@ -84,10 +84,10 @@ CREATE TABLE IF NOT EXISTS user_field_contexts (
 -- Create Donors table 
 CREATE TABLE IF NOT EXISTS donors (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    account_id TEXT NOT NULL UNIQUE,
+    account_id TEXT UNIQUE,
     name TEXT UNIQUE NOT NULL,
-    country TEXT NOT NULL,
-    donor_group TEXT NOT NULL,
+    country TEXT,
+    donor_group TEXT,
     created_by UUID REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -105,6 +105,7 @@ CREATE TABLE IF NOT EXISTS outcomes (
 -- Create Field Contexts table  
 CREATE TABLE IF NOT EXISTS field_contexts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT,
     name TEXT UNIQUE NOT NULL,
     category TEXT NOT NULL,
     geographic_coverage TEXT,
@@ -134,7 +135,7 @@ END$$;
 CREATE TABLE IF NOT EXISTS proposals (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id),
-    template_name VARCHAR(255) DEFAULT 'unhcr_proposal_template.json',
+    template_name VARCHAR(255) DEFAULT 'proposal_template_unhcr.json',
     form_data JSONB NOT NULL,
     project_description TEXT NOT NULL,
     generated_sections JSONB,
@@ -171,11 +172,11 @@ CREATE TABLE IF NOT EXISTS proposal_peer_reviews (
     deadline TIMESTAMPTZ,
     review_text TEXT,
     author_response TEXT,
+    author_response_by TEXT,
     type_of_comment TEXT,
     severity TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (proposal_id, reviewer_id, section_name)
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create Knowledge Cards table
@@ -218,12 +219,12 @@ CREATE TABLE IF NOT EXISTS knowledge_card_reviews (
     rating VARCHAR(10),
     review_text TEXT,
     author_response TEXT,
+    author_response_by TEXT,
     type_of_comment TEXT,
-    severity VARCHAR(20),
+    severity TEXT,
     status VARCHAR(50) DEFAULT 'pending',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (knowledge_card_id, reviewer_id, section_name)
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create Knowledge Card References table  
@@ -262,8 +263,24 @@ CREATE TABLE IF NOT EXISTS rag_evaluation_logs (
     query TEXT NOT NULL,
     retrieved_context TEXT NOT NULL,
     generated_answer TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Add trigger to update updated_at on changes
+CREATE OR REPLACE FUNCTION update_rag_evaluation_logs_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_rag_evaluation_logs_updated_at ON rag_evaluation_logs;
+CREATE TRIGGER trg_rag_evaluation_logs_updated_at
+    BEFORE UPDATE ON rag_evaluation_logs
+    FOR EACH ROW
+    EXECUTE FUNCTION update_rag_evaluation_logs_updated_at();
 
 -- Create Knowledge Card Usage Tracking table
 CREATE TABLE IF NOT EXISTS knowledge_card_usage (
@@ -303,6 +320,38 @@ CREATE TABLE IF NOT EXISTS proposal_field_contexts (
     PRIMARY KEY (proposal_id, field_context_id)
 );
 
+-- Create Donor Template Requests table
+CREATE TABLE IF NOT EXISTS donor_template_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    donor_id UUID REFERENCES donors(id) ON DELETE SET NULL,
+    donor_ids UUID[],
+    template_type TEXT DEFAULT 'proposal',
+    configuration JSONB NOT NULL,
+    initial_file_content JSONB,
+    status VARCHAR(50) DEFAULT 'pending',
+    created_by UUID NOT NULL REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create Donor Template Comments table
+CREATE TABLE IF NOT EXISTS donor_template_comments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    template_request_id UUID REFERENCES donor_template_requests(id) ON DELETE CASCADE,
+    template_name TEXT,
+    user_id UUID NOT NULL REFERENCES users(id),
+    comment_text TEXT NOT NULL,
+    section_name TEXT,
+    rating VARCHAR(10),
+    severity TEXT,
+    type_of_comment TEXT DEFAULT 'Donor Template',
+    author_response TEXT,
+    author_response_by TEXT,
+    status VARCHAR(50) DEFAULT 'pending',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create index for faster user lookup
 CREATE INDEX IF NOT EXISTS idx_proposals_user_id ON proposals(user_id);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email); 
@@ -319,11 +368,1602 @@ CREATE INDEX IF NOT EXISTS idx_proposal_peer_reviews_reviewer_id ON proposal_pee
 CREATE INDEX IF NOT EXISTS idx_proposal_status_history_proposal_id ON proposal_status_history(proposal_id);
 CREATE INDEX IF NOT EXISTS idx_user_role_requests_user_id ON user_role_requests(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_donors_user_id ON user_donors(user_id);
-CREATE INDEX IF NOT EXISTS idx_donor_template_comments_section
-    ON donor_template_comments(template_request_id, section_name);
+
+CREATE INDEX IF NOT EXISTS idx_donor_template_requests_creator ON donor_template_requests(created_by);
+CREATE INDEX IF NOT EXISTS idx_donor_template_comments_request ON donor_template_comments(template_request_id);
+CREATE INDEX IF NOT EXISTS idx_donor_template_comments_section ON donor_template_comments(template_request_id, section_name);
+CREATE INDEX IF NOT EXISTS idx_donor_template_comments_user ON donor_template_comments(user_id);
  
  
 
 -- Grant table permissions to application user
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO <DB_USERNAME>;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO <DB_USERNAME>;
+
+
+
+-- Template in DB
+-- Create template_type enum type
+CREATE TYPE template_type AS ENUM (
+            'proposal',
+            'concept_note',
+            'knowledge_card'
+        );
+-- Create template_status enum type
+CREATE TYPE template_status AS ENUM (
+    'draft',
+    'active',
+    'deprecated',
+    'archived'
+);
+
+-- Create templates table
+CREATE TABLE IF NOT EXISTS templates (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    filename TEXT NOT NULL,
+    template_type template_type NOT NULL,
+    description TEXT,
+    status template_status DEFAULT 'draft',
+    is_default BOOLEAN DEFAULT FALSE,
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_by UUID REFERENCES users(id),
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_template_filename UNIQUE (filename),
+    CONSTRAINT unique_default_template UNIQUE (template_type) DEFERRABLE INITIALLY IMMEDIATE
+);
+
+
+
+-- Create template_donors table for mapping templates to donors
+CREATE TABLE IF NOT EXISTS template_donors (
+    template_id UUID NOT NULL REFERENCES templates(id) ON DELETE CASCADE,
+    donor_id UUID NOT NULL REFERENCES donors(id) ON DELETE CASCADE,
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (template_id, donor_id)
+);
+
+-- Create template_audit_log table
+CREATE TABLE IF NOT EXISTS template_audit_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    template_id UUID REFERENCES templates(id) ON DELETE SET NULL,
+    template_version_id UUID REFERENCES template_versions(id) ON DELETE SET NULL,
+    action TEXT NOT NULL,
+    action_details JSONB,
+    performed_by UUID REFERENCES users(id),
+    performed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for query performance
+CREATE INDEX IF NOT EXISTS idx_templates_name ON templates(name);
+CREATE INDEX IF NOT EXISTS idx_templates_type ON templates(template_type);
+CREATE INDEX IF NOT EXISTS idx_templates_status ON templates(status);
+CREATE INDEX IF NOT EXISTS idx_template_donors_template_id ON template_donors(template_id);
+CREATE INDEX IF NOT EXISTS idx_template_donors_donor_id ON template_donors(donor_id);
+CREATE INDEX IF NOT EXISTS idx_template_audit_log_template_id ON template_audit_log(template_id);
+CREATE INDEX IF NOT EXISTS idx_template_audit_log_version_id ON template_audit_log(template_version_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_template_registry_key_type
+ON template_registry(template_key, template_type);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_single_prod_version
+ON template_versions(template_registry_id)
+WHERE environment = 'prod' AND status = 'promoted_to_prod'; 
+
+-- Create a trigger to update the updated_at timestamp for templates
+CREATE OR REPLACE FUNCTION update_template_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_templates_updated_at
+BEFORE UPDATE ON templates
+FOR EACH ROW
+EXECUTE FUNCTION update_template_timestamp();
+
+-- Create a trigger to update the updated_at timestamp for template versions
+CREATE OR REPLACE FUNCTION update_template_version_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+--CREATE TRIGGER trg_template_versions_updated_at
+--BEFORE UPDATE ON template_versions
+--FOR EACH ROW
+--EXECUTE FUNCTION update_template_version_timestamp();
+
+-- Create views for querying template data
+CREATE OR REPLACE VIEW vw_template_summary AS
+SELECT 
+    t.id AS template_id,
+    t.name AS template_name,
+    t.filename,
+    t.template_type,
+    t.description,
+    t.status,
+    t.is_default,
+    t.created_by,
+    t.created_at,
+    t.updated_by,
+    t.updated_at,
+    tv.version_number AS latest_version,
+    tv.created_at AS latest_version_created,
+    tv.status AS latest_version_status,
+    COUNT(d.id) AS donor_count
+FROM templates t
+LEFT JOIN template_versions tv ON t.id = tv.template_registry_id -- AND tv.status = 'active'
+LEFT JOIN template_donors td ON t.id = td.template_id
+LEFT JOIN donors d ON td.donor_id = d.id
+GROUP BY t.id, tv.version_number, tv.created_at, tv.status;
+
+CREATE OR REPLACE VIEW vw_template_version_history AS
+SELECT 
+    tv.id AS version_id,
+    tv.template_registry_id,
+    t.name AS template_name,
+    tv.version_number,
+    tv.release_notes,
+    tv.status,
+    tv.created_by,
+    tv.created_at,
+    tv.updated_by,
+    tv.updated_at
+FROM template_versions tv
+JOIN templates t ON tv.template_registry_id = t.id
+ORDER BY tv.created_at DESC;
+
+-- ============================================================================
+-- SHAREPOINT INTEGRATION TABLES
+-- ============================================================================
+
+-- Create sharepoint_status enum for tracking upload states
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'sharepoint_status') THEN
+        CREATE TYPE sharepoint_status AS ENUM (
+            'pending',
+            'uploading',
+            'uploaded',
+            'failed',
+            'expired'
+        );
+    END IF;
+END$$;
+
+-- Create error_type enum for SharePoint errors
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'sharepoint_error_type') THEN
+        CREATE TYPE sharepoint_error_type AS ENUM (
+            'authentication_error',
+            'connection_error',
+            'upload_error',
+            'metadata_error',
+            'quota_exceeded',
+            'permission_error',
+            'file_exists',
+            'unknown_error'
+        );
+    END IF;
+END$$;
+
+-- Table for storing SharePoint document links for proposals
+CREATE TABLE IF NOT EXISTS proposal_sharepoint_links (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    proposal_id UUID NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id),
+    sharepoint_url TEXT NOT NULL,
+    filename TEXT NOT NULL,
+    folder_path TEXT,
+    file_id TEXT,
+    file_version TEXT,
+    status sharepoint_status NOT NULL DEFAULT 'uploading',
+    error_type sharepoint_error_type,
+    error_message TEXT,
+    retry_count INTEGER DEFAULT 0,
+    last_attempt_at TIMESTAMPTZ,
+    uploaded_at TIMESTAMPTZ,
+    expires_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (proposal_id, user_id)
+);
+
+-- Table for storing SharePoint document links for knowledge cards
+CREATE TABLE IF NOT EXISTS knowledge_card_sharepoint_links (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    knowledge_card_id UUID NOT NULL REFERENCES knowledge_cards(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id),
+    sharepoint_url TEXT NOT NULL,
+    filename TEXT NOT NULL,
+    folder_path TEXT,
+    file_id TEXT,
+    file_version TEXT,
+    status sharepoint_status NOT NULL DEFAULT 'uploading',
+    error_type sharepoint_error_type,
+    error_message TEXT,
+    retry_count INTEGER DEFAULT 0,
+    last_attempt_at TIMESTAMPTZ,
+    uploaded_at TIMESTAMPTZ,
+    expires_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (knowledge_card_id, user_id)
+);
+
+-- Table for SharePoint upload events and logs
+CREATE TABLE IF NOT EXISTS sharepoint_upload_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_type TEXT NOT NULL CHECK (event_type IN ('upload_started', 'upload_success', 'upload_failed', 'retry_attempt', 'url_retrieved', 'access_error')),
+    artifact_type TEXT NOT NULL CHECK (artifact_type IN ('proposal', 'knowledge_card')),
+    artifact_id UUID NOT NULL,
+    user_id UUID NOT NULL REFERENCES users(id),
+    sharepoint_link_id UUID,
+    status sharepoint_status,
+    error_type sharepoint_error_type,
+    error_message TEXT,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes for SharePoint tables
+CREATE INDEX IF NOT EXISTS idx_proposal_sharepoint_links_proposal_id ON proposal_sharepoint_links(proposal_id);
+CREATE INDEX IF NOT EXISTS idx_proposal_sharepoint_links_user_id ON proposal_sharepoint_links(user_id);
+CREATE INDEX IF NOT EXISTS idx_proposal_sharepoint_links_status ON proposal_sharepoint_links(status);
+CREATE INDEX IF NOT EXISTS idx_knowledge_card_sharepoint_links_card_id ON knowledge_card_sharepoint_links(knowledge_card_id);
+CREATE INDEX IF NOT EXISTS idx_knowledge_card_sharepoint_links_user_id ON knowledge_card_sharepoint_links(user_id);
+CREATE INDEX IF NOT EXISTS idx_knowledge_card_sharepoint_links_status ON knowledge_card_sharepoint_links(status);
+CREATE INDEX IF NOT EXISTS idx_sharepoint_upload_events_artifact ON sharepoint_upload_events(artifact_type, artifact_id);
+CREATE INDEX IF NOT EXISTS idx_sharepoint_upload_events_user ON sharepoint_upload_events(user_id);
+CREATE INDEX IF NOT EXISTS idx_sharepoint_upload_events_created ON sharepoint_upload_events(created_at);
+
+-- Trigger to update updated_at for proposal_sharepoint_links
+CREATE OR REPLACE FUNCTION update_proposal_sharepoint_link_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_proposal_sharepoint_links_updated_at
+BEFORE UPDATE ON proposal_sharepoint_links
+FOR EACH ROW
+EXECUTE FUNCTION update_proposal_sharepoint_link_timestamp();
+
+-- Trigger to update updated_at for knowledge_card_sharepoint_links
+CREATE OR REPLACE FUNCTION update_knowledge_card_sharepoint_link_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_knowledge_card_sharepoint_links_updated_at
+BEFORE UPDATE ON knowledge_card_sharepoint_links
+FOR EACH ROW
+EXECUTE FUNCTION update_knowledge_card_sharepoint_link_timestamp();
+
+-- View for monitoring SharePoint upload status
+CREATE OR REPLACE VIEW vw_sharepoint_upload_status AS
+SELECT 
+    'proposal' AS artifact_type,
+    psl.proposal_id AS artifact_id,
+    p.id AS link_id,
+    p.user_id,
+    u.name AS user_name,
+    psl.sharepoint_url,
+    psl.filename,
+    psl.status,
+    psl.error_type,
+    psl.error_message,
+    psl.retry_count,
+    psl.last_attempt_at,
+    psl.uploaded_at,
+    psl.created_at,
+    COUNT(sue.id) AS event_count
+FROM proposal_sharepoint_links psl
+JOIN proposals p ON psl.proposal_id = p.id
+JOIN users u ON psl.user_id = u.id
+LEFT JOIN sharepoint_upload_events sue ON psl.id = sue.sharepoint_link_id
+GROUP BY psl.proposal_id, p.id, psl.user_id, u.name, psl.sharepoint_url, psl.filename, 
+         psl.status, psl.error_type, psl.error_message, psl.retry_count, 
+         psl.last_attempt_at, psl.uploaded_at, psl.created_at
+UNION ALL
+SELECT 
+    'knowledge_card' AS artifact_type,
+    kcsl.knowledge_card_id AS artifact_id,
+    kc.id AS link_id,
+    kcsl.user_id,
+    u.name AS user_name,
+    kcsl.sharepoint_url,
+    kcsl.filename,
+    kcsl.status,
+    kcsl.error_type,
+    kcsl.error_message,
+    kcsl.retry_count,
+    kcsl.last_attempt_at,
+    kcsl.uploaded_at,
+    kcsl.created_at,
+    COUNT(sue.id) AS event_count
+FROM knowledge_card_sharepoint_links kcsl
+JOIN knowledge_cards kc ON kcsl.knowledge_card_id = kc.id
+JOIN users u ON kcsl.user_id = u.id
+LEFT JOIN sharepoint_upload_events sue ON kcsl.id = sue.sharepoint_link_id
+GROUP BY kcsl.knowledge_card_id, kc.id, kcsl.user_id, u.name, kcsl.sharepoint_url, kcsl.filename, 
+         kcsl.status, kcsl.error_type, kcsl.error_message, kcsl.retry_count, 
+         kcsl.last_attempt_at, kcsl.uploaded_at, kcsl.created_at;
+
+-- Function to check if a SharePoint link exists and is valid for an artifact
+CREATE OR REPLACE FUNCTION get_valid_sharepoint_link(
+    p_artifact_type TEXT,
+    p_artifact_id UUID,
+    p_user_id UUID
+) RETURNS TABLE(
+    link_id UUID,
+    sharepoint_url TEXT,
+    filename TEXT,
+    status sharepoint_status,
+    needs_retry BOOLEAN
+) AS $$
+BEGIN
+    IF p_artifact_type = 'proposal' THEN
+        RETURN QUERY
+        SELECT 
+            psl.id,
+            psl.sharepoint_url,
+            psl.filename,
+            psl.status,
+            CASE 
+                WHEN psl.status = 'uploaded' THEN FALSE
+                WHEN psl.status = 'failed' AND psl.retry_count < 3 THEN TRUE
+                WHEN psl.status = 'expired' THEN TRUE
+                ELSE FALSE
+            END AS needs_retry
+        FROM proposal_sharepoint_links psl
+        WHERE psl.proposal_id = p_artifact_id 
+          AND psl.user_id = p_user_id
+        ORDER BY psl.created_at DESC
+        LIMIT 1;
+    ELSIF p_artifact_type = 'knowledge_card' THEN
+        RETURN QUERY
+        SELECT 
+            kcsl.id,
+            kcsl.sharepoint_url,
+            kcsl.filename,
+            kcsl.status,
+            CASE 
+                WHEN kcsl.status = 'uploaded' THEN FALSE
+                WHEN kcsl.status = 'failed' AND kcsl.retry_count < 3 THEN TRUE
+                WHEN kcsl.status = 'expired' THEN TRUE
+                ELSE FALSE
+            END AS needs_retry
+        FROM knowledge_card_sharepoint_links kcsl
+        WHERE kcsl.knowledge_card_id = p_artifact_id 
+          AND kcsl.user_id = p_user_id
+        ORDER BY kcsl.created_at DESC
+        LIMIT 1;
+    END IF;
+    RETURN;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================================
+-- SHAREPOINT SYNC TABLES (for tracking file changes)
+-- ============================================================================
+
+-- Create sharepoint_sync_status enum for tracking sync states
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'sharepoint_sync_status') THEN
+        CREATE TYPE sharepoint_sync_status AS ENUM (
+            'pending',
+            'started',
+            'completed',
+            'failed'
+        );
+    END IF;
+END$$;
+
+-- Create sync_change_type enum for tracking change types
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'sync_change_type') THEN
+        CREATE TYPE sync_change_type AS ENUM (
+            'created',
+            'modified',
+            'deleted',
+            'renamed'
+        );
+    END IF;
+END$$;
+
+-- Table for sync history
+CREATE TABLE IF NOT EXISTS sharepoint_sync_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sync_started_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    sync_completed_at TIMESTAMPTZ,
+    status sharepoint_sync_status NOT NULL DEFAULT 'started',
+    total_files_checked INTEGER DEFAULT 0,
+    files_changed INTEGER DEFAULT 0,
+    files_created INTEGER DEFAULT 0,
+    files_deleted INTEGER DEFAULT 0,
+    errors_encountered INTEGER DEFAULT 0,
+    error_summary JSONB,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table for file version history
+CREATE TABLE IF NOT EXISTS sharepoint_file_versions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    artifact_type TEXT NOT NULL CHECK (artifact_type IN ('proposal', 'knowledge_card')),
+    artifact_id UUID NOT NULL,
+    user_id UUID NOT NULL REFERENCES users(id),
+    sharepoint_link_id UUID NOT NULL,
+    version_number INTEGER NOT NULL,
+    sharepoint_url TEXT NOT NULL,
+    filename TEXT NOT NULL,
+    file_size BIGINT,
+    sharepoint_version TEXT,
+    last_modified_at TIMESTAMPTZ,
+    last_modified_by TEXT,
+    diff_from_previous TEXT,
+    change_type sync_change_type NOT NULL DEFAULT 'modified',
+    metadata JSONB DEFAULT '{}'::jsonb,
+    is_current BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (sharepoint_link_id, version_number)
+);
+
+-- Indexes for sync tables
+CREATE INDEX IF NOT EXISTS idx_sharepoint_sync_history_status 
+    ON sharepoint_sync_history(status);
+
+CREATE INDEX IF NOT EXISTS idx_sharepoint_sync_history_created 
+    ON sharepoint_sync_history(created_at);
+
+CREATE INDEX IF NOT EXISTS idx_sharepoint_file_versions_link 
+    ON sharepoint_file_versions(sharepoint_link_id);
+
+CREATE INDEX IF NOT EXISTS idx_sharepoint_file_versions_artifact 
+    ON sharepoint_file_versions(artifact_type, artifact_id);
+
+CREATE INDEX IF NOT EXISTS idx_sharepoint_file_versions_current 
+    ON sharepoint_file_versions(sharepoint_link_id, is_current) 
+    WHERE is_current = TRUE;
+
+-- View for file version history
+CREATE OR REPLACE VIEW vw_file_version_history AS
+SELECT 
+    sfv.id,
+    sfv.artifact_type,
+    sfv.artifact_id,
+    sfv.user_id,
+    u.name AS user_name,
+    sfv.sharepoint_link_id,
+    sfv.version_number,
+    sfv.sharepoint_url,
+    sfv.filename,
+    sfv.file_size,
+    sfv.sharepoint_version,
+    sfv.last_modified_at,
+    sfv.last_modified_by,
+    sfv.change_type,
+    sfv.is_current,
+    sfv.created_at,
+    -- Get artifact info
+    CASE 
+        WHEN sfv.artifact_type = 'proposal' THEN p.template_name
+        WHEN sfv.artifact_type = 'knowledge_card' THEN kc.template_name
+    END AS template_name,
+    CASE 
+        WHEN sfv.artifact_type = 'proposal' THEN p.status::TEXT
+        WHEN sfv.artifact_type = 'knowledge_card' THEN kc.status::TEXT
+    END AS artifact_status
+FROM sharepoint_file_versions sfv
+JOIN users u ON sfv.user_id = u.id
+LEFT JOIN proposals p ON sfv.artifact_type = 'proposal' AND sfv.artifact_id = p.id
+LEFT JOIN knowledge_cards kc ON sfv.artifact_type = 'knowledge_card' AND sfv.artifact_id = kc.id;
+
+-- View for sync history with details
+CREATE OR REPLACE VIEW vw_sync_history_details AS
+SELECT 
+    ssh.id,
+    ssh.sync_started_at,
+    ssh.sync_completed_at,
+    ssh.status,
+    ssh.total_files_checked,
+    ssh.files_changed,
+    ssh.files_created,
+    ssh.files_deleted,
+    ssh.errors_encountered,
+    ssh.error_summary,
+    ssh.created_at,
+    EXTRACT(EPOCH FROM (ssh.sync_completed_at - ssh.sync_started_at)) AS duration_seconds
+FROM sharepoint_sync_history ssh;
+
+-- Function to get file version history
+CREATE OR REPLACE FUNCTION get_file_version_history(
+    p_link_id UUID
+) RETURNS TABLE(
+    version_number INTEGER,
+    sharepoint_url TEXT,
+    filename TEXT,
+    file_size BIGINT,
+    sharepoint_version TEXT,
+    last_modified_at TIMESTAMPTZ,
+    last_modified_by TEXT,
+    change_type sync_change_type,
+    is_current BOOLEAN,
+    created_at TIMESTAMPTZ,
+    diff_preview TEXT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        sfv.version_number,
+        sfv.sharepoint_url,
+        sfv.filename,
+        sfv.file_size,
+        sfv.sharepoint_version,
+        sfv.last_modified_at,
+        sfv.last_modified_by,
+        sfv.change_type,
+        sfv.is_current,
+        sfv.created_at,
+        CASE 
+            WHEN sfv.diff_from_previous IS NOT NULL 
+            THEN LEFT(sfv.diff_from_previous, 500) || '...' 
+            ELSE NULL
+        END AS diff_preview
+    FROM sharepoint_file_versions sfv
+    WHERE sfv.sharepoint_link_id = p_link_id
+    ORDER BY sfv.version_number DESC;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Logs in DB adds comprehensive logging for proposal generation runs
+
+
+CREATE TYPE run_status AS ENUM (
+    'drafting',
+    'completed', 
+    'failed',
+    'cancelled'
+);
+
+-- Create artifact_runs table (for both proposals and knowledge cards)
+CREATE TABLE IF NOT EXISTS artifact_runs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    artifact_type TEXT NOT NULL CHECK (artifact_type IN ('proposal', 'knowledge_card')),
+    artifact_id UUID NOT NULL,
+    user_id UUID NOT NULL REFERENCES users(id),
+    
+    -- Run metadata
+    run_status run_status NOT NULL DEFAULT 'drafting',
+    start_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    end_time TIMESTAMPTZ,
+    
+    -- Agent execution details
+    agents_executed TEXT[],  -- Array of agent names
+    model_deployment TEXT,    -- Model/deployment used
+    
+    -- Token usage and cost
+    tokens_input INTEGER DEFAULT 0,
+    tokens_output INTEGER DEFAULT 0,
+    estimated_cost NUMERIC(10,6) DEFAULT 0.0,
+    
+    -- Performance metrics
+    step_count INTEGER DEFAULT 0,
+    retry_count INTEGER DEFAULT 0,
+    failure_count INTEGER DEFAULT 0,
+    
+    -- Timing information
+    total_latency_ms INTEGER,  -- Total execution time in milliseconds
+    stage_latencies JSONB,     -- Latency per stage/agent
+    
+    -- Output metrics
+    sections_generated INTEGER DEFAULT 0,
+    pages_generated INTEGER DEFAULT 0,
+    words_generated INTEGER DEFAULT 0,
+    
+    -- Export events
+    export_events JSONB,  -- Word/PDF export events with timestamps
+    
+    -- Additional context
+    template_name TEXT,
+    template_version TEXT,
+    metadata JSONB,
+    
+    -- Timestamps
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for query performance
+CREATE INDEX IF NOT EXISTS idx_artifact_runs_artifact_type ON artifact_runs(artifact_type);
+CREATE INDEX IF NOT EXISTS idx_artifact_runs_artifact_id ON artifact_runs(artifact_id);
+CREATE INDEX IF NOT EXISTS idx_artifact_runs_user_id ON artifact_runs(user_id);
+CREATE INDEX IF NOT EXISTS idx_artifact_runs_status ON artifact_runs(run_status);
+CREATE INDEX IF NOT EXISTS idx_artifact_runs_start_time ON artifact_runs(start_time);
+CREATE INDEX IF NOT EXISTS idx_artifact_runs_end_time ON artifact_runs(end_time);
+
+-- Create a trigger to update the updated_at timestamp
+CREATE OR REPLACE FUNCTION update_artifact_run_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_artifact_runs_updated_at
+BEFORE UPDATE ON artifact_runs
+FOR EACH ROW
+EXECUTE FUNCTION update_artifact_run_timestamp();
+
+-- Create views for querying telemetry data
+CREATE OR REPLACE VIEW vw_proposal_run_telemetry AS
+SELECT 
+    ar.id AS run_id,
+    ar.artifact_id AS proposal_id,
+    ar.user_id,
+    u.name AS user_name,
+    ar.run_status,
+    ar.start_time,
+    ar.end_time,
+    ar.agents_executed,
+    ar.model_deployment,
+    ar.tokens_input,
+    ar.tokens_output,
+    ar.estimated_cost,
+    ar.step_count,
+    ar.retry_count,
+    ar.failure_count,
+    ar.total_latency_ms,
+    ar.sections_generated,
+    ar.pages_generated,
+    ar.words_generated,
+    ar.template_name,
+    ar.template_version,
+    EXTRACT(EPOCH FROM (ar.end_time - ar.start_time)) AS duration_seconds,
+    p.form_data,
+    p.project_description
+FROM artifact_runs ar
+JOIN users u ON ar.user_id = u.id
+JOIN proposals p ON ar.artifact_id = p.id
+WHERE ar.artifact_type = 'proposal';
+
+CREATE OR REPLACE VIEW vw_knowledge_card_run_telemetry AS
+SELECT 
+    ar.id AS run_id,
+    ar.artifact_id AS knowledge_card_id,
+    ar.user_id,
+    u.name AS user_name,
+    ar.run_status,
+    ar.start_time,
+    ar.end_time,
+    ar.agents_executed,
+    ar.model_deployment,
+    ar.tokens_input,
+    ar.tokens_output,
+    ar.estimated_cost,
+    ar.step_count,
+    ar.retry_count,
+    ar.failure_count,
+    ar.total_latency_ms,
+    ar.sections_generated,
+    ar.pages_generated,
+    ar.words_generated,
+    ar.template_name,
+    ar.template_version,
+    EXTRACT(EPOCH FROM (ar.end_time - ar.start_time)) AS duration_seconds,
+    kc.summary,
+    kc.created_at AS card_created_at
+FROM artifact_runs ar
+JOIN users u ON ar.user_id = u.id
+JOIN knowledge_cards kc ON ar.artifact_id = kc.id
+WHERE ar.artifact_type = 'knowledge_card';
+
+
+
+
+
+
+-- ============================================================================
+-- - Incident Analysis + Template Qualification 
+-- ============================================================================
+-- PURPOSE
+--   1) Persisting incident-analysis / agentic QA outputs
+--   2) Managing canonical template registry and immutable template versions
+--   3) Running UAT -> PROD qualification workflows for proposal and knowledge-card templates
+--   4) Storing rule sets, rule evaluations, signoffs, waivers, and release history
+--   5) Exposing views to simplify qualification metric evaluation
+--
+-- PREREQUISITES
+--   - Requires pgcrypto extension already enabled in the base schema
+-- ============================================================================
+
+BEGIN;
+
+-- --------------------------------------------------------------------------
+-- 1) INCIDENT ANALYSIS RESULTS
+-- --------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS incident_analysis_results (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    artifact_type TEXT NOT NULL CHECK (artifact_type IN ('proposal', 'knowledge_card', 'template')),
+    source_review_id UUID NOT NULL,
+    proposal_id UUID NULL REFERENCES proposals(id) ON DELETE SET NULL,
+    knowledge_card_id UUID NULL REFERENCES knowledge_cards(id) ON DELETE SET NULL,
+    template_request_id UUID NULL REFERENCES donor_template_requests(id) ON DELETE SET NULL,
+    incident_type TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'analyzed',
+    analysis_payload JSONB NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (artifact_type, source_review_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_incident_analysis_artifact_type
+    ON incident_analysis_results(artifact_type);
+
+CREATE INDEX IF NOT EXISTS idx_incident_analysis_source_review_id
+    ON incident_analysis_results(source_review_id);
+
+CREATE INDEX IF NOT EXISTS idx_incident_analysis_proposal_id
+    ON incident_analysis_results(proposal_id);
+
+CREATE INDEX IF NOT EXISTS idx_incident_analysis_knowledge_card_id
+    ON incident_analysis_results(knowledge_card_id);
+
+CREATE INDEX IF NOT EXISTS idx_incident_analysis_template_request_id
+    ON incident_analysis_results(template_request_id);
+
+-- --------------------------------------------------------------------------
+-- 2) ENUMS FOR TEMPLATE QUALIFICATION / RELEASE GOVERNANCE
+-- --------------------------------------------------------------------------
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'release_environment') THEN
+        CREATE TYPE release_environment AS ENUM ('uat', 'prod');
+    END IF;
+END$$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_type
+        WHERE typname = 'managed_template_type'
+    ) THEN
+        CREATE TYPE managed_template_type AS ENUM (
+            'proposal',
+            'knowledge_card',
+            'concept_note'
+        );
+    ELSE
+        ALTER TYPE managed_template_type ADD VALUE IF NOT EXISTS 'concept_note';
+    END IF;
+END$$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'template_version_status') THEN
+        CREATE TYPE template_version_status AS ENUM (
+            'draft',
+            'in_uat',
+            'conditionally_qualified',
+            'qualified',
+            'disqualified',
+            'promoted_to_prod',
+            'suspended',
+            'retired'
+        );
+    END IF;
+END$$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'qualification_run_status') THEN
+        CREATE TYPE qualification_run_status AS ENUM (
+            'draft',
+            'collecting_evidence',
+            'evaluating',
+            'pending_signoff',
+            'approved',
+            'rejected',
+            'cancelled'
+        );
+    END IF;
+END$$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'qualification_rule_result') THEN
+        CREATE TYPE qualification_rule_result AS ENUM (
+            'pass',
+            'fail',
+            'waived',
+            'not_applicable'
+        );
+    END IF;
+END$$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'qualification_decision') THEN
+        CREATE TYPE qualification_decision AS ENUM (
+            'qualified',
+            'conditionally_qualified',
+            'disqualified',
+            'suspended',
+            'rolled_back'
+        );
+    END IF;
+END$$;
+
+-- --------------------------------------------------------------------------
+-- 3) CANONICAL TEMPLATE REGISTRY
+-- --------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS template_registry (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    template_key TEXT NOT NULL UNIQUE,
+    template_name TEXT NOT NULL,
+    template_type managed_template_type NOT NULL,
+    source_template_request_id UUID NULL REFERENCES donor_template_requests(id) ON DELETE SET NULL,
+    owner_user_id UUID NOT NULL REFERENCES users(id),
+    owning_team_id UUID NULL REFERENCES teams(id),
+    description TEXT,
+    active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_template_registry_template_type
+    ON template_registry(template_type);
+
+CREATE INDEX IF NOT EXISTS idx_template_registry_owner_user_id
+    ON template_registry(owner_user_id);
+
+CREATE INDEX IF NOT EXISTS idx_template_registry_owning_team_id
+    ON template_registry(owning_team_id);
+
+-- --------------------------------------------------------------------------
+-- 4) IMMUTABLE TEMPLATE VERSIONS
+-- --------------------------------------------------------------------------
+
+
+-- Create template_versions table
+CREATE TABLE IF NOT EXISTS template_versions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    template_registry_id UUID NOT NULL REFERENCES template_registry(id) ON DELETE CASCADE,
+    template_id UUID NOT NULL REFERENCES templates(id) ON DELETE CASCADE,
+    version_label TEXT NOT NULL,
+    version_number TEXT NOT NULL,
+    version_notes TEXT,
+    environment release_environment NOT NULL DEFAULT 'uat',
+    status template_version_status NOT NULL DEFAULT 'draft',
+    cloned_from_version_id UUID NULL REFERENCES template_versions(id) ON DELETE SET NULL,
+
+    configuration JSONB NOT NULL DEFAULT '{}'::jsonb,
+    template_content JSONB,
+    initial_file_content JSONB,
+    release_notes TEXT,
+    template_data JSONB NOT NULL,
+    
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_by UUID REFERENCES users(id),
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    promoted_at TIMESTAMPTZ,
+    promoted_by UUID NULL REFERENCES users(id),
+    suspended_at TIMESTAMPTZ,
+    suspended_by UUID NULL REFERENCES users(id),
+
+    UNIQUE (template_registry_id, version_number),
+    UNIQUE (template_registry_id, version_label)
+    CONSTRAINT unique_template_version UNIQUE (template_id, version_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_template_versions_registry
+    ON template_versions(template_registry_id);
+
+CREATE INDEX IF NOT EXISTS idx_template_versions_status
+    ON template_versions(status);
+
+CREATE INDEX IF NOT EXISTS idx_template_versions_environment
+    ON template_versions(environment);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_template_versions_single_prod_per_registry
+    ON template_versions(template_registry_id)
+    WHERE environment = 'prod' AND status = 'promoted_to_prod';
+
+
+CREATE INDEX IF NOT EXISTS idx_template_versions_template_id ON template_versions(template_registry_id);
+CREATE INDEX IF NOT EXISTS idx_template_versions_status ON template_versions(status);
+
+-- --------------------------------------------------------------------------
+-- 5) LINK GENERATED OUTPUTS TO EXACT TEMPLATE REGISTRY / VERSION
+-- --------------------------------------------------------------------------
+ALTER TABLE proposals
+    ADD COLUMN IF NOT EXISTS template_registry_id UUID NULL REFERENCES template_registry(id) ON DELETE SET NULL;
+
+ALTER TABLE proposals
+    ADD COLUMN IF NOT EXISTS template_version_id UUID NULL REFERENCES template_versions(id) ON DELETE SET NULL;
+
+ALTER TABLE knowledge_cards
+    ADD COLUMN IF NOT EXISTS template_registry_id UUID NULL REFERENCES template_registry(id) ON DELETE SET NULL;
+
+ALTER TABLE knowledge_cards
+    ADD COLUMN IF NOT EXISTS template_version_id UUID NULL REFERENCES template_versions(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_proposals_template_registry_id
+    ON proposals(template_registry_id);
+
+CREATE INDEX IF NOT EXISTS idx_proposals_template_version_id
+    ON proposals(template_version_id);
+
+CREATE INDEX IF NOT EXISTS idx_knowledge_cards_template_registry_id
+    ON knowledge_cards(template_registry_id);
+
+CREATE INDEX IF NOT EXISTS idx_knowledge_cards_template_version_id
+    ON knowledge_cards(template_version_id);
+
+-- --------------------------------------------------------------------------
+-- 6) QUALIFICATION RULE SETS
+-- --------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS qualification_rule_sets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL UNIQUE,
+    template_type managed_template_type NOT NULL,
+    version_label TEXT NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    description TEXT,
+    created_by UUID NOT NULL REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_by UUID NOT NULL REFERENCES users(id),
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_qualification_rule_sets_template_type
+    ON qualification_rule_sets(template_type);
+
+CREATE INDEX IF NOT EXISTS idx_qualification_rule_sets_is_active
+    ON qualification_rule_sets(is_active);
+
+-- --------------------------------------------------------------------------
+-- 7) INDIVIDUAL QUALIFICATION RULES
+-- --------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS qualification_rules (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    rule_set_id UUID NOT NULL REFERENCES qualification_rule_sets(id) ON DELETE CASCADE,
+
+    rule_code TEXT NOT NULL,
+    rule_name TEXT NOT NULL,
+    category TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    applies_to managed_template_type NOT NULL,
+
+    evaluation_mode TEXT NOT NULL,
+    metric_name TEXT,
+    comparator TEXT,
+    threshold_numeric NUMERIC,
+    threshold_json JSONB,
+    weight NUMERIC,
+    required BOOLEAN DEFAULT TRUE,
+
+    description TEXT,
+    remediation_guidance TEXT,
+
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE (rule_set_id, rule_code)
+);
+
+CREATE INDEX IF NOT EXISTS idx_qualification_rules_rule_set_id
+    ON qualification_rules(rule_set_id);
+
+CREATE INDEX IF NOT EXISTS idx_qualification_rules_applies_to
+    ON qualification_rules(applies_to);
+
+CREATE INDEX IF NOT EXISTS idx_qualification_rules_is_active
+    ON qualification_rules(is_active);
+
+-- --------------------------------------------------------------------------
+-- 8) QUALIFICATION SCENARIOS
+-- --------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS qualification_scenarios (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    scenario_code TEXT NOT NULL UNIQUE,
+    template_type managed_template_type NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+
+    donor_id UUID NULL REFERENCES donors(id) ON DELETE SET NULL,
+    outcome_id UUID NULL REFERENCES outcomes(id) ON DELETE SET NULL,
+    field_context_id UUID NULL REFERENCES field_contexts(id) ON DELETE SET NULL,
+
+    geography JSONB,
+    metadata JSONB DEFAULT '{}'::jsonb,
+
+    active BOOLEAN DEFAULT TRUE,
+    created_by UUID NOT NULL REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_qualification_scenarios_template_type
+    ON qualification_scenarios(template_type);
+
+CREATE INDEX IF NOT EXISTS idx_qualification_scenarios_active
+    ON qualification_scenarios(active);
+
+-- --------------------------------------------------------------------------
+-- 9) QUALIFICATION RUNS
+-- --------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS template_qualification_runs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    template_version_id UUID NOT NULL REFERENCES template_versions(id) ON DELETE CASCADE,
+    rule_set_id UUID NOT NULL REFERENCES qualification_rule_sets(id) ON DELETE RESTRICT,
+
+    run_name TEXT NOT NULL,
+    environment release_environment NOT NULL DEFAULT 'uat',
+    status qualification_run_status NOT NULL DEFAULT 'draft',
+
+    target_sample_size INTEGER,
+    actual_sample_size INTEGER DEFAULT 0,
+    required_reviewer_count INTEGER DEFAULT 1,
+
+    started_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
+
+    overall_score NUMERIC,
+    decision qualification_decision,
+    decision_reason TEXT,
+
+    initiated_by UUID NOT NULL REFERENCES users(id),
+    approved_by UUID NULL REFERENCES users(id),
+
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_template_qualification_runs_version
+    ON template_qualification_runs(template_version_id);
+
+CREATE INDEX IF NOT EXISTS idx_template_qualification_runs_status
+    ON template_qualification_runs(status);
+
+CREATE INDEX IF NOT EXISTS idx_template_qualification_runs_decision
+    ON template_qualification_runs(decision);
+
+CREATE INDEX IF NOT EXISTS idx_template_qualification_runs_environment
+    ON template_qualification_runs(environment);
+
+-- --------------------------------------------------------------------------
+-- 10) RUN-TO-SCENARIO MAPPING
+-- --------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS template_qualification_run_scenarios (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    qualification_run_id UUID NOT NULL REFERENCES template_qualification_runs(id) ON DELETE CASCADE,
+    scenario_id UUID NOT NULL REFERENCES qualification_scenarios(id) ON DELETE CASCADE,
+    is_required BOOLEAN DEFAULT TRUE,
+    executed BOOLEAN DEFAULT FALSE,
+    notes TEXT,
+    UNIQUE (qualification_run_id, scenario_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_template_qualification_run_scenarios_run
+    ON template_qualification_run_scenarios(qualification_run_id);
+
+CREATE INDEX IF NOT EXISTS idx_template_qualification_run_scenarios_scenario
+    ON template_qualification_run_scenarios(scenario_id);
+
+-- --------------------------------------------------------------------------
+-- 11) QUALIFICATION EVIDENCE ITEMS
+-- --------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS qualification_evidence_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    qualification_run_id UUID NOT NULL REFERENCES template_qualification_runs(id) ON DELETE CASCADE,
+
+    source_artifact_type TEXT NOT NULL,
+    source_id UUID NOT NULL,
+    source_table TEXT NOT NULL,
+
+    proposal_id UUID NULL REFERENCES proposals(id) ON DELETE SET NULL,
+    knowledge_card_id UUID NULL REFERENCES knowledge_cards(id) ON DELETE SET NULL,
+    template_request_id UUID NULL REFERENCES donor_template_requests(id) ON DELETE SET NULL,
+
+    scenario_id UUID NULL REFERENCES qualification_scenarios(id) ON DELETE SET NULL,
+    section_name TEXT,
+    severity TEXT,
+    incident_type TEXT,
+    rating VARCHAR(10),
+
+    evidence_payload JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_qualification_evidence_items_run
+    ON qualification_evidence_items(qualification_run_id);
+
+CREATE INDEX IF NOT EXISTS idx_qualification_evidence_items_source
+    ON qualification_evidence_items(source_table, source_id);
+
+CREATE INDEX IF NOT EXISTS idx_qualification_evidence_items_proposal_id
+    ON qualification_evidence_items(proposal_id);
+
+CREATE INDEX IF NOT EXISTS idx_qualification_evidence_items_knowledge_card_id
+    ON qualification_evidence_items(knowledge_card_id);
+
+CREATE INDEX IF NOT EXISTS idx_qualification_evidence_items_scenario_id
+    ON qualification_evidence_items(scenario_id);
+
+-- --------------------------------------------------------------------------
+-- 12) RULE EVALUATION RESULTS
+-- --------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS qualification_rule_evaluations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    qualification_run_id UUID NOT NULL REFERENCES template_qualification_runs(id) ON DELETE CASCADE,
+    rule_id UUID NOT NULL REFERENCES qualification_rules(id) ON DELETE RESTRICT,
+
+    result qualification_rule_result NOT NULL,
+    metric_value NUMERIC,
+    metric_payload JSONB DEFAULT '{}'::jsonb,
+    explanation TEXT,
+    waived_by UUID NULL REFERENCES users(id),
+    waiver_reason TEXT,
+    artifact_type TEXT,
+    artifact_id TEXT,
+
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (qualification_run_id, rule_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_qualification_rule_evaluations_run
+    ON qualification_rule_evaluations(qualification_run_id);
+
+CREATE INDEX IF NOT EXISTS idx_qualification_rule_evaluations_rule
+    ON qualification_rule_evaluations(rule_id);
+
+-- --------------------------------------------------------------------------
+-- 13) REVIEWER SIGNOFFS
+-- --------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS template_qualification_signoffs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    qualification_run_id UUID NOT NULL REFERENCES template_qualification_runs(id) ON DELETE CASCADE,
+    reviewer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+    role_name TEXT,
+    decision TEXT NOT NULL,
+    comments TEXT,
+    signed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE (qualification_run_id, reviewer_id, role_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_template_qualification_signoffs_run
+    ON template_qualification_signoffs(qualification_run_id);
+
+CREATE INDEX IF NOT EXISTS idx_template_qualification_signoffs_reviewer
+    ON template_qualification_signoffs(reviewer_id);
+
+-- --------------------------------------------------------------------------
+-- 14) PROMOTION / RELEASE HISTORY
+-- --------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS template_release_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    template_version_id UUID NOT NULL REFERENCES template_versions(id) ON DELETE CASCADE,
+    qualification_run_id UUID NULL REFERENCES template_qualification_runs(id) ON DELETE SET NULL,
+
+    action TEXT NOT NULL,
+    from_environment release_environment,
+    to_environment release_environment,
+    previous_status template_version_status,
+    new_status template_version_status,
+
+    reason TEXT,
+    actioned_by UUID NOT NULL REFERENCES users(id),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_template_release_history_version
+    ON template_release_history(template_version_id);
+
+CREATE INDEX IF NOT EXISTS idx_template_release_history_qualification_run
+    ON template_release_history(qualification_run_id);
+
+-- --------------------------------------------------------------------------
+-- 15) OPTIONAL WAIVERS / EXCEPTIONS
+-- --------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS qualification_waivers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    qualification_run_id UUID NOT NULL REFERENCES template_qualification_runs(id) ON DELETE CASCADE,
+    rule_id UUID NOT NULL REFERENCES qualification_rules(id) ON DELETE RESTRICT,
+
+    approved_by UUID NOT NULL REFERENCES users(id),
+    reason TEXT NOT NULL,
+    expires_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_qualification_waivers_run
+    ON qualification_waivers(qualification_run_id);
+
+CREATE INDEX IF NOT EXISTS idx_qualification_waivers_rule
+    ON qualification_waivers(rule_id);
+
+-- --------------------------------------------------------------------------
+-- 16) OPTIONAL AUTOMATED TIMESTAMP TRIGGER
+-- --------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION set_updated_at_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_incident_analysis_results_updated_at ON incident_analysis_results;
+CREATE TRIGGER trg_incident_analysis_results_updated_at
+BEFORE UPDATE ON incident_analysis_results
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at_timestamp();
+
+DROP TRIGGER IF EXISTS trg_template_registry_updated_at ON template_registry;
+CREATE TRIGGER trg_template_registry_updated_at
+BEFORE UPDATE ON template_registry
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at_timestamp();
+
+DROP TRIGGER IF EXISTS trg_template_versions_updated_at ON template_versions;
+CREATE TRIGGER trg_template_versions_updated_at
+BEFORE UPDATE ON template_versions
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at_timestamp();
+
+DROP TRIGGER IF EXISTS trg_qualification_rule_sets_updated_at ON qualification_rule_sets;
+CREATE TRIGGER trg_qualification_rule_sets_updated_at
+BEFORE UPDATE ON qualification_rule_sets
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at_timestamp();
+
+DROP TRIGGER IF EXISTS trg_template_qualification_runs_updated_at ON template_qualification_runs;
+CREATE TRIGGER trg_template_qualification_runs_updated_at
+BEFORE UPDATE ON template_qualification_runs
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at_timestamp();
+
+-- --------------------------------------------------------------------------
+-- 17) QUALIFICATION METRIC VIEWS
+-- --------------------------------------------------------------------------
+CREATE OR REPLACE VIEW vw_proposal_template_quality_metrics AS
+SELECT
+    p.template_version_id,
+    COUNT(DISTINCT p.id) AS proposal_count,
+    COUNT(ppr.id) AS total_reviews,
+
+    COUNT(*) FILTER (WHERE ppr.severity = 'P0') AS p0_count,
+    COUNT(*) FILTER (WHERE ppr.severity = 'P1') AS p1_count,
+    COUNT(*) FILTER (WHERE ppr.severity = 'P2') AS p2_count,
+    COUNT(*) FILTER (WHERE ppr.severity = 'P3') AS p3_count,
+
+    COUNT(*) FILTER (
+        WHERE ppr.severity = 'P0'
+          AND COALESCE(ppr.status, 'pending') <> 'resolved'
+    ) AS unresolved_p0_count,
+
+    AVG(
+        CASE
+            WHEN ppr.rating ~ '^[0-9]+(\.[0-9]+)?$' THEN ppr.rating::numeric
+            ELSE NULL
+        END
+    ) AS avg_numeric_rating
+FROM proposals p
+LEFT JOIN proposal_peer_reviews ppr
+    ON ppr.proposal_id = p.id
+WHERE p.template_version_id IS NOT NULL
+GROUP BY p.template_version_id;
+
+CREATE OR REPLACE VIEW vw_proposal_template_repeated_p1_sections AS
+SELECT
+    p.template_version_id,
+    ppr.section_name,
+    COUNT(*) AS p1_count
+FROM proposals p
+JOIN proposal_peer_reviews ppr
+    ON ppr.proposal_id = p.id
+WHERE p.template_version_id IS NOT NULL
+  AND ppr.severity = 'P1'
+GROUP BY p.template_version_id, ppr.section_name;
+
+CREATE OR REPLACE VIEW vw_knowledge_card_template_quality_metrics AS
+SELECT
+    kc.template_version_id,
+    COUNT(DISTINCT kc.id) AS knowledge_card_count,
+    COUNT(kcr.id) AS total_reviews,
+
+    COUNT(*) FILTER (WHERE kcr.severity = 'P0') AS p0_count,
+    COUNT(*) FILTER (WHERE kcr.severity = 'P1') AS p1_count,
+    COUNT(*) FILTER (WHERE kcr.severity = 'P2') AS p2_count,
+    COUNT(*) FILTER (WHERE kcr.severity = 'P3') AS p3_count,
+
+    COUNT(*) FILTER (
+        WHERE kcr.severity = 'P0'
+          AND COALESCE(kcr.status, 'pending') <> 'resolved'
+    ) AS unresolved_p0_count,
+
+    COUNT(*) FILTER (WHERE kcr.type_of_comment = 'Outdated Information') AS outdated_information_count,
+    COUNT(*) FILTER (WHERE kcr.type_of_comment = 'Duplicate Content') AS duplicate_content_count,
+    COUNT(*) FILTER (WHERE kcr.type_of_comment = 'Generic Content') AS generic_content_count,
+
+    AVG(
+        CASE
+            WHEN kcr.rating ~ '^[0-9]+(\.[0-9]+)?$' THEN kcr.rating::numeric
+            ELSE NULL
+        END
+    ) AS avg_numeric_rating
+FROM knowledge_cards kc
+LEFT JOIN knowledge_card_reviews kcr
+    ON kcr.knowledge_card_id = kc.id
+WHERE kc.template_version_id IS NOT NULL
+GROUP BY kc.template_version_id;
+
+CREATE OR REPLACE VIEW vw_knowledge_card_template_traceability AS
+SELECT
+    kc.template_version_id,
+    COUNT(DISTINCT kc.id) AS knowledge_card_count,
+    COUNT(DISTINCT kctr.reference_id) AS total_linked_references,
+    COUNT(DISTINCT rel.id) AS total_rag_logs,
+    COUNT(DISTINCT kc.id) FILTER (
+        WHERE EXISTS (
+            SELECT 1
+            FROM knowledge_card_to_references x
+            WHERE x.knowledge_card_id = kc.id
+        )
+    ) AS cards_with_references
+FROM knowledge_cards kc
+LEFT JOIN knowledge_card_to_references kctr
+    ON kctr.knowledge_card_id = kc.id
+LEFT JOIN rag_evaluation_logs rel
+    ON rel.knowledge_card_id = kc.id
+WHERE kc.template_version_id IS NOT NULL
+GROUP BY kc.template_version_id;
+
+
+COMMIT;
+
+
+-- automatically maintains template registry and version
+CREATE OR REPLACE FUNCTION public.ensure_template_registry_and_version(
+    p_template_name text,
+    p_template_type public.managed_template_type,
+    p_user_id uuid
+)
+RETURNS TABLE(template_registry_id uuid, template_version_id uuid)
+LANGUAGE plpgsql
+AS $_$
+DECLARE
+    v_template_key TEXT;
+    v_registry_id UUID;
+    v_version_id UUID;
+    v_next_version INTEGER;
+BEGIN
+    IF p_template_name IS NULL OR trim(p_template_name) = '' THEN
+        RETURN;
+    END IF;
+
+    v_template_key := lower(regexp_replace(p_template_name, '[^a-zA-Z0-9]+', '_', 'g'));
+
+    SELECT tr.id
+      INTO v_registry_id
+      FROM public.template_registry tr
+     WHERE tr.template_key = v_template_key
+       AND tr.template_type = p_template_type;
+
+    IF v_registry_id IS NULL THEN
+        INSERT INTO public.template_registry (
+            template_key, template_name, template_type, owner_user_id, description
+        )
+        VALUES (
+            v_template_key, p_template_name, p_template_type, p_user_id, 'Auto-registered from usage'
+        )
+        RETURNING id INTO v_registry_id;
+    END IF;
+
+    SELECT tv.id
+      INTO v_version_id
+      FROM public.template_versions tv
+     WHERE tv.template_registry_id = v_registry_id
+       AND tv.environment = 'uat'
+     ORDER BY
+       tv.version_number DESC NULLS LAST,
+       tv.created_at DESC
+     LIMIT 1;
+
+    IF v_version_id IS NULL THEN
+        SELECT COALESCE(MAX(tv.version_number), 0) + 1
+          INTO v_next_version
+          FROM public.template_versions tv
+         WHERE tv.template_registry_id = v_registry_id;
+
+        INSERT INTO public.template_versions (
+            template_registry_id,
+            version_label,
+            version_number,
+            environment,
+            status,
+            release_notes,
+            created_by,
+            updated_by
+        )
+        VALUES (
+            v_registry_id,
+            'auto-uat-v' || v_next_version,
+            v_next_version,
+            'uat'::public.release_environment,
+            'in_uat'::public.template_version_status,
+            'Auto-created from existing usage',
+            p_user_id,
+            p_user_id
+        )
+        RETURNING id INTO v_version_id;
+    END IF;
+
+    template_registry_id := v_registry_id;
+    template_version_id := v_version_id;
+    RETURN NEXT;
+END;
+$_$;
+ 
+
+-------------
+
+CREATE OR REPLACE FUNCTION trg_proposals_template_autoregister()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_result RECORD;
+BEGIN
+    IF NEW.template_name IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    -- Only act if not already populated or template changed
+    IF NEW.template_registry_id IS NULL
+       OR NEW.template_version_id IS NULL
+       OR NEW.template_name IS DISTINCT FROM OLD.template_name THEN
+
+        SELECT *
+        INTO v_result
+        FROM ensure_template_registry_and_version(
+            NEW.template_name,
+            'proposal',
+            NEW.created_by
+        );
+
+        NEW.template_registry_id := v_result.template_registry_id;
+        NEW.template_version_id := v_result.template_version_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS proposals_template_autoregister
+ON proposals;
+
+CREATE TRIGGER proposals_template_autoregister
+BEFORE INSERT OR UPDATE OF template_name
+ON proposals
+FOR EACH ROW
+EXECUTE FUNCTION trg_proposals_template_autoregister();
+
+
+CREATE OR REPLACE FUNCTION trg_knowledge_cards_template_autoregister()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_result RECORD;
+BEGIN
+    IF NEW.template_name IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    IF NEW.template_registry_id IS NULL
+       OR NEW.template_version_id IS NULL
+       OR NEW.template_name IS DISTINCT FROM OLD.template_name THEN
+
+        SELECT *
+        INTO v_result
+        FROM ensure_template_registry_and_version(
+            NEW.template_name,
+            'knowledge_card',
+            NEW.created_by
+        );
+
+        NEW.template_registry_id := v_result.template_registry_id;
+        NEW.template_version_id := v_result.template_version_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS knowledge_cards_template_autoregister
+ON knowledge_cards;
+
+CREATE TRIGGER knowledge_cards_template_autoregister
+BEFORE INSERT OR UPDATE OF template_name
+ON knowledge_cards
+FOR EACH ROW
+EXECUTE FUNCTION trg_knowledge_cards_template_autoregister();
+
+
+----------------
+-- ## One-time backfill for existing data
+UPDATE proposals p
+SET
+    template_registry_id = src.template_registry_id,
+    template_version_id  = src.template_version_id
+FROM (
+    SELECT
+        p2.id AS proposal_id,
+        r.template_registry_id,
+        r.template_version_id
+    FROM proposals p2
+    JOIN LATERAL ensure_template_registry_and_version(
+        p2.template_name,
+        'proposal'::managed_template_type,
+        p2.created_by
+    ) r ON TRUE
+    WHERE p2.template_name IS NOT NULL
+      AND (
+          p2.template_registry_id IS NULL
+          OR p2.template_version_id IS NULL
+      )
+) src
+WHERE p.id = src.proposal_id;
+
+
+
+
+
+UPDATE knowledge_cards kc
+SET
+    template_registry_id = src.template_registry_id,
+    template_version_id  = src.template_version_id
+FROM (
+    SELECT
+        kc2.id AS knowledge_card_id,
+        r.template_registry_id,
+        r.template_version_id
+    FROM knowledge_cards kc2
+    JOIN LATERAL ensure_template_registry_and_version(
+        kc2.template_name,
+        'knowledge_card'::managed_template_type,
+        kc2.created_by
+    ) r ON TRUE
+    WHERE kc2.template_name IS NOT NULL
+      AND (
+          kc2.template_registry_id IS NULL
+          OR kc2.template_version_id IS NULL
+      )
+) src
+WHERE kc.id = src.knowledge_card_id;
+
+
+---
+

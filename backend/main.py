@@ -34,14 +34,16 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 #  Internal Modules
-from backend.api import auth, proposals, session, documents, health, users, knowledge, metrics, admin, templates
+from backend.api import auth, proposals, session, documents, health, users, knowledge, metrics, admin, templates, incident, qualification, template_management, sharepoint
 from backend.core.middleware import (
     setup_cors_middleware,
     custom_http_exception_handler,
     setup_scheduler
 )
+from backend.utils.sharepoint_sync import setup_sharepoint_sync_scheduler, initialize_database
 
 from backend.core.db import test_connection
+
 
 # This is the main application file. It brings together all the different
 # parts of the application: API routers, middleware, and event handlers.
@@ -53,6 +55,20 @@ async def lifespan(app: FastAPI):
     Manages application startup and shutdown events.
     """
     logging.info("Application is starting up...")
+    
+    # Initialize SharePoint sync database tables
+    try:
+        initialize_database()
+        logging.info("SharePoint sync database initialized")
+    except Exception as e:
+        logging.error(f"Failed to initialize SharePoint sync database: {e}")
+    
+    # Start SharePoint sync scheduler (runs twice daily)
+    try:
+        setup_sharepoint_sync_scheduler()
+    except Exception as e:
+        logging.error(f"Failed to start SharePoint sync scheduler: {e}")
+    
    # setup_scheduler()
    # logging.info("Background scheduler has been started.")
     yield
@@ -100,7 +116,11 @@ app.include_router(knowledge.router, prefix="/api", tags=["Knowledge"])
 app.include_router(metrics.router, prefix="/api", tags=["Metrics"])
 app.include_router(admin.router, prefix="/api", tags=["Admin"])
 app.include_router(templates.router, prefix="/api/templates", tags=["Donor Templates"])
+app.include_router(template_management.router, prefix="/api/admin", tags=["Template Management"])
+app.include_router(incident.router, prefix="/api", tags=["Incidents"])
+app.include_router(qualification.router, prefix="/api", tags=["Qualification"])
 app.include_router(health.router, tags=["Health & Debugging"])
+app.include_router(sharepoint.router, prefix="/api", tags=["SharePoint"])
 
 # --- Root Endpoint: Health Check + SPA ---
 # This MUST be defined before the SPA fallback to take priority

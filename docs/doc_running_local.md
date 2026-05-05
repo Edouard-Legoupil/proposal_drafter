@@ -168,3 +168,12 @@ Congrat if you have everything working locally, you can go to the next step - ge
 For cloud deployement, see the  `doc_cloud-deployment.md`
 
 Note that you can also run all the built-in test with playwright, see the doc `pplaywright/readme.md`
+
+
+## Test
+
+```bash
+cd frontend && npm run lint && npm run test
+cd backend  && pytest
+```
+

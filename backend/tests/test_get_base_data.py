@@ -10,7 +10,7 @@ def test_get_base_data(authenticated_client):
             "Project type": "Development Aid"
         },
         "project_description": "A testing project.",
-        "template_name": "unhcr_proposal_template.json"
+        "template_name": "proposal_template_unhcr.json"
     }
 
     post_response = client.post("/api/store_base_data", json=payload)

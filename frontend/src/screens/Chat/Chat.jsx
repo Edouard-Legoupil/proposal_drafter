@@ -1,7 +1,7 @@
 import './Chat.css'
 import { Snackbar, Alert } from '@mui/material';
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Markdown from 'react-markdown'
 import rehypeSanitize from 'rehype-sanitize'
@@ -24,7 +24,8 @@ import arrow from "../../assets/images/expanderArrow.svg"
 import generateIcon from "../../assets/images/generateIcon.svg"
 import knowIcon from "../../assets/images/knowIcon.svg"
 import resultsIcon from "../../assets/images/Chat_resultsIcon.svg"
-import Review from './components/Review/Review'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import SectionReview from '../../components/SectionReview/SectionReview'
 import edit from "../../assets/images/Chat_edit.svg"
 import save from "../../assets/images/Chat_save.svg"
 import cancel from "../../assets/images/Chat_editCancel.svg"
@@ -40,6 +41,13 @@ export default function Chat(props) {
         const { id } = useParams()
 
         const [documentType, setDocumentType] = useState("proposal")
+
+        const [isReviewer, setIsReviewer] = useState(false);
+        const [reviewComments, setReviewComments] = useState({});
+        const [reviewStatus, setReviewStatus] = useState({});
+        const autoSaveTimers = useRef({});
+        const [isAdmin, setIsAdmin] = useState(false);
+
         const [sidebarOpen, setSidebarOpen] = useState(false);
         const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
         const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -57,29 +65,25 @@ export default function Chat(props) {
 
         const [userPrompt, setUserPrompt] = useState("")
 
-        const [isModalOpen, setIsModalOpen] = useState(false)
         const [isPeerReviewModalOpen, setIsPeerReviewModalOpen] = useState(false)
         const [isAssociateKnowledgeModalOpen, setIsAssociateKnowledgeModalOpen] = useState(false)
         const [isPdfUploadModalOpen, setIsPdfUploadModalOpen] = useState(false)
         const [currentUser, setCurrentUser] = useState(null)
         const [users, setUsers] = useState([])
         const [selectedUsers, setSelectedUsers] = useState([])
-        const [associatedKnowledgeCards, setAssociatedKnowledgeCards] = useState([]);
-        const [validationMissingFields, setValidationMissingFields] = useState([]);
-        const [isValidationModalOpen, setIsValidationModalOpen] = useState(false);
-        const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
-        const [transferUsers, setTransferUsers] = useState([]);
+        const [associatedKnowledgeCards, setAssociatedKnowledgeCards] = useState([])
+        const [validationMissingFields, setValidationMissingFields] = useState([])
+        const [isValidationModalOpen, setIsValidationModalOpen] = useState(false)
+        const [isTransferModalOpen, setIsTransferModalOpen] = useState(false)
+        const [transferUsers, setTransferUsers] = useState([])
 
-        const [donors, setDonors] = useState([]);
-        const [outcomes, setOutcomes] = useState([]);
-        const [fieldContexts, setFieldContexts] = useState([]);
-        const [filteredFieldContexts, setFilteredFieldContexts] = useState([]);
-        const [newDonors, setNewDonors] = useState([]);
-        const [newOutcomes, setNewOutcomes] = useState([]);
-        const [newFieldContexts, setNewFieldContexts] = useState([]);
-        const [newBudgetRanges, setNewBudgetRanges] = useState([]);
-        const [newDurations, setNewDurations] = useState([]);
-        const [geographicCoverages, setGeographicCoverages] = useState([]);
+        const [donors, setDonors] = useState([])
+        const [outcomes, setOutcomes] = useState([])
+        const [fieldContexts, setFieldContexts] = useState([])
+        const [filteredFieldContexts, setFilteredFieldContexts] = useState([])
+        const [newBudgetRanges, setNewBudgetRanges] = useState([])
+        const [newDurations, setNewDurations] = useState([])
+        const [geographicCoverages, setGeographicCoverages] = useState([])
 
         async function fetchData() {
                 try {
@@ -240,6 +244,7 @@ export default function Chat(props) {
         useEffect(() => {
                 getUsers()
                 getTransferUsers()
+                getProfile()
         }, [])
 
         useEffect(() => {
@@ -268,8 +273,8 @@ export default function Chat(props) {
                 setFormData(p => ({
                         ...p,
                         [label]: {
-                                ...formData[label],
-                                value: e.target.value
+                                ...(p[label] || {}),
+                                value: e?.target ? e.target.value : e
                         }
                 }))
         }
@@ -341,7 +346,7 @@ export default function Chat(props) {
                 const getOptions = (label) => {
                         switch (label) {
                                 case "Main Outcome": {
-                                        const options = [...outcomes, ...newOutcomes].map(o => ({ value: o.id, label: o.name }));
+                                        const options = outcomes.map(o => ({ value: o.id, label: o.name }));
                                         return options.sort((a, b) => {
                                                 const indexA = OUTCOME_ORDER.indexOf(a.label);
                                                 const indexB = OUTCOME_ORDER.indexOf(b.label);
@@ -352,9 +357,9 @@ export default function Chat(props) {
                                         });
                                 }
                                 case "Targeted Donor":
-                                        return [...donors, ...newDonors].map(d => ({ value: d.id, label: d.name })).sort((a, b) => a.label.localeCompare(b.label));
+                                        return donors.map(d => ({ value: d.id, label: d.name })).sort((a, b) => a.label.localeCompare(b.label));
                                 case "Country / Location(s)":
-                                        return [...filteredFieldContexts, ...newFieldContexts].map(fc => ({ value: fc.id, label: fc.name })).sort((a, b) => a.label.localeCompare(b.label));
+                                        return filteredFieldContexts.map(fc => ({ value: fc.id, label: fc.name })).sort((a, b) => a.label.localeCompare(b.label));
                                 case "Geographical Scope":
                                         return geographicCoverages.map(gc => ({ value: gc, label: gc })).sort((a, b) => a.label.localeCompare(b.label));
                                 case "Duration": {
@@ -386,7 +391,7 @@ export default function Chat(props) {
 
                 const isCreatableSelect = ["Duration", "Budget Range"].includes(label);
                 const isSelect = ["Targeted Donor", "Country / Location(s)"].includes(label);
-                const isMultiSelect = label === "Main Outcome" || (label === "Targeted Donor" && formData["multiple donors"].value) || (label === "Country / Location(s)" && formData["multiple countries"].value);
+                const isMultiSelect = label === "Main Outcome" || (label === "Targeted Donor" && formData["multiple donors"]?.value) || (label === "Country / Location(s)" && formData["multiple countries"]?.value);
                 const isNormalSelect = label === "Geographical Scope";
 
                 return (
@@ -483,6 +488,8 @@ export default function Chat(props) {
         const [proposal, setProposal] = useState({})
         const [generateLoading, setGenerateLoading] = useState(false)
         const [generateLabel, setGenerateLabel] = useState("Generate")
+        const [followUpInstruction, setFollowUpInstruction] = useState("")
+        const [showFollowUpModal, setShowFollowUpModal] = useState(false)
         const isGenerating = useRef(false);
 
         useEffect(() => {
@@ -551,15 +558,29 @@ export default function Chat(props) {
                                                 });
                                                 setProposal(sectionState);
                                         }
-                                        if (data.status !== 'generating_sections') {
+                                        // Check if generation is truly complete: status is not 'generating_sections' AND we have all expected sections
+                                        // Also handle edge case where expected_sections is 0 (template not loaded yet)
+                                        const generatedCount = Object.keys(data.generated_sections || {}).length;
+                                        const hasAllSections = data.expected_sections > 0 ?
+                                                generatedCount >= data.expected_sections :
+                                                generatedCount > 0;
+                                        const isFailed = data.status === 'failed';
+
+                                        if ((data.status !== 'generating_sections' && hasAllSections) || isFailed) {
                                                 setGenerateLoading(false);
-                                                setGenerateLabel("Regenerate");
                                                 setGenerationProgress(100);
-                                                setGenerationMessage("Generation completed!");
-                                                setNotif({ open: true, message: 'Proposal generation completed!', severity: 'success' });
+                                                setGenerationMessage(isFailed ? "Generation failed!" : "Generation completed!");
+                                                setNotif({ open: true, message: isFailed ? 'Proposal generation failed!' : 'Proposal generation completed!', severity: isFailed ? 'error' : 'success' });
                                                 pollingActive = false;
                                                 clearInterval(pollInterval);
                                                 setTimeout(() => setIsProgressModalOpen(false), 1000); // Small delay to show 100%
+
+                                                // Show follow-up instruction modal for successful generation
+                                                if (!isFailed && hasAllSections) {
+                                                        setTimeout(() => {
+                                                                setShowFollowUpModal(true);
+                                                        }, 1500); // Show modal after progress modal closes
+                                                }
                                         }
                                 } else throw new Error('Non-200 response');
                         } catch (err) {
@@ -637,6 +658,15 @@ export default function Chat(props) {
                 }
         }
 
+        async function handleRegenerateWithFollowUp() {
+                // Regenerate entire proposal with follow-up instruction
+                if (!followUpInstruction) return;
+
+                setShowFollowUpModal(false);
+                // Trigger the main generate/regenerate flow
+                await handleGenerateClick();
+        }
+
         async function handleGenerateClick() {
                 const missing = getMissingFields();
                 if (missing.length > 0) {
@@ -644,6 +674,62 @@ export default function Chat(props) {
                         setIsValidationModalOpen(true);
                         return;
                 }
+
+                // Check if this is a regeneration (proposal already exists)
+                const existingProposalId = sessionStorage.getItem("proposal_id");
+                const existingSessionId = sessionStorage.getItem("session_id");
+
+                if (existingProposalId && existingSessionId && followUpInstruction) {
+                        // This is a regeneration with follow-up instruction
+                        setGenerateLoading(true);
+                        setFormExpanded(false);
+
+                        try {
+                                // Get all current sections to pass as context
+                                const currentSections = proposal;
+
+                                // Call backend to regenerate with follow-up instruction
+                                const response = await fetch(`${API_BASE_URL}/regenerate-full-proposal/${existingSessionId}`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                                proposal_id: existingProposalId,
+                                                follow_up_instruction: followUpInstruction,
+                                                current_sections: currentSections,
+                                                form_data: Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])),
+                                                project_description: userPrompt
+                                        }),
+                                        credentials: 'include'
+                                });
+
+                                if (!response.ok) {
+                                        throw new Error('Failed to start proposal regeneration.');
+                                }
+
+                                const data = await response.json();
+                                // Update session with new IDs if needed
+                                if (data.session_id) {
+                                        sessionStorage.setItem("session_id", data.session_id);
+                                }
+
+                                // Reset state for polling
+                                setGenerationProgress(0);
+                                setGenerationMessage("Starting proposal regeneration...");
+                                setIsProgressModalOpen(true);
+
+                                // Keep generateLoading true so polling continues
+                                // The polling will be handled by the existing useEffect
+                                return;
+
+                        } catch (error) {
+                                console.error("Error during proposal regeneration:", error);
+                                setGenerateLoading(false);
+                                setNotif({ open: true, message: 'Failed to start proposal regeneration. Try again.', severity: 'error' });
+                                return;
+                        }
+                }
+
+                // Initial generation flow
                 setGenerateLoading(true);
                 setFormExpanded(false);
                 sessionStorage.removeItem("proposal_id"); // Clear old ID to prevent polling it
@@ -747,28 +833,44 @@ export default function Chat(props) {
         }
 
         const [isCopied, setIsCopied] = useState(false)
-        async function handleCopyClick(section, content) {
-                setSelectedSection(section)
-                setIsCopied(true)
-                // await navigator.clipboard.writeText(content)
+        const copyResetTimerRef = useRef(null)
 
-                const timeoutId = setTimeout(() => {
-                        setIsCopied(false)
-                }, [3000])
+        async function handleCopyClick(sectionName, content) {
+                try {
+                        await navigator.clipboard.writeText(content)
+                        setIsCopied(true)
 
-                return () => clearTimeout(timeoutId)
+                        if (copyResetTimerRef.current) {
+                                clearTimeout(copyResetTimerRef.current)
+                        }
+
+                        copyResetTimerRef.current = setTimeout(() => {
+                                setIsCopied(false)
+                        }, 3000)
+                } catch (error) {
+                        console.error('Failed to copy section content:', error)
+                        setNotif({ open: true, message: 'Unable to copy the section content.', severity: 'error' })
+                }
         }
+
+        useEffect(() => {
+                return () => {
+                        if (copyResetTimerRef.current) {
+                                clearTimeout(copyResetTimerRef.current)
+                        }
+                }
+        }, [])
 
         const dialogRef = useRef()
         const [regenerateInput, setRegenerateInput] = useState("")
-        const handleRegenerateIconClick = sectionIndex => {
-                setSelectedSection(sectionIndex)
+        const handleRegenerateIconClick = sectionName => {
+                setSelectedSectionName(sectionName)
                 dialogRef.current.showModal()
         }
         const [regenerateSectionLoading, setRegenerateSectionLoading] = useState(false)
         async function handleRegenerateButtonClick(ip = regenerateInput) {
                 setRegenerateSectionLoading(true)
-                const sectionName = proposalTemplate ? proposalTemplate.sections[selectedSection].section_name : Object.keys(proposal)[selectedSection];
+                const sectionName = selectedSectionName;
 
                 const response = await fetch(`${API_BASE_URL}/regenerate_section/${sessionStorage.getItem("proposal_id")}`, {
                         method: 'POST',
@@ -810,8 +912,7 @@ export default function Chat(props) {
                         setIsEdit(false)
         }
 
-        function handleExpanderToggle(section) {
-                const sectionName = proposalTemplate ? proposalTemplate.sections[section].section_name : Object.keys(proposal)[section];
+        function handleExpanderToggle(sectionName) {
                 setProposal(p => {
                         return ({
                                 ...p,
@@ -826,17 +927,16 @@ export default function Chat(props) {
         const [isEdit, setIsEdit] = useState(false)
         const [editorContent, setEditorContent] = useState("")
         const [proposalTemplate, setProposalTemplate] = useState(null)
-        async function handleEditClick(section) {
+        const [selectedSectionName, setSelectedSectionName] = useState(null)
+        async function handleEditClick(sectionName) {
                 if (!isEdit) {
                         // Entering edit mode
-                        setSelectedSection(section);
+                        setSelectedSectionName(sectionName);
                         setIsEdit(true);
-                        setEditorContent(Object.values(proposal)[section].content);
+                        setEditorContent(proposal[sectionName]?.content || "");
                 }
                 else {
                         // Saving the edit
-                        const sectionName = proposalTemplate ? proposalTemplate.sections[selectedSection].section_name : Object.keys(proposal)[selectedSection];
-
                         try {
                                 const response = await fetch(`${API_BASE_URL}/update-section-content`, {
                                         method: 'POST',
@@ -868,6 +968,7 @@ export default function Chat(props) {
                         } finally {
                                 // Exit edit mode regardless of success or failure.
                                 setIsEdit(false);
+                                setSelectedSectionName(null);
                         }
                 }
         }
@@ -941,12 +1042,14 @@ export default function Chat(props) {
                                 if (profileRes.ok) {
                                         const profileData = await profileRes.json();
                                         const curUser = profileData.user;
+                                        setCurrentUser(curUser);
                                         const ownerId = data.user_id;
                                         const isOwner = curUser.id === ownerId || curUser.user_id === ownerId;
+                                        const _isAdmin = curUser.is_admin || (curUser.roles || []).some(r => r === 'admin' || (r && r.name === 'admin'));
+                                        setIsAdmin(_isAdmin);
 
                                         if (!isOwner) {
-                                                navigate(`/review/proposal/${data.proposal_id}`);
-                                                return;
+                                                setIsReviewer(true);
                                         }
                                 }
 
@@ -955,12 +1058,16 @@ export default function Chat(props) {
 
                                 setUserPrompt(data.project_description)
 
-                                setFormData(p => Object.fromEntries(Object.entries(data.form_data).map(field =>
-                                        [field[0], {
-                                                value: field[1],
-                                                mandatory: p[field[0]]?.mandatory || false
-                                        }]
-                                )))
+                                setFormData(p => {
+                                        const next = { ...p };
+                                        Object.entries(data.form_data).forEach(([key, val]) => {
+                                                next[key] = {
+                                                        ...(p[key] || { mandatory: false }),
+                                                        value: val
+                                                };
+                                        });
+                                        return next;
+                                });
 
                                 const sectionState = {};
                                 Object.entries(data.generated_sections).forEach(([key, value]) => {
@@ -985,25 +1092,361 @@ export default function Chat(props) {
                                 setContributionId(data.contribution_id || "")
                                 setSidebarOpen(true)
                                 getStatusHistory()
-                                if (data.status === 'pre_submission' || data.status === 'in_review') {
-                                        getPeerReviews()
-                                }
+                                // Always fetch peer reviews for all users
+                                getPeerReviews()
 
                                 const storedTemplate = sessionStorage.getItem("proposal_template");
                                 if (storedTemplate) {
                                         setProposalTemplate(JSON.parse(storedTemplate));
+                                }
+                        } else if (response.status === 401) {
+                                sessionStorage.setItem("session_expired", "Session expired. Please login again.")
+                                navigate("/login")
+                        } else if (response.status === 400 || response.status === 403 || response.status === 404) {
+                                // May be a reviewer: try loading via the review endpoint
+                                const profileRes2 = await fetch(`${API_BASE_URL}/profile`, { credentials: 'include' });
+                                if (profileRes2.ok) {
+                                        const profileData2 = await profileRes2.json();
+                                        const curUser2 = profileData2.user;
+                                        setCurrentUser(curUser2);
+                                        const _isAdmin2 = curUser2.is_admin || (curUser2.roles || []).some(r => r === 'admin' || (r && r.name === 'admin'));
+                                        setIsAdmin(_isAdmin2);
+                                        setIsReviewer(true);
+                                }
+                                const proposalIdFromParam = id || sessionStorage.getItem('proposal_id');
+                                if (!proposalIdFromParam) return;
+                                const reviewRes = await fetch(`${API_BASE_URL}/review-proposal/${proposalIdFromParam}`, { credentials: 'include' });
+                                if (reviewRes.ok) {
+                                        const reviewData = await reviewRes.json();
+                                        sessionStorage.setItem('proposal_id', proposalIdFromParam);
+
+                                        setUserPrompt(reviewData.project_description || '');
+
+                                        const sectionState = {};
+                                        Object.entries(reviewData.generated_sections || {}).forEach(([key, value]) => {
+                                                sectionState[key] = { content: value, open: true };
+                                        });
+                                        setProposal(sectionState);
+                                        setProposalStatus(reviewData.status);
+
+                                        const initialComments = {};
+                                        const initialStatus = {};
+                                        Object.keys(reviewData.generated_sections || {}).forEach(section => {
+                                                const existing = reviewData.draft_comments?.[section] || {};
+                                                initialComments[section] = {
+                                                        id: existing.id || null,
+                                                        review_text: existing.review_text || '',
+                                                        type_of_comment: existing.type_of_comment || 'P2',
+                                                        severity: existing.severity || 'P2',
+                                                        author_response: existing.author_response || '',
+                                                        rating: existing.rating || null
+                                                };
+                                                initialStatus[section] = existing.rating || null;
+                                        });
+                                        setReviewComments(initialComments);
+                                        setReviewStatus(initialStatus);
+                                        setSidebarOpen(true);
+
+                                        // Load template so section list renders correctly
+                                        try {
+                                                const tplRes = await fetch(`${API_BASE_URL}/templates/proposal_template_unhcr.json/sections`, { credentials: 'include' });
+                                                if (tplRes.ok) {
+                                                        const tplData = await tplRes.json();
+                                                        // tplData is { sections: [...] }
+                                                        setProposalTemplate(tplData);
+                                                } else {
+                                                        // Fallback: build template from section keys
+                                                        const syntheticSections = Object.keys(reviewData.generated_sections || {}).map(name => ({ section_name: name }));
+                                                        setProposalTemplate({ sections: syntheticSections });
+                                                }
+                                        } catch (e) {
+                                                // Fallback: build template from section keys
+                                                const syntheticSections = Object.keys(reviewData.generated_sections || {}).map(name => ({ section_name: name }));
+                                                setProposalTemplate({ sections: syntheticSections });
+                                        }
+                                } else if (reviewRes.status === 401) {
+                                        sessionStorage.setItem('session_expired', 'Session expired. Please login again.');
+                                        navigate('/login');
+                                } else {
+                                        // Final fallback: truly not found or no access
+                                        console.warn("Draft not found or no access after trying review endpoint.");
+                                        sessionStorage.removeItem("proposal_id");
+                                        sessionStorage.removeItem("session_id");
+                                }
+                        }
+                }
+        }
+
+        // ── Review handler functions ────────────────────────────────────────
+        async function handleCommentChange(section, field, value) {
+                if (field === "save") {
+                        const proposalId = id || sessionStorage.getItem('proposal_id');
+                        if (!proposalId) {
+                                console.error("No proposal ID found in params");
+                                return;
+                        }
+                        const commentData = {
+                                section_name: section,
+                                review_text: value,
+                                severity: reviewComments[section]?.severity || 'P2',
+                                type_of_comment: reviewComments[section]?.type_of_comment || 'General'
+                        };
+                        try {
+                                const res = await fetch(`${API_BASE_URL}/proposals/${proposalId}/comment`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify(commentData),
+                                        credentials: 'include'
+                                });
+                                if (res.ok) {
+                                        // Clear local draft state for this section
+                                        setReviewComments(prev => {
+                                                const next = { ...prev };
+                                                delete next[section];
+                                                return next;
+                                        });
+                                        // Reset status to show as previous feedback
+                                        handleStatusChange(section, null);
+                                        // Refresh all reviews from backend
+                                        await getPeerReviews();
+                                } else {
+                                        const error = await res.json();
+                                        console.error('Save failed:', error);
+                                        alert('Failed to save comment: ' + (error.detail || 'Unknown error'));
+                                }
+                        } catch (e) {
+                                console.error("Error saving comment", e);
+                                alert('Error connecting to server. Please try again.');
+                        }
+                        return;
+                }
+                setReviewComments(prev => {
+                        const updated = {
+                                ...prev,
+                                [section]: { ...prev[section], [field]: value }
+                        };
+                        if (field === 'review_text' || field === 'type_of_comment' || field === 'severity') {
+                                autoSaveSection(section, updated[section]);
+                        }
+                        return updated;
+                });
+        }
+
+        function handleStatusChange(section, status) {
+                setReviewStatus(prev => ({ ...prev, [section]: status }));
+                setReviewComments(prev => ({
+                        ...prev,
+                        [section]: { ...prev[section], rating: status }
+                }));
+        }
+
+        const autoSaveSection = useCallback((section, commentData) => {
+                if (autoSaveTimers.current[section]) clearTimeout(autoSaveTimers.current[section]);
+                autoSaveTimers.current[section] = setTimeout(async () => {
+                        const proposalId = sessionStorage.getItem('proposal_id');
+                        if (!proposalId) return;
+                        try {
+                                await fetch(`${API_BASE_URL}/proposals/${proposalId}/save-draft-review`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ comments: [{ section_name: section, ...commentData }] }),
+                                        credentials: 'include'
+                                });
+                        } catch (e) { void e; }
+                }, 800);
+        }, []);
+
+        async function handleDeleteComment(commentOrSection) {
+                if (!window.confirm('Remove this comment?')) return;
+                const proposalId = sessionStorage.getItem('proposal_id');
+
+                // Handle both cases: commentId or section name
+                let commentId = null;
+                let sectionName = null;
+
+                if (typeof commentOrSection === 'string' && commentOrSection.includes('-')) {
+                        // This is likely a UUID (comment ID)
+                        commentId = commentOrSection;
+                        // Find the section name for this comment ID
+                        const existing = reviews.find(r => r.id === commentId);
+                        sectionName = existing?.section_name;
+                } else {
+                        // This is a section name
+                        sectionName = commentOrSection;
+                        // Try from local draft state first
+                        commentId = reviewComments[sectionName]?.id;
+
+                        // If not there, try from reviews array
+                        if (!commentId) {
+                                const existing = reviews.find(r => r.section_name === sectionName && (r.reviewer_id === currentUser?.id || r.reviewer_id === currentUser?.user_id));
+                                commentId = existing?.id;
+                        }
+                }
+
+                if (commentId && proposalId) {
+                        try {
+                                const res = await fetch(`${API_BASE_URL}/proposals/${proposalId}/comment/${commentId}`, {
+                                        method: 'DELETE',
+                                        credentials: 'include'
+                                });
+                                if (res.ok) {
+                                        // Refresh the reviews to get the updated status
+                                        await getPeerReviews();
+                                        // Also refresh draft comments if we are in review mode
+                                        if (isReviewer) await getContent();
+
+                                        // Force re-render by updating local state
+                                        if (sectionName) {
+                                                setReviewComments(prev => {
+                                                        const next = { ...prev };
+                                                        delete next[sectionName];
+                                                        return next;
+                                                });
+                                                handleStatusChange(sectionName, null);
+                                        }
+                                }
+                        } catch (err) { console.error('Error deleting comment', err); }
+                }
+        }
+
+        const handleSaveResponse = async (section, responseText) => {
+                const proposalId = sessionStorage.getItem('proposal_id');
+                if (!proposalId) return;
+                try {
+                        const res = await fetch(`${API_BASE_URL}/proposals/${proposalId}/author-response`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ section_name: section, author_response: responseText }),
+                                credentials: 'include'
+                        });
+                        if (res.ok) getPeerReviews();
+                } catch (error) { console.error('Error saving author response:', error); }
+        };
+
+        const handleReplyToFeedback = async (feedbackId, replyText, replyStatus) => {
+                const proposalId = sessionStorage.getItem('proposal_id');
+                if (!proposalId) return;
+                try {
+                        const res = await fetch(`${API_BASE_URL}/proposals/${proposalId}/reply-to-feedback`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                        feedback_id: feedbackId,
+                                        author_response: replyText,
+                                        status: replyStatus
+                                }),
+                                credentials: 'include'
+                        });
+                        if (res.ok) getPeerReviews();
+                } catch (error) { console.error('Error replying to feedback:', error); }
+        };
+
+        async function handleSubmitReview() {
+                const proposalId = sessionStorage.getItem('proposal_id');
+                if (!proposalId) return;
+                const comments = Object.entries(reviewComments).map(([section_name, comment_data]) => ({
+                        section_name, ...comment_data
+                }));
+                const response = await fetch(`${API_BASE_URL}/proposals/${proposalId}/review`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ comments }),
+                        credentials: 'include'
+                });
+                if (response.ok) {
+                        sessionStorage.setItem('selectedDashboardTab', 'reviews');
+                        navigate('/dashboard');
+                }
+        }
+        // ───────────────────────────────────────────────────────────────────
+        // SharePoint Link State Management
+        // ───────────────────────────────────────────────────────────────────
+
+        // State for tracking SharePoint upload status
+        const [sharepointStatus, setSharepointStatus] = useState(null); // null, 'uploading', 'failed', 'uploaded'
+        const [sharepointLink, setSharepointLink] = useState(null);
+        const [sharepointError, setSharepointError] = useState(null);
+        const [isCheckingLink, setIsCheckingLink] = useState(false);
+
+        // Check for existing SharePoint link
+        async function checkSharepointLink(proposalId) {
+                if (!proposalId || proposalId === "undefined") {
+                        return null;
+                }
+
+                try {
+                        setIsCheckingLink(true);
+                        const response = await fetch(`${API_BASE_URL}/sharepoint-link-status/proposal/${proposalId}`, {
+                                method: "GET",
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: "include"
+                        });
+
+                        if (response.ok) {
+                                const data = await response.json();
+                                return data;
+                        }
+                        return null;
+                } catch (error) {
+                        console.error("Error checking SharePoint link status:", error);
+                        return null;
+                } finally {
+                        setIsCheckingLink(false);
+                }
+        }
+
+        // Retry SharePoint upload
+        async function handleRetryUpload(proposalId) {
+                if (!proposalId || proposalId === "undefined") {
+                        setNotif({ open: true, message: "No draft available. Please create or load a draft first.", severity: 'error' });
+                        return;
+                }
+
+                try {
+                        setSharepointStatus('uploading');
+                        setSharepointError(null);
+
+                        const response = await fetch(`${API_BASE_URL}/retry-sharepoint-upload/proposal/${proposalId}`, {
+                                method: "POST",
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: "include"
+                        });
+
+                        if (response.ok) {
+                                const data = await response.json();
+                                if (data.success && data.url) {
+                                        setSharepointStatus('uploaded');
+                                        setSharepointLink(data);
+                                        window.open(data.url, '_blank');
+                                        setNotif({ open: true, message: "Document opened in Word Online", severity: 'success' });
+                                } else {
+                                        throw new Error(data.message || "Failed to get SharePoint URL");
                                 }
                         }
                         else if (response.status === 401) {
                                 sessionStorage.setItem("session_expired", "Session expired. Please login again.")
                                 navigate("/login")
                         }
+                        else if (response.status === 429) {
+                                const errorData = await response.json();
+                                setSharepointStatus('failed');
+                                setSharepointError(errorData.detail || "Max retry attempts exceeded");
+                                setNotif({ open: true, message: errorData.detail || "Max retry attempts exceeded", severity: 'error' });
+                        }
+                        else {
+                                const errorData = await response.json();
+                                throw new Error(errorData.detail || `Retry failed: ${response.status} ${response.statusText}`);
+                        }
+                } catch (error) {
+                        setSharepointStatus('failed');
+                        setSharepointError(error.message);
+                        setNotif({ open: true, message: `Error: ${error.message}`, severity: 'error' });
+                        console.error("SharePoint retry error:", error);
                 }
         }
 
+        // Handle export with SharePoint caching and retry logic
         async function handleExport(format) {
-
-
                 const proposalId = sessionStorage.getItem("proposal_id");
 
                 if (!proposalId || proposalId === "undefined") {
@@ -1011,38 +1454,89 @@ export default function Chat(props) {
                         return;
                 }
 
-                const response = await fetch(`${API_BASE_URL}/generate-document/${sessionStorage.getItem("proposal_id")}?format=${format}`, {
-                        method: "GET",
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: "include"
-                })
+                // Check for existing link first
+                const linkStatus = await checkSharepointLink(proposalId);
 
-                if (response.ok) {
-                        const contentDisposition = response.headers.get('Content-Disposition');
-                        let filename = "proposal.docx"; // Default filename
-                        if (contentDisposition) {
-                                const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
-                                if (filenameMatch && filenameMatch[1]) {
-                                        filename = filenameMatch[1];
+                if (linkStatus && linkStatus.has_link) {
+                        if (linkStatus.status === 'uploaded' && !linkStatus.is_expired) {
+                                // Use cached link
+                                setSharepointStatus('uploaded');
+                                setSharepointLink(linkStatus);
+                                window.open(linkStatus.url, '_blank');
+                                setNotif({ open: true, message: "Document opened in Word Online (cached)", severity: 'success' });
+                                return;
+                        }
+                        else if (linkStatus.status === 'uploading') {
+                                setSharepointStatus('uploading');
+                                setNotif({ open: true, message: "Document is currently being uploaded to SharePoint. Please wait...", severity: 'info' });
+                                return;
+                        }
+                        else if (linkStatus.status === 'failed' && linkStatus.can_retry) {
+                                // Auto-retry
+                                setSharepointStatus('uploading');
+                                setNotif({ open: true, message: "Retrying SharePoint upload...", severity: 'info' });
+                                handleRetryUpload(proposalId);
+                                return;
+                        }
+                        else if (linkStatus.status === 'failed' && !linkStatus.can_retry) {
+                                setSharepointStatus('failed');
+                                setSharepointError(linkStatus.error_message || "Max retry attempts exceeded");
+                                setNotif({ open: true, message: linkStatus.error_message || "Max retry attempts exceeded. Please contact support.", severity: 'error' });
+                                return;
+                        }
+                }
+
+                // No existing link or needs new upload
+                try {
+                        setSharepointStatus('uploading');
+                        setSharepointError(null);
+
+                        // Call the new SharePoint upload endpoint
+                        const response = await fetch(`${API_BASE_URL}/upload-proposal-to-sharepoint/${proposalId}?format=${format}`, {
+                                method: "POST",
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: "include"
+                        });
+
+                        if (response.ok) {
+                                const data = await response.json();
+                                if (data.success && data.url) {
+                                        setSharepointStatus('uploaded');
+                                        setSharepointLink(data);
+                                        // Open the document in Word Online in a new tab
+                                        window.open(data.url, '_blank');
+                                        setNotif({ open: true, message: data.from_cache ? "Document opened in Word Online (cached)" : "Document opened in Word Online", severity: 'success' });
+                                } else {
+                                        throw new Error(data.message || "Failed to get SharePoint URL");
                                 }
                         }
-
-                        const blob = await response.blob();
-                        const link = document.createElement('a');
-                        link.href = URL.createObjectURL(blob);
-                        link.download = filename;
-                        document.body.appendChild(link);
-                        link.click();
-                        link.remove();
-
-                        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+                        else if (response.status === 401) {
+                                sessionStorage.setItem("session_expired", "Session expired. Please login again.")
+                                navigate("/login")
+                        }
+                        else if (response.status === 503) {
+                                // Service unavailable - upload failed but will retry
+                                const errorData = await response.json();
+                                setSharepointStatus('failed');
+                                setSharepointError(errorData.detail || "Upload failed");
+                                setNotif({ open: true, message: errorData.detail || "Upload failed. Will retry automatically.", severity: 'warning' });
+                        }
+                        else if (response.status === 429) {
+                                const errorData = await response.json();
+                                setSharepointStatus('failed');
+                                setSharepointError(errorData.detail || "Max retry attempts exceeded");
+                                setNotif({ open: true, message: errorData.detail || "Max retry attempts exceeded", severity: 'error' });
+                        }
+                        else {
+                                const errorData = await response.json();
+                                throw new Error(errorData.detail || `Upload failed: ${response.status} ${response.statusText}`);
+                        }
+                } catch (error) {
+                        setSharepointStatus('failed');
+                        setSharepointError(error.message);
+                        setNotif({ open: true, message: `Error: ${error.message}`, severity: 'error' });
+                        console.error("SharePoint upload error:", error);
                 }
-                else if (response.status === 401) {
-                        sessionStorage.setItem("session_expired", "Session expired. Please login again.")
-                        navigate("/login")
-                }
-                else
-                        throw new Error(`Download failed: ${response.status} ${response.statusText}`);
         }
 
         async function handleExportTables() {
@@ -1098,21 +1592,6 @@ export default function Chat(props) {
                         await getContent();
                 } else {
                         console.error("Failed to revert status");
-                }
-        }
-
-        async function handleSaveResponse(reviewId, responseText) {
-                const response = await fetch(`${API_BASE_URL}/peer-reviews/${reviewId}/response`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ author_response: responseText }),
-                        credentials: 'include'
-                });
-
-                if (response.ok) {
-                        getPeerReviews(); // Refresh reviews to show the new response
-                } else {
-                        console.error("Failed to save response");
                 }
         }
 
@@ -1198,459 +1677,567 @@ export default function Chat(props) {
                 setAssociatedKnowledgeCards(selectedCards);
         }
 
-        return <Base>
-                <div className={`Chat ${isMobile && isMobileMenuOpen ? 'mobile-menu-open' : ''}`} data-testid="chat-container">
+        return (
+                <Base>
+                        <div className={`Chat ${isMobile && isMobileMenuOpen ? 'mobile-menu-open' : ''}`} data-testid="chat-container">
+                                <Snackbar
+                                        open={notif.open}
+                                        autoHideDuration={notif.severity === "info" ? 1400 : 5000}
+                                        onClose={() => setNotif(v => ({ ...v, open: false }))}
+                                        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+                                >
+                                        <Alert severity={notif.severity} onClose={() => setNotif(v => ({ ...v, open: false }))} sx={{ width: '100%' }}>
+                                                {notif.message}
+                                        </Alert>
+                                </Snackbar>
+                                <ProgressModal
+                                        isOpen={isProgressModalOpen}
+                                        onClose={() => setIsProgressModalOpen(false)}
+                                        progress={generationProgress}
+                                        message={generationMessage}
+                                />
 
-                        <Snackbar
-                                open={notif.open}
-                                autoHideDuration={notif.severity === "info" ? 1400 : 5000}
-                                onClose={() => setNotif(v => ({ ...v, open: false }))}
-                                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-                        >
-                                <Alert severity={notif.severity} onClose={() => setNotif(v => ({ ...v, open: false }))} sx={{ width: '100%' }}>
-                                        {notif.message}
-                                </Alert>
-                        </Snackbar>
-                        <ProgressModal
-                                isOpen={isProgressModalOpen}
-                                onClose={() => setIsProgressModalOpen(false)}
-                                progress={generationProgress}
-                                message={generationMessage}
-                        />
+                                <MultiSelectModal
+                                        isOpen={isPeerReviewModalOpen}
+                                        onClose={() => setIsPeerReviewModalOpen(false)}
+                                        options={users}
+                                        selectedOptions={selectedUsers}
+                                        onSelectionChange={setSelectedUsers}
+                                        onConfirm={handleSubmitForPeerReview}
+                                        title="Select Users for Peer Review"
+                                        showDeadline={true}
+                                />
+                                <SingleSelectUserModal
+                                        isOpen={isTransferModalOpen}
+                                        onClose={() => setIsTransferModalOpen(false)}
+                                        options={transferUsers}
+                                        title="Transfer Proposal Ownership to another Focal Point"
+                                        onConfirm={confirmTransfer}
+                                />
+                                <AssociateKnowledgeModal
+                                        isOpen={isAssociateKnowledgeModalOpen}
+                                        onClose={() => setIsAssociateKnowledgeModalOpen(false)}
+                                        onConfirm={handleAssociateKnowledgeConfirm}
+                                        donorId={formData["Targeted Donor"]?.value}
+                                        outcomeId={formData["Main Outcome"]?.value}
+                                        fieldContextId={formData["Country / Location(s)"]?.value}
+                                        initialSelection={associatedKnowledgeCards}
+                                />
+                                <PdfUploadModal
+                                        isOpen={isPdfUploadModalOpen}
+                                        onClose={() => setIsPdfUploadModalOpen(false)}
+                                        onConfirm={handlePdfUpload}
+                                />
 
-                        <MultiSelectModal
-                                isOpen={isPeerReviewModalOpen}
-                                onClose={() => setIsPeerReviewModalOpen(false)}
-                                options={users}
-                                selectedOptions={selectedUsers}
-                                onSelectionChange={setSelectedUsers}
-                                onConfirm={handleSubmitForPeerReview}
-                                title="Select Users for Peer Review"
-                                showDeadline={true}
-                        />
-                        <SingleSelectUserModal
-                                isOpen={isTransferModalOpen}
-                                onClose={() => setIsTransferModalOpen(false)}
-                                options={transferUsers}
-                                title="Transfer Proposal Ownership to another Focal Point"
-                                onConfirm={confirmTransfer}
-                        />
-                        <AssociateKnowledgeModal
-                                isOpen={isAssociateKnowledgeModalOpen}
-                                onClose={() => setIsAssociateKnowledgeModalOpen(false)}
-                                onConfirm={handleAssociateKnowledgeConfirm}
-                                donorId={formData["Targeted Donor"].value}
-                                outcomeId={formData["Main Outcome"].value}
-                                fieldContextId={formData["Country / Location(s)"].value}
-                                initialSelection={associatedKnowledgeCards}
-                        />
-                        <PdfUploadModal
-                                isOpen={isPdfUploadModalOpen}
-                                onClose={() => setIsPdfUploadModalOpen(false)}
-                                onConfirm={handlePdfUpload}
-                        />
-
-                        {/* Validation Modal */}
-                        <dialog open={isValidationModalOpen} className="Chat_regenerate" style={{ height: 'auto', maxHeight: '80vh', top: '10%' }}>
-                                <header className="Chat_regenerate_header">
-                                        Data Missing
-                                        <img src={regenerateClose} alt="" onClick={() => setIsValidationModalOpen(false)} style={{ cursor: 'pointer' }} />
-                                </header>
-                                <main className="Chat_right" style={{ padding: '20px' }}>
-                                        <p style={{ marginBottom: '15px' }}>The following mandatory parameters are missing:</p>
-                                        <ul style={{ listStyleType: 'disc', paddingLeft: '20px', marginBottom: '20px', color: '#141419' }}>
-                                                {validationMissingFields.map((field, index) => (
-                                                        <li key={index} style={{ marginBottom: '5px' }}>{field}</li>
-                                                ))}
-                                        </ul>
-                                        <div className="Chat_inputArea_buttonContainer">
-                                                <CommonButton onClick={() => setIsValidationModalOpen(false)} label="Close" />
-                                        </div>
-                                </main>
-                        </dialog>
-                        {((!isMobile && sidebarOpen) || (isMobile && isMobileMenuOpen)) && <aside>
-                                <ul className='Chat_sidebar' data-testid="chat-sidebar">
-                                        <li
-                                                className={`Chat_sidebarOption ${selectedSection === -1 ? "selectedSection" : ""}`}
-                                                onClick={() => handleSidebarSectionClick(-1)}
-                                                data-testid="sidebar-option-proposal-prompt"
-                                        >
-                                                Proposal Prompt
-                                        </li>
-
-                                        {proposalTemplate ? proposalTemplate.sections.map((section, i) =>
-                                                <li
-                                                        key={i}
-                                                        className={`Chat_sidebarOption ${selectedSection === i ? "selectedSection" : ""}`}
-                                                        onClick={() => handleSidebarSectionClick(i)}
-                                                        data-testid={`sidebar-option-${toKebabCase(section.section_name)}`}
-                                                >
-                                                        {section.section_name}
-                                                </li>
-                                        ) : Object.keys(proposal).map((section, i) =>
-                                                <li
-                                                        key={i}
-                                                        className={`Chat_sidebarOption ${selectedSection === i ? "selectedSection" : ""}`}
-                                                        onClick={() => handleSidebarSectionClick(i)}
-                                                        data-testid={`sidebar-option-${toKebabCase(section)}`}
-                                                >
-                                                        {section}
-                                                </li>
-                                        )}
-                                </ul>
-                        </aside>}
-
-                        <main className="Chat_right" ref={topRef} data-testid="chat-main">
-                                <button className="Chat_menuButton" onClick={() => setIsMobileMenuOpen(p => !p)} data-testid="mobile-menu-button">
-                                        <i className="fa-solid fa-bars"></i>
-                                </button>
-                                {proposalStatus !== 'submitted' ?
-                                        <>
-                                                <div className='Dashboard_top'>
-                                                        <div className='Dashboard_label' data-testid="chat-title">
-                                                                <img className='Dashboard_label_fileIcon' src={fileIcon} alt="" />
-                                                                {titleName}
-                                                        </div>
+                                {/* Validation Modal */}
+                                <dialog open={isValidationModalOpen} className="Chat_regenerate" style={{ height: 'auto', maxHeight: '80vh', top: '10%' }}>
+                                        <header className="Chat_regenerate_header">
+                                                Data Missing
+                                                <img src={regenerateClose} alt="" onClick={() => setIsValidationModalOpen(false)} style={{ cursor: 'pointer' }} />
+                                        </header>
+                                        <main className="Chat_right" style={{ padding: '20px' }}>
+                                                <p style={{ marginBottom: '15px' }}>The following mandatory parameters are missing:</p>
+                                                <ul style={{ listStyleType: 'disc', paddingLeft: '20px', marginBottom: '20px', color: '#141419' }}>
+                                                        {validationMissingFields.map((field, index) => (
+                                                                <li key={index} style={{ marginBottom: '5px' }}>{field}</li>
+                                                        ))}
+                                                </ul>
+                                                <div className="Chat_inputArea_buttonContainer">
+                                                        <CommonButton onClick={() => setIsValidationModalOpen(false)} label="Close" />
                                                 </div>
+                                        </main>
+                                </dialog>
 
-                                                <div className="Chat_inputArea">
-                                                        <div className="Chat_docTypeSwitcher" data-testid="doc-type-switcher">
-                                                                <button
-                                                                        type="button"
-                                                                        className={`Chat_docTypeButton ${documentType === 'proposal' ? 'active' : ''}`}
-                                                                        onClick={() => proposalStatus === 'draft' && setDocumentType('proposal')}
-                                                                        disabled={proposalStatus !== 'draft'}
-                                                                        data-testid="doc-type-proposal-button"
-                                                                >
-                                                                        Proposal
-                                                                </button>
-                                                                <button
-                                                                        type="button"
-                                                                        className={`Chat_docTypeButton ${documentType === 'concept note' ? 'active' : ''}`}
-                                                                        onClick={() => proposalStatus === 'draft' && setDocumentType('concept note')}
-                                                                        disabled={proposalStatus !== 'draft'}
-                                                                        data-testid="doc-type-concept-note-button"
-                                                                >
-                                                                        Concept Note
-                                                                </button>
-                                                        </div>
-                                                        {renderFormField("Project Draft Short name", proposalStatus !== 'draft')}
-                                                        <textarea id="main-prompt" name="main-prompt" value={userPrompt} onChange={e => setUserPrompt(e.target.value)} placeholder='Provide as much details as possible on your initial project idea!' className='Chat_inputArea_prompt' disabled={proposalStatus !== 'draft'} data-testid="main-prompt" />
-
-                                                        <span
-                                                                onClick={() => proposalStatus === 'draft' && setFormExpanded(p => !p)}
-                                                                className={`Chat_inputArea_additionalDetails ${form_expanded && "expanded"} ${proposalStatus !== 'draft' ? 'disabled' : ''}`}
-                                                                data-testid="specify-parameters-expander"
-                                                        >
-                                                                Specify Parameters
-                                                                <img src={arrow} alt="Arrow" />
-                                                        </span>
-
-                                                        {form_expanded ?
-                                                                <form className='Chat_form' data-testid="chat-form">
-                                                                        <div className='Chat_form_group'>
-                                                                                <div className="tooltip-container">
-                                                                                        <h3 className='Chat_form_group_title'>Identify Potential Interventions</h3>
-                                                                                        <span className="tooltip-text">surface Relevant Policies, Strategies and past Evaluation Recommendations</span>
-                                                                                </div>
-                                                                                {renderFormField("Main Outcome", proposalStatus !== 'draft')}
-                                                                                {renderFormField("Beneficiaries Profile", proposalStatus !== 'draft')}
-                                                                                {renderFormField("Potential Implementing Partner", proposalStatus !== 'draft')}
-                                                                        </div>
-                                                                        <div className='Chat_form_group'>
-                                                                                <div className="tooltip-container">
-                                                                                        <h3 className='Chat_form_group_title'>Define Field Context</h3>
-                                                                                        <span className="tooltip-text">surface Situation Analysis and Needs Assessment</span>
-                                                                                </div>
-                                                                                {renderFormField("Geographical Scope", proposalStatus !== 'draft')}
-                                                                                <div className="Chat_form_inputContainer" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
-                                                                                        <input
-                                                                                                type="checkbox"
-                                                                                                id="multiple-countries"
-                                                                                                checked={formData["multiple countries"].value}
-                                                                                                onChange={e => {
-                                                                                                        const isChecked = e.target.checked;
-                                                                                                        setFormData(prev => ({
-                                                                                                                ...prev,
-                                                                                                                "multiple countries": { ...prev["multiple countries"], value: isChecked },
-                                                                                                                "Country / Location(s)": { ...prev["Country / Location(s)"], value: isChecked ? [] : "" }
-                                                                                                        }));
-                                                                                                }}
-                                                                                                disabled={proposalStatus !== 'draft'}
-                                                                                        />
-                                                                                        <label htmlFor="multiple-countries" className="Chat_form_inputLabel" style={{ marginBottom: 0 }}>Multiple Countries</label>
-                                                                                </div>
-                                                                                {renderFormField("Country / Location(s)", proposalStatus !== 'draft')}
-                                                                        </div>
-                                                                        <div className='Chat_form_group'>
-                                                                                <div className="tooltip-container">
-                                                                                        <h3 className='Chat_form_group_title'>Tailor Funding Request</h3>
-                                                                                        <span className="tooltip-text">surface Donor profile and apply Formal Requirement for Submission</span>
-                                                                                </div>
-                                                                                {renderFormField("Budget Range", proposalStatus !== 'draft')}
-                                                                                {renderFormField("Duration", proposalStatus !== 'draft')}
-                                                                                <div className="Chat_form_inputContainer" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
-                                                                                        <input
-                                                                                                type="checkbox"
-                                                                                                id="multiple-donors"
-                                                                                                checked={formData["multiple donors"].value}
-                                                                                                onChange={e => {
-                                                                                                        const isChecked = e.target.checked;
-                                                                                                        setFormData(prev => ({
-                                                                                                                ...prev,
-                                                                                                                "multiple donors": { ...prev["multiple donors"], value: isChecked },
-                                                                                                                "Targeted Donor": { ...prev["Targeted Donor"], value: isChecked ? [] : "" }
-                                                                                                        }));
-                                                                                                }}
-                                                                                                disabled={proposalStatus !== 'draft'}
-                                                                                        />
-                                                                                        <label htmlFor="multiple-donors" className="Chat_form_inputLabel" style={{ marginBottom: 0 }}>Multiple Donors</label>
-                                                                                </div>
-                                                                                {renderFormField("Targeted Donor", proposalStatus !== 'draft')}
-                                                                        </div>
-                                                                </form> : ""
-                                                        }
-
-                                                        <div className="Chat_inputArea_buttonContainer">
-                                                                <div style={{ position: 'relative' }}>
-                                                                        <CommonButton
-                                                                                onClick={() => {
-                                                                                        const missing = getMissingFields();
-                                                                                        if (missing.length > 0) {
-                                                                                                setValidationMissingFields(missing);
-                                                                                                setIsValidationModalOpen(true);
-                                                                                        } else {
-                                                                                                setIsAssociateKnowledgeModalOpen(true);
-                                                                                        }
-                                                                                }}
-                                                                                label="Manage Knowledge"
-                                                                                disabled={proposalStatus !== 'draft' || !buttonEnable}
-                                                                                className={!buttonEnable ? "inactive" : ""}
-                                                                                icon={knowIcon}
-                                                                                data-testid="manage-knowledge-button"
-                                                                        />
-                                                                        {associatedKnowledgeCards.length > 0 && (
-                                                                                <div className="associated-knowledge-display" data-testid="associated-knowledge-cards">
-                                                                                        <h4>Associated Knowledge Cards:</h4>
-                                                                                        <ul>
-                                                                                                {associatedKnowledgeCards.map(card => {
-                                                                                                        const title = [
-                                                                                                                card.title,
-                                                                                                                card.donor_name,
-                                                                                                                card.outcome_name,
-                                                                                                                card.field_context_name,
-                                                                                                        ].filter(Boolean).join(' - ');
-                                                                                                        return (
-                                                                                                                <li key={card.id}>
-                                                                                                                        <a href={`/knowledge-card/${card.id}`} target="_blank" rel="noopener noreferrer">
-                                                                                                                                {title}
-                                                                                                                        </a>
-                                                                                                                </li>
-                                                                                                        );
-                                                                                                })}
-                                                                                        </ul>
-                                                                                </div>
-                                                                        )}
-                                                                </div>
-
-                                                                <div style={{ marginLeft: 'auto' }}>
-                                                                        <CommonButton
-                                                                                onClick={handleGenerateClick}
-                                                                                icon={generateIcon}
-                                                                                label={generateLabel}
-                                                                                loading={generateLoading}
-                                                                                loadingLabel={generateLabel === "Generate" ? "Generating (~ 2 mins of patience...) " : "Regenerating (~ 2 mins of patience...)"}
-                                                                                disabled={proposalStatus !== 'draft' || !buttonEnable}
-                                                                                className={!buttonEnable ? "inactive" : ""}
-                                                                                data-testid="generate-button"
-                                                                        />
-                                                                </div>
-                                                        </div>
-                                                </div>
-                                        </>
-                                        :
-                                        ""
-                                }
-
-                                {sidebarOpen ? <>
-                                        <div className='Dashboard_top'>
-                                                <div className='Dashboard_label'>
-                                                        <img className='Dashboard_label_fileIcon' src={resultsIcon} alt="" />
-                                                        Results
-                                                </div>
-
-                                                {Object.keys(proposal).length > 0 ? <div className='Chat_exportButtons'>
-                                                        <button type="button" onClick={() => handleExport("docx")} data-testid="export-word-button">
-                                                                <img src={word_icon} alt="" />
-                                                                Download Document
-                                                        </button>
-
-                                                        <button type="button" onClick={() => handleExportTables()} data-testid="export-excel-button">
-                                                                <img src={excel_icon} alt="" />
-                                                                Download Tables
-                                                        </button>
-                                                        <button type="button" onClick={() => setIsTransferModalOpen(true)} data-testid="transfer-ownership-button" style={{ marginLeft: '10px', background: '#f5f5f5', color: '#333' }}>
-                                                                Transfer Ownership
-                                                        </button>
-                                                        <div className="Chat_workflow_status_container">
-                                                                <div className="workflow-stage-box">
-                                                                        <span className="workflow-stage-label">Workflow Stage</span>
-                                                                        <div className="workflow-badges">
-                                                                                {['draft', 'in_review', 'pre_submission', 'submitted'].map(status => {
-                                                                                        const statusDetails = {
-                                                                                                draft: { text: 'Drafting', className: 'status-draft', message: "Initial drafting stage - Author + AI" },
-                                                                                                in_review: { text: 'Peer Review', className: 'status-review', message: "Wait while proposal sent for quality review to other users" },
-                                                                                                pre_submission: { text: 'Pre-Submission', className: 'status-submission', message: "Edit to address the comments from all your reviewers" },
-                                                                                                submitted: { text: 'Submitted', className: 'status-submitted', message: "Non editable Record of Initial version as submitted to donor" }
-                                                                                        };
-                                                                                        const isActive = proposalStatus === status;
-                                                                                        const isClickable = (proposalStatus === 'draft' && (status === 'in_review' || status === 'submitted')) ||
-                                                                                                (proposalStatus === 'in_review' && (status === 'pre_submission' || status === 'draft')) ||
-                                                                                                (proposalStatus === 'pre_submission' && status === 'submitted');
-
-                                                                                        return (
-                                                                                                <div key={status} className="status-badge-container">
-                                                                                                        <button
-                                                                                                                type="button"
-                                                                                                                title={statusDetails[status].message}
-                                                                                                                className={`status-badge ${statusDetails[status].className} ${isActive ? 'active' : 'inactive'}`}
-                                                                                                                onClick={() => {
-                                                                                                                        if (status === 'in_review' && proposalStatus === 'draft') setIsPeerReviewModalOpen(true);
-                                                                                                                        if (status === 'draft' && proposalStatus === 'in_review') handleSetStatus('draft');
-                                                                                                                        if (status === 'submitted' && (proposalStatus === 'pre_submission' || proposalStatus === 'draft')) handleSubmit();
-                                                                                                                }}
-                                                                                                                disabled={!isClickable && !isActive}
-                                                                                                                data-testid={`workflow-status-badge-${status}`}
-                                                                                                        >
-                                                                                                                {statusDetails[status].text}
-                                                                                                        </button>
-                                                                                                        {statusHistory.includes(status) && !isActive && (
-                                                                                                                <button className="revert-btn" onClick={() => handleRevert(status)} data-testid={`revert-button-${status}`}>
-                                                                                                                        Revert
-                                                                                                                </button>
-                                                                                                        )}
-                                                                                                </div>
-                                                                                        );
-                                                                                })}
-                                                                        </div>
-                                                                        {proposalStatus === 'pre_submission' && (
-                                                                                <button className="revert-btn" onClick={() => handleRevert('draft')} data-testid="revert-to-draft-button">
-                                                                                        Revert to Draft
-                                                                                </button>
-                                                                        )}
-                                                                </div>
-                                                        </div>
-                                                </div> : ""}
-                                        </div>
-
-                                        {proposalStatus === 'submitted' && (
-                                                <div className="contribution-id-container">
-                                                        <label htmlFor="contribution-id">Contribution ID:</label>
-                                                        <p>Only submitted proposal with a confirmed ContributionID are counted as approved</p>
-                                                        <input
-                                                                type="text"
-                                                                id="contribution-id"
-                                                                value={contributionId}
-                                                                onChange={(e) => setContributionId(e.target.value)}
-                                                                data-testid="contribution-id-input"
+                                {/* Follow-up Instruction Modal - Shown after initial generation */}
+                                <dialog open={showFollowUpModal} className="Chat_regenerate" style={{ height: 'auto', maxHeight: '80vh', top: '10%', width: '60vw', maxWidth: '800px' }} data-testid="followup-modal">
+                                        <header className="Chat_regenerate_header">
+                                                Provide Follow-up Instructions
+                                                <img src={regenerateClose} alt="" onClick={() => setShowFollowUpModal(false)} style={{ cursor: 'pointer' }} />
+                                        </header>
+                                        <main className="Chat_right" style={{ padding: '20px' }}>
+                                                <p style={{ marginBottom: '15px', color: '#666' }}>
+                                                        The initial proposal has been generated. Please provide any follow-up instructions or refinements you'd like to make.
+                                                        The AI will use the existing content as context and apply your instructions to improve it.
+                                                </p>
+                                                <textarea
+                                                        id="followup-instruction"
+                                                        name="followup-instruction"
+                                                        value={followUpInstruction}
+                                                        onChange={e => setFollowUpInstruction(e.target.value)}
+                                                        className='Chat_inputArea_prompt'
+                                                        placeholder="e.g., 'Make the budget section more detailed', 'Focus more on gender equality', 'Revise the timeline to be more realistic'..."
+                                                        style={{ minHeight: '100px', marginBottom: '20px' }}
+                                                        data-testid="followup-instruction-input"
+                                                />
+                                                <div className="Chat_inputArea_buttonContainer" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                                                        <CommonButton onClick={() => {
+                                                                setShowFollowUpModal(false);
+                                                                setGenerateLabel("Regenerate");
+                                                        }} label="Skip" data-testid="followup-skip-button" />
+                                                        <CommonButton
+                                                                onClick={() => {
+                                                                        setShowFollowUpModal(false);
+                                                                        setGenerateLabel("Regenerate");
+                                                                }}
+                                                                label="Save for Later"
+                                                                data-testid="followup-save-button"
                                                         />
-                                                        <CommonButton onClick={handleSaveContributionId} label="Save ID" data-testid="save-contribution-id-button" />
+                                                        <CommonButton
+                                                                icon={generateIcon}
+                                                                onClick={() => handleRegenerateWithFollowUp()}
+                                                                label="Regenerate Now"
+                                                                disabled={!followUpInstruction}
+                                                                data-testid="followup-regenerate-button"
+                                                        />
                                                 </div>
-                                        )}
+                                        </main>
+                                </dialog>
 
-                                        <div ref={proposalRef} className="Chat_proposalContainer" data-testid="proposal-container">
-                                                {(proposalTemplate ? proposalTemplate.sections.map(s => s.section_name) : Object.keys(proposal)).map((sectionName, i) => {
-                                                        const sectionObj = proposal[sectionName];
-                                                        const sectionReviews = reviews.filter(r => r.section_name === sectionName);
+                                {((!isMobile && sidebarOpen) || (isMobile && isMobileMenuOpen)) && (
+                                        <aside>
+                                                <ul className='Chat_sidebar' data-testid="chat-sidebar">
+                                                        <li
+                                                                className={`Chat_sidebarOption ${selectedSection === -1 ? "selectedSection" : ""}`}
+                                                                onClick={() => handleSidebarSectionClick(-1)}
+                                                                data-testid="sidebar-option-proposal-prompt"
+                                                        >
+                                                                Proposal Prompt
+                                                        </li>
 
-                                                        if (!sectionObj) return null;
-                                                        const kebabSectionName = toKebabCase(sectionName);
+                                                        {proposalTemplate ? proposalTemplate.sections.map((section, i) => (
+                                                                <li
+                                                                        key={i}
+                                                                        className={`Chat_sidebarOption ${selectedSection === i ? "selectedSection" : ""}`}
+                                                                        onClick={() => handleSidebarSectionClick(i)}
+                                                                        data-testid={`sidebar-option-${toKebabCase(section.section_name)}`}
+                                                                >
+                                                                        {section.section_name}
+                                                                </li>
+                                                        )) : Object.keys(proposal).map((section, i) => (
+                                                                <li
+                                                                        key={i}
+                                                                        className={`Chat_sidebarOption ${selectedSection === i ? "selectedSection" : ""}`}
+                                                                        onClick={() => handleSidebarSectionClick(i)}
+                                                                        data-testid={`sidebar-option-${toKebabCase(section)}`}
+                                                                >
+                                                                        {section}
+                                                                </li>
+                                                        ))}
+                                                </ul>
+                                        </aside>
+                                )}
 
-                                                        return (
-                                                                <div key={i} className="Chat_proposalSection" data-testid={`proposal-section-${kebabSectionName}`}>
-                                                                        <div className="Chat_sectionHeader" data-testid={`section-header-${kebabSectionName}`}>
-                                                                                <div className="Chat_sectionTitle" data-testid={`section-title-${kebabSectionName}`}>{sectionName}</div>
+                                <main className="Chat_right" ref={topRef} data-testid="chat-main">
+                                        <button className="Chat_menuButton" onClick={() => setIsMobileMenuOpen(p => !p)} data-testid="mobile-menu-button">
+                                                <i className="fa-solid fa-bars"></i>
+                                        </button>
 
-                                                                                {!generateLoading && sectionObj.content && sectionObj.open && proposalStatus !== 'submitted' ? <div className="Chat_sectionOptions" data-testid={`section-options-${kebabSectionName}`}>
-                                                                                        {!isEdit || (selectedSection === i && isEdit) ? <button type="button" onClick={() => handleEditClick(i)} style={(selectedSection === i && isEdit && regenerateSectionLoading) ? { pointerEvents: "none" } : {}} aria-label={`edit-section-${i}`} disabled={proposalStatus === 'in_review'} data-testid={`edit-save-button-${kebabSectionName}`}>
-                                                                                                <img src={(selectedSection === i && isEdit) ? save : edit} alt="" />
-                                                                                                <span>{(selectedSection === i && isEdit) ? "Save" : "Edit"}</span>
-                                                                                        </button> : ""}
+                                        {proposalStatus !== 'submitted' ? (
+                                                <>
+                                                        <div className='Dashboard_top'>
+                                                                <div className='Dashboard_label' data-testid="chat-title">
+                                                                        <img className='Dashboard_label_fileIcon' src={fileIcon} alt="" />
+                                                                        {titleName}
+                                                                </div>
+                                                        </div>
 
-                                                                                        {selectedSection === i && isEdit ? <button type="button" onClick={() => setIsEdit(false)} data-testid={`cancel-edit-button-${kebabSectionName}`}>
-                                                                                                <img src={cancel} alt="" />
-                                                                                                <span>Cancel</span>
-                                                                                        </button> : ""}
+                                                        <div className="Chat_inputArea">
+                                                                <div className="Chat_docTypeSwitcher" data-testid="doc-type-switcher">
+                                                                        <button
+                                                                                type="button"
+                                                                                className={`Chat_docTypeButton ${documentType === 'proposal' ? 'active' : ''}`}
+                                                                                onClick={() => proposalStatus === 'draft' && setDocumentType('proposal')}
+                                                                                disabled={proposalStatus !== 'draft'}
+                                                                                data-testid="doc-type-proposal-button"
+                                                                        >
+                                                                                Proposal
+                                                                        </button>
+                                                                        <button
+                                                                                type="button"
+                                                                                className={`Chat_docTypeButton ${documentType === 'concept note' ? 'active' : ''}`}
+                                                                                onClick={() => proposalStatus === 'draft' && setDocumentType('concept note')}
+                                                                                disabled={proposalStatus !== 'draft'}
+                                                                                data-testid="doc-type-concept-note-button"
+                                                                        >
+                                                                                Concept Note
+                                                                        </button>
+                                                                </div>
 
-                                                                                        {!isEdit ?
-                                                                                                <>
-                                                                                                        <button type="button" onClick={() => handleCopyClick(i, sectionObj.content)} data-testid={`copy-button-${kebabSectionName}`}>
-                                                                                                                <img src={(selectedSection === i && isCopied) ? tick : copy} alt="" />
-                                                                                                                <span>{(selectedSection === i && isCopied) ? "Copied" : "Copy"}</span>
-                                                                                                        </button>
+                                                                {renderFormField("Project Draft Short name", proposalStatus !== 'draft')}
 
-                                                                                                        <button type="button" className='Chat_sectionOptions_regenerate' onClick={() => handleRegenerateIconClick(i)} disabled={proposalStatus !== 'draft'} data-testid={`regenerate-button-${kebabSectionName}`} >
-                                                                                                                <img src={regenerate} alt="" />
-                                                                                                                <span>Regenerate</span>
-                                                                                                        </button>
-                                                                                                </>
-                                                                                                : ""}
-                                                                                </div> : ""}
+                                                                <textarea
+                                                                        id="main-prompt"
+                                                                        name="main-prompt"
+                                                                        value={userPrompt}
+                                                                        onChange={e => setUserPrompt(e.target.value)}
+                                                                        placeholder='Provide as much details as possible on your initial project idea!'
+                                                                        className='Chat_inputArea_prompt'
+                                                                        disabled={proposalStatus !== 'draft'}
+                                                                        data-testid="main-prompt"
+                                                                />
 
-                                                                                {sectionObj.content && !(isEdit && selectedSection === i) ? <div className={`Chat_expanderArrow ${sectionObj.open ? "" : "closed"}`} onClick={() => handleExpanderToggle(i)} data-testid={`section-expander-${kebabSectionName}`}>
-                                                                                        <img src={arrow} alt="" />
-                                                                                </div> : ""}
-                                                                        </div>
+                                                                <span
+                                                                        onClick={() => proposalStatus === 'draft' && setFormExpanded(p => !p)}
+                                                                        className={`Chat_inputArea_additionalDetails ${form_expanded && "expanded"} ${proposalStatus !== 'draft' ? 'disabled' : ''}`}
+                                                                        data-testid="specify-parameters-expander"
+                                                                >
+                                                                        Specify Parameters
+                                                                        <img src={arrow} alt="Arrow" />
+                                                                </span>
 
-                                                                        {(sectionObj.open || !sectionObj.content) ? <div className='Chat_sectionContent' data-testid={`section-content-${kebabSectionName}`}>
-                                                                                {sectionObj.content ?
-                                                                                        (selectedSection === i && isEdit) ?
-                                                                                                <textarea value={editorContent} onChange={e => setEditorContent(e.target.value)} aria-label={`editor for ${sectionName}`} data-testid={`section-editor-${kebabSectionName}`} />
-                                                                                                :
-                                                                                                <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>{sectionObj.content}</Markdown>
-                                                                                        :
-                                                                                        <div className='Chat_sectionContent_loading'>
-                                                                                                <span className='submitButtonSpinner' />
-                                                                                                <span className='Chat_sectionContent_loading'>Loading</span>
+                                                                {form_expanded && (
+                                                                        <form className='Chat_form' data-testid="chat-form">
+                                                                                <div className='Chat_form_group'>
+                                                                                        <div className="tooltip-container">
+                                                                                                <h3 className='Chat_form_group_title'>Identify Potential Interventions</h3>
+                                                                                                <span className="tooltip-text">surface Relevant Policies, Strategies and past Evaluation Recommendations</span>
                                                                                         </div>
-                                                                                }
-                                                                        </div> : ""}
-
-                                                                        {(proposalStatus === 'pre_submission' || proposalStatus === 'submission') && reviews.length > 0 && (
-                                                                                <div className="reviews-container" data-testid={`reviews-container-${kebabSectionName}`}>
-                                                                                        <h4>Peer Reviews</h4>
-                                                                                        {reviews.filter(r => r.section_name === sectionName).map(review => (
-                                                                                                <Review
-                                                                                                        key={review.id}
-                                                                                                        review={review}
-                                                                                                        onSaveResponse={handleSaveResponse}
+                                                                                        {renderFormField("Main Outcome", proposalStatus !== 'draft')}
+                                                                                        {renderFormField("Beneficiaries Profile", proposalStatus !== 'draft')}
+                                                                                        {renderFormField("Potential Implementing Partner", proposalStatus !== 'draft')}
+                                                                                </div>
+                                                                                <div className='Chat_form_group'>
+                                                                                        <div className="tooltip-container">
+                                                                                                <h3 className='Chat_form_group_title'>Define Field Context</h3>
+                                                                                                <span className="tooltip-text">surface Situation Analysis and Needs Assessment</span>
+                                                                                        </div>
+                                                                                        {renderFormField("Geographical Scope", proposalStatus !== 'draft')}
+                                                                                        <div className="Chat_form_inputContainer" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
+                                                                                                <input
+                                                                                                        type="checkbox"
+                                                                                                        id="multiple-countries"
+                                                                                                        checked={formData["multiple countries"]?.value || false}
+                                                                                                        onChange={e => {
+                                                                                                                const isChecked = e.target.checked;
+                                                                                                                setFormData(prev => ({
+                                                                                                                        ...prev,
+                                                                                                                        "multiple countries": { ...prev["multiple countries"], value: isChecked },
+                                                                                                                        "Country / Location(s)": { ...prev["Country / Location(s)"], value: isChecked ? [] : "" }
+                                                                                                                }));
+                                                                                                        }}
+                                                                                                        disabled={proposalStatus !== 'draft'}
                                                                                                 />
-                                                                                        ))}
+                                                                                                <label htmlFor="multiple-countries" className="Chat_form_inputLabel" style={{ marginBottom: 0 }}>Multiple Countries</label>
+                                                                                        </div>
+                                                                                        {renderFormField("Country / Location(s)", proposalStatus !== 'draft')}
+                                                                                </div>
+                                                                                <div className='Chat_form_group'>
+                                                                                        <div className="tooltip-container">
+                                                                                                <h3 className='Chat_form_group_title'>Tailor Funding Request</h3>
+                                                                                                <span className="tooltip-text">surface Donor profile and apply Formal Requirement for Submission</span>
+                                                                                        </div>
+                                                                                        {renderFormField("Budget Range", proposalStatus !== 'draft')}
+                                                                                        {renderFormField("Duration", proposalStatus !== 'draft')}
+                                                                                        <div className="Chat_form_inputContainer" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
+                                                                                                <input
+                                                                                                        type="checkbox"
+                                                                                                        id="multiple-donors"
+                                                                                                        checked={formData["multiple donors"]?.value || false}
+                                                                                                        onChange={e => {
+                                                                                                                const isChecked = e.target.checked;
+                                                                                                                setFormData(prev => ({
+                                                                                                                        ...prev,
+                                                                                                                        "multiple donors": { ...prev["multiple donors"], value: isChecked },
+                                                                                                                        "Targeted Donor": { ...prev["Targeted Donor"], value: isChecked ? [] : (prev["Targeted Donor"]?.value || "") }
+                                                                                                                }));
+                                                                                                        }}
+                                                                                                        disabled={proposalStatus !== 'draft'}
+                                                                                                />
+                                                                                                <label htmlFor="multiple-donors" className="Chat_form_inputLabel" style={{ marginBottom: 0 }}>Multiple Donors</label>
+                                                                                        </div>
+                                                                                        {renderFormField("Targeted Donor", proposalStatus !== 'draft')}
+                                                                                </div>
+                                                                        </form>
+                                                                )}
+
+                                                                <div className="Chat_inputArea_buttonContainer">
+                                                                        {Object.keys(proposal).length > 0 && (
+                                                                                <div style={{ position: 'relative' }}>
+                                                                                        <CommonButton
+                                                                                                onClick={() => {
+                                                                                                        const missing = getMissingFields();
+                                                                                                        if (missing.length > 0) {
+                                                                                                                setValidationMissingFields(missing);
+                                                                                                                setIsValidationModalOpen(true);
+                                                                                                        } else {
+                                                                                                                setIsAssociateKnowledgeModalOpen(true);
+                                                                                                        }
+                                                                                                }}
+                                                                                                label="Manage Knowledge"
+                                                                                                disabled={proposalStatus !== 'draft' || !buttonEnable}
+                                                                                                className={!buttonEnable ? "inactive" : ""}
+                                                                                                icon={knowIcon}
+                                                                                                data-testid="manage-knowledge-button"
+                                                                                        />
+                                                                                        {associatedKnowledgeCards.length > 0 && (
+                                                                                                <div className="associated-knowledge-display" data-testid="associated-knowledge-cards">
+                                                                                                        <h4>Associated Knowledge Cards:</h4>
+                                                                                                        <ul>
+                                                                                                                {associatedKnowledgeCards.map(card => {
+                                                                                                                        const title = [
+                                                                                                                                card.title,
+                                                                                                                                card.donor_name,
+                                                                                                                                card.outcome_name,
+                                                                                                                                card.field_context_name,
+                                                                                                                        ].filter(Boolean).join(' - ');
+                                                                                                                        return (
+                                                                                                                                <li key={card.id}>
+                                                                                                                                        <a href={`/knowledge-card/${card.id}`} target="_blank" rel="noopener noreferrer">
+                                                                                                                                                {title}
+                                                                                                                                        </a>
+                                                                                                                                </li>
+                                                                                                                        );
+                                                                                                                })}
+                                                                                                        </ul>
+                                                                                                </div>
+                                                                                        )}
                                                                                 </div>
                                                                         )}
+
+                                                                        <div style={{ marginLeft: 'auto' }}>
+                                                                                <CommonButton
+                                                                                        onClick={handleGenerateClick}
+                                                                                        icon={generateIcon}
+                                                                                        label={generateLabel}
+                                                                                        loading={generateLoading}
+                                                                                        loadingLabel={generateLabel === "Generate" ? "Generating (~ 2 mins of patience...) " : "Regenerating (~ 2 mins of patience...)"}
+                                                                                        disabled={proposalStatus !== 'draft' || !buttonEnable}
+                                                                                        className={!buttonEnable ? "inactive" : ""}
+                                                                                        data-testid="generate-button"
+                                                                                />
+                                                                        </div>
                                                                 </div>
-                                                        )
-                                                })}
-                                        </div>
-                                </> : ""}
-                        </main>
+                                                        </div>
+                                                </>
+                                        ) : null}
 
-                        <dialog ref={dialogRef} className='Chat_regenerate' data-testid="regenerate-dialog">
-                                <header className='Chat_regenerate_header'>
-                                        Regenerate — {proposalTemplate ? proposalTemplate.sections[selectedSection]?.section_name : Object.keys(proposal)[selectedSection]}
-                                        <img src={regenerateClose} alt="" onClick={() => { setRegenerateSectionLoading(false); setRegenerateInput(""); dialogRef.current.close() }} data-testid="regenerate-dialog-close-button" />
-                                </header>
+                                        {sidebarOpen && (
+                                                <>
+                                                        <div className='Dashboard_top'>
+                                                                <div className='Dashboard_label'>
+                                                                        <img className='Dashboard_label_fileIcon' src={resultsIcon} alt="" />
+                                                                        Results
+                                                                </div>
 
-                                <main className='Chat_right'>
-                                        <section className='Chat_inputArea'>
-                                                <textarea id="regenerate-prompt" name="regenerate-prompt" value={regenerateInput} onChange={e => setRegenerateInput(e.target.value)} className='Chat_inputArea_prompt' data-testid="regenerate-dialog-prompt-input" />
+                                                                {Object.keys(proposal).length > 0 && (
+                                                                        <div className='Chat_exportButtons'>
+                                                                                <button type="button" onClick={() => handleExport("docx")} data-testid="export-word-button">
+                                                                                        <img src={word_icon} alt="" />
+                                                                                        Edit in Word
+                                                                                </button>
 
-                                                <div className="Chat_inputArea_buttonContainer" style={{ marginTop: "20px" }}>
-                                                        <CommonButton icon={generateIcon} onClick={() => handleRegenerateButtonClick()} label="Regenerate" loading={regenerateSectionLoading} loadingLabel="Regenerating" disabled={!regenerateInput} data-testid="regenerate-dialog-regenerate-button" />
-                                                </div>
-                                        </section>
+                                                                                <button type="button" onClick={() => handleExportTables()} data-testid="export-excel-button">
+                                                                                        <img src={excel_icon} alt="" />
+                                                                                        Download Tables
+                                                                                </button>
+                                                                                <button type="button" onClick={() => setIsTransferModalOpen(true)} data-testid="transfer-ownership-button" style={{ marginLeft: '10px', background: '#f5f5f5', color: '#333' }}>
+                                                                                        Transfer Ownership
+                                                                                </button>
+                                                                                <div className="Chat_workflow_status_container">
+                                                                                        <div className="workflow-stage-box">
+                                                                                                <span className="workflow-stage-label">Workflow Stage</span>
+                                                                                                <div className="workflow-badges">
+                                                                                                        {['draft', 'in_review', 'pre_submission', 'submitted'].map(status => {
+                                                                                                                const statusDetails = {
+                                                                                                                        draft: { text: 'Drafting', className: 'status-draft', message: "Initial drafting stage - Author + AI" },
+                                                                                                                        in_review: { text: 'Peer Review', className: 'status-review', message: "Wait while proposal sent for quality review to other users" },
+                                                                                                                        pre_submission: { text: 'Pre-Submission', className: 'status-submission', message: "Edit to address the comments from all your reviewers" },
+                                                                                                                        submitted: { text: 'Submitted', className: 'status-submitted', message: "Non editable Record of Initial version as submitted to donor" }
+                                                                                                                };
+                                                                                                                const isActive = proposalStatus === status;
+                                                                                                                const isClickable = (proposalStatus === 'draft' && (status === 'in_review' || status === 'submitted')) ||
+                                                                                                                        (proposalStatus === 'in_review' && (status === 'pre_submission' || status === 'draft')) ||
+                                                                                                                        (proposalStatus === 'pre_submission' && status === 'submitted');
+
+                                                                                                                return (
+                                                                                                                        <div key={status} className="status-badge-container">
+                                                                                                                                <button
+                                                                                                                                        type="button"
+                                                                                                                                        title={statusDetails[status].message}
+                                                                                                                                        className={`status-badge ${statusDetails[status].className} ${isActive ? 'active' : 'inactive'}`}
+                                                                                                                                        onClick={() => {
+                                                                                                                                                if (status === 'in_review' && proposalStatus === 'draft') setIsPeerReviewModalOpen(true);
+                                                                                                                                                if (status === 'draft' && proposalStatus === 'in_review') handleSetStatus('draft');
+                                                                                                                                                if (status === 'submitted' && (proposalStatus === 'pre_submission' || proposalStatus === 'draft')) handleSubmit();
+                                                                                                                                        }}
+                                                                                                                                        disabled={!isClickable && !isActive}
+                                                                                                                                        data-testid={`workflow-status-badge-${status}`}
+                                                                                                                                >
+                                                                                                                                        {statusDetails[status].text}
+                                                                                                                                </button>
+                                                                                                                                {statusHistory.includes(status) && !isActive && (
+                                                                                                                                        <button className="revert-btn" onClick={() => handleRevert(status)} data-testid={`revert-button-${status}`}>
+                                                                                                                                                Revert
+                                                                                                                                        </button>
+                                                                                                                                )}
+                                                                                                                        </div>
+                                                                                                                );
+                                                                                                        })}
+                                                                                                </div>
+                                                                                                {proposalStatus === 'pre_submission' && (
+                                                                                                        <button className="revert-btn" onClick={() => handleRevert('draft')} data-testid="revert-to-draft-button">
+                                                                                                                Revert to Draft
+                                                                                                        </button>
+                                                                                                )}
+                                                                                        </div>
+                                                                                </div>
+                                                                        </div>
+                                                                )}
+                                                        </div>
+
+                                                        {proposalStatus === 'submitted' && (
+                                                                <div className="contribution-id-container">
+                                                                        <label htmlFor="contribution-id">Contribution ID:</label>
+                                                                        <p>Only submitted proposal with a confirmed ContributionID are counted as approved</p>
+                                                                        <input
+                                                                                type="text"
+                                                                                id="contribution-id"
+                                                                                value={contributionId}
+                                                                                onChange={(e) => setContributionId(e.target.value)}
+                                                                                data-testid="contribution-id-input"
+                                                                        />
+                                                                        <CommonButton onClick={handleSaveContributionId} label="Save ID" data-testid="save-contribution-id-button" />
+                                                                </div>
+                                                        )}
+
+                                                        <div ref={proposalRef} className="Chat_proposalContainer" data-testid="proposal-container">
+                                                                {(proposalTemplate ? proposalTemplate.sections.map(s => s.section_name) : Object.keys(proposal)).map((sectionName, i) => {
+                                                                        const sectionObj = proposal[sectionName];
+                                                                        const sectionReviews = reviews.filter(r => r.section_name === sectionName);
+
+                                                                        if (!sectionObj) return null;
+                                                                        const kebabSectionName = toKebabCase(sectionName);
+
+                                                                        return (
+                                                                                <div key={i} className="Chat_proposalSection" data-testid={`proposal-section-${kebabSectionName}`}>
+                                                                                        <div className="Chat_sectionHeader" data-testid={`section-header-${kebabSectionName}`}>
+                                                                                                <div className="Chat_sectionTitle" data-testid={`section-title-${kebabSectionName}`}>{sectionName}</div>
+
+                                                                                                {!generateLoading && sectionObj.content && sectionObj.open && proposalStatus !== 'submitted' && (
+                                                                                                        <div className="Chat_sectionOptions" data-testid={`section-options-${kebabSectionName}`}>
+                                                                                                                {!isEdit || (selectedSectionName === sectionName && isEdit) ? (
+                                                                                                                        <button
+                                                                                                                                type="button"
+                                                                                                                                onClick={() => handleEditClick(sectionName)}
+                                                                                                                                style={(selectedSectionName === sectionName && isEdit && regenerateSectionLoading) ? { pointerEvents: "none" } : {}}
+                                                                                                                                aria-label={`edit-section-${kebabSectionName}`}
+                                                                                                                                disabled={isReviewer || proposalStatus === 'in_review'}
+                                                                                                                                data-testid={`edit-save-button-${kebabSectionName}`}
+                                                                                                                        >
+                                                                                                                                <img src={(selectedSectionName === sectionName && isEdit) ? save : edit} alt="" />
+                                                                                                                                <span>{(selectedSectionName === sectionName && isEdit) ? "Save" : "Edit"}</span>
+                                                                                                                        </button>
+                                                                                                                ) : null}
+
+                                                                                                                {selectedSectionName === sectionName && isEdit && (
+                                                                                                                        <button type="button" onClick={() => setIsEdit(false)} data-testid={`cancel-edit-button-${kebabSectionName}`}>
+                                                                                                                                <img src={cancel} alt="" />
+                                                                                                                                <span>Cancel</span>
+                                                                                                                        </button>
+                                                                                                                )}
+
+                                                                                                                {!isEdit && (
+                                                                                                                        <>
+                                                                                                                                <button type="button" onClick={() => handleCopyClick(sectionName, sectionObj.content)} data-testid={`copy-button-${kebabSectionName}`}>
+                                                                                                                                        <img src={(selectedSectionName === sectionName && isCopied) ? tick : copy} alt="" />
+                                                                                                                                        <span>{(selectedSectionName === sectionName && isCopied) ? "Copied" : "Copy"}</span>
+                                                                                                                                </button>
+
+                                                                                                                                {!isReviewer && (
+                                                                                                                                        <button type="button" className='Chat_sectionOptions_regenerate' onClick={() => handleRegenerateIconClick(sectionName)} disabled={proposalStatus !== 'draft'} data-testid={`regenerate-button-${kebabSectionName}`}>
+                                                                                                                                                <img src={regenerate} alt="" />
+                                                                                                                                                <span>Regenerate</span>
+                                                                                                                                        </button>
+                                                                                                                                )}
+                                                                                                                        </>
+                                                                                                                )}
+                                                                                                        </div>
+                                                                                                )}
+
+                                                                                                {sectionObj.content && !(isEdit && selectedSectionName === sectionName) && (
+                                                                                                        <div className={`Chat_expanderArrow ${sectionObj.open ? "" : "closed"}`} onClick={() => handleExpanderToggle(sectionName)} data-testid={`section-expander-${kebabSectionName}`}>
+                                                                                                                <img src={arrow} alt="" />
+                                                                                                        </div>
+                                                                                                )}
+                                                                                        </div>
+
+                                                                                        {(sectionObj.open || !sectionObj.content) && (
+                                                                                                <div className='Chat_sectionContent' data-testid={`section-content-${kebabSectionName}`}>
+                                                                                                        {sectionObj.content ? (
+                                                                                                                (selectedSectionName === sectionName && isEdit) ? (
+                                                                                                                        <textarea value={editorContent} onChange={e => setEditorContent(e.target.value)} aria-label={`editor for ${sectionName}`} data-testid={`section-editor-${kebabSectionName}`} />
+                                                                                                                ) : (
+                                                                                                                        <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>{sectionObj.content}</Markdown>
+                                                                                                                )
+                                                                                                        ) : (
+                                                                                                                <div className='Chat_sectionContent_loading'>
+                                                                                                                        <span className='submitButtonSpinner' />
+                                                                                                                        <span className='Chat_sectionContent_loading'>Loading</span>
+                                                                                                                </div>
+                                                                                                        )}
+
+                                                                                                        {/* Unified SectionReview - handles both current user editing and peer reviews */}
+                                                                                                        <SectionReview
+                                                                                                                key={`${sectionName}-${reviews.filter(r => r.section_name === sectionName).length}`}
+                                                                                                                section={sectionName}
+                                                                                                                type="proposal"
+                                                                                                                reviewComment={reviewComments[sectionName]}
+                                                                                                                status={reviewStatus[sectionName]}
+                                                                                                                isReviewEditable={isReviewer || proposalStatus === 'draft'}
+                                                                                                                isAuthorizedToReply={false}
+                                                                                                                onCommentChange={handleCommentChange}
+                                                                                                                onStatusChange={handleStatusChange}
+                                                                                                                onDeleteComment={handleDeleteComment}
+                                                                                                                isOwnerOfComment={true}
+                                                                                                                isAdmin={isAdmin}
+                                                                                                                previousFeedback={(reviews || []).filter(r => r.section_name === sectionName && !['removed', 'fixed'].includes(r.status)).map(review => ({
+                                                                                                                        id: review.id,
+                                                                                                                        author: review.reviewer_name,
+                                                                                                                        review_text: review.review_text,
+                                                                                                                        severity: review.severity,
+                                                                                                                        type_of_comment: review.type_of_comment,
+                                                                                                                        status: review.status,
+                                                                                                                        created_at: review.created_at,
+                                                                                                                        isOwnedByCurrentUser: review.reviewer_id === currentUser?.id || review.reviewer_id === currentUser?.user_id,
+                                                                                                                        replies: review.author_response ? [
+                                                                                                                                {
+                                                                                                                                        author: review.response_author || review.proposal_owner_name || 'Author',
+                                                                                                                                        text: review.author_response,
+                                                                                                                                        status: review.status,
+                                                                                                                                        created_at: review.updated_at || review.created_at,
+                                                                                                                                }
+                                                                                                                        ] : []
+                                                                                                                }))}
+                                                                                                                onReplyToFeedback={handleReplyToFeedback}
+                                                                                                                onSaveReply={handleSaveResponse}
+                                                                                                        />
+                                                                                                </div>
+                                                                                        )}
+                                                                                </div>
+                                                                        );
+                                                                })}
+                                                        </div>
+                                                </>
+                                        )}
                                 </main>
-                        </dialog>
-                </div>
-        </Base>
+
+                                <dialog ref={dialogRef} className='Chat_regenerate' data-testid="regenerate-dialog">
+                                        <header className='Chat_regenerate_header'>
+                                                Regenerate — {selectedSectionName || "Section"}
+                                                <img src={regenerateClose} alt="" onClick={() => { setRegenerateSectionLoading(false); setRegenerateInput(""); dialogRef.current.close() }} data-testid="regenerate-dialog-close-button" />
+                                        </header>
+
+                                        <main className='Chat_right'>
+                                                <section className='Chat_inputArea'>
+                                                        <textarea id="regenerate-prompt" name="regenerate-prompt" value={regenerateInput} onChange={e => setRegenerateInput(e.target.value)} className='Chat_inputArea_prompt' data-testid="regenerate-dialog-prompt-input" />
+
+                                                        <div className="Chat_inputArea_buttonContainer" style={{ marginTop: "20px" }}>
+                                                                <CommonButton icon={generateIcon} onClick={() => handleRegenerateButtonClick()} label="Regenerate" loading={regenerateSectionLoading} loadingLabel="Regenerating" disabled={!regenerateInput} data-testid="regenerate-dialog-regenerate-button" />
+                                                        </div>
+                                                </section>
+                                        </main>
+                                </dialog>
+                        </div>
+                </Base>
+        );
 }

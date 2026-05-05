@@ -100,6 +100,10 @@ resource backendApp 'Microsoft.App/containerApps@2022-03-01' = {
           value: listCredentials(resourceId('Microsoft.ContainerRegistry/registries', containerRegistry), '2022-02-01-preview').passwords[0].value
         }
         {
+          name: 'postgres-password'
+          value: postgresAdminPassword
+        }
+        {
           name: 'postgres-connection-string'
           value: 'postgresql://${postgresAdminUser}:${postgresAdminPassword}@${postgresServerName}.postgres.database.azure.com/${postgresDatabaseName}'
         }
@@ -155,6 +159,22 @@ resource backendApp 'Microsoft.App/containerApps@2022-03-01' = {
             memory: '1.0Gi'
           }
           env: [
+            {
+              name: 'DB_HOST'
+              value: '${postgresServerName}.postgres.database.azure.com'
+            }
+            {
+              name: 'DB_NAME'
+              value: postgresDatabaseName
+            }
+            {
+              name: 'DB_USERNAME'
+              value: postgresAdminUser
+            }
+            {
+              name: 'DB_PASSWORD'
+              secretRef: 'postgres-password'
+            }
             {
               name: 'DATABASE_URL'
               secretRef: 'postgres-connection-string'

@@ -13,9 +13,7 @@ import KnowledgeCardHistory from '../../components/KnowledgeCardHistory/Knowledg
 import KnowledgeCardReferences from '../../components/KnowledgeCardReferences/KnowledgeCardReferences';
 import UploadReferenceModal from '../../components/UploadReferenceModal/UploadReferenceModal';
 import { setupSse } from '../../utils/sse';
-import Markdown from 'react-markdown';
-import rehypeSanitize from 'rehype-sanitize';
-import remarkGfm from 'remark-gfm';
+import SectionReview from '../../components/SectionReview/SectionReview';
 import word_icon from '../../assets/images/word.svg';
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api";
@@ -60,7 +58,13 @@ export default function KnowledgeCard() {
     const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
     const [alertModalMessage, setAlertModalMessage] = useState('');
     const [currentUser, setCurrentUser] = useState(null);
-    const [sectionReviews, setSectionReviews] = useState({});
+    const [reviewComments, setReviewComments] = useState({});
+    const [reviews, setReviews] = useState([]);
+    const [isReviewer, setIsReviewer] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [reviewStatus, setReviewStatus] = useState({});
+
+
 
     // Use refs to track current state without stale closures
     const summaryRef = useRef(summary);
@@ -84,6 +88,175 @@ export default function KnowledgeCard() {
         eventSourceRef.current = eventSource;
     }, [eventSource]);
 
+
+    function handleCommentChange(section, field, value) {
+        if (field === 'save') {
+            // Clear the draft after saving
+            setReviewComments(prev => {
+                const next = { ...prev };
+                delete next[section];
+                return next;
+            });
+            const commentData = {
+                section_name: section,
+                review_text: value,
+                severity: reviewComments[section]?.severity || 'P2',
+                type_of_comment: reviewComments[section]?.type_of_comment || ''
+            };
+            const endpoint = `${API_BASE_URL}/knowledge-cards/${id}/comment`;
+            try {
+                authenticatedFetch(endpoint, {
+                    method: "POST",
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(commentData)
+                }).then(async res => {
+                    if (res.ok) {
+                        // Refresh all data to get the complete updated comment with ID and status
+                        await fetchData();
+                        // Reset status to show as previous feedback
+                        handleStatusChange(section, null);
+                    } else {
+                        const error = await res.json();
+                        console.error('Save failed:', error);
+                        alert('Failed to save comment: ' + (error.detail || 'Unknown error'));
+                    }
+                });
+            } catch (e) { console.error("Error saving comment", e); }
+            return;
+        }
+
+        setReviewComments(prev => {
+            const currentSectionReview = prev[section] || {};
+            const updated = {
+                ...prev,
+                [section]: {
+                    ...currentSectionReview,
+                    [field]: value
+                }
+            };
+            return updated;
+        });
+    }
+
+    function handleStatusChange(section, status) {
+        setReviewStatus(prev => ({ ...prev, [section]: status }));
+        handleCommentChange(section, 'rating', status);
+    }
+
+
+
+    async function handleDeleteComment(section) {
+        if (!window.confirm('Remove this comment?')) return;
+
+        try {
+            const commentData = reviewComments[section];
+            if (!commentData?.id) {
+                // If no ID, just clear local state (comment wasn't saved yet)
+                handleCommentChange(section, 'review_text', '');
+                handleCommentChange(section, 'rating', null);
+                handleStatusChange(section, null);
+                return;
+            }
+
+            // Change status to 'removed' instead of deleting
+            const endpoint = `${API_BASE_URL}/knowledge-cards/${id}/comment/${commentData.id}/status`;
+            const res = await authenticatedFetch(endpoint, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'removed' }),
+                credentials: 'include'
+            });
+
+            if (res.ok) {
+                // Refresh data to get updated status
+                await fetchData();
+                // Clear local state for this section
+                setReviewComments(prev => {
+                    const next = { ...prev };
+                    delete next[section];
+                    return next;
+                });
+                handleStatusChange(section, null);
+            } else {
+                console.error('Failed to remove comment');
+                alert('Failed to remove comment. Please try again.');
+            }
+        } catch (e) {
+            console.error('Error removing comment:', e);
+            alert('Error connecting to server. Please try again.');
+        }
+    }
+
+    async function handleSubmitReview() {
+        const comments = Object.entries(reviewComments)
+            .map(([section_name, comment_data]) => ({
+                section_name,
+                ...comment_data
+            }));
+
+        const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${id}/review`, {
+            method: "POST",
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ comments })
+        });
+        if (response.ok) {
+            navigate("/dashboard");
+        }
+    }
+
+    const handleSaveResponse = async (section, responseText) => {
+        try {
+            const commentData = reviewComments[section];
+            if (!commentData?.id) {
+                console.error('No comment ID found for author response');
+                return;
+            }
+
+            const endpoint = `${API_BASE_URL}/knowledge-cards/${id}/comment/${commentData.id}/response`;
+            const res = await authenticatedFetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ author_response: responseText })
+            });
+
+            if (res.ok) {
+                // Refresh data to show the response
+                await fetchData();
+            } else {
+                console.error('Failed to save author response');
+                alert('Failed to save response. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error saving author response:', error);
+            alert('Error connecting to server. Please try again.');
+        }
+    };
+
+    const handleReplyToFeedback = async (feedbackId, replyText, replyStatus) => {
+        try {
+            const endpoint = `${API_BASE_URL}/knowledge-card-reviews/${feedbackId}/response`;
+            const res = await authenticatedFetch(endpoint, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    author_response: replyText,
+                    status: replyStatus
+                })
+            });
+
+            if (res.ok) {
+                // Refresh data to show the reply
+                await fetchData();
+            } else {
+                console.error('Failed to save reply to feedback');
+                alert('Failed to save reply. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error replying to feedback:', error);
+            alert('Error saving reply. Please try again.');
+        }
+    };
+
     const getStatus = useCallback((ref) => {
         if (ref.status) return ref.status;
         if (ref.scraping_error) return 'error';
@@ -104,12 +277,10 @@ export default function KnowledgeCard() {
             // Cleanup EventSource on component unmount
             if (eventSourceRef.current) {
                 eventSourceRef.current.close();
-                console.log('EventSource cleaned up on unmount');
             }
             // Cleanup polling interval on unmount
             if (pollingRef.current.intervalId) {
                 clearInterval(pollingRef.current.intervalId);
-                console.log('Polling interval cleaned up on unmount');
             }
         };
     }, []);
@@ -154,18 +325,35 @@ export default function KnowledgeCard() {
 
                     const hasSpecificRole = userRoles.includes(normalize(specificRequiredRole));
 
-                    console.log('Role Debug (Granular):', {
-                        currentUser: curUser,
-                        card,
-                        userRoles,
-                        specificRequiredRole,
-                        hasSpecificRole
+                    const _isAdmin = curUser.is_admin || (curUser.roles || []).some(r => {
+                        const n = typeof r === 'string' ? r : r.name;
+                        return n && n.toLowerCase() === 'admin';
                     });
+                    setIsAdmin(_isAdmin);
 
-                    if (!hasSpecificRole) {
-                        console.log(`Redirecting user (missing specific role: ${specificRequiredRole}) to /review/knowledge-card/${id}`);
-                        navigate(`/review/knowledge-card/${id}`, { replace: true });
-                        return;
+                    // Fetch all knowledge card reviews
+                    try {
+                        const reviewsEndpoint = `${API_BASE_URL}/knowledge-cards/${id}/all-reviews`;
+                        const prRes = await authenticatedFetch(reviewsEndpoint);
+                        if (prRes.ok) {
+                            const prData = await prRes.json();
+                            const allReviews = Array.isArray(prData.reviews) ? prData.reviews : [];
+                            setReviews(allReviews);
+
+                            if (!hasSpecificRole) {
+                                setIsReviewer(true);
+                            }
+
+                            // We no longer pre-fill draft comments from history
+                            // to allow for multiple comments and avoid confusion with saved feedback.
+                            setReviewComments({});
+                        }
+                    } catch (e) {
+                        console.error("Failed to fetch knowledge card reviews:", e);
+                    }
+
+                    if (card.generated_sections) {
+                        setGeneratedSections(card.generated_sections);
                     }
 
                     setSummary(card.summary || '');
@@ -185,40 +373,11 @@ export default function KnowledgeCard() {
                     }
                     setReferences(card.references || []);
 
-                    // Properly handle generated sections
-                    if (card.generated_sections && typeof card.generated_sections === 'object') {
-                        // Ensure it's a non-empty object
-                        const sections = card.generated_sections;
-                        if (Object.keys(sections).length > 0) {
-                            setGeneratedSections(sections);
-                            // --- Fetch reviews for each section ---
-                            try {
-                                const reviewsRes = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${id}/all-reviews`, { credentials: 'include' });
-                                if (reviewsRes.ok) {
-                                    const { reviews } = await reviewsRes.json();
-                                    const bySection = {};
-                                    for (const review of reviews) {
-                                        if (review.section_name) {
-                                            if (!bySection[review.section_name]) bySection[review.section_name] = [];
-                                            bySection[review.section_name].push(review);
-                                        }
-                                    }
-                                    setSectionReviews(bySection);
-                                }
-                            } catch (err) {
-                                console.error('Failed to load knowledge card section reviews', err);
-                            }
-                        } else {
-                            setGeneratedSections(null);
-                        }
-                    } else {
-                        setGeneratedSections(null);
-                    }
 
                     // Fetch the template using the DERIVED linkType, not from the card data
                     if (determinedLinkType) {
                         const templateName = `knowledge_card_${determinedLinkType}_template.json`;
-                        const templateRes = await authenticatedFetch(`${API_BASE_URL}/templates/${templateName}`, { credentials: 'include' });
+                        const templateRes = await authenticatedFetch(`${API_BASE_URL}/templates/published/${templateName}`, { credentials: 'include' });
                         if (templateRes.ok) {
                             const templateData = await templateRes.json();
                             setProposalTemplate(templateData);
@@ -347,7 +506,7 @@ export default function KnowledgeCard() {
             if (!id && linkType) { // Only for new cards
                 const templateName = `knowledge_card_${linkType}_template.json`;
                 try {
-                    const response = await authenticatedFetch(`${API_BASE_URL}/templates/${templateName}`, { credentials: 'include' });
+                    const response = await authenticatedFetch(`${API_BASE_URL}/templates/published/${templateName}`, { credentials: 'include' });
                     if (response.ok) {
                         const data = await response.json();
                         setProposalTemplate(data);
@@ -395,14 +554,12 @@ export default function KnowledgeCard() {
 
     useEffect(() => {
         if (!id && linkedId && linkType && initialDataLoaded) {
-            console.log(`Checking for duplicates. ID: ${id}, Linked ID: ${linkedId}, Link Type: ${linkType}, Loaded: ${initialDataLoaded}`);
             const existing = allKnowledgeCards.find(card => {
                 if (linkType === 'donor') return card.donor_id === linkedId;
                 if (linkType === 'outcome') return card.outcome_id === linkedId;
                 if (linkType === 'field_context') return card.field_context_id === linkedId;
                 return false;
             });
-            console.log('Existing card found:', existing);
 
             if (existing) {
                 setExistingCard(existing);
@@ -616,7 +773,6 @@ export default function KnowledgeCard() {
                 pollingRef.current.attempts = 0;
                 pollingRef.current.intervalId = setInterval(() => {
                     pollingRef.current.attempts += 1;
-                    console.log(`Polling for ingestion updates... Attempt: ${pollingRef.current.attempts + 1}`);
                     if (fetchDataRef.current) {
                         fetchDataRef.current();
                     }
@@ -921,9 +1077,94 @@ export default function KnowledgeCard() {
         }
     };
 
+    // SharePoint Link State Management
+    const [sharepointStatus, setSharepointStatus] = useState(null); // null, 'uploading', 'failed', 'uploaded'
+    const [sharepointLink, setSharepointLink] = useState(null);
+    const [sharepointError, setSharepointError] = useState(null);
+    const [isCheckingLink, setIsCheckingLink] = useState(false);
+
+    // Check for existing SharePoint link
+    async function checkSharepointLink(cardId) {
+        if (!cardId || cardId === "undefined") {
+            return null;
+        }
+
+        try {
+            setIsCheckingLink(true);
+            const response = await fetch(`${API_BASE_URL}/sharepoint-link-status/knowledge_card/${cardId}`, {
+                method: "GET",
+                headers: { 'Content-Type': 'application/json' },
+                credentials: "include"
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                return data;
+            }
+            return null;
+        } catch (error) {
+            console.error("Error checking SharePoint link status:", error);
+            return null;
+        } finally {
+            setIsCheckingLink(false);
+        }
+    }
+
+    // Retry SharePoint upload
+    async function handleRetryUpload(cardId) {
+        if (!cardId || cardId === "undefined") {
+            setAlertModalMessage("No draft available. Please create or load a draft first.");
+            setIsAlertModalOpen(true);
+            return;
+        }
+
+        try {
+            setSharepointStatus('uploading');
+            setSharepointError(null);
+
+            const response = await fetch(`${API_BASE_URL}/retry-sharepoint-upload/knowledge_card/${cardId}`, {
+                method: "POST",
+                headers: { 'Content-Type': 'application/json' },
+                credentials: "include"
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.url) {
+                    setSharepointStatus('uploaded');
+                    setSharepointLink(data);
+                    window.open(data.url, '_blank');
+                    setAlertModalMessage("Document opened in Word Online");
+                    setIsAlertModalOpen(true);
+                } else {
+                    throw new Error(data.message || "Failed to get SharePoint URL");
+                }
+            }
+            else if (response.status === 401) {
+                sessionStorage.setItem("session_expired", "Session expired. Please login again.")
+                navigate("/login")
+            }
+            else if (response.status === 429) {
+                const errorData = await response.json();
+                setSharepointStatus('failed');
+                setSharepointError(errorData.detail || "Max retry attempts exceeded");
+                setAlertModalMessage(errorData.detail || "Max retry attempts exceeded");
+                setIsAlertModalOpen(true);
+            }
+            else {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || `Retry failed: ${response.status} ${response.statusText}`);
+            }
+        } catch (error) {
+            setSharepointStatus('failed');
+            setSharepointError(error.message);
+            setAlertModalMessage(`Error: ${error.message}`);
+            setIsAlertModalOpen(true);
+            console.error("SharePoint retry error:", error);
+        }
+    }
+
     async function handleExport(format) {
-
-
         const cardId = id;
 
         if (!cardId || cardId === "undefined") {
@@ -932,38 +1173,96 @@ export default function KnowledgeCard() {
             return;
         }
 
-        const response = await fetch(`${API_BASE_URL}/knowledge-cards/${id}/generate-document/?format=${format}`, {
-            method: "GET",
-            headers: { 'Content-Type': 'application/json' },
-            credentials: "include"
-        })
+        // Check for existing link first
+        const linkStatus = await checkSharepointLink(cardId);
 
-        if (response.ok) {
-            const contentDisposition = response.headers.get('Content-Disposition');
-            let filename = "knowledge-card.docx"; // Default filename
-            if (contentDisposition) {
-                const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
-                if (filenameMatch && filenameMatch[1]) {
-                    filename = filenameMatch[1];
+        if (linkStatus && linkStatus.has_link) {
+            if (linkStatus.status === 'uploaded' && !linkStatus.is_expired) {
+                // Use cached link
+                setSharepointStatus('uploaded');
+                setSharepointLink(linkStatus);
+                window.open(linkStatus.url, '_blank');
+                setAlertModalMessage("Document opened in Word Online (cached)");
+                setIsAlertModalOpen(true);
+                return;
+            }
+            else if (linkStatus.status === 'uploading') {
+                setSharepointStatus('uploading');
+                setAlertModalMessage("Document is currently being uploaded to SharePoint. Please wait...");
+                setIsAlertModalOpen(true);
+                return;
+            }
+            else if (linkStatus.status === 'failed' && linkStatus.can_retry) {
+                // Auto-retry
+                setSharepointStatus('uploading');
+                setAlertModalMessage("Retrying SharePoint upload...");
+                setIsAlertModalOpen(true);
+                handleRetryUpload(cardId);
+                return;
+            }
+            else if (linkStatus.status === 'failed' && !linkStatus.can_retry) {
+                setSharepointStatus('failed');
+                setSharepointError(linkStatus.error_message || "Max retry attempts exceeded");
+                setAlertModalMessage(linkStatus.error_message || "Max retry attempts exceeded. Please contact support.");
+                setIsAlertModalOpen(true);
+                return;
+            }
+        }
+
+        try {
+            setSharepointStatus('uploading');
+            setSharepointError(null);
+
+            // Call the new SharePoint upload endpoint for knowledge cards
+            const response = await fetch(`${API_BASE_URL}/upload-knowledge-card-to-sharepoint/${id}?format=${format}`, {
+                method: "POST",
+                headers: { 'Content-Type': 'application/json' },
+                credentials: "include"
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.url) {
+                    setSharepointStatus('uploaded');
+                    setSharepointLink(data);
+                    // Open the document in Word Online in a new tab
+                    window.open(data.url, '_blank');
+                    setAlertModalMessage(data.from_cache ? "Document opened in Word Online (cached)" : "Document opened in Word Online");
+                    setIsAlertModalOpen(true);
+                } else {
+                    throw new Error(data.message || "Failed to get SharePoint URL");
                 }
             }
-
-            const blob = await response.blob();
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-
-            setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+            else if (response.status === 401) {
+                sessionStorage.setItem("session_expired", "Session expired. Please login again.")
+                navigate("/login")
+            }
+            else if (response.status === 503) {
+                // Service unavailable - upload failed but will retry
+                const errorData = await response.json();
+                setSharepointStatus('failed');
+                setSharepointError(errorData.detail || "Upload failed");
+                setAlertModalMessage(errorData.detail || "Upload failed. Will retry automatically.");
+                setIsAlertModalOpen(true);
+            }
+            else if (response.status === 429) {
+                const errorData = await response.json();
+                setSharepointStatus('failed');
+                setSharepointError(errorData.detail || "Max retry attempts exceeded");
+                setAlertModalMessage(errorData.detail || "Max retry attempts exceeded");
+                setIsAlertModalOpen(true);
+            }
+            else {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || `Upload failed: ${response.status} ${response.statusText}`);
+            }
+        } catch (error) {
+            setSharepointStatus('failed');
+            setSharepointError(error.message);
+            setAlertModalMessage(`Error: ${error.message}`);
+            setIsAlertModalOpen(true);
+            console.error("SharePoint upload error:", error);
         }
-        else if (response.status === 401) {
-            sessionStorage.setItem("session_expired", "Session expired. Please login again.")
-            navigate("/login")
-        }
-        else
-            throw new Error(`Download failed: ${response.status} ${response.statusText}`);
     }
 
     return (
@@ -1051,7 +1350,7 @@ export default function KnowledgeCard() {
                                         className="squared-btn small-btn"
                                         style={{ padding: '6px 12px', fontSize: '13px' }}
                                         data-testid="identify-references-button"
-                                        disabled={!linkType || !linkedId}
+                                        disabled={isReviewer || !linkType || !linkedId}
                                     />
                                     <CommonButton
                                         type="button"
@@ -1060,7 +1359,7 @@ export default function KnowledgeCard() {
                                         className="squared-btn small-btn"
                                         style={{ padding: '6px 12px', fontSize: '13px' }}
                                         data-testid="ingest-references-button"
-                                        disabled={references.length === 0}
+                                        disabled={isReviewer || references.length === 0}
                                     />
                                     <CommonButton
                                         type="submit"
@@ -1068,7 +1367,7 @@ export default function KnowledgeCard() {
                                         className="squared-btn small-btn"
                                         style={{ padding: '6px 12px', fontSize: '13px' }}
                                         data-testid="populate-card-button"
-                                        disabled={!linkType || !linkedId}
+                                        disabled={isReviewer || !linkType || !linkedId}
                                     />
                                 </div>
                             </div>
@@ -1095,7 +1394,7 @@ export default function KnowledgeCard() {
                                 <select
                                     id="kc-link-type"
                                     value={linkType}
-                                    onChange={e => setLinkType(e.target.value)}
+                                    onChange={e => setLinkType(e.target.value)} disabled={isReviewer}
                                     data-testid="link-type-select"
                                     required
                                 >
@@ -1111,7 +1410,7 @@ export default function KnowledgeCard() {
                                         <select
                                             id="kc-geo-coverage"
                                             value={selectedGeoCoverage}
-                                            onChange={e => setSelectedGeoCoverage(e.target.value)}
+                                            onChange={e => setSelectedGeoCoverage(e.target.value)} disabled={isReviewer}
                                             data-testid="geo-coverage-select"
                                         >
                                             <option value="">All</option>
@@ -1151,7 +1450,7 @@ export default function KnowledgeCard() {
                                 <textarea
                                     id="kc-summary"
                                     value={summary}
-                                    onChange={e => setSummary(e.target.value)}
+                                    onChange={e => setSummary(e.target.value)} disabled={isReviewer}
                                     required
                                     data-testid="summary-textarea"
                                     placeholder="Enter a description for this knowledge card..."
@@ -1183,17 +1482,22 @@ export default function KnowledgeCard() {
 
                         <div className="kc-content-header">
                             <h2>Generated Content</h2>
-                            <button type="button" onClick={() => handleExport("docx")} className="download-word-btn" data-testid="export-word-button">
-                                <img src={word_icon} alt="Download as Word" />
-                                Download as Word
-                            </button>
-
+                            <div className="kc-content-header-actions">
+                                <button type="button" onClick={() => handleExport("docx")} className="download-word-btn" data-testid="export-word-button">
+                                    <img src={word_icon} alt="Edit in Word" />
+                                    Open in Word Online
+                                </button>
+                            </div>
                         </div>
                         {proposal_template.sections.map(sectionInfo => {
                             const section = sectionInfo.section_name;
                             const content = generatedSections[section];
                             // Only show sections that have content
                             if (!content) return null;
+
+                            // Filter reviews for this specific section
+                            const sectionReviews = reviews.filter(r => r.section_name === section);
+                            const sectionReviewsCount = sectionReviews.length;
 
                             return (
                                 <div key={section} className={`kc-section ${editingSection === section ? 'kc-section-editing' : ''}`} data-testid={`generated-section-${section}`}>
@@ -1208,20 +1512,40 @@ export default function KnowledgeCard() {
                                         />
                                     ) : (
                                         <div className="kc-section-content" data-testid={`section-content-${section}`}>
-                                            <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>{content}</Markdown>
+                                            <div style={{ whiteSpace: 'pre-wrap' }}>{content}</div>
                                             {/* --- Knowledge Card Review Comments display --- */}
-                                            {sectionReviews[section] && sectionReviews[section].map((comment, idx) => (
-                                                <div className="kc-review-comment" key={idx} style={{
-                                                    background: '#f8f9fb', borderRadius: 4, margin: '12px 0 0 0', padding: '10px 14px', border: '1px solid #e6e9ef'
-                                                }}>
-                                                    <div style={{ fontSize: 13, color: '#888', marginBottom: 2, letterSpacing: '0.01em' }}>
-                                                        Comment by {comment.reviewer_name || "Reviewer"}
-                                                        {comment.created_at && <> – {new Date(comment.created_at).toLocaleString()}</>}
-                                                    </div>
-                                                    <div style={{ fontWeight: 500, margin: '4px 0' }}>{comment.review_text}</div>
-                                                    <div style={{ fontSize: 12, color: '#777' }}>Type: {comment.type_of_comment} | Severity: {comment.severity}</div>
-                                                </div>
-                                            ))}
+                                            <div className="kc-reviews-container">
+                                                <SectionReview
+                                                    key={`${section}-${reviews.filter(r => r.section_name === section).length}`}
+                                                    section={section}
+                                                    type="knowledge_card"
+                                                    reviewComment={reviewComments[section]}
+                                                    status={reviewStatus[section]}
+                                                    isReviewEditable={isReviewer}
+                                                    isAuthorizedToReply={false}
+                                                    onCommentChange={handleCommentChange}
+                                                    onStatusChange={handleStatusChange}
+                                                    onDeleteComment={handleDeleteComment}
+                                                    onSaveReply={handleSaveResponse}
+                                                    isOwnerOfComment={true}
+                                                    isAdmin={isAdmin}
+                                                    previousFeedback={(reviews || []).filter(r => r.section_name === section && !['removed'].includes(r.status)).map(comment => ({
+                                                        id: comment.id,
+                                                        author: comment.reviewer_name || 'Reviewer',
+                                                        review_text: comment.review_text,
+                                                        severity: comment.severity,
+                                                        type_of_comment: comment.type_of_comment,
+                                                        status: comment.status,
+                                                        isOwnedByCurrentUser: comment.reviewer_id === (currentUser?.id || currentUser?.user_id),
+                                                        replies: comment.author_response ? [{
+                                                            author: comment.response_author || 'Author',
+                                                            text: comment.author_response,
+                                                            status: comment.status
+                                                        }] : []
+                                                    }))}
+                                                    onReplyToFeedback={handleReplyToFeedback}
+                                                />
+                                            </div>
                                         </div>
                                     )}
                                     <div className="kc-section-actions">

@@ -142,6 +142,79 @@ def handle_text_format(
     return generated_text
 
 
+def handle_text_format_with_context(
+    section_config,
+    crew_instance,
+    form_data,
+    project_description,
+    session_id,
+    proposal_id,
+    special_requirements="None",
+    follow_up_instruction="",
+    previous_content=""
+):
+    """Handles 'text' format_type with previous content context and follow-up instructions."""
+    section_name = section_config["section_name"]
+    char_limit = section_config.get("char_limit")
+    word_limit = section_config.get("word_limit")
+    if char_limit is not None:
+        limit_type = "char"
+        limit_value = char_limit
+    elif word_limit is not None:
+        limit_type = "word"
+        limit_value = word_limit
+    else:
+        limit_type = "word"
+        limit_value = 350  # fallback
+
+    limit_instruction = f"IMPORTANT: Do not exceed {limit_value} {'characters' if limit_type == 'char' else 'words'} for this section. If your response is longer, you MUST summarize or truncate to fit the limit."
+    instructions = section_config.get("instructions", "")
+    if instructions:
+        instructions += " " + limit_instruction
+    else:
+        instructions = limit_instruction
+
+    inputs = {
+        "section": section_name,
+        "form_data": form_data,
+        "project_description": project_description,
+        "instructions": instructions,
+        "special_requirements": special_requirements,
+        "limit_value": limit_value,
+        "limit_term": "character" if limit_type == "char" else "word",
+    }
+    if limit_type == "char":
+        inputs["char_limit"] = limit_value
+    else:
+        inputs["word_limit"] = limit_value
+    
+    # Add follow-up instruction and previous content to context
+    if follow_up_instruction:
+        inputs["follow_up_instruction"] = follow_up_instruction
+    if previous_content:
+        inputs["previous_content"] = previous_content
+        inputs["context_instruction"] = "Use the previous content as a starting point and improve it based on the follow-up instructions. Maintain the structure and key points from the previous version."
+    
+    result = crew_instance.kickoff(inputs=inputs)
+    parsed = extract_json_from_crew_output(result)
+    if not parsed:
+        logger.error(f"[CREWAI PARSE ERROR] for section {section_name}")
+        # Return previous content if parsing fails
+        return previous_content if previous_content else ""
+
+    generated_text = parsed.get("generated_content", "").strip()
+    evaluation_status = parsed.get("evaluation_status", "")
+    feedback = parsed.get("feedback", "")
+
+    if evaluation_status.lower() == "flagged" and feedback:
+        # If flagged, try to regenerate with the feedback
+        generated_text = regenerate_section_logic(
+            session_id, section_name, feedback, proposal_id, previous_content
+        )
+
+    return generated_text
+
+
 def handle_fixed_text_format(section_config):
     """Handles 'fixed_text' format_type."""
     return section_config.get("fixed_text", "")
@@ -282,9 +355,14 @@ def handle_table_format(
                 )
                 return generated_content
 
-        section_data = table_data.get(section_name, {})
-        table_rows = section_data.get("table", [])
-        notes = section_data.get("notes", "")
+        section_data = table_data.get(section_name)
+        if isinstance(section_data, dict) and "table" in section_data:
+            table_rows = section_data.get("table", [])
+            notes = section_data.get("notes", "")
+        else:
+            # Fallback: check if table is at the top level (happens when LLM skips section name key)
+            table_rows = table_data.get("table", [])
+            notes = table_data.get("notes", "")
         
         # REMOVED AGGRESSIVE SANITISATION ON NOTES
         # Use LLM compliance for length control

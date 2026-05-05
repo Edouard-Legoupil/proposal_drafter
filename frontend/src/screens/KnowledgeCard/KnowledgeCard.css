@@ -219,6 +219,15 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.kc-content-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
 }
 
 .download-word-btn {
@@ -234,6 +243,25 @@
 
 .download-word-btn:hover {
     background-color: #e0e0e0;
+}
+
+.review-mode-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1rem;
+    background-color: #0d6e6e;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: background 0.15s;
+}
+
+.review-mode-btn:hover {
+    background-color: #0a5a5a;
 }
 
 .kc-section-editing {

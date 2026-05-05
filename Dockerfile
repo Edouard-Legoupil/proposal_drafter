@@ -9,6 +9,11 @@ WORKDIR /app
 COPY frontend/package*.json ./
 RUN npm ci && echo "✅ NPM modules installed"
 
+# Diagnostic step 
+RUN ls -lah node_modules/.bin && npm list vite || true && echo "Checking vite installation"
+RUN npm ls vite && ls -lah node_modules/.bin/ && cat package-lock.json | grep vite
+
+
 COPY frontend/ .
 RUN npm run build && echo "✅ Frontend build complete"
 
@@ -116,7 +121,7 @@ RUN chmod +x /usr/local/bin/start.sh
 
 # Install OpenSSH server
 RUN apt-get update && apt-get install -y --no-install-recommends openssh-server \
- && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
 # Generate host keys and prepare runtime dir
 RUN ssh-keygen -A && mkdir -p /var/run/sshd

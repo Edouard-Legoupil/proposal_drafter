@@ -121,6 +121,7 @@ CREATE TABLE IF NOT EXISTS proposal_peer_reviews (
     deadline TIMESTAMPTZ,
     review_text TEXT,
     author_response TEXT,
+    author_response_by TEXT,
     type_of_comment TEXT,
     severity TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,

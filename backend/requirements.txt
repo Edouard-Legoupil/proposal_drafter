@@ -5,6 +5,7 @@ python-dotenv
 fastapi
 fastapi-sso
 msal
+fastapi-limiter
 
 # In-memory data structure store used as database, cache, and message broker
 redis
@@ -69,6 +70,9 @@ xlsxwriter
 
 # Task scheduling library for running jobs at specified intervals
 apscheduler
+
+# Simple task scheduling library for running jobs at specified times
+schedule
 
 # ASGI server implementation with enhanced performance (standard extras)
 uvicorn[standard]>=0.23.0

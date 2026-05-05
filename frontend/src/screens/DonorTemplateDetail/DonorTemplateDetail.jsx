@@ -3,9 +3,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import './DonorTemplateDetail.css'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faThumbsUp, faThumbsDown, faComments, faListCheck, faRobot, faList, faArrowLeft, faFileLines, faFileContract } from '@fortawesome/free-solid-svg-icons'
+import { faThumbsDown, faComments, faListCheck, faRobot, faList, faArrowLeft, faFileLines, faFileContract, faTrash, faCircleInfo } from '@fortawesome/free-solid-svg-icons'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
+import SectionReview from '../../components/SectionReview/SectionReview'
 
 export default function DonorTemplateDetail() {
     const { id } = useParams()
@@ -14,8 +15,8 @@ export default function DonorTemplateDetail() {
     const navigate = useNavigate()
 
     const [template, setTemplate] = useState(null)
-    const [commentText, setCommentText] = useState('')
-    const [commentSection, setCommentSection] = useState('')
+    const [reviewComments, setReviewComments] = useState({})
+    const [reviewStatus, setReviewStatus] = useState({})
     const [isSubmittingComment, setIsSubmittingComment] = useState(false)
     const [error, setError] = useState(null)
     const [currentUser, setCurrentUser] = useState(null)
@@ -96,27 +97,6 @@ export default function DonorTemplateDetail() {
             <div className="hli-panel">
                 <div className="hli-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                     <h4 style={{ margin: 0 }}><FontAwesomeIcon icon={faListCheck} style={{ marginRight: '8px' }} /> High-level Instructions</h4>
-                    <div className="section-review-actions">
-                        <button 
-                            className={`thumb-btn up ${rating === 'up' ? 'active' : ''}`}
-                            onClick={() => handleAddQuickComment(hliName, 'up')}
-                            title="Looks good"
-                        >
-                            <FontAwesomeIcon icon={faThumbsUp} />
-                            <span style={{ fontSize: '0.65rem', marginLeft: '4px' }}>Good</span>
-                        </button>
-                        <button 
-                            className={`thumb-btn down ${rating === 'down' ? 'active' : ''}`}
-                            onClick={() => {
-                                setCommentSection(hliName)
-                                setCommentText(comment)
-                            }}
-                            title="Needs changes"
-                        >
-                            <FontAwesomeIcon icon={faThumbsDown} />
-                            <span style={{ fontSize: '0.65rem', marginLeft: '4px' }}>Fix</span>
-                        </button>
-                    </div>
                 </div>
 
                 <ol className="hli-list">
@@ -125,39 +105,74 @@ export default function DonorTemplateDetail() {
                     ))}
                 </ol>
 
-                {/* HLI Comments History */}
-                {template.comments?.filter(c => c.section_name === hliName).length > 0 && (
-                    <div className="section-comments-history" style={{ borderTop: 'none', marginTop: '0.5rem', paddingTop: 0 }}>
-                        <div className="shared-history-label">Previous Feedback:</div>
-                        {template.comments.filter(c => c.section_name === hliName).map(c => (
-                            <div key={c.id} className={`mini-comment ${c.rating === 'up' ? 'positive' : 'negative'}`}>
-                                <div className="mini-comment-header">
-                                    <strong>{c.user}</strong>
-                                    <span className="mini-comment-date">{new Date(c.created_at).toLocaleDateString()}</span>
-                                </div>
-                                <div className="mini-comment-body">
-                                    <FontAwesomeIcon icon={c.rating === 'up' ? faThumbsUp : faThumbsDown} style={{ marginRight: '6px', opacity: 0.6 }} />
-                                    {c.text}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-                {/* HLI Inline Comment Form */}
-                {commentSection === hliName && (
-                    <div className="inline-comment-form">
-                        <textarea
-                            value={commentText}
-                            onChange={(e) => setCommentText(e.target.value)}
-                            placeholder="Feedback for High-level Instructions..."
+                {/* HLI Inline Comment Form wrapped in SectionReview */}
+                {(() => {
+                    const existingSelf = template.comments?.find(c => c.section_name === hliName && (c.user_id === currentUser?.id || c.user_id === currentUser?.user_id));
+                    
+                    return (
+                        <SectionReview
+                            section={hliName}
+                            type="template"
+                            status={reviewStatus[hliName]}
+                            reviewComment={reviewComments[hliName]}
+                            isReviewEditable={true}
+                            isAuthorizedToReply={false}
+                            onSaveReply={handleSaveResponse}
+                            onStatusChange={(sec, stat) => {
+                                setReviewStatus(prev => ({ ...prev, [sec]: stat }));
+                                if (stat === 'down' && !reviewComments[sec] && existingSelf) {
+                                    setReviewComments(prev => ({ 
+                                        ...prev, 
+                                        [sec]: { 
+                                            id: existingSelf.id,
+                                            review_text: existingSelf.text,
+                                            severity: existingSelf.severity || 'P2',
+                                            type_of_comment: existingSelf.type_of_comment || ''
+                                        } 
+                                    }));
+                                }
+                            }}
+                            onCommentChange={(sec, field, val) => {
+                                if (field === 'save') {
+                                    handleSaveComment(sec, val);
+                                } else {
+                                    setReviewComments(prev => ({
+                                        ...prev,
+                                        [sec]: { ...prev[sec], [field]: val }
+                                    }));
+                                }
+                            }}
+                            onDeleteComment={(sec) => {
+                                const commentId = reviewComments[sec]?.id || existingSelf?.id;
+                                if (commentId) handleDeleteTemplateComment(commentId);
+                                setReviewComments(prev => {
+                                    const next = { ...prev };
+                                    delete next[sec];
+                                    return next;
+                                });
+                                setReviewStatus(prev => ({ ...prev, [sec]: null }));
+                            }}
+                            isOwnerOfComment={true}
+                            isAdmin={currentUser?.is_admin}
+                            previousFeedback={template.comments?.filter(c => c.section_name === hliName && c.status !== 'removed').map(c => ({
+                                id: c.id,
+                                author: c.user,
+                                review_text: c.text,
+                                severity: c.severity || 'P2',
+                                type_of_comment: c.type_of_comment,
+                                status: c.status,
+                                isOwnedByCurrentUser: c.user_id === (currentUser?.id || currentUser?.user_id),
+                                replies: c.author_response ? [{
+                                    author: 'Author',
+                                    text: c.author_response,
+                                    status: c.status
+                                }] : []
+                            })) || []}
+                            onReplyToFeedback={handleReplyToFeedback}
+                            isExpanded={reviewStatus[hliName] === 'down'}
                         />
-                        <div className="inline-comment-actions">
-                            <button className="btn btn--primary btn--small" onClick={handleAddComment}>Save Comment</button>
-                            <button className="btn btn--link btn--small" onClick={() => { setCommentSection(''); setCommentText(''); }}>Cancel</button>
-                        </div>
-                    </div>
-                )}
+                    );
+                })()}
             </div>
         )
     }
@@ -260,34 +275,6 @@ export default function DonorTemplateDetail() {
                                         </span>
                                     )}
                                 </div>
-
-                                {/* Enable feedback for all templates */}
-                                <div className="section-review-actions">
-                                        <button 
-                                            className={`thumb-btn up ${sectionRating === 'up' ? 'active' : ''}`}
-                                            onClick={() => handleAddQuickComment(name, 'up')}
-                                            title="Looks good"
-                                        >
-                                            <FontAwesomeIcon icon={faThumbsUp} />
-                                            <span style={{ fontSize: '0.65rem', marginLeft: '4px' }}>Good</span>
-                                        </button>
-                                    <button 
-                                        className={`thumb-btn down ${sectionRating === 'down' ? 'active' : ''}`}
-                                        onClick={() => {
-                                            setCommentSection(name)
-                                            setCommentText(sectionComment)
-                                            // Focus the local textarea
-                                            setTimeout(() => {
-                                                const el = document.getElementById(`comment-textarea-${idx}`);
-                                                if (el) el.focus();
-                                            }, 10);
-                                        }}
-                                        title="Needs changes"
-                                    >
-                                        <FontAwesomeIcon icon={faThumbsDown} />
-                                        <span style={{ fontSize: '0.65rem', marginLeft: '4px' }}>Fix</span>
-                                    </button>
-                                </div>
                             </div>
 
                             {instructions && (
@@ -303,60 +290,74 @@ export default function DonorTemplateDetail() {
                                 </div>
                             )}
 
-                            {/* Section Comments History (Visible to all users) */}
-                            {template.comments?.filter(c => c.section_name === name).length > 0 && (
-                                <div className="section-comments-history">
-                                    <div className="shared-history-label">Previous Feedback:</div>
-                                    {template.comments.filter(c => c.section_name === name).map(c => (
-                                        <div key={c.id} className={`mini-comment ${c.rating === 'up' ? 'positive' : 'negative'}`}>
-                                            <div className="mini-comment-header">
-                                                <strong>{c.user}</strong>
-                                                <span className="mini-comment-date">{new Date(c.created_at).toLocaleDateString()}</span>
-                                            </div>
-                                            <div className="mini-comment-body">
-                                                <FontAwesomeIcon 
-                                                    icon={c.rating === 'up' ? faThumbsUp : faThumbsDown} 
-                                                    style={{ marginRight: '6px', opacity: 0.6 }} 
-                                                />
-                                                {c.text}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            {/* Inline Comment Form (when thumb-down or active) */}
-                            {(sectionRating === 'down' || commentSection === name) && (
-                                <div className="inline-comment-form">
-                                    <textarea
-                                        id={`comment-textarea-${idx}`}
-                                        value={commentSection === name ? commentText : ''}
-                                        onChange={(e) => {
-                                            setCommentSection(name)
-                                            setCommentText(e.target.value)
+                            {/* SectionReview Integrated - Single component per section */}
+                            {(() => {
+                                const existingSelf = template.comments?.find(c => c.section_name === name && (c.user_id === currentUser?.id || c.user_id === currentUser?.user_id));
+                                
+                                return (
+                                    <SectionReview
+                                        section={name}
+                                        type="template"
+                                        status={reviewStatus[name]}
+                                        reviewComment={reviewComments[name]}
+                                        isReviewEditable={true}
+                                        onStatusChange={(sec, stat) => {
+                                            setReviewStatus(prev => ({ ...prev, [sec]: stat }));
+                                            if (stat === 'down' && !reviewComments[sec] && existingSelf) {
+                                                setReviewComments(prev => ({ 
+                                                    ...prev, 
+                                                    [sec]: { 
+                                                        id: existingSelf.id,
+                                                        review_text: existingSelf.text,
+                                                        severity: existingSelf.severity || 'P2',
+                                                        type_of_comment: existingSelf.type_of_comment || ''
+                                                    } 
+                                                }));
+                                            }
                                         }}
-                                        placeholder={`Feedback for ${name}...`}
+                                        onCommentChange={(sec, field, val) => {
+                                            if (field === 'save') {
+                                                handleSaveComment(sec, val);
+                                            } else {
+                                                setReviewComments(prev => ({
+                                                    ...prev,
+                                                    [sec]: { ...prev[sec], [field]: val }
+                                                }));
+                                            }
+                                        }}
+                                        onDeleteComment={(sec) => {
+                                            const commentId = reviewComments[sec]?.id || existingSelf?.id;
+                                            if (commentId) handleDeleteTemplateComment(commentId);
+                                            setReviewComments(prev => {
+                                                const next = { ...prev };
+                                                delete next[sec];
+                                                return next;
+                                            });
+                                            setReviewStatus(prev => ({ ...prev, [sec]: null }));
+                                        }}
+                                        isOwnerOfComment={true}
+                                        isAdmin={currentUser?.is_admin}
+                                        isAuthorizedToReply={isAdmin}
+                                        onSaveReply={handleSaveResponse}
+                                        previousFeedback={template.comments?.filter(c => c.section_name === name && c.user_id !== currentUser?.id && c.user_id !== currentUser?.user_id).map(c => ({
+                                            id: c.id,
+                                            author: c.user,
+                                            review_text: c.text,
+                                            severity: c.severity || 'P2',
+                                            type_of_comment: c.type_of_comment,
+                                            status: c.status,
+                                            isOwnedByCurrentUser: false,
+                                            replies: c.author_response ? [{
+                                                author: 'Author',
+                                                text: c.author_response,
+                                                status: c.status
+                                            }] : []
+                                        })) || []}
+                                        onReplyToFeedback={handleReplyToFeedback}
+                                        isExpanded={reviewStatus[name] === 'down'}
                                     />
-                                    <div className="inline-comment-actions">
-                                        <button 
-                                            className="btn btn--primary btn--small" 
-                                            onClick={handleAddComment}
-                                            disabled={isSubmittingComment || (commentSection === name && !commentText.trim())}
-                                        >
-                                            {isSubmittingComment && commentSection === name ? 'Saving...' : 'Save Comment'}
-                                        </button>
-                                        <button 
-                                            className="btn btn--link btn--small" 
-                                            onClick={() => {
-                                                setCommentSection('')
-                                                setCommentText('')
-                                            }}
-                                        >
-                                            Cancel
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
+                                );
+                            })()}
 
                             {format === 'table' && columns && (
                                 <div className="table-preview-container">
@@ -397,53 +398,112 @@ export default function DonorTemplateDetail() {
         )
     }
 
-    const handleAddQuickComment = async (sectionName, rating) => {
-        try {
-            const res = await fetch(`${API_BASE_URL}/templates/request/${id}/comment`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    comment_text: rating === 'up' ? 'Approved' : 'Needs review',
-                    section_name: sectionName,
-                    rating: rating
-                }),
-                credentials: 'include'
-            })
-            if (res.ok) {
-                await fetchTemplate()
-            }
-        } catch (err) {
-            console.error("Error adding quick comment", err)
-        }
-    }
-
     // ── Comment handlers ───────────────────────────────────────────────────
-    const handleAddComment = async (e) => {
-        e.preventDefault()
-        if (!commentText.trim()) return
+    const handleSaveComment = async (section, textContent) => {
+        if (!textContent.trim()) return
         setIsSubmittingComment(true)
 
+        const reviewData = reviewComments[section] || {}
+
         try {
             const res = await fetch(`${API_BASE_URL}/templates/request/${id}/comment`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    comment_text: commentText,
-                    section_name: commentSection || null,
-                    rating: 'down' // Manual comments are usually for improvements/rejections
+                    comment_text: textContent,
+                    section_name: section || null,
+                    severity: reviewData.severity || 'P2',
+                    type_of_comment: reviewData.type_of_comment || '',
+                    status: 'submitted'
                 }),
                 credentials: 'include'
             })
 
             if (res.ok) {
-                setCommentText('')
-                setCommentSection('')
                 await fetchTemplate()
+                setReviewStatus(prev => ({ ...prev, [section]: null }))
+                setReviewComments(prev => {
+                    const next = { ...prev }
+                    delete next[section]
+                    return next
+                })
             }
         } catch (err) {
             console.error("Error adding comment", err)
         } finally {
             setIsSubmittingComment(false)
+        }
+    }
+
+    const handleDeleteTemplateComment = async (commentId) => {
+        if (!window.confirm('Remove this comment?')) return
+        try {
+            // Change status to 'removed' instead of deleting
+            const res = await fetch(`${API_BASE_URL}/templates/request/${id}/comment/${commentId}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'removed' }),
+                credentials: 'include'
+            })
+            
+            if (res.ok) {
+                await fetchTemplate()
+            } else {
+                alert('Failed to remove comment. The comment may have already been removed.')
+            }
+        } catch (err) {
+            console.error('Error removing comment', err)
+            alert('Error connecting to server. Please try again.')
+        }
+    }
+
+    const handleSaveResponse = async (section, responseText) => {
+        try {
+            const existing = template.comments?.find(c => c.section_name === section && c.user === currentUser?.name);
+            if (!existing?.id) {
+                console.error('No comment ID found for author response');
+                return;
+            }
+            
+            const res = await fetch(`${API_BASE_URL}/templates/request/${id}/comment/${existing.id}/response`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ author_response: responseText }),
+                credentials: 'include'
+            })
+            
+            if (res.ok) {
+                await fetchTemplate()
+            } else {
+                alert('Failed to save response. Please try again.')
+            }
+        } catch (err) {
+            console.error('Error saving author response', err)
+            alert('Error connecting to server. Please try again.')
+        }
+    }
+
+    const handleReplyToFeedback = async (feedbackId, replyText, replyStatus) => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/templates/request/${id}/reply`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    author_response: replyText,
+                    feedback_id: feedbackId,
+                    status: replyStatus
+                }),
+                credentials: 'include'
+            })
+            
+            if (res.ok) {
+                await fetchTemplate()
+            } else {
+                alert('Failed to save reply. Please try again.')
+            }
+        } catch (err) {
+            console.error('Error saving reply', err)
+            alert('Error connecting to server. Please try again.')
         }
     }
 
@@ -494,9 +554,9 @@ export default function DonorTemplateDetail() {
                         <div className="header-title-group">
                             <h1>{template.name}</h1>
                             <span className="template-type-badge">
-                                <FontAwesomeIcon 
-                                    icon={template.template_type === 'concept_note' || template.template_type === 'Concept Note' ? faFileLines : faFileContract} 
-                                    style={{ marginRight: '6px' }} 
+                                <FontAwesomeIcon
+                                    icon={template.template_type === 'concept_note' || template.template_type === 'Concept Note' ? faFileLines : faFileContract}
+                                    style={{ marginRight: '6px' }}
                                 />
                                 {template.template_type === 'concept_note' ? 'Concept Note' : template.template_type || 'Proposal'}
                             </span>

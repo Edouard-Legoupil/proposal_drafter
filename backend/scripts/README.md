@@ -147,3 +147,52 @@ A comprehensive validation script that ensures all proposal and concept note tem
 ```bash
 python3 backend/scripts/validate_templates.py
 ```
+
+
+## `5-seed-templates.py`
+
+This script imports existing template files from the `templates/` directory into the database. It handles all template types and provides detailed feedback on the migration process.
+
+### Prerequisites
+
+1.  **Template Files**: Ensure that your template files are located in the `templates/` directory and are correctly formatted JSON.
+
+2.  **User ID**: You must provide the UUID of an existing user in the database. The created records will be associated with this user.
+
+3.  **Dependencies**: Activate the app virtual environment
+
+```bash
+source backend/venv/bin/activate
+```
+
+### How to Get a `user_id`
+
+You can get a `user_id` by connecting to the database with `psql` and running the following command:
+
+```bash
+psql -h localhost -U <your_username> -d <your_database_name> -c "SELECT id FROM users LIMIT 1;"
+```
+
+### Usage
+
+Run the script from the root directory of the project, providing the `user_id`. The script will use the default template directory path (`backend/templates/`).
+
+```bash
+python3 backend/scripts/5-seed_templates.py --user-id <your_user_id>
+```
+
+You can also specify a different path to the templates directory using the `--templates-dir` argument:
+
+```bash
+python3 backend/scripts/5-seed_templates.py --templates-dir /path/to/your/templates --user-id <your_user_id>
+```
+
+### Template Structure
+
+The script automatically detects the template type based on the directory structure within the templates folder:
+
+- **`templates/proposal_template/`**: Detected as `proposal` type.
+- **`templates/concept_note_template/`**: Detected as `concept_note` type.
+- **`templates/knowledge_card_template/`**: Detected as `knowledge_card` type.
+
+Each JSON file should contain the template structure expected by the application.

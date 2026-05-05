@@ -1,6 +1,6 @@
 import './KnowledgeCard.css'
 
-export default function KnowledgeCard({ card, date, onClick, isDuplicate, onDelete }) {
+export default function KnowledgeCardPreview({ card, date, onClick, isDuplicate, onDelete }) {
     let linked_to_element;
     let title = card.summary;
 
