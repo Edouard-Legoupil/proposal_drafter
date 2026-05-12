@@ -255,48 +255,7 @@ export default function Chat(props) {
                 });
         }, [id]);
 
-        async function getUsers() {
-                const response = await fetch(`${API_BASE_URL}/users`, {
-                        method: 'GET',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include'
-                })
-
-                if (response.ok) {
-                        const data = await response.json();
-                        // Handle both flat list and dictionary structure
-                        const userList = Array.isArray(data) ? data : (data.users || []);
-                        const formattedUsers = userList.map(user => ({
-                                id: user.id,
-                                name: user.name,
-                                team: user.team_name || 'Unassigned',
-                                donor_ids: user.donor_ids || [],
-                                outcomes: user.outcomes || [],
-                                field_contexts: user.field_contexts || []
-                        }));
-                        setUsers(formattedUsers.sort((a, b) => a.name.localeCompare(b.name)));
-                }
-        }
-
-        async function getTransferUsers() {
-                const response = await fetch(`${API_BASE_URL}/users?role=proposal%20drafter`, {
-                        method: 'GET',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include'
-                })
-
-                if (response.ok) {
-                        const data = await response.json();
-                        const userList = Array.isArray(data) ? data : (data.users || []);
-                        setTransferUsers(userList.map(user => ({
-                                id: user.id,
-                                name: user.name,
-                                team: user.team_name || 'Unassigned'
-                        })));
-                } else {
-                        console.error("Failed to fetch transfer users", response.status);
-                }
-        }
+        // getUsers and getTransferUsers are imported from useChatApi hook
 
 
 
