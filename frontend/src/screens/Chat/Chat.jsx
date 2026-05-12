@@ -375,26 +375,12 @@ export default function Chat(props) {
                 if (existingProposalId) {
                         setButtonEnable(true);
                 } else {
-                        const missing = getMissingFields();
+                        const missing = getMissingFields(userPrompt);
                         setButtonEnable(missing.length === 0);
                 }
         }, [userPrompt, formData])
 
-        const getMissingFields = () => {
-                const missing = [];
-                if (!userPrompt.trim()) missing.push("Proposal Prompt Details");
-                for (const label in formData) {
-                        const field = formData[label];
-                        if (field.mandatory) {
-                                if (Array.isArray(field.value) && field.value.length === 0) {
-                                        missing.push(label);
-                                } else if (!field.value || (typeof field.value === 'string' && !field.value.trim())) {
-                                        missing.push(label);
-                                }
-                        }
-                }
-                return missing;
-        };
+        // getMissingFields is imported from useFormData hook
 
         // renderFormField, getOptions, handleCreate, and OUTCOME_ORDER are now imported from useFormData hook
         // The hook version handles all the same logic with proper dependencies
@@ -589,7 +575,7 @@ export default function Chat(props) {
                 // For regeneration, skip missing fields check (fields should already be filled)
                 // For initial generation, check for missing fields
                 if (!existingProposalId || !existingSessionId) {
-                        const missing = getMissingFields();
+                        const missing = getMissingFields(userPrompt);
                         if (missing.length > 0) {
                                 setValidationMissingFields(missing);
                                 setIsValidationModalOpen(true);
@@ -1728,7 +1714,7 @@ export default function Chat(props) {
                                                                                 <div style={{ position: 'relative' }}>
                                                                                         <CommonButton
                                                                                                 onClick={() => {
-                                                                                                        const missing = getMissingFields();
+                                                                                                        const missing = getMissingFields(userPrompt);
                                                                                                         if (missing.length > 0) {
                                                                                                                 setValidationMissingFields(missing);
                                                                                                                 setIsValidationModalOpen(true);
