@@ -883,17 +883,7 @@ export default function Chat(props) {
         async function getStatusHistory() {
         }
 
-        async function getProfile() {
-                const response = await fetch(`${API_BASE_URL}/profile`, {
-                        method: 'GET',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include'
-                });
-                if (response.ok) {
-                        const result = await response.json();
-                        setCurrentUser(result.user);
-                }
-        }
+        // getProfile is imported from useChatApi hook
 
         async function getContent() {
 
