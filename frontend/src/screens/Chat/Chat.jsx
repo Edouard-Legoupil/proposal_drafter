@@ -36,22 +36,167 @@ import word_icon from "../../assets/images/word.svg"
 import excel_icon from "../../assets/images/excel.svg"
 import { FollowUpModal, ValidationModal, ProgressModal, RegenerateModal, Sidebar, Header, ProposalContainer } from './components';
 import { toKebabCase } from './utils';
+import { useFormData, OUTCOME_ORDER } from './hooks/useFormData';
+import { useChatApi } from './hooks/useChatApi';
+import { useProposal } from './hooks/useProposal';
 
 export default function Chat(props) {
+        // Initialize custom hooks
+        const {
+                formData: hookFormData,
+                setFormData: hookSetFormData,
+                formExpanded: hookFormExpanded,
+                setFormExpanded: hookSetFormExpanded,
+                handleFormInput: hookHandleFormInput,
+                getMissingFields: hookGetMissingFields,
+                getOptions: hookGetOptions,
+                handleCreate: hookHandleCreate,
+                renderFormField: hookRenderFormField
+        } = useFormData();
+
+        const {
+                donors: hookDonors,
+                outcomes: hookOutcomes,
+                fieldContexts: hookFieldContexts,
+                filteredFieldContexts: hookFilteredFieldContexts,
+                newBudgetRanges: hookNewBudgetRanges,
+                newDurations: hookNewDurations,
+                geographicCoverages: hookGeographicCoverages,
+                users: hookUsers,
+                transferUsers: hookTransferUsers,
+                currentUser: hookCurrentUser,
+                isReviewer: hookIsReviewer,
+                isAdmin: hookIsAdmin,
+                setFilteredFieldContexts: hookSetFilteredFieldContexts,
+                fetchData: hookFetchData,
+                getUsers: hookGetUsers,
+                getTransferUsers: hookGetTransferUsers,
+                getProfile: hookGetProfile
+        } = useChatApi();
+
+        const {
+                proposal: hookProposal,
+                setProposal: hookSetProposal,
+                proposalTemplate: hookProposalTemplate,
+                setProposalTemplate: hookSetProposalTemplate,
+                proposalStatus: hookProposalStatus,
+                setProposalStatus: hookSetProposalStatus,
+                generateLoading: hookGenerateLoading,
+                setGenerateLoading: hookSetGenerateLoading,
+                generateLabel: hookGenerateLabel,
+                setGenerateLabel: hookSetGenerateLabel,
+                contributionId: hookContributionId,
+                setContributionId: hookSetContributionId,
+                isEdit: hookIsEdit,
+                setIsEdit: hookSetIsEdit,
+                editorContent: hookEditorContent,
+                setEditorContent: hookSetEditorContent,
+                selectedSectionName: hookSelectedSectionName,
+                setSelectedSectionName: hookSetSelectedSectionName,
+                isCopied: hookIsCopied,
+                setIsCopied: hookSetIsCopied,
+                fromFollowUpModalRef: hookFromFollowUpModalRef,
+                topRef: hookTopRef,
+                proposalRef: hookProposalRef,
+                associatedKnowledgeCards: hookAssociatedKnowledgeCards,
+                setAssociatedKnowledgeCards: hookSetAssociatedKnowledgeCards,
+                reviews: hookReviews,
+                setReviews: hookSetReviews,
+                reviewComments: hookReviewComments,
+                setReviewComments: hookSetReviewComments,
+                reviewStatus: hookReviewStatus,
+                setReviewStatus: hookSetReviewStatus,
+                handleCopyClick: hookHandleCopyClick,
+                handleExpanderToggle: hookHandleExpanderToggle,
+                handleEditClick: hookHandleEditClick,
+                handleRegenerateIconClick: hookHandleRegenerateIconClick,
+                handleCommentChange: hookHandleCommentChange,
+                handleStatusChange: hookHandleStatusChange,
+                handleDeleteComment: hookHandleDeleteComment,
+                handleReplyToFeedback: hookHandleReplyToFeedback,
+                handleSaveResponse: hookHandleSaveResponse,
+                handleSidebarSectionClick: hookHandleSidebarSectionClick
+        } = useProposal();
         const navigate = useNavigate()
         const { id } = useParams()
 
         const [documentType, setDocumentType] = useState("proposal")
 
-        const [isReviewer, setIsReviewer] = useState(false);
-        const [reviewComments, setReviewComments] = useState({});
-        const [reviewStatus, setReviewStatus] = useState({});
-        const autoSaveTimers = useRef({});
-        const [isAdmin, setIsAdmin] = useState(false);
+        // Use hook state instead of local state
+        const donors = hookDonors
+        const outcomes = hookOutcomes
+        const fieldContexts = hookFieldContexts
+        const filteredFieldContexts = hookFilteredFieldContexts
+        const newBudgetRanges = hookNewBudgetRanges
+        const newDurations = hookNewDurations
+        const geographicCoverages = hookGeographicCoverages
+        const users = hookUsers
+        const transferUsers = hookTransferUsers
+        const currentUser = hookCurrentUser
+        const isReviewer = hookIsReviewer
+        const isAdmin = hookIsAdmin
+        const setFilteredFieldContexts = hookSetFilteredFieldContexts
+        
+        const proposal = hookProposal
+        const setProposal = hookSetProposal
+        const proposalTemplate = hookProposalTemplate
+        const setProposalTemplate = hookSetProposalTemplate
+        const proposalStatus = hookProposalStatus
+        const setProposalStatus = hookSetProposalStatus
+        const generateLoading = hookGenerateLoading
+        const setGenerateLoading = hookSetGenerateLoading
+        const generateLabel = hookGenerateLabel
+        const setGenerateLabel = hookSetGenerateLabel
+        const contributionId = hookContributionId
+        const setContributionId = hookSetContributionId
+        const isEdit = hookIsEdit
+        const setIsEdit = hookSetIsEdit
+        const editorContent = hookEditorContent
+        const setEditorContent = hookSetEditorContent
+        const selectedSectionName = hookSelectedSectionName
+        const setSelectedSectionName = hookSetSelectedSectionName
+        const isCopied = hookIsCopied
+        const setIsCopied = hookSetIsCopied
+        const fromFollowUpModalRef = hookFromFollowUpModalRef
+        const topRef = hookTopRef
+        const proposalRef = hookProposalRef
+        const associatedKnowledgeCards = hookAssociatedKnowledgeCards
+        const setAssociatedKnowledgeCards = hookSetAssociatedKnowledgeCards
+        const reviews = hookReviews
+        const setReviews = hookSetReviews
+        const reviewComments = hookReviewComments
+        const setReviewComments = hookSetReviewComments
+        const reviewStatus = hookReviewStatus
+        const setReviewStatus = hookSetReviewStatus
+        
+        // Local state (not in hooks yet)
+        const [titleName, setTitleName] = useState(props?.title ?? "Generate Draft Proposal")
+        const [userPrompt, setUserPrompt] = useState("")
+        const [buttonEnable, setButtonEnable] = useState(false)
+        const autoSaveTimers = useRef({})
+        const copyResetTimerRef = useRef(null)
+        const isGenerating = useRef(false)
 
+        // Modal state (could be in useModalState but needs local for now)
         const [sidebarOpen, setSidebarOpen] = useState(false);
         const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
         const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+        const [isPeerReviewModalOpen, setIsPeerReviewModalOpen] = useState(false)
+        const [isAssociateKnowledgeModalOpen, setIsAssociateKnowledgeModalOpen] = useState(false)
+        const [isPdfUploadModalOpen, setIsPdfUploadModalOpen] = useState(false)
+        const [selectedUsers, setSelectedUsers] = useState([])
+        const [validationMissingFields, setValidationMissingFields] = useState([])
+        const [isValidationModalOpen, setIsValidationModalOpen] = useState(false)
+        const [isTransferModalOpen, setIsTransferModalOpen] = useState(false)
+        const [showFollowUpModal, setShowFollowUpModal] = useState(false)
+        const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
+        const [followUpInstruction, setFollowUpInstruction] = useState("");
+        const [generationProgress, setGenerationProgress] = useState(0);
+        const [generationMessage, setGenerationMessage] = useState("");
+        const [isRegenerateModalOpen, setIsRegenerateModalOpen] = useState(false)
+        const [regenerateInput, setRegenerateInput] = useState("");
+        const [regenerateSectionLoading, setRegenerateSectionLoading] = useState(false);
+        const [notif, setNotif] = useState({ open: false, message: '', severity: 'info' });
 
         useEffect(() => {
                 function handleResize() {
@@ -62,31 +207,12 @@ export default function Chat(props) {
                 return () => window.removeEventListener('resize', handleResize);
         }, []);
 
-        const [titleName, setTitleName] = useState(props?.title ?? "Generate Draft Proposal")
-
-        const [userPrompt, setUserPrompt] = useState("")
-
-        const [isPeerReviewModalOpen, setIsPeerReviewModalOpen] = useState(false)
-        const [isAssociateKnowledgeModalOpen, setIsAssociateKnowledgeModalOpen] = useState(false)
-        const [isPdfUploadModalOpen, setIsPdfUploadModalOpen] = useState(false)
-        const [currentUser, setCurrentUser] = useState(null)
-        const [users, setUsers] = useState([])
-        const [selectedUsers, setSelectedUsers] = useState([])
-        const [associatedKnowledgeCards, setAssociatedKnowledgeCards] = useState([])
-        const [validationMissingFields, setValidationMissingFields] = useState([])
-        const [isValidationModalOpen, setIsValidationModalOpen] = useState(false)
-        const [isTransferModalOpen, setIsTransferModalOpen] = useState(false)
-        const [transferUsers, setTransferUsers] = useState([])
-
-        const [donors, setDonors] = useState([])
-        const [outcomes, setOutcomes] = useState([])
-        const [fieldContexts, setFieldContexts] = useState([])
-        const [filteredFieldContexts, setFilteredFieldContexts] = useState([])
-        const [newBudgetRanges, setNewBudgetRanges] = useState([])
-        const [newDurations, setNewDurations] = useState([])
-        const [geographicCoverages, setGeographicCoverages] = useState([])
-
-        async function fetchData() {
+        // Use hook functions
+        const fetchData = hookFetchData
+        const getUsers = hookGetUsers
+        const getTransferUsers = hookGetTransferUsers
+        const getProfile = hookGetProfile
+        const getContent = async () => {
                 try {
                         const [donorsRes, outcomesRes, fieldContextsRes, geoCoveragesRes] = await Promise.all([
                                 fetch(`${API_BASE_URL}/donors`, { credentials: 'include' }),
@@ -174,54 +300,16 @@ export default function Chat(props) {
 
 
 
-        const [form_expanded, setFormExpanded] = useState(true)
-        const [formData, setFormData] = useState({
-                "Project Draft Short name": {
-                        mandatory: true,
-                        value: ""
-                },
-                "Main Outcome": {
-                        mandatory: true,
-                        value: [],
-                        type: 'multiselect'
-                },
-                "Beneficiaries Profile": {
-                        mandatory: true,
-                        value: ""
-                },
-                "Potential Implementing Partner": {
-                        mandatory: false,
-                        value: ""
-                },
-                "Geographical Scope": {
-                        mandatory: true,
-                        value: ""
-                },
-                "Country / Location(s)": {
-                        mandatory: true,
-                        value: ""
-                },
-                "Budget Range": {
-                        mandatory: true,
-                        value: ""
-                },
-                "Duration": {
-                        mandatory: true,
-                        value: ""
-                },
-                "Targeted Donor": {
-                        mandatory: true,
-                        value: ""
-                },
-                "multiple countries": {
-                        mandatory: false,
-                        value: false
-                },
-                "multiple donors": {
-                        mandatory: false,
-                        value: false
-                }
-        })
+        // Use hook state instead of local state
+        const formData = hookFormData
+        const setFormData = hookSetFormData
+        const formExpanded = hookFormExpanded
+        const setFormExpanded = hookSetFormExpanded
+        const handleFormInput = hookHandleFormInput
+        const renderFormField = hookRenderFormField
+        const getMissingFields = hookGetMissingFields
+        const getOptions = hookGetOptions
+        const handleCreate = hookHandleCreate
 
         useEffect(() => {
                 if (isPeerReviewModalOpen && users.length > 0) {
@@ -308,185 +396,8 @@ export default function Chat(props) {
                 return missing;
         };
 
-        const renderFormField = (label, disabled) => {
-                const field = formData[label];
-                if (!field) return null;
-
-                const fieldId = toKebabCase(label);
-
-                const OUTCOME_ORDER = [
-                        "OA1. Access to Territory, Registration and Documentation",
-                        "OA2. Status Determination",
-                        "OA3. Protection Policy and Law",
-                        "OA4. Gender-based Violence",
-                        "OA5. Child Protection",
-                        "OA6. Safety and Access to Justice",
-                        "OA7. Community Engagement and Participation",
-                        "OA8. Well-Being and Basic Needs",
-                        "OA9. Sustainable housing and Settlements",
-                        "OA10. Healthy Lives",
-                        "OA11. Education",
-                        "OA12. Clean Water, Sanitation and Hygiene",
-                        "OA13. Self Reliance, Economic Inclusion and Livelihoods",
-                        "OA14. Voluntary Repatriation and Sustainable Reintegration",
-                        "OA15. Resettlement and Complementary Pathways",
-                        "OA16. Local Integration and other Local Solutions",
-                        "EA17. Systems and Processes",
-                        "EA18. Operational support and supply chain",
-                        "EA19. People and culture",
-                        "EA20. External engagement and resource mobilization",
-                        "EA21. Leadership and Governance",
-                        "FA1. Safeguard international protection, including in the context of mixed movements.",
-                        "FA2. Strengthen accountability to the people we serve, especially women and children.",
-                        "FA3. Reinforce efforts to strengthen gender-based violence prevention, risk mitigation and response.",
-                        "FA4. Expand, pursue and adapt options for resettlement and complementary pathways.",
-                        "FA5. Mainstream development engagement in our responses from the outset, especially by building coalitions with development partners.",
-                        "FA6. Grow our engagement on responses and solutions for internally displaced people.",
-                        "FA7. Redouble efforts on statelessness so that the objectives of the #IBelong campaign are best pursued.",
-                        "FA8. Proactively act to mitigate the effects of the climate change crisis on displacement and in line with our protection mandate."
-                ];
-
-                const getOptions = (label) => {
-                        switch (label) {
-                                case "Main Outcome": {
-                                        const options = outcomes.map(o => ({ value: o.id, label: o.name }));
-                                        return options.sort((a, b) => {
-                                                const indexA = OUTCOME_ORDER.indexOf(a.label);
-                                                const indexB = OUTCOME_ORDER.indexOf(b.label);
-                                                if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-                                                if (indexA !== -1) return -1;
-                                                if (indexB !== -1) return 1;
-                                                return a.label.localeCompare(b.label);
-                                        });
-                                }
-                                case "Targeted Donor":
-                                        return donors.map(d => ({ value: d.id, label: d.name })).sort((a, b) => a.label.localeCompare(b.label));
-                                case "Country / Location(s)":
-                                        return filteredFieldContexts.map(fc => ({ value: fc.id, label: fc.name })).sort((a, b) => a.label.localeCompare(b.label));
-                                case "Geographical Scope":
-                                        return geographicCoverages.map(gc => ({ value: gc, label: gc })).sort((a, b) => a.label.localeCompare(b.label));
-                                case "Duration": {
-                                        const durationOptions = ["1 month", "3 months", "6 months", "12 months", "18 months", "24 months", "30 months", "36 months"];
-                                        return [...durationOptions.map(d => ({ value: d, label: d })), ...newDurations.map(d => ({ value: d.id, label: d.name }))];
-                                }
-                                case "Budget Range": {
-                                        const budgetOptions = ["50k$", "100k$", "250k$", "500k$", "1M$", "2M$", "5M$", "10M$", "15M$", "25M$"];
-                                        return [...budgetOptions.map(b => ({ value: b, label: b })), ...newBudgetRanges.map(b => ({ value: b.id, label: b.name }))];
-                                }
-                                default:
-                                        return [];
-                        }
-                };
-
-                const handleCreate = (inputValue, label) => {
-                        const newOption = { id: `new_${inputValue}`, name: inputValue };
-                        switch (label) {
-                                case "Duration":
-                                        setNewDurations(prev => [...prev, newOption]);
-                                        handleFormInput({ target: { value: newOption.id } }, label);
-                                        break;
-                                case "Budget Range":
-                                        setNewBudgetRanges(prev => [...prev, newOption]);
-                                        handleFormInput({ target: { value: newOption.id } }, label);
-                                        break;
-                        }
-                };
-
-                const isCreatableSelect = ["Duration", "Budget Range"].includes(label);
-                const isSelect = ["Targeted Donor", "Country / Location(s)"].includes(label);
-                const isMultiSelect = label === "Main Outcome" || (label === "Targeted Donor" && formData["multiple donors"]?.value) || (label === "Country / Location(s)" && formData["multiple countries"]?.value);
-                const isNormalSelect = label === "Geographical Scope";
-
-                return (
-                        <div key={label} className='Chat_form_inputContainer'>
-                                <label className='Chat_form_inputLabel' htmlFor={fieldId}>
-                                        <div className="tooltip-container">
-                                                {label}
-                                                <span className={`Chat_form_input_mandatoryAsterisk ${!field.mandatory ? "hidden" : ""}`}>*</span>
-                                                {label === "Project Draft Short name" && <span className="tooltip-text">This will be the name used to story your draft on this system</span>}
-                                        </div>
-                                </label>
-
-                                {isCreatableSelect ? (
-                                        <div data-testid={`creatable-select-container-${toKebabCase(label)}`}>
-                                                <CreatableSelect
-                                                        isClearable
-                                                        aria-label={label}
-                                                        classNamePrefix={toKebabCase(label)}
-                                                        onChange={option => handleFormInput({ target: { value: option ? option.value : "" } }, label)}
-                                                        onCreateOption={inputValue => handleCreate(inputValue, label)}
-                                                        options={getOptions(label)}
-                                                        value={getOptions(label).find(o => o.value === field.value)}
-                                                        isDisabled={disabled}
-                                                        inputId={fieldId}
-                                                />
-                                        </div>
-                                ) : isSelect ? (
-                                        <div data-testid={`select-container-${toKebabCase(label)}`}>
-                                                <Select
-                                                        isMulti={isMultiSelect}
-                                                        isClearable
-                                                        aria-label={label}
-                                                        classNamePrefix={toKebabCase(label)}
-                                                        onChange={option => {
-                                                                if (isMultiSelect) {
-                                                                        handleFormInput({ target: { value: option ? option.map(o => o.value) : [] } }, label)
-                                                                } else {
-                                                                        handleFormInput({ target: { value: option ? option.value : "" } }, label)
-                                                                }
-                                                        }}
-                                                        options={getOptions(label)}
-                                                        value={isMultiSelect
-                                                                ? (Array.isArray(field.value) ? field.value.map(v => getOptions(label).find(o => o.value === v)).filter(Boolean) : [])
-                                                                : getOptions(label).find(o => o.value === field.value)}
-                                                        isDisabled={disabled}
-                                                        inputId={fieldId}
-                                                />
-                                        </div>
-                                ) : isMultiSelect ? (
-                                        <div data-testid={`multiselect-container-${toKebabCase(label)}`}>
-                                                <Select
-                                                        isMulti
-                                                        aria-label={label}
-                                                        classNamePrefix={toKebabCase(label)}
-                                                        onChange={options => handleFormInput({ target: { value: options ? options.map(o => o.value) : [] } }, label)}
-                                                        options={getOptions(label)}
-                                                        value={field.value.map(v => getOptions(label).find(o => o.value === v)).filter(Boolean)}
-                                                        isDisabled={disabled}
-                                                        inputId={fieldId}
-                                                />
-                                        </div>
-                                ) : isNormalSelect ? (
-                                        <select
-                                                className='Chat_form_input'
-                                                id={fieldId}
-                                                name={fieldId}
-                                                value={field.value}
-                                                onChange={e => handleFormInput(e, label)}
-                                                disabled={disabled}
-                                                data-testid={fieldId}
-                                        >
-                                                <option value="" disabled>Select {label}</option>
-                                                {getOptions(label).map(option => (
-                                                        <option key={option.value} value={option.value}>{option.label}</option>
-                                                ))}
-                                        </select>
-                                ) : (
-                                        <input
-                                                type="text"
-                                                className='Chat_form_input'
-                                                id={fieldId}
-                                                name={fieldId}
-                                                placeholder={`Enter ${label}`}
-                                                value={field.value}
-                                                onChange={e => handleFormInput(e, label)}
-                                                disabled={disabled}
-                                                data-testid={fieldId}
-                                        />
-                                )}
-                        </div>
-                );
-        };
+        // renderFormField, getOptions, handleCreate, and OUTCOME_ORDER are now imported from useFormData hook
+        // The hook version handles all the same logic with proper dependencies
 
         const [proposal, setProposal] = useState({})
         const [generateLoading, setGenerateLoading] = useState(false)
@@ -1805,7 +1716,7 @@ export default function Chat(props) {
                                                                 fileIcon={fileIcon}
                                                                 userPrompt={userPrompt}
                                                                 setUserPrompt={setUserPrompt}
-                                                                formExpanded={form_expanded}
+                                                                formExpanded={formExpanded}
                                                                 setFormExpanded={setFormExpanded}
                                                                 toKebabCase={toKebabCase}
                                                                 renderFormField={renderFormField}

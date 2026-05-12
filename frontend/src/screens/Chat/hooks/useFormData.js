@@ -58,7 +58,7 @@ const INITIAL_FORM_DATA = {
 };
 
 // Outcome ordering for sorted dropdown
-const OUTCOME_ORDER = [
+export const OUTCOME_ORDER = [
   "OA1. Access to Territory, Registration and Documentation",
   "OA2. Status Determination",
   "OA3. Protection Policy and Law",
