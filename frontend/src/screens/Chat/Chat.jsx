@@ -402,8 +402,6 @@ export default function Chat(props) {
         const [proposal, setProposal] = useState({})
         const [generateLoading, setGenerateLoading] = useState(false)
         const [generateLabel, setGenerateLabel] = useState("Generate")
-        const [followUpInstruction, setFollowUpInstruction] = useState("")
-        const [showFollowUpModal, setShowFollowUpModal] = useState(false)
         const isGenerating = useRef(false);
         const fromFollowUpModalRef = useRef(false);
 
@@ -429,12 +427,6 @@ export default function Chat(props) {
                         topRef.current?.scrollIntoView({ behavior: "smooth" });
                 }
         }, [generateLoading, proposal]);
-
-        // --- Progress + Notification State ---
-        const [generationProgress, setGenerationProgress] = useState(0); // percent [0-100]
-        const [generationMessage, setGenerationMessage] = useState("");
-        const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
-        const [notif, setNotif] = useState({ open: false, message: '', severity: 'info' }); // info/success/error
 
         // --- Streaming polling logic for proposal generation ---
         useEffect(() => {
@@ -798,13 +790,11 @@ export default function Chat(props) {
                 }
         }, [])
 
-        const [isRegenerateModalOpen, setIsRegenerateModalOpen] = useState(false)
         const [regenerateInput, setRegenerateInput] = useState("")
         const handleRegenerateIconClick = sectionName => {
                 setSelectedSectionName(sectionName)
                 setIsRegenerateModalOpen(true)
         }
-        const [regenerateSectionLoading, setRegenerateSectionLoading] = useState(false)
         async function handleRegenerateButtonClick(ip = regenerateInput) {
                 setRegenerateSectionLoading(true)
                 const sectionName = selectedSectionName;
