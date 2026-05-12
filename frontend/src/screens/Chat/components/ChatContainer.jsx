@@ -214,7 +214,7 @@ const ChatContainer = (props) => {
         const getUsers = hookGetUsers
         const getTransferUsers = hookGetTransferUsers
         const getProfile = hookGetProfile
-        const getContent = async () => {
+        const fetchFormData = async () => {
                 try {
                         const [donorsRes, outcomesRes, fieldContextsRes, geoCoveragesRes] = await Promise.all([
                                 fetch(`${API_BASE_URL}/donors`, { credentials: 'include' }),
@@ -252,7 +252,7 @@ const ChatContainer = (props) => {
                 }
                 fetchData().then(() => {
                         if (sessionStorage.getItem("proposal_id")) {
-                                getContent();
+                                fetchFormData();
                         }
                 });
         }, [id]);
@@ -319,38 +319,6 @@ const ChatContainer = (props) => {
                         }
                 }
         }, [formData['Geographical Scope'].value, fieldContexts]);
-        function handleFormInput(e, label) {
-                setFormData(p => ({
-                        ...p,
-                        [label]: {
-                                ...(p[label] || {}),
-                                value: e?.target ? e.target.value : e
-                        }
-                }))
-        }
-
-        const [buttonEnable, setButtonEnable] = useState(false)
-        // Update buttonEnable: true if there's an existing proposal, otherwise check fields
-        useEffect(() => {
-                const existingProposalId = sessionStorage.getItem("proposal_id");
-                if (existingProposalId) {
-                        setButtonEnable(true);
-                } else {
-                        const missing = getMissingFields(userPrompt);
-                        setButtonEnable(missing.length === 0);
-                }
-        }, [userPrompt, formData])
-
-        // getMissingFields is imported from useFormData hook
-
-        // renderFormField, getOptions, handleCreate, and OUTCOME_ORDER are now imported from useFormData hook
-        // The hook version handles all the same logic with proper dependencies
-
-        const [proposal, setProposal] = useState({})
-        const [generateLoading, setGenerateLoading] = useState(false)
-        const [generateLabel, setGenerateLabel] = useState("Generate")
-        const isGenerating = useRef(false);
-        const fromFollowUpModalRef = useRef(false);
 
         // Set label to Regenerate if there's an existing proposal
         useEffect(() => {
@@ -697,8 +665,6 @@ const ChatContainer = (props) => {
         }
 
         const [selectedSection, setSelectedSection] = useState(-1)
-        const topRef = useRef()
-        const proposalRef = useRef()
         function handleSidebarSectionClick(sectionIndex) {
                 setSelectedSection(sectionIndex)
 
@@ -707,9 +673,6 @@ const ChatContainer = (props) => {
                 else if (proposalRef.current)
                         proposalRef?.current?.children[sectionIndex]?.scrollIntoView({ behavior: "smooth" })
         }
-
-        const [isCopied, setIsCopied] = useState(false)
-        const copyResetTimerRef = useRef(null)
 
         async function handleCopyClick(sectionName, content) {
                 try {
@@ -737,7 +700,6 @@ const ChatContainer = (props) => {
                 }
         }, [])
 
-        const [regenerateInput, setRegenerateInput] = useState("")
         const handleRegenerateIconClick = sectionName => {
                 setSelectedSectionName(sectionName)
                 setIsRegenerateModalOpen(true)
@@ -796,10 +758,6 @@ const ChatContainer = (props) => {
                 })
         }
 
-        const [isEdit, setIsEdit] = useState(false)
-        const [editorContent, setEditorContent] = useState("")
-        const [proposalTemplate, setProposalTemplate] = useState(null)
-        const [selectedSectionName, setSelectedSectionName] = useState(null)
         async function handleEditClick(sectionName) {
                 if (!isEdit) {
                         // Entering edit mode
@@ -844,11 +802,6 @@ const ChatContainer = (props) => {
                         }
                 }
         }
-
-        const [proposalStatus, setProposalStatus] = useState("draft")
-        const [contributionId, setContributionId] = useState("")
-        const [statusHistory, setStatusHistory] = useState([])
-        const [reviews, setReviews] = useState([])
 
         async function handleSaveContributionId() {
                 const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/save-contribution-id`, {
