@@ -121,7 +121,7 @@ const ChatContainer = (props) => {
                 handleSidebarSectionClick: hookHandleSidebarSectionClick,
                 getPeerReviews: hookGetPeerReviews,
                 getStatusHistory: hookGetStatusHistory
-        } = useProposal();
+        } = useProposal({ setCurrentUser, setIsAdmin, setIsReviewer });
         const navigate = useNavigate()
         const { id } = useParams()
 

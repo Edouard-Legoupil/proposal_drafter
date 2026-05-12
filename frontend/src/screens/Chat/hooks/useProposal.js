@@ -11,9 +11,13 @@ const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api";
 
 /**
  * Custom hook for proposal management
+ * @param {Object} options - Optional parameters
+ * @param {Function} options.setCurrentUser - Setter for currentUser from useChatApi
+ * @param {Function} options.setIsAdmin - Setter for isAdmin from useChatApi
+ * @param {Function} options.setIsReviewer - Setter for isReviewer from useChatApi
  * @returns {Object} Proposal state and handlers
  */
-export const useProposal = () => {
+export const useProposal = ({ setCurrentUser, setIsAdmin, setIsReviewer } = {}) => {
   const navigate = useNavigate();
   const { id } = useParams();
   
