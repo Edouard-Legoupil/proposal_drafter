@@ -1,0 +1,58 @@
+Unify the user feedback logic managed through frontend/src/components/SectionReview/SectionReview.jsx across:
+
+
+- proposal - frontend/src/screens/Chat/Chat.jsx
+- card -  frontend/src/screens/KnowledgeCard/KnowledgeCard.jsx
+- template - frontend/src/screens/DonorTemplateDetail/DonorTemplateDetail.jsx
+
+Feedback are activated when user click on the Thumb down button - 
+
+If user click again on the thumb-down, the icon change and the feedback componnent is deactivated
+
+The thumn-down button across the 3 screens should be strictly similar
+
+They should all use the same UI componnent - 
+
+
+Depending on the screen ttype this componnnet link up to different table 
+
+- proposal - proposal_peer_reviews
+- card -  knowledge_card_reviews
+- template - donor_template_comments
+
+Each table has in common the following field to be filled by the commenter
+
+- section_name,
+- severity
+- type_of_comment,
+- review_text,
+
+The status field record the status - it can be submitted, removed, processing, parked, or fixed 
+
+When a user save a comment it becomes submitted. If a user click on remove on an existing record, status is then set to remove and the comment is not displayed again.
+
+System admin can then change the status of a comment from submitted to processing or parked or fixed - 
+
+- the author_response records comments from the sysadmin or from any user that is the author of the proposal, card or template
+
+Revise the componnent - 
+
+User have to select severity  using a radio button - when user pop on the selected level a hover on description of what the severity means is displayed - the description is dependant on whether it applies to a proposal, card or template 
+Depending on severity, different 'type_of_comment' can then be selected - 
+
+Then user can enter the comment itself - depending on the type (card, proposal or template) the comment and severity is saved in the appropriate table
+
+user should have a button to save a comment. A comment can be saved - aka the save button is activated  only if  'severity', 'type_of_comment' and 'review_text' are not empty - 
+
+Once the UI componnent is integrated - clean code within 
+- proposal - frontend/src/screens/Chat/Chat.jsx
+- card -  frontend/src/screens/KnowledgeCard/KnowledgeCard.jsx
+- template - frontend/src/screens/DonorTemplateDetail/DonorTemplateDetail.jsx
+
+to make sure commenting ability is strictly mainstreamed in that componnent.
+
+This componnent should also include the display of any previous comments , with severity and status
+
+For any previous comments, user shall have an option to remove an existing comment - when a user press this button - the comment status change to removed and the comment is not displayed anymore
+
+In the componnnet screen, I should see first - severity radio button - then conditional dropdown for the  type_of_comment (which should remain visible after being set) and then the long text box for the review_text

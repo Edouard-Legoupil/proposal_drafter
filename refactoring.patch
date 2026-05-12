@@ -1,0 +1,136 @@
+--- a/frontend/src/screens/Chat/Chat.jsx
++++ b/frontend/src/screens/Chat/Chat.jsx
+@@ -14,7 +14,6 @@ import PdfUploadModal from '../../components/PdfUploadModal/PdfUploadModal';
+ import Select from 'react-select';
+ import CreatableSelect from 'react-select/creatable';
+ import SingleSelectUserModal from '../../components/SingleSelectUserModal/SingleSelectUserModal'
+-
+ import ProgressModal from '../../components/ProgressModal/ProgressModal';
+ import Select from 'react-select';
+ import { useNavigate, useParams } from 'react-router-dom'
+@@ -34,6 +33,9 @@ import word_icon from "../../assets/images/word.svg"
+ import excel_icon from "../../assets/images/excel.svg"
+ import { FollowUpModal } from './components/Modals';
+ 
++import { FollowUpModal, ValidationModal, ProgressModal } from './components';
++
+ export default function Chat(props) {
+        const navigate = useNavigate()
+        const { id } = useParams()
+@@ -15,7 +17,6 @@ import SingleSelectUserModal from '../../components/SingleSelectUserModal/Singl
+ import ProgressModal from '../../components/ProgressModal/ProgressModal';
+ import Select from 'react-select';
+ import CreatableSelect from 'react-select/creatable';
+-
+ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+ import SectionReview from '../../components/SectionReview/SectionReview'
+ import edit from "../../assets/images/Chat_edit.svg"
+@@ -1720,14 +1721,11 @@ export default function Chat(props) {
+                                 </Snackbar>
+ 
+-                                <ProgressModal
+-                                        isOpen={isProgressModalOpen}
+-                                        onClose={() => setIsProgressModalOpen(false)}
+-                                        progress={generationProgress}
+-                                        message={generationMessage}
+-                                />
+-
++                                <ProgressModal
++                                        isOpen={isProgressModalOpen}
++                                        onClose={() => setIsProgressModalOpen(false)}
++                                        progress={generationProgress}
++                                        message={generationMessage}
++                                />
+ 
+                                 <MultiSelectModal
+                                         isOpen={isPeerReviewModalOpen}
+@@ -1759,26 +1757,14 @@ export default function Chat(props) {
+ 
+                                 {/* Validation Modal */}
+-                                <dialog open={isValidationModalOpen} className="Chat_regenerate" style={{ height: 'auto', maxHeight: '80vh', top: '10%' }}>
+-                                        <header className="Chat_regenerate_header">
+-                                                Data Missing
+-                                                <img src={regenerateClose} alt="" onClick={() => setIsValidationModalOpen(false)} style={{ cursor: 'pointer' }} />
+-                                        </header>
+-                                        <main className="Chat_right" style={{ padding: '20px' }}>
+-                                                <p style={{ marginBottom: '15px' }}>The following mandatory parameters are missing:</p>
+-                                                <ul style={{ listStyleType: 'disc', paddingLeft: '20px', marginBottom: '20px', color: '#141419' }}>
+-                                                        {validationMissingFields.map((field, index) => (
+-                                                                <li key={index} style={{ marginBottom: '5px' }}>{field}</li>
+-                                                        ))}
+-                                                </ul>
+-                                                <div className="Chat_inputArea_buttonContainer">
+-                                                        <CommonButton onClick={() => setIsValidationModalOpen(false)} label="Close" />
+-                                                </div>
+-                                        </main>
+-                                </dialog>
++
++                                <ValidationModal
++                                        isOpen={isValidationModalOpen}
++                                        onClose={() => setIsValidationModalOpen(false)}
++                                        missingFields={validationMissingFields}
++                                />
+ 
+                                 {/* Follow-up Instruction Modal - Shown when regenerating a proposal */}
+-                                <dialog open={showFollowUpModal} className="Chat_regenerate" style={{ height: 'auto', maxHeight: '80vh', top: '10%', width: '60vw', maxWidth: '800px' }} data-testid="followup-modal">
++                                <FollowUpModal
++                                        isOpen={showFollowUpModal}
++                                        onClose={() => setShowFollowUpModal(false)}
++                                        onSkip={() => {
++                                                setShowFollowUpModal(false);
++                                                setGenerateLabel("Regenerate");
++                                        }}
++                                        onSaveForLater={() => {
++                                                setShowFollowUpModal(false);
++                                                setGenerateLabel("Regenerate");
++                                        }}
++                                        onRegenerate={handleRegenerateWithFollowUp}
++                                        instruction={followUpInstruction}
++                                        setInstruction={setFollowUpModal}
++                                        regenerateCloseIcon={regenerateClose}
++                                        generateIcon={generateIcon}
++                                />
+-                                        <header className="Chat_regenerate_header">
+-                                                Provide Follow-up Instructions
+-                                                <img src={regenerateClose} alt="" onClick={() => setShowFollowUpModal(false)} style={{ cursor: 'pointer' }} />
+-                                        </header>
+-                                        <main className="Chat_right" style={{ padding: '20px' }}>
+-                                                <p style={{ marginBottom: '15px', color: '#666' }}>
+-                                                        Please provide any follow-up instructions or refinements you'd like to make.
+-                                                        The AI will use the existing content as context and apply your instructions to improve it.
+-                                                </p>
+-                                                <textarea
+-                                                        id="followup-instruction"
+-                                                        name="followup-instruction"
+-                                                        value={followUpInstruction}
+-                                                        onChange={e => setFollowUpInstruction(e.target.value)}
+-                                                        className='Chat_inputArea_prompt'
+-                                                        placeholder="e.g., 'Make the budget section more detailed', 'Focus more on gender equality', 'Revise the timeline to be more realistic'..."
+-                                                        style={{ minHeight: '100px', marginBottom: '20px' }}
+-                                                        data-testid="followup-instruction-input"
+-                                                />
+-                                                <div className="Chat_inputArea_buttonContainer" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+-                                                        <CommonButton onClick={() => {
+-                                                                setShowFollowUpModal(false);
+-                                                                setGenerateLabel("Regenerate");
+-                                                        }} label="Skip" data-testid="followup-skip-button" />
+-                                                        <CommonButton
+-                                                                onClick={() => {
+-                                                                        setShowFollowUpModal(false);
+-                                                                        setGenerateLabel("Regenerate");
+-                                                                }}
+-                                                                label="Save for Later"
+-                                                                data-testid="followup-save-button"
+-                                                        />
+-                                                        <CommonButton
+-                                                                icon={generateIcon}
+-                                                                onClick={() => handleRegenerateWithFollowUp()}
+-                                                                label="Regenerate Now"
+-                                                                disabled={!followUpInstruction}
+-                                                                data-testid="followup-regenerate-button"
+-                                                        />
+-                                                </div>
+-                                        </main>
+-                                </dialog>
+ 
+                                 {((!isMobile && sidebarOpen) || (isMobile && isMobileMenuOpen)) && (

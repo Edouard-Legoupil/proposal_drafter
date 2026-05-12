@@ -7,6 +7,9 @@ from sqlalchemy import create_engine, text
 from fastapi.testclient import TestClient
 
 # --- Environment Variable Setup ---
+# Set TESTING flag BEFORE any imports to prevent production DB connections
+os.environ["TESTING"] = "true"
+
 os.environ["DB_USERNAME"] = "testuser"
 os.environ["DB_PASSWORD"] = "testpass"
 os.environ["DB_HOST"] = "localhost"

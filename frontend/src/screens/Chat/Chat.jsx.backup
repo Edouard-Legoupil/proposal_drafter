@@ -12,6 +12,7 @@ import CommonButton from '../../components/CommonButton/CommonButton'
 import MultiSelectModal from '../../components/MultiSelectModal/MultiSelectModal'
 import AssociateKnowledgeModal from '../../components/AssociateKnowledgeModal/AssociateKnowledgeModal'
 import PdfUploadModal from '../../components/PdfUploadModal/PdfUploadModal'
+import ProgressModal from '../../components/ProgressModal/ProgressModal';
 import Select from 'react-select';
 import CreatableSelect from 'react-select/creatable';
 import SingleSelectUserModal from '../../components/SingleSelectUserModal/SingleSelectUserModal'
@@ -34,7 +35,7 @@ import regenerate from "../../assets/images/Chat_regenerate.svg"
 import regenerateClose from "../../assets/images/Chat_regenerateClose.svg"
 import word_icon from "../../assets/images/word.svg"
 import excel_icon from "../../assets/images/excel.svg"
-import { FollowUpModal, ValidationModal, ProgressModal, RegenerateModal, Sidebar, Header, ProposalContainer } from './components';
+import { FollowUpModal } from './components/Modals';
 
 export default function Chat(props) {
         const navigate = useNavigate()
@@ -890,11 +891,11 @@ export default function Chat(props) {
                 }
         }, [])
 
-        const [isRegenerateModalOpen, setIsRegenerateModalOpen] = useState(false)
+        const dialogRef = useRef()
         const [regenerateInput, setRegenerateInput] = useState("")
         const handleRegenerateIconClick = sectionName => {
                 setSelectedSectionName(sectionName)
-                setIsRegenerateModalOpen(true)
+                dialogRef.current.showModal()
         }
         const [regenerateSectionLoading, setRegenerateSectionLoading] = useState(false)
         async function handleRegenerateButtonClick(ip = regenerateInput) {
@@ -932,7 +933,9 @@ export default function Chat(props) {
                         console.log("Error: ", response)
 
                 setRegenerateInput("")
-                setIsRegenerateModalOpen(false)
+                if (typeof dialogRef.current?.close === 'function') {
+                        dialogRef.current.close()
+                }
                 setRegenerateSectionLoading(false)
 
                 if (isEdit)
@@ -1757,41 +1760,102 @@ export default function Chat(props) {
                                 />
 
                                 {/* Validation Modal */}
-                                <ValidationModal
-                                        isOpen={isValidationModalOpen}
-                                        onClose={() => setIsValidationModalOpen(false)}
-                                        missingFields={validationMissingFields}
-                                />
+                                <dialog open={isValidationModalOpen} className="Chat_regenerate" style={{ height: 'auto', maxHeight: '80vh', top: '10%' }}>
+                                        <header className="Chat_regenerate_header">
+                                                Data Missing
+                                                <img src={regenerateClose} alt="" onClick={() => setIsValidationModalOpen(false)} style={{ cursor: 'pointer' }} />
+                                        </header>
+                                        <main className="Chat_right" style={{ padding: '20px' }}>
+                                                <p style={{ marginBottom: '15px' }}>The following mandatory parameters are missing:</p>
+                                                <ul style={{ listStyleType: 'disc', paddingLeft: '20px', marginBottom: '20px', color: '#141419' }}>
+                                                        {validationMissingFields.map((field, index) => (
+                                                                <li key={index} style={{ marginBottom: '5px' }}>{field}</li>
+                                                        ))}
+                                                </ul>
+                                                <div className="Chat_inputArea_buttonContainer">
+                                                        <CommonButton onClick={() => setIsValidationModalOpen(false)} label="Close" />
+                                                </div>
+                                        </main>
+                                </dialog>
 
                                 {/* Follow-up Instruction Modal - Shown when regenerating a proposal */}
-                                <FollowUpModal
-                                        isOpen={showFollowUpModal}
-                                        onClose={() => setShowFollowUpModal(false)}
-                                        onSkip={() => {
-                                                setShowFollowUpModal(false);
-                                                setGenerateLabel("Regenerate");
-                                        }}
-                                        onSaveForLater={() => {
-                                                setShowFollowUpModal(false);
-                                                setGenerateLabel("Regenerate");
-                                        }}
-                                        onRegenerate={handleRegenerateWithFollowUp}
-                                        instruction={followUpInstruction}
-                                        setInstruction={setFollowUpInstruction}
-                                        regenerateCloseIcon={regenerateClose}
-                                        generateIcon={generateIcon}
-                                />
+                                <dialog open={showFollowUpModal} className="Chat_regenerate" style={{ height: 'auto', maxHeight: '80vh', top: '10%', width: '60vw', maxWidth: '800px' }} data-testid="followup-modal">
+                                        <header className="Chat_regenerate_header">
+                                                Provide Follow-up Instructions
+                                                <img src={regenerateClose} alt="" onClick={() => setShowFollowUpModal(false)} style={{ cursor: 'pointer' }} />
+                                        </header>
+                                        <main className="Chat_right" style={{ padding: '20px' }}>
+                                                <p style={{ marginBottom: '15px', color: '#666' }}>
+                                                        Please provide any follow-up instructions or refinements you'd like to make.
+                                                        The AI will use the existing content as context and apply your instructions to improve it.
+                                                </p>
+                                                <textarea
+                                                        id="followup-instruction"
+                                                        name="followup-instruction"
+                                                        value={followUpInstruction}
+                                                        onChange={e => setFollowUpInstruction(e.target.value)}
+                                                        className='Chat_inputArea_prompt'
+                                                        placeholder="e.g., 'Make the budget section more detailed', 'Focus more on gender equality', 'Revise the timeline to be more realistic'..."
+                                                        style={{ minHeight: '100px', marginBottom: '20px' }}
+                                                        data-testid="followup-instruction-input"
+                                                />
+                                                <div className="Chat_inputArea_buttonContainer" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                                                        <CommonButton onClick={() => {
+                                                                setShowFollowUpModal(false);
+                                                                setGenerateLabel("Regenerate");
+                                                        }} label="Skip" data-testid="followup-skip-button" />
+                                                        <CommonButton
+                                                                onClick={() => {
+                                                                        setShowFollowUpModal(false);
+                                                                        setGenerateLabel("Regenerate");
+                                                                }}
+                                                                label="Save for Later"
+                                                                data-testid="followup-save-button"
+                                                        />
+                                                        <CommonButton
+                                                                icon={generateIcon}
+                                                                onClick={() => handleRegenerateWithFollowUp()}
+                                                                label="Regenerate Now"
+                                                                disabled={!followUpInstruction}
+                                                                data-testid="followup-regenerate-button"
+                                                        />
+                                                </div>
+                                        </main>
+                                </dialog>
 
-                                <Sidebar
-                                        isMobile={isMobile}
-                                        isMobileMenuOpen={isMobileMenuOpen}
-                                        sidebarOpen={sidebarOpen}
-                                        selectedSection={selectedSection}
-                                        proposalTemplate={proposalTemplate}
-                                        proposal={proposal}
-                                        onSectionClick={handleSidebarSectionClick}
-                                        toKebabCase={toKebabCase}
-                                />
+                                {((!isMobile && sidebarOpen) || (isMobile && isMobileMenuOpen)) && (
+                                        <aside>
+                                                <ul className='Chat_sidebar' data-testid="chat-sidebar">
+                                                        <li
+                                                                className={`Chat_sidebarOption ${selectedSection === -1 ? "selectedSection" : ""}`}
+                                                                onClick={() => handleSidebarSectionClick(-1)}
+                                                                data-testid="sidebar-option-proposal-prompt"
+                                                        >
+                                                                Proposal Prompt
+                                                        </li>
+
+                                                        {proposalTemplate ? proposalTemplate.sections.map((section, i) => (
+                                                                <li
+                                                                        key={i}
+                                                                        className={`Chat_sidebarOption ${selectedSection === i ? "selectedSection" : ""}`}
+                                                                        onClick={() => handleSidebarSectionClick(i)}
+                                                                        data-testid={`sidebar-option-${toKebabCase(section.section_name)}`}
+                                                                >
+                                                                        {section.section_name}
+                                                                </li>
+                                                        )) : Object.keys(proposal).map((section, i) => (
+                                                                <li
+                                                                        key={i}
+                                                                        className={`Chat_sidebarOption ${selectedSection === i ? "selectedSection" : ""}`}
+                                                                        onClick={() => handleSidebarSectionClick(i)}
+                                                                        data-testid={`sidebar-option-${toKebabCase(section)}`}
+                                                                >
+                                                                        {section}
+                                                                </li>
+                                                        ))}
+                                                </ul>
+                                        </aside>
+                                )}
 
                                 <main className="Chat_right" ref={topRef} data-testid="chat-main">
                                         <button className="Chat_menuButton" onClick={() => setIsMobileMenuOpen(p => !p)} data-testid="mobile-menu-button">
@@ -1800,30 +1864,121 @@ export default function Chat(props) {
 
                                         {proposalStatus !== 'submitted' ? (
                                                 <>
-                                                        <Header
-                                                                titleName={titleName}
-                                                                documentType={documentType}
-                                                                setDocumentType={setDocumentType}
-                                                                proposalStatus={proposalStatus}
-                                                                fileIcon={fileIcon}
-                                                                userPrompt={userPrompt}
-                                                                setUserPrompt={setUserPrompt}
-                                                                formExpanded={form_expanded}
-                                                                setFormExpanded={setFormExpanded}
-                                                                toKebabCase={toKebabCase}
-                                                                renderFormField={renderFormField}
-                                                                formData={formData}
-                                                                setFormData={setFormData}
-                                                                outcomes={outcomes}
-                                                                donors={donors}
-                                                                filteredFieldContexts={filteredFieldContexts}
-                                                                geographicCoverages={geographicCoverages}
-                                                                newDurations={newDurations}
-                                                                setNewDurations={setNewDurations}
-                                                                newBudgetRanges={newBudgetRanges}
-                                                                setNewBudgetRanges={setNewBudgetRanges}
-                                                                handleFormInput={handleFormInput}
-                                                        />
+                                                        <div className='Dashboard_top'>
+                                                                <div className='Dashboard_label' data-testid="chat-title">
+                                                                        <img className='Dashboard_label_fileIcon' src={fileIcon} alt="" />
+                                                                        {titleName}
+                                                                </div>
+                                                        </div>
+
+                                                        <div className="Chat_inputArea">
+                                                                <div className="Chat_docTypeSwitcher" data-testid="doc-type-switcher">
+                                                                        <button
+                                                                                type="button"
+                                                                                className={`Chat_docTypeButton ${documentType === 'proposal' ? 'active' : ''}`}
+                                                                                onClick={() => proposalStatus === 'draft' && setDocumentType('proposal')}
+                                                                                disabled={proposalStatus !== 'draft'}
+                                                                                data-testid="doc-type-proposal-button"
+                                                                        >
+                                                                                Proposal
+                                                                        </button>
+                                                                        <button
+                                                                                type="button"
+                                                                                className={`Chat_docTypeButton ${documentType === 'concept note' ? 'active' : ''}`}
+                                                                                onClick={() => proposalStatus === 'draft' && setDocumentType('concept note')}
+                                                                                disabled={proposalStatus !== 'draft'}
+                                                                                data-testid="doc-type-concept-note-button"
+                                                                        >
+                                                                                Concept Note
+                                                                        </button>
+                                                                </div>
+
+                                                                {renderFormField("Project Draft Short name", proposalStatus !== 'draft')}
+
+                                                                <textarea
+                                                                        id="main-prompt"
+                                                                        name="main-prompt"
+                                                                        value={userPrompt}
+                                                                        onChange={e => setUserPrompt(e.target.value)}
+                                                                        placeholder='Provide as much details as possible on your initial project idea!'
+                                                                        className='Chat_inputArea_prompt'
+                                                                        disabled={proposalStatus !== 'draft'}
+                                                                        data-testid="main-prompt"
+                                                                />
+
+                                                                <span
+                                                                        onClick={() => proposalStatus === 'draft' && setFormExpanded(p => !p)}
+                                                                        className={`Chat_inputArea_additionalDetails ${form_expanded && "expanded"} ${proposalStatus !== 'draft' ? 'disabled' : ''}`}
+                                                                        data-testid="specify-parameters-expander"
+                                                                >
+                                                                        Specify Parameters
+                                                                        <img src={arrow} alt="Arrow" />
+                                                                </span>
+
+                                                                {form_expanded && (
+                                                                        <form className='Chat_form' data-testid="chat-form">
+                                                                                <div className='Chat_form_group'>
+                                                                                        <div className="tooltip-container">
+                                                                                                <h3 className='Chat_form_group_title'>Identify Potential Interventions</h3>
+                                                                                                <span className="tooltip-text">surface Relevant Policies, Strategies and past Evaluation Recommendations</span>
+                                                                                        </div>
+                                                                                        {renderFormField("Main Outcome", proposalStatus !== 'draft')}
+                                                                                        {renderFormField("Beneficiaries Profile", proposalStatus !== 'draft')}
+                                                                                        {renderFormField("Potential Implementing Partner", proposalStatus !== 'draft')}
+                                                                                </div>
+                                                                                <div className='Chat_form_group'>
+                                                                                        <div className="tooltip-container">
+                                                                                                <h3 className='Chat_form_group_title'>Define Field Context</h3>
+                                                                                                <span className="tooltip-text">surface Situation Analysis and Needs Assessment</span>
+                                                                                        </div>
+                                                                                        {renderFormField("Geographical Scope", proposalStatus !== 'draft')}
+                                                                                        <div className="Chat_form_inputContainer" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
+                                                                                                <input
+                                                                                                        type="checkbox"
+                                                                                                        id="multiple-countries"
+                                                                                                        checked={formData["multiple countries"]?.value || false}
+                                                                                                        onChange={e => {
+                                                                                                                const isChecked = e.target.checked;
+                                                                                                                setFormData(prev => ({
+                                                                                                                        ...prev,
+                                                                                                                        "multiple countries": { ...prev["multiple countries"], value: isChecked },
+                                                                                                                        "Country / Location(s)": { ...prev["Country / Location(s)"], value: isChecked ? [] : "" }
+                                                                                                                }));
+                                                                                                        }}
+                                                                                                        disabled={proposalStatus !== 'draft'}
+                                                                                                />
+                                                                                                <label htmlFor="multiple-countries" className="Chat_form_inputLabel" style={{ marginBottom: 0 }}>Multiple Countries</label>
+                                                                                        </div>
+                                                                                        {renderFormField("Country / Location(s)", proposalStatus !== 'draft')}
+                                                                                </div>
+                                                                                <div className='Chat_form_group'>
+                                                                                        <div className="tooltip-container">
+                                                                                                <h3 className='Chat_form_group_title'>Tailor Funding Request</h3>
+                                                                                                <span className="tooltip-text">surface Donor profile and apply Formal Requirement for Submission</span>
+                                                                                        </div>
+                                                                                        {renderFormField("Budget Range", proposalStatus !== 'draft')}
+                                                                                        {renderFormField("Duration", proposalStatus !== 'draft')}
+                                                                                        <div className="Chat_form_inputContainer" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
+                                                                                                <input
+                                                                                                        type="checkbox"
+                                                                                                        id="multiple-donors"
+                                                                                                        checked={formData["multiple donors"]?.value || false}
+                                                                                                        onChange={e => {
+                                                                                                                const isChecked = e.target.checked;
+                                                                                                                setFormData(prev => ({
+                                                                                                                        ...prev,
+                                                                                                                        "multiple donors": { ...prev["multiple donors"], value: isChecked },
+                                                                                                                        "Targeted Donor": { ...prev["Targeted Donor"], value: isChecked ? [] : (prev["Targeted Donor"]?.value || "") }
+                                                                                                                }));
+                                                                                                        }}
+                                                                                                        disabled={proposalStatus !== 'draft'}
+                                                                                                />
+                                                                                                <label htmlFor="multiple-donors" className="Chat_form_inputLabel" style={{ marginBottom: 0 }}>Multiple Donors</label>
+                                                                                        </div>
+                                                                                        {renderFormField("Targeted Donor", proposalStatus !== 'draft')}
+                                                                                </div>
+                                                                        </form>
+                                                                )}
 
                                                                 <div className="Chat_inputArea_buttonContainer">
                                                                         {Object.keys(proposal).length > 0 && (
@@ -1882,6 +2037,7 @@ export default function Chat(props) {
                                                                                 />
                                                                         </div>
                                                                 </div>
+                                                        </div>
                                                 </>
                                         ) : null}
 
@@ -2095,21 +2251,22 @@ export default function Chat(props) {
                                         )}
                                 </main>
 
-                                <RegenerateModal
-                                        isOpen={isRegenerateModalOpen}
-                                        onClose={() => {
-                                                setRegenerateSectionLoading(false)
-                                                setRegenerateInput("")
-                                                setIsRegenerateModalOpen(false)
-                                        }}
-                                        onRegenerate={() => handleRegenerateButtonClick()}
-                                        sectionName={selectedSectionName}
-                                        inputValue={regenerateInput}
-                                        setInputValue={setRegenerateInput}
-                                        loading={regenerateSectionLoading}
-                                        generateIcon={generateIcon}
-                                        regenerateCloseIcon={regenerateClose}
-                                />
+                                <dialog ref={dialogRef} className='Chat_regenerate' data-testid="regenerate-dialog">
+                                        <header className='Chat_regenerate_header'>
+                                                Regenerate — {selectedSectionName || "Section"}
+                                                <img src={regenerateClose} alt="" onClick={() => { setRegenerateSectionLoading(false); setRegenerateInput(""); dialogRef.current.close() }} data-testid="regenerate-dialog-close-button" />
+                                        </header>
+
+                                        <main className='Chat_right'>
+                                                <section className='Chat_inputArea'>
+                                                        <textarea id="regenerate-prompt" name="regenerate-prompt" value={regenerateInput} onChange={e => setRegenerateInput(e.target.value)} className='Chat_inputArea_prompt' data-testid="regenerate-dialog-prompt-input" />
+
+                                                        <div className="Chat_inputArea_buttonContainer" style={{ marginTop: "20px" }}>
+                                                                <CommonButton icon={generateIcon} onClick={() => handleRegenerateButtonClick()} label="Regenerate" loading={regenerateSectionLoading} loadingLabel="Regenerating" disabled={!regenerateInput} data-testid="regenerate-dialog-regenerate-button" />
+                                                        </div>
+                                                </section>
+                                        </main>
+                                </dialog>
                         </div>
                 </Base>
         );
