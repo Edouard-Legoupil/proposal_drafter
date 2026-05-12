@@ -115,7 +115,9 @@ export default function Chat(props) {
                 handleDeleteComment: hookHandleDeleteComment,
                 handleReplyToFeedback: hookHandleReplyToFeedback,
                 handleSaveResponse: hookHandleSaveResponse,
-                handleSidebarSectionClick: hookHandleSidebarSectionClick
+                handleSidebarSectionClick: hookHandleSidebarSectionClick,
+                getPeerReviews: hookGetPeerReviews,
+                getStatusHistory: hookGetStatusHistory
         } = useProposal();
         const navigate = useNavigate()
         const { id } = useParams()
@@ -864,24 +866,7 @@ export default function Chat(props) {
                 }
         }
 
-        async function getPeerReviews() {
-                if (sessionStorage.getItem("proposal_id")) {
-                        const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/peer-reviews`, {
-                                method: "GET",
-                                headers: { 'Content-Type': 'application/json' },
-                                credentials: "include"
-                        });
-                        if (response.ok) {
-                                const data = await response.json();
-                                setReviews(data.reviews);
-                        } else if (response.status === 403) {
-                                setReviews([]);
-                        }
-                }
-        }
-
-        async function getStatusHistory() {
-        }
+        // getPeerReviews and getStatusHistory are imported from useProposal hook
 
         // getProfile is imported from useChatApi hook
 
