@@ -5,6 +5,8 @@
  */
 
 import { useState, useCallback } from 'react';
+import Select from 'react-select';
+import CreatableSelect from 'react-select/creatable';
 import { toKebabCase as kebabCase, getMissingFields as getMissingFieldsUtil } from '../utils';
 
 const INITIAL_FORM_DATA = {
@@ -228,10 +230,6 @@ export const useFormData = (initialData = null) => {
       (label === "Targeted Donor" && formData["multiple donors"]?.value) || 
       (label === "Country / Location(s)" && formData["multiple countries"]?.value);
     const isNormalSelect = label === "Geographical Scope";
-
-    // Import these from react-select in the component that uses this hook
-    // import Select from 'react-select';
-    // import CreatableSelect from 'react-select/creatable';
 
     const options = getOptions(label, outcomes, donors, filteredFieldContexts, geographicCoverages, newDurations, newBudgetRanges);
 

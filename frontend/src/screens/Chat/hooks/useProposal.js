@@ -190,6 +190,177 @@ export const useProposal = () => {
     }
   }, []);
 
+  /**
+   * Fetches proposal content from backend
+   */
+  const getContent = useCallback(async () => {
+    if (sessionStorage.getItem("proposal_id")) {
+      const response = await fetch(`${API_BASE_URL}/load-draft/${sessionStorage.getItem("proposal_id")}`, {
+        method: "GET",
+        headers: { 'Content-Type': 'application/json' },
+        credentials: "include"
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+
+        // Ownership check
+        const profileRes = await fetch(`${API_BASE_URL}/profile`, { credentials: 'include' });
+        if (profileRes.ok) {
+          const profileData = await profileRes.json();
+          const curUser = profileData.user;
+          setCurrentUser(curUser);
+          const ownerId = data.user_id;
+          const isOwner = curUser.id === ownerId || curUser.user_id === ownerId;
+          const _isAdmin = curUser.is_admin || (curUser.roles || []).some(r => r === 'admin' || (r && r.name === 'admin'));
+          setIsAdmin(_isAdmin);
+
+          if (!isOwner) {
+            setIsReviewer(true);
+          }
+        }
+
+        sessionStorage.setItem("proposal_id", data.proposal_id);
+        sessionStorage.setItem("session_id", data.session_id);
+
+        // This would need to be called from the parent component
+        // setUserPrompt(data.project_description);
+        // setFormData(...);
+        // etc.
+
+        const sectionState = {};
+        Object.entries(data.generated_sections || {}).forEach(([key, value]) => {
+          sectionState[key] = {
+            content: value,
+            open: true
+          };
+        });
+        setProposal(sectionState);
+
+        if (data.associated_knowledge_cards) {
+          setAssociatedKnowledgeCards(data.associated_knowledge_cards);
+        }
+
+        if (data.template_name && data.template_name.startsWith("concept_note_")) {
+          // setDocumentType("concept note"); // Would need to be passed in
+        } else {
+          // setDocumentType("proposal");
+        }
+
+        setProposalStatus(data.status);
+        setContributionId(data.contribution_id || "");
+        // setSidebarOpen(true); // Would need to be passed in
+        // getStatusHistory();
+        // getPeerReviews();
+
+        const storedTemplate = sessionStorage.getItem("proposal_template");
+        if (storedTemplate) {
+          setProposalTemplate(JSON.parse(storedTemplate));
+        }
+      } else if (response.status === 401) {
+        sessionStorage.setItem("session_expired", "Session expired. Please login again.");
+        navigate("/login");
+      }
+    }
+  }, [navigate, setCurrentUser, setIsAdmin, setIsReviewer, setProposal, setAssociatedKnowledgeCards, setProposalStatus, setContributionId, setProposalTemplate]);
+
+  /**
+   * Fetches peer reviews for the current proposal
+   */
+  const getPeerReviews = useCallback(async () => {
+    if (sessionStorage.getItem("proposal_id")) {
+      const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/peer-reviews`, {
+        method: "GET",
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setReviews(data.reviews);
+      } else if (response.status === 403) {
+        setReviews([]);
+      }
+    }
+  }, [setReviews]);
+
+  /**
+   * Fetches status history for the proposal
+   */
+  const getStatusHistory = useCallback(async () => {
+    // Implementation can be added here
+    const history = [];
+    setStatusHistory(history);
+  }, [setStatusHistory]);
+
+  /**
+   * Saves contribution ID
+   */
+  const handleSaveContributionId = useCallback(async () => {
+    const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/save-contribution-id`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contribution_id: contributionId }),
+      credentials: 'include'
+    });
+
+    if (response.ok) {
+      alert("Contribution ID saved!");
+    } else {
+      console.error("Failed to save Contribution ID");
+      alert("Failed to save Contribution ID.");
+    }
+  }, [contributionId]);
+
+  /**
+   * Handles proposal generation
+   */
+  const handleGenerateClick = useCallback(async (
+    userPrompt,
+    formData,
+    documentType,
+    setValidationMissingFields,
+    setIsValidationModalOpen,
+    setShowFollowUpModal,
+    fromFollowUpModalRef,
+    followUpInstruction,
+    setGenerateLoading,
+    setFormExpanded,
+    setGenerationProgress,
+    setGenerationMessage,
+    setIsProgressModalOpen,
+    setGenerateLabel,
+    setNotif
+  ) => {
+    // Check if this is a regeneration (proposal already exists)
+    const existingProposalId = sessionStorage.getItem("proposal_id");
+    const existingSessionId = sessionStorage.getItem("session_id");
+
+    // For regeneration, skip missing fields check (fields should already be filled)
+    // For initial generation, check for missing fields
+    if (!existingProposalId || !existingSessionId) {
+      // This would need getMissingFields from useFormData
+      // const missing = getMissingFields(userPrompt, formData);
+      // if (missing.length > 0) {
+      //   setValidationMissingFields(missing);
+      //   setIsValidationModalOpen(true);
+      //   return;
+      // }
+    }
+
+    // Show follow-up modal for regeneration unless coming from the modal itself
+    if (existingProposalId && existingSessionId) {
+      if (!fromFollowUpModalRef.current) {
+        setShowFollowUpModal(true);
+        return;
+      }
+      fromFollowUpModalRef.current = false;
+      // Implementation continues...
+    }
+
+    // For now, this is a placeholder
+    console.log("handleGenerateClick called");
+  }, []);
+
   return {
     // Proposal state
     proposal,
@@ -251,7 +422,14 @@ export const useProposal = () => {
     handleDeleteComment,
     handleReplyToFeedback,
     handleSaveResponse,
-    handleSidebarSectionClick
+    handleSidebarSectionClick,
+    
+    // New handlers
+    getContent,
+    getPeerReviews,
+    getStatusHistory,
+    handleSaveContributionId,
+    handleGenerateClick
   };
 };
 
