@@ -64,12 +64,12 @@ const ChatContainer = (props) => {
                 geographicCoverages: hookGeographicCoverages,
                 users: hookUsers,
                 transferUsers: hookTransferUsers,
-                currentUser: hookCurrentUser,
-                setCurrentUser: hookSetCurrentUser,
-                isReviewer: hookIsReviewer,
-                setIsReviewer: hookSetIsReviewer,
-                isAdmin: hookIsAdmin,
-                setIsAdmin: hookSetIsAdmin,
+                currentUser,
+                setCurrentUser,
+                isReviewer,
+                setIsReviewer,
+                isAdmin,
+                setIsAdmin,
                 setFilteredFieldContexts: hookSetFilteredFieldContexts,
                 fetchData: hookFetchData,
                 getUsers: hookGetUsers,
@@ -127,53 +127,6 @@ const ChatContainer = (props) => {
 
         const [documentType, setDocumentType] = useState("proposal")
 
-        // Use hook state instead of local state
-        const donors = hookDonors
-        const outcomes = hookOutcomes
-        const fieldContexts = hookFieldContexts
-        const filteredFieldContexts = hookFilteredFieldContexts
-        const newBudgetRanges = hookNewBudgetRanges
-        const newDurations = hookNewDurations
-        const geographicCoverages = hookGeographicCoverages
-        const users = hookUsers
-        const transferUsers = hookTransferUsers
-        const currentUser = hookCurrentUser
-        const isReviewer = hookIsReviewer
-        const isAdmin = hookIsAdmin
-        const setFilteredFieldContexts = hookSetFilteredFieldContexts
-        
-        const proposal = hookProposal
-        const setProposal = hookSetProposal
-        const proposalTemplate = hookProposalTemplate
-        const setProposalTemplate = hookSetProposalTemplate
-        const proposalStatus = hookProposalStatus
-        const setProposalStatus = hookSetProposalStatus
-        const generateLoading = hookGenerateLoading
-        const setGenerateLoading = hookSetGenerateLoading
-        const generateLabel = hookGenerateLabel
-        const setGenerateLabel = hookSetGenerateLabel
-        const contributionId = hookContributionId
-        const setContributionId = hookSetContributionId
-        const isEdit = hookIsEdit
-        const setIsEdit = hookSetIsEdit
-        const editorContent = hookEditorContent
-        const setEditorContent = hookSetEditorContent
-        const selectedSectionName = hookSelectedSectionName
-        const setSelectedSectionName = hookSetSelectedSectionName
-        const isCopied = hookIsCopied
-        const setIsCopied = hookSetIsCopied
-        const fromFollowUpModalRef = hookFromFollowUpModalRef
-        const topRef = hookTopRef
-        const proposalRef = hookProposalRef
-        const associatedKnowledgeCards = hookAssociatedKnowledgeCards
-        const setAssociatedKnowledgeCards = hookSetAssociatedKnowledgeCards
-        const reviews = hookReviews
-        const setReviews = hookSetReviews
-        const reviewComments = hookReviewComments
-        const setReviewComments = hookSetReviewComments
-        const reviewStatus = hookReviewStatus
-        const setReviewStatus = hookSetReviewStatus
-        
         // Local state (not in hooks yet)
         const [titleName, setTitleName] = useState(props?.title ?? "Generate Draft Proposal")
         const [userPrompt, setUserPrompt] = useState("")
