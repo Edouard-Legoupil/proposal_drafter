@@ -319,17 +319,7 @@ export default function Chat(props) {
                         }
                 }
         }, [formData['Geographical Scope'].value, fieldContexts]);
-        function handleFormInput(e, label) {
-                setFormData(p => ({
-                        ...p,
-                        [label]: {
-                                ...(p[label] || {}),
-                                value: e?.target ? e.target.value : e
-                        }
-                }))
-        }
 
-        const [buttonEnable, setButtonEnable] = useState(false)
         // Update buttonEnable: true if there's an existing proposal, otherwise check fields
         useEffect(() => {
                 const existingProposalId = sessionStorage.getItem("proposal_id");
@@ -345,12 +335,6 @@ export default function Chat(props) {
 
         // renderFormField, getOptions, handleCreate, and OUTCOME_ORDER are now imported from useFormData hook
         // The hook version handles all the same logic with proper dependencies
-
-        const [proposal, setProposal] = useState({})
-        const [generateLoading, setGenerateLoading] = useState(false)
-        const [generateLabel, setGenerateLabel] = useState("Generate")
-        const isGenerating = useRef(false);
-        const fromFollowUpModalRef = useRef(false);
 
         // Set label to Regenerate if there's an existing proposal
         useEffect(() => {
@@ -697,8 +681,6 @@ export default function Chat(props) {
         }
 
         const [selectedSection, setSelectedSection] = useState(-1)
-        const topRef = useRef()
-        const proposalRef = useRef()
         function handleSidebarSectionClick(sectionIndex) {
                 setSelectedSection(sectionIndex)
 
@@ -708,7 +690,6 @@ export default function Chat(props) {
                         proposalRef?.current?.children[sectionIndex]?.scrollIntoView({ behavior: "smooth" })
         }
 
-        const [isCopied, setIsCopied] = useState(false)
         const copyResetTimerRef = useRef(null)
 
         async function handleCopyClick(sectionName, content) {
