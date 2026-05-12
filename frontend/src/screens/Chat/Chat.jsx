@@ -35,6 +35,7 @@ import regenerateClose from "../../assets/images/Chat_regenerateClose.svg"
 import word_icon from "../../assets/images/word.svg"
 import excel_icon from "../../assets/images/excel.svg"
 import { FollowUpModal, ValidationModal, ProgressModal, RegenerateModal, Sidebar, Header, ProposalContainer } from './components';
+import { toKebabCase } from './utils';
 
 export default function Chat(props) {
         const navigate = useNavigate()
@@ -305,10 +306,6 @@ export default function Chat(props) {
                         }
                 }
                 return missing;
-        };
-
-        const toKebabCase = (str) => {
-                return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
         };
 
         const renderFormField = (label, disabled) => {
