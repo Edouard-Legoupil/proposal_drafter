@@ -109,12 +109,8 @@ const ChatContainer = (props) => {
                 setReviewComments,
                 reviewStatus,
                 setReviewStatus,
-                isGenerating,
                 getPeerReviews,
                 getStatusHistory,
-                getContent,
-                handleSaveContributionId,
-                handleGenerateClick,
                 handleCopyClick,
                 handleExpanderToggle,
                 handleEditClick,
@@ -122,7 +118,6 @@ const ChatContainer = (props) => {
                 handleCommentChange,
                 handleStatusChange,
                 handleDeleteComment,
-                handleReplyToFeedback,
                 handleSaveResponse,
                 handleSidebarSectionClick
         } = useProposal({ setCurrentUser, setIsAdmin, setIsReviewer });
