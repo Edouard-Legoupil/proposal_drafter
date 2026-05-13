@@ -43,15 +43,15 @@ import { useProposal } from '../hooks/useProposal';
 const ChatContainer = (props) => {
         // Initialize custom hooks
         const {
-                formData: hookFormData,
-                setFormData: hookSetFormData,
-                formExpanded: hookFormExpanded,
-                setFormExpanded: hookSetFormExpanded,
-                handleFormInput: hookHandleFormInput,
-                getMissingFields: hookGetMissingFields,
-                getOptions: hookGetOptions,
-                handleCreate: hookHandleCreate,
-                renderFormField: hookRenderFormField
+                formData,
+                setFormData,
+                formExpanded,
+                setFormExpanded,
+                handleFormInput,
+                getMissingFields,
+                getOptions,
+                handleCreate,
+                renderFormField
         } = useFormData();
 
         const {
@@ -78,39 +78,53 @@ const ChatContainer = (props) => {
         } = useChatApi();
 
         const {
-                proposal: hookProposal,
-                setProposal: hookSetProposal,
-                proposalTemplate: hookProposalTemplate,
-                setProposalTemplate: hookSetProposalTemplate,
-                proposalStatus: hookProposalStatus,
-                setProposalStatus: hookSetProposalStatus,
-                generateLoading: hookGenerateLoading,
-                setGenerateLoading: hookSetGenerateLoading,
-                generateLabel: hookGenerateLabel,
-                setGenerateLabel: hookSetGenerateLabel,
-                contributionId: hookContributionId,
-                setContributionId: hookSetContributionId,
-                isEdit: hookIsEdit,
-                setIsEdit: hookSetIsEdit,
-                editorContent: hookEditorContent,
-                setEditorContent: hookSetEditorContent,
-                selectedSectionName: hookSelectedSectionName,
-                setSelectedSectionName: hookSetSelectedSectionName,
-                isCopied: hookIsCopied,
-                setIsCopied: hookSetIsCopied,
-                fromFollowUpModalRef: hookFromFollowUpModalRef,
-                topRef: hookTopRef,
-                proposalRef: hookProposalRef,
-                associatedKnowledgeCards: hookAssociatedKnowledgeCards,
-                setAssociatedKnowledgeCards: hookSetAssociatedKnowledgeCards,
-                reviews: hookReviews,
-                setReviews: hookSetReviews,
-                reviewComments: hookReviewComments,
-                setReviewComments: hookSetReviewComments,
-                reviewStatus: hookReviewStatus,
-                setReviewStatus: hookSetReviewStatus,
-                getPeerReviews: hookGetPeerReviews,
-                getStatusHistory: hookGetStatusHistory
+                proposal,
+                setProposal,
+                proposalTemplate,
+                setProposalTemplate,
+                proposalStatus,
+                setProposalStatus,
+                generateLoading,
+                setGenerateLoading,
+                generateLabel,
+                setGenerateLabel,
+                contributionId,
+                setContributionId,
+                isEdit,
+                setIsEdit,
+                editorContent,
+                setEditorContent,
+                selectedSectionName,
+                setSelectedSectionName,
+                isCopied,
+                setIsCopied,
+                fromFollowUpModalRef,
+                topRef,
+                proposalRef,
+                associatedKnowledgeCards,
+                setAssociatedKnowledgeCards,
+                reviews,
+                setReviews,
+                reviewComments,
+                setReviewComments,
+                reviewStatus,
+                setReviewStatus,
+                isGenerating,
+                getPeerReviews,
+                getStatusHistory,
+                getContent,
+                handleSaveContributionId,
+                handleGenerateClick,
+                handleCopyClick,
+                handleExpanderToggle,
+                handleEditClick,
+                handleRegenerateIconClick,
+                handleCommentChange,
+                handleStatusChange,
+                handleDeleteComment,
+                handleReplyToFeedback,
+                handleSaveResponse,
+                handleSidebarSectionClick
         } = useProposal({ setCurrentUser, setIsAdmin, setIsReviewer });
         const navigate = useNavigate()
         const { id } = useParams()
@@ -202,17 +216,6 @@ const ChatContainer = (props) => {
         // getUsers and getTransferUsers are imported from useChatApi hook
 
 
-
-        // Use hook state instead of local state
-        const formData = hookFormData
-        const setFormData = hookSetFormData
-        const formExpanded = hookFormExpanded
-        const setFormExpanded = hookSetFormExpanded
-        const handleFormInput = hookHandleFormInput
-        const renderFormField = hookRenderFormField
-        const getMissingFields = hookGetMissingFields
-        const getOptions = hookGetOptions
-        const handleCreate = hookHandleCreate
 
         useEffect(() => {
                 if (isPeerReviewModalOpen && users.length > 0) {
