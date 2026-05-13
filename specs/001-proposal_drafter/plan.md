@@ -50,19 +50,23 @@ The system is currently **PRODUCTION - Feature Complete** as of April 2025, with
 
 ### Security Gates
 
-| Security Requirement | Status | Notes |
-|----------------------|--------|-------|
-| JWT Authentication (HS256) | ✅ PASS | Implemented with refresh tokens |
-| Azure AD OAuth 2.0 (EntraID) | ✅ PASS | SSO integration available |
-| Secure Session Cookies | ✅ PASS | HTTP-only cookies implemented |
-| Password Hashing (PBKDF2) | ✅ PASS | Werkzeug security utils |
-| RBAC with 6 role types | ✅ PASS | Role-based access control implemented |
-| Pydantic Input Validation | ✅ PASS | All API requests validated |
-| HTTPS/TLS for all communications | ✅ PASS | Enforced in production |
-| Prompt Injection Prevention | ✅ PASS | Structured prompts with boundaries |
-| Output Validation | ✅ PASS | JSON parsing, schema validation, repair |
-| Secrets Management | ✅ PASS | Environment variables, no hardcoded secrets |
-| Audit Trail | ✅ PASS | All changes logged with timestamps and user IDs |
+| Security Requirement | Status | Notes | Remediation Task |
+|----------------------|--------|-------|-----------------|
+| JWT Authentication (HS256) | ✅ PASS | Implemented with refresh tokens | - |
+| Azure AD OAuth 2.0 (EntraID) | ✅ PASS | SSO integration available | - |
+| Secure Session Cookies | ⚠️ PARTIAL | HTTP-only cookies implemented, but timeout too long | TASK-SEC-005 |
+| Password Hashing (PBKDF2) | ✅ PASS | Werkzeug security utils | - |
+| RBAC with 6 role types | ⚠️ PARTIAL | Implemented, but object-level auth missing | TASK-SEC-001 |
+| Pydantic Input Validation | ✅ PASS | All API requests validated | - |
+| HTTPS/TLS for all communications | ✅ PASS | Enforced in production | - |
+| Prompt Injection Prevention | ⚠️ PARTIAL | Structured prompts, but need sanitization | TASK-SEC-004 |
+| Output Validation | ✅ PASS | JSON parsing, schema validation, repair | - |
+| Secrets Management | ⚠️ PARTIAL | Environment variables used, but need production service | TASK-SEC-002 |
+| Audit Trail | ⚠️ PARTIAL | Changes logged, but need comprehensive audit logging | TASK-SEC-008 |
+
+**Security Gate Status:** 5/10 Fully Implemented, 5/10 Need Remediation
+
+> **Action Required:** Complete all ⚠️ PARTIAL gates before production deployment.
 
 ### Architecture Gates
 
@@ -76,7 +80,19 @@ The system is currently **PRODUCTION - Feature Complete** as of April 2025, with
 | Template Management System | ✅ PASS | Versioned donor-specific templates |
 | Quality Assurance Workflow | ✅ PASS | Incident analysis and qualification system |
 
-**Overall Constitution Check**: ✅ **ALL GATES PASSED**
+**Overall Constitution Check**: ⚠️ **5/10 GATES PARTIAL - REMEDIATION REQUIRED**
+
+**Security Remediation Status:** 
+- 12 security findings identified
+- 3 HIGH severity (CRITICAL for production)
+- 6 MEDIUM severity
+- 3 LOW severity
+- All findings require implementation before production deployment
+
+**Next Steps:**
+1. Review security tasks in [tasks.md](../../../.specify/memory/task.md)
+2. Prioritize Phase 1 (TASK-SEC-001, TASK-SEC-002, TASK-SEC-003) as production blockers
+3. Complete security remediation before production deployment
 
 ---
 
@@ -175,6 +191,54 @@ No violations identified. All constitution gates passed without requiring justif
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
 | N/A | N/A | N/A |
+
+---
+
+## 🔒 Security Remediation Plan
+
+*Source: Security review findings from [security-review-plan.md](security-review-plan.md) and [security-review-followup.md](security-review-followup.md)*
+
+### Security Posture
+- **Overall Risk:** MODERATE
+- **Total Findings:** 12
+- **Severity Breakdown:** 0 Critical, 3 High, 6 Medium, 3 Low
+- **OWASP Categories Covered:** A01, A02, A03, A05, A06, A07, A09
+
+### Immediate Actions Required (Before Production)
+The following security tasks **MUST** be completed before production deployment:
+
+| Task ID | Title | Severity | Priority | Effort | Status |
+|---------|-------|----------|----------|--------|--------|
+| TASK-SEC-001 | Object-Level Authorization | HIGH | CRITICAL | 3-5 days | ⏳ Pending |
+| TASK-SEC-002 | Production-Grade Secrets Management | HIGH | CRITICAL | 2-3 days | ⏳ Pending |
+| TASK-SEC-003 | Standardize Secure Error Handling | HIGH | CRITICAL | 2-3 days | ⏳ Pending |
+
+### High Priority Security Tasks
+| Task ID | Title | Severity | Priority | Effort | Status |
+|---------|-------|----------|----------|--------|--------|
+| TASK-SEC-004 | LLM Prompt Injection Prevention | MEDIUM | HIGH | 2-3 days | ⏳ Pending |
+| TASK-SEC-005 | Harden Session Management | MEDIUM | HIGH | 2 days | ⏳ Pending |
+| TASK-SEC-006 | LLM Rate Limiting | MEDIUM | HIGH | 2 days | ⏳ Pending |
+| TASK-SEC-008 | Comprehensive Audit Logging | MEDIUM | HIGH | 3-4 days | ⏳ Pending |
+
+### Medium Priority Security Tasks
+| Task ID | Title | Severity | Priority | Effort | Status |
+|---------|-------|----------|----------|--------|--------|
+| TASK-SEC-007 | Security HTTP Headers | MEDIUM | MEDIUM | 1 day | ⏳ Pending |
+
+### Low Priority Security Tasks
+| Task ID | Title | Severity | Priority | Effort | Status |
+|---------|-------|----------|----------|--------|--------|
+| TASK-SEC-009 | Multi-Factor Authentication | LOW | LOW | 3-5 days | ⏳ Pending |
+| TASK-SEC-010 | Dependency Scanning & SBOM | LOW | LOW | 2-3 days | ⏳ Pending |
+| TASK-SEC-011 | Security-Specific Telemetry | LOW | LOW | 2 days | ⏳ Pending |
+
+### Implementation Sequence
+1. **Phase 1 (1-2 weeks)**: TASK-SEC-001, TASK-SEC-002, TASK-SEC-003 (Critical blockers)
+2. **Phase 2 (1-2 weeks)**: TASK-SEC-004, TASK-SEC-005, TASK-SEC-006, TASK-SEC-007, TASK-SEC-008
+3. **Phase 3 (1-2 weeks)**: TASK-SEC-009, TASK-SEC-010, TASK-SEC-011
+
+**Note:** Security tasks are now integrated into the main backlog in [tasks.md](../../../.specify/memory/task.md).
 
 ---
 

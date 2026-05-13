@@ -436,6 +436,176 @@ These tasks have been completed and are documented for reference:
 
 ---
 
+## 🔒 SECURITY REMEDIATION TASKS (P0 - Critical for Production)
+
+*Source: [security-review-followup.md](../../specs/001-proposal_drafter/security-review-followup.md)*
+
+### Object-Level Authorization
+- [ ] **TASK-SEC-001: Implement Object-Level Authorization for All Resources**
+  - Implement authorization middleware that verifies user ownership, permissions, and team/donor group membership
+  - Add decorators: @require_ownership, @require_permission, @require_team_membership
+  - Apply to all API endpoints in backend/api/*.py
+  - Add integration tests for cross-user access scenarios (must return 403 Forbidden)
+  - Update contracts/README.md with authorization requirements
+  - **OWASP:** A01:2025-Broken Access Control
+  - **CWE:** CWE-284: Improper Access Control
+  - **CVSS:** 7.5 (High)
+  - **Effort:** 3-5 days
+  - **Priority:** CRITICAL
+  - **Dependencies:** None
+  - **Location:** backend/core/authorization.py, backend/api/*.py
+
+- [ ] **TASK-SEC-002: Implement Production-Grade Secrets Management**
+  - Integrate Azure Key Vault/Google Secret Manager for production
+  - Add pre-commit hooks to prevent secrets in Git
+  - Implement 90-day secrets rotation policy
+  - Encrypt secrets at rest using KMS
+  - Add audit logging for secrets access
+  - Update quickstart.md with production configuration
+  - **OWASP:** A02:2025-Security Misconfiguration
+  - **CWE:** CWE-287: Improper Authentication
+  - **CVSS:** 7.3 (High)
+  - **Effort:** 2-3 days
+  - **Priority:** CRITICAL
+  - **Dependencies:** None
+  - **Location:** backend/core/config.py, .github/hooks/pre-commit
+
+- [ ] **TASK-SEC-003: Standardize Secure Error Handling**
+  - Create error_handlers.py with standardized error responses
+  - Use same error message for all auth failures ("Invalid credentials")
+  - Log detailed errors server-side without exposing to clients
+  - Add error handling specification to contracts/README.md
+  - Implement circuit breakers for LLM failures
+  - Add security-focused error tests
+  - **OWASP:** A10:2025-Mishandling of Exceptional Conditions
+  - **CWE:** CWE-798: Hard-coded Credentials
+  - **CVSS:** 7.0 (High)
+  - **Effort:** 2-3 days
+  - **Priority:** CRITICAL
+  - **Dependencies:** None
+  - **Location:** backend/core/error_handlers.py, contracts/README.md
+
+### LLM Security
+- [ ] **TASK-SEC-004: Implement LLM Prompt Injection Prevention**
+  - Create prompt_sanitizer.py with sanitize_user_input() function
+  - Implement prompt templates separating user input from system instructions
+  - Add output validation to detect injection attempts
+  - Document approach in data-model.md
+  - Test with known prompt injection attacks
+  - **OWASP:** A05:2025-Injection
+  - **CWE:** CWE-942: Overly Permissive Cross-domain Whitelist
+  - **CVSS:** 6.5 (Medium)
+  - **Effort:** 2-3 days
+  - **Priority:** HIGH
+  - **Dependencies:** TASK-SEC-003
+  - **Location:** backend/utils/prompt_sanitizer.py
+
+- [ ] **TASK-SEC-006: Implement LLM Rate Limiting for Cost Control**
+  - Per-user: 5 requests/minute, Per-org: 50/minute, Global: 500/minute
+  - Implement cost-based rate limiting ($10/hour per user)
+  - Add budget alerts and automatic suspension
+  - Document policy in plan.md
+  - Implement token bucket algorithm
+  - **OWASP:** A06:2025-Insecure Design
+  - **CWE:** CWE-770: Allocation of Resources Without Limits
+  - **CVSS:** 5.5 (Medium)
+  - **Effort:** 2 days
+  - **Priority:** HIGH
+  - **Dependencies:** None
+  - **Location:** backend/core/rate_limiter.py
+
+### Session & Authentication Security
+- [ ] **TASK-SEC-005: Harden Session Management**
+  - Reduce session timeout from 8h to 30-60 minutes
+  - Implement session regeneration after auth (login, password change, privilege escalation)
+  - Reduce max session size from 10MB to 1-2MB
+  - Use cryptographically secure tokens (128+ bits entropy)
+  - Implement concurrent session control
+  - Add session binding to IP/user-agent
+  - **OWASP:** A06:2025-Insecure Design
+  - **CWE:** CWE-327: Use of Broken or Risky Cryptographic Algorithm
+  - **CVSS:** 6.0 (Medium)
+  - **Effort:** 2 days
+  - **Priority:** HIGH
+  - **Dependencies:** TASK-SEC-002
+  - **Location:** backend/core/redis.py, backend/middleware/session.py
+
+- [ ] **TASK-SEC-007: Add Security HTTP Headers**
+  - Content-Security-Policy, X-Frame-Options, X-Content-Type-Options
+  - Strict-Transport-Security (max-age=31536000)
+  - Referrer-Policy, Permissions-Policy
+  - Document in contracts/README.md
+  - Test using securityheaders.com
+  - **OWASP:** A02:2025-Security Misconfiguration
+  - **CWE:** CWE-693: Protection Mechanism Failure
+  - **CVSS:** 5.3 (Medium)
+  - **Effort:** 1 day
+  - **Priority:** MEDIUM
+  - **Dependencies:** None
+  - **Location:** backend/core/security_headers.py
+
+- [ ] **TASK-SEC-009: Implement Multi-Factor Authentication**
+  - TOTP support using pyotp library
+  - WebAuthn support for hardware keys
+  - Password strength meter with real-time feedback
+  - Integration with Have I Been Pwned API
+  - Password blacklist for common passwords
+  - **OWASP:** A07:2025-Authentication Failures
+  - **CWE:** CWE-532: Insertion of Sensitive Information into Log File
+  - **CVSS:** 3.7 (Low)
+  - **Effort:** 3-5 days
+  - **Priority:** LOW
+  - **Dependencies:** TASK-SEC-003
+  - **Location:** backend/api/auth.py, backend/core/mfa.py
+
+### Audit & Logging
+- [ ] **TASK-SEC-008: Implement Comprehensive Audit Logging**
+  - Create audit_logs table in database
+  - Log all auth events, access decisions, data modifications
+  - Log sensitive operations (proposal generation, knowledge card creation)
+  - Log security events (rate limit hits, validation failures)
+  - Protect logs: append-only storage, encryption at rest, integrity verification
+  - Add log monitoring and alerting
+  - **OWASP:** A09:2025-Security Logging & Alerting Failures
+  - **CWE:** CWE-778: Insufficient Logging
+  - **CVSS:** 5.0 (Medium)
+  - **Effort:** 3-4 days
+  - **Priority:** HIGH
+  - **Dependencies:** TASK-SEC-001
+  - **Location:** backend/core/audit.py, db/migrations/*
+
+### Dependency & Supply Chain Security
+- [ ] **TASK-SEC-010: Implement Dependency Scanning and SBOM Generation**
+  - Integrate Snyk or Dependabot in CI/CD
+  - Scan for vulnerabilities on every PR
+  - Block PRs with critical/high vulnerabilities
+  - Pin all dependency versions (no floating versions)
+  - Generate SBOM for each release
+  - Implement update policy (monthly, patches within 14 days)
+  - **OWASP:** A03:2025-Software Supply Chain Failures
+  - **CWE:** CWE-1104: Use of Unmaintained Third Party Components
+  - **CVSS:** 3.5 (Low)
+  - **Effort:** 2-3 days
+  - **Priority:** LOW
+  - **Dependencies:** None
+  - **Location:** .github/workflows/dependency-scan.yml
+
+- [ ] **TASK-SEC-011: Add Security-Specific Telemetry**
+  - Track failed auth attempts, authorization denials, rate limit hits
+  - Track validation failures, input sanitization events
+  - Create security dashboards in Grafana
+  - Implement alerting for suspicious events (brute force, unusual access)
+  - Integrate with SIEM if available
+  - **OWASP:** A09:2025-Security Logging & Alerting Failures
+  - **CWE:** CWE-778: Insufficient Logging
+  - **CVSS:** 2.0 (Low)
+  - **Effort:** 2 days
+  - **Priority:** LOW
+  - **Dependencies:** TASK-SEC-008
+  - **Location:** backend/core/monitoring.py, infra/grafana/dashboards/
+
+---
+
 ## 🎯 NEXT STEPS
 
 ### Immediate (This Week)
@@ -459,6 +629,7 @@ These tasks have been completed and are documented for reference:
 
 | Category | Total | Completed | Remaining | % Complete |
 |----------|-------|-----------|-----------|-----------|
+| Security Remediation | 11 | 0 | 11 | 0% |
 | Qualification System | 12 | 6 | 6 | 50% |
 | Budget Builder | 7 | 0 | 7 | 0% |
 | Reporting Toolkit | 4 | 0 | 4 | 0% |
@@ -467,30 +638,41 @@ These tasks have been completed and are documented for reference:
 | Collaboration | 5 | 0 | 5 | 0% |
 | AI Features | 4 | 0 | 4 | 0% |
 | Maintenance | 5 | 0 | 5 | 0% |
-| **TOTAL** | **43** | **6** | **37** | **14%** |
+| **TOTAL** | **54** | **6** | **48** | **11%** |
 
-*Note: This represents new feature development tasks. Core system (100+ tasks) is already complete.*
+*Note: This represents new feature development and security remediation tasks. Core system (100+ tasks) is already complete.*
 
 ---
 
 ## 🏆 PRIORITY MATRIX
 
 ### P0 - Critical (Must have, blocks production)
+- **TASK-SEC-001**: Object-Level Authorization
+- **TASK-SEC-002**: Production-Grade Secrets Management
+- **TASK-SEC-003**: Standardize Secure Error Handling
 - Qualification rule engine
 - Qualification rule sets
 - Automatic qualification on save
 
-### P1 - High (High value, next quarter)
+### P0 - High (High value, next quarter)
+- **TASK-SEC-004**: LLM Prompt Injection Prevention
+- **TASK-SEC-005**: Harden Session Management
+- **TASK-SEC-006**: LLM Rate Limiting
+- **TASK-SEC-008**: Comprehensive Audit Logging
 - Budget builder
 - Performance optimization
 - Enhanced kwalification UI
 
-### P2 - Medium (Nice to have, next 6 months)
+### P1 - Medium (Nice to have, next 6 months)
+- **TASK-SEC-007**: Security HTTP Headers
 - Reporting toolkit
 - Multi-tenancy
 - Advanced AI features
 
-### P3 - Low (Future enhancements)
+### P2 - Low (Future enhancements)
+- **TASK-SEC-009**: Multi-Factor Authentication
+- **TASK-SEC-010**: Dependency Scanning and SBOM
+- **TASK-SEC-011**: Security-Specific Telemetry
 - Collaboration features
 - Technical debt cleanup
 - Additional optimizations
