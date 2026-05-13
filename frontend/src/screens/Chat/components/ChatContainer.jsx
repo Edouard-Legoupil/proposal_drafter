@@ -55,26 +55,26 @@ const ChatContainer = (props) => {
         } = useFormData();
 
         const {
-                donors: hookDonors,
-                outcomes: hookOutcomes,
-                fieldContexts: hookFieldContexts,
-                filteredFieldContexts: hookFilteredFieldContexts,
-                newBudgetRanges: hookNewBudgetRanges,
-                newDurations: hookNewDurations,
-                geographicCoverages: hookGeographicCoverages,
-                users: hookUsers,
-                transferUsers: hookTransferUsers,
+                donors,
+                outcomes,
+                fieldContexts,
+                filteredFieldContexts,
+                newBudgetRanges,
+                newDurations,
+                geographicCoverages,
+                users,
+                transferUsers,
                 currentUser,
                 setCurrentUser,
                 isReviewer,
                 setIsReviewer,
                 isAdmin,
                 setIsAdmin,
-                setFilteredFieldContexts: hookSetFilteredFieldContexts,
-                fetchData: hookFetchData,
-                getUsers: hookGetUsers,
-                getTransferUsers: hookGetTransferUsers,
-                getProfile: hookGetProfile
+                setFilteredFieldContexts,
+                fetchData,
+                getUsers,
+                getTransferUsers,
+                getProfile
         } = useChatApi();
 
         const {
@@ -109,16 +109,6 @@ const ChatContainer = (props) => {
                 setReviewComments: hookSetReviewComments,
                 reviewStatus: hookReviewStatus,
                 setReviewStatus: hookSetReviewStatus,
-                handleCopyClick: hookHandleCopyClick,
-                handleExpanderToggle: hookHandleExpanderToggle,
-                handleEditClick: hookHandleEditClick,
-                handleRegenerateIconClick: hookHandleRegenerateIconClick,
-                handleCommentChange: hookHandleCommentChange,
-                handleStatusChange: hookHandleStatusChange,
-                handleDeleteComment: hookHandleDeleteComment,
-                handleReplyToFeedback: hookHandleReplyToFeedback,
-                handleSaveResponse: hookHandleSaveResponse,
-                handleSidebarSectionClick: hookHandleSidebarSectionClick,
                 getPeerReviews: hookGetPeerReviews,
                 getStatusHistory: hookGetStatusHistory
         } = useProposal({ setCurrentUser, setIsAdmin, setIsReviewer });
@@ -166,10 +156,6 @@ const ChatContainer = (props) => {
         }, []);
 
         // Use hook functions
-        const fetchData = hookFetchData
-        const getUsers = hookGetUsers
-        const getTransferUsers = hookGetTransferUsers
-        const getProfile = hookGetProfile
         const fetchFormData = async () => {
                 try {
                         const [donorsRes, outcomesRes, fieldContextsRes, geoCoveragesRes] = await Promise.all([
@@ -621,45 +607,6 @@ const ChatContainer = (props) => {
         }
 
         const [selectedSection, setSelectedSection] = useState(-1)
-        function handleSidebarSectionClick(sectionIndex) {
-                setSelectedSection(sectionIndex)
-
-                if (sectionIndex === -1 && topRef?.current)
-                        topRef?.current?.scroll({ top: 0, behavior: "smooth" })
-                else if (proposalRef.current)
-                        proposalRef?.current?.children[sectionIndex]?.scrollIntoView({ behavior: "smooth" })
-        }
-
-        async function handleCopyClick(sectionName, content) {
-                try {
-                        await navigator.clipboard.writeText(content)
-                        setIsCopied(true)
-
-                        if (copyResetTimerRef.current) {
-                                clearTimeout(copyResetTimerRef.current)
-                        }
-
-                        copyResetTimerRef.current = setTimeout(() => {
-                                setIsCopied(false)
-                        }, 3000)
-                } catch (error) {
-                        console.error('Failed to copy section content:', error)
-                        setNotif({ open: true, message: 'Unable to copy the section content.', severity: 'error' })
-                }
-        }
-
-        useEffect(() => {
-                return () => {
-                        if (copyResetTimerRef.current) {
-                                clearTimeout(copyResetTimerRef.current)
-                        }
-                }
-        }, [])
-
-        const handleRegenerateIconClick = sectionName => {
-                setSelectedSectionName(sectionName)
-                setIsRegenerateModalOpen(true)
-        }
         async function handleRegenerateButtonClick(ip = regenerateInput) {
                 setRegenerateSectionLoading(true)
                 const sectionName = selectedSectionName;
@@ -700,63 +647,6 @@ const ChatContainer = (props) => {
 
                 if (isEdit)
                         setIsEdit(false)
-        }
-
-        function handleExpanderToggle(sectionName) {
-                setProposal(p => {
-                        return ({
-                                ...p,
-                                [sectionName]: {
-                                        content: p[sectionName].content,
-                                        open: !p[sectionName].open
-                                }
-                        })
-                })
-        }
-
-        async function handleEditClick(sectionName) {
-                if (!isEdit) {
-                        // Entering edit mode
-                        setSelectedSectionName(sectionName);
-                        setIsEdit(true);
-                        setEditorContent(proposal[sectionName]?.content || "");
-                }
-                else {
-                        // Saving the edit
-                        try {
-                                const response = await fetch(`${API_BASE_URL}/update-section-content`, {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({
-                                                proposal_id: sessionStorage.getItem("proposal_id"),
-                                                section: sectionName,
-                                                content: editorContent
-                                        }),
-                                        credentials: 'include'
-                                });
-
-                                if (!response.ok) {
-                                        throw new Error('Failed to save the section content.');
-                                }
-
-                                // On successful save, update the local state to reflect the change.
-                                setProposal(p => ({
-                                        ...p,
-                                        [sectionName]: {
-                                                ...p[sectionName],
-                                                content: editorContent
-                                        }
-                                }));
-
-                        } catch (error) {
-                                console.error("Error saving section:", error);
-                                // Optionally, show an error message to the user.
-                        } finally {
-                                // Exit edit mode regardless of success or failure.
-                                setIsEdit(false);
-                                setSelectedSectionName(null);
-                        }
-                }
         }
 
         async function handleSaveContributionId() {
@@ -932,68 +822,6 @@ const ChatContainer = (props) => {
         }
 
         // ── Review handler functions ────────────────────────────────────────
-        async function handleCommentChange(section, field, value) {
-                if (field === "save") {
-                        const proposalId = id || sessionStorage.getItem('proposal_id');
-                        if (!proposalId) {
-                                console.error("No proposal ID found in params");
-                                return;
-                        }
-                        const commentData = {
-                                section_name: section,
-                                review_text: value,
-                                severity: reviewComments[section]?.severity || 'P2',
-                                type_of_comment: reviewComments[section]?.type_of_comment || 'General'
-                        };
-                        try {
-                                const res = await fetch(`${API_BASE_URL}/proposals/${proposalId}/comment`, {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify(commentData),
-                                        credentials: 'include'
-                                });
-                                if (res.ok) {
-                                        // Clear local draft state for this section
-                                        setReviewComments(prev => {
-                                                const next = { ...prev };
-                                                delete next[section];
-                                                return next;
-                                        });
-                                        // Reset status to show as previous feedback
-                                        handleStatusChange(section, null);
-                                        // Refresh all reviews from backend
-                                        await getPeerReviews();
-                                } else {
-                                        const error = await res.json();
-                                        console.error('Save failed:', error);
-                                        alert('Failed to save comment: ' + (error.detail || 'Unknown error'));
-                                }
-                        } catch (e) {
-                                console.error("Error saving comment", e);
-                                alert('Error connecting to server. Please try again.');
-                        }
-                        return;
-                }
-                setReviewComments(prev => {
-                        const updated = {
-                                ...prev,
-                                [section]: { ...prev[section], [field]: value }
-                        };
-                        if (field === 'review_text' || field === 'type_of_comment' || field === 'severity') {
-                                autoSaveSection(section, updated[section]);
-                        }
-                        return updated;
-                });
-        }
-
-        function handleStatusChange(section, status) {
-                setReviewStatus(prev => ({ ...prev, [section]: status }));
-                setReviewComments(prev => ({
-                        ...prev,
-                        [section]: { ...prev[section], rating: status }
-                }));
-        }
-
         const autoSaveSection = useCallback((section, commentData) => {
                 if (autoSaveTimers.current[section]) clearTimeout(autoSaveTimers.current[section]);
                 autoSaveTimers.current[section] = setTimeout(async () => {
@@ -1009,73 +837,6 @@ const ChatContainer = (props) => {
                         } catch (e) { void e; }
                 }, 800);
         }, []);
-
-        async function handleDeleteComment(commentOrSection) {
-                if (!window.confirm('Remove this comment?')) return;
-                const proposalId = sessionStorage.getItem('proposal_id');
-
-                // Handle both cases: commentId or section name
-                let commentId = null;
-                let sectionName = null;
-
-                if (typeof commentOrSection === 'string' && commentOrSection.includes('-')) {
-                        // This is likely a UUID (comment ID)
-                        commentId = commentOrSection;
-                        // Find the section name for this comment ID
-                        const existing = reviews.find(r => r.id === commentId);
-                        sectionName = existing?.section_name;
-                } else {
-                        // This is a section name
-                        sectionName = commentOrSection;
-                        // Try from local draft state first
-                        commentId = reviewComments[sectionName]?.id;
-
-                        // If not there, try from reviews array
-                        if (!commentId) {
-                                const existing = reviews.find(r => r.section_name === sectionName && (r.reviewer_id === currentUser?.id || r.reviewer_id === currentUser?.user_id));
-                                commentId = existing?.id;
-                        }
-                }
-
-                if (commentId && proposalId) {
-                        try {
-                                const res = await fetch(`${API_BASE_URL}/proposals/${proposalId}/comment/${commentId}`, {
-                                        method: 'DELETE',
-                                        credentials: 'include'
-                                });
-                                if (res.ok) {
-                                        // Refresh the reviews to get the updated status
-                                        await getPeerReviews();
-                                        // Also refresh draft comments if we are in review mode
-                                        if (isReviewer) await getContent();
-
-                                        // Force re-render by updating local state
-                                        if (sectionName) {
-                                                setReviewComments(prev => {
-                                                        const next = { ...prev };
-                                                        delete next[sectionName];
-                                                        return next;
-                                                });
-                                                handleStatusChange(sectionName, null);
-                                        }
-                                }
-                        } catch (err) { console.error('Error deleting comment', err); }
-                }
-        }
-
-        const handleSaveResponse = async (section, responseText) => {
-                const proposalId = sessionStorage.getItem('proposal_id');
-                if (!proposalId) return;
-                try {
-                        const res = await fetch(`${API_BASE_URL}/proposals/${proposalId}/author-response`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ section_name: section, author_response: responseText }),
-                                credentials: 'include'
-                        });
-                        if (res.ok) getPeerReviews();
-                } catch (error) { console.error('Error saving author response:', error); }
-        };
 
         const handleReplyToFeedback = async (feedbackId, replyText, replyStatus) => {
                 const proposalId = sessionStorage.getItem('proposal_id');
