@@ -1,8 +1,8 @@
 # Proposal Drafter Implementation Plan
 
-**Version:** 2.0  
-**Last Updated:** April 2025  
-**Current Status:** ✅ **PRODUCTION - Feature Complete**  
+**Version:** 2.0
+**Last Updated:** April 2025
+**Current Status:** ✅ **PRODUCTION - Feature Complete**
 
 ---
 

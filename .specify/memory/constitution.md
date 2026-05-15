@@ -1,8 +1,8 @@
 # Proposal Drafter Constitution
 
-**Version:** 2.0  
-**Last Updated:** April 2025  
-**Status:** Active Implementation  
+**Version:** 2.0
+**Last Updated:** April 2025
+**Status:** Active Implementation
 
 ---
 
@@ -108,9 +108,9 @@ The Proposal Drafter is an **extensible agentic AI system** that automates and e
 ### 4.1 High-Level Process
 
 ```
-User Input → Session Creation → Form Data Collection → 
-Template Selection → Section Generation (Background) → 
-Review & refinement → Validation & Quality Checks → 
+User Input → Session Creation → Form Data Collection →
+Template Selection → Section Generation (Background) →
+Review & refinement → Validation & Quality Checks →
 Export (Word/PDF/Excel) → Submission
 ```
 
