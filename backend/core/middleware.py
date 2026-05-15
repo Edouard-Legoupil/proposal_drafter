@@ -42,7 +42,7 @@ def setup_security_middleware(app):
             "script-src 'self'",
             ("style-src 'self' 'unsafe-inline' " "https://cdnjs.cloudflare.com " "https://fonts.googleapis.com"),
             "img-src 'self' data:",
-            "font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com data:",
+            "font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com https://cdnjs.cloudflare.com data:",
             "connect-src 'self'",
             "frame-src 'none'",
             "object-src 'none'",
