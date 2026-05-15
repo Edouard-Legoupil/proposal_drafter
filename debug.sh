@@ -86,7 +86,7 @@ check_file() {
 
 check_file "backend" "Backend Directory"
 check_file "frontend" "Frontend Directory"
-check_file "backend/main.py" "Backend Startup Script" 
+check_file "backend/main.py" "Backend Startup Script"
 check_file "backend/requirements.txt" "Backend Requirements"
 check_file "frontend/package.json" "Frontend Package Config"
 check_file "frontend/src/App.jsx" "Frontend Application"
@@ -100,18 +100,18 @@ if command_exists python3; then
     echo "Python executable: $(which python3)"
     echo "Python version: $(python3 --version)"
     echo "Python path: $(python3 -c 'import sys; print(sys.executable)')"
-    
+
     # Check if we can access the backend directory
     cd backend 2>/dev/null || { echo -e "  ❌ Cannot access backend directory"; exit 1; }
-    
+
     echo ""
     echo "Python modules check:"
-    
+
     check_python_module() {
         local module=$1
         python3 -c "import $module; print(f'  ✅ $module: {$module.__version__ if hasattr($module, \"__version__\") else \"installed\"}')" 2>/dev/null || echo -e "  ❌ $module: Not installed"
     }
-    
+
     check_python_module fastapi
     check_python_module uvicorn
     check_python_module pydantic
@@ -119,7 +119,7 @@ if command_exists python3; then
     check_python_module langchain_google_genai
     check_python_module dotenv
     check_python_module axios
-    
+
     cd ..
 fi
 echo ""
@@ -130,7 +130,7 @@ if command_exists node; then
     echo "Node executable: $(which node)"
     echo "Node version: $(node --version)"
     echo "npm version: $(npm --version)"
-    
+
     if [ -d "frontend" ]; then
         cd frontend
         echo ""
@@ -155,7 +155,7 @@ echo ""
 echo -e "${GREEN}🔐 Environment Variables${NC}"
 if [ -f "backend/.env" ]; then
     echo "  ✅ .env file found"
-    
+
     # Check for required variables without showing values
     check_env_var() {
         local var=$1
@@ -165,7 +165,7 @@ if [ -f "backend/.env" ]; then
             echo -e "  ❌ $var: Not found"
         fi
     }
-    
+
 else
     echo -e "  ❌ .env file not found in backend directory"
     echo "     Create backend/.env "
@@ -181,7 +181,7 @@ if [ -d "logs" ]; then
         ls -lt logs | head -5 | while read line; do
             echo "    $line"
         done
-        
+
         # Show last few lines of most recent log
         latest_log=$(ls -t logs/*.log 2>/dev/null | head -1)
         if [ -n "$latest_log" ]; then

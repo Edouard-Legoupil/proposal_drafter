@@ -35,8 +35,8 @@ This system leverages the agent-based framework of [CrewAI](https://docs.crewai.
 Each agent is powered by an LLM and follows a role-specific prompt and toolset.
 
 The key configuration files are in `backend/config/agents.yaml` and `backend/config/tasks.yaml`, which define the agents' roles, prompts, and tasks.
- 
-![AI Agent Crew Description](https://raw.githubusercontent.com/edouard-legoupil/proposal_drafter/refs/heads/main/img/crew.png) 
+
+![AI Agent Crew Description](https://raw.githubusercontent.com/edouard-legoupil/proposal_drafter/refs/heads/main/img/crew.png)
 
 ## 🛠️ Installation
 
@@ -48,7 +48,7 @@ Refer to [doc_running_local.md](https://github.com/edouard-legoupilproposal_draf
 This project prioritizes security to ensure the safe handling of sensitive information and the integrity of the proposal generation process. Our approach to security includes the following considerations:
 
 *   **Data Privacy**: As the application is designed to work from Public Data Sources, elements related to Data Protection in relation Personally Identifiable Information do not apply.
-*   **Secure Coding Practices**: We adhere to secure coding standards to minimize vulnerabilities. This includes practices like input validation to prevent common security flaws. A large part of the codebase has been created through [vibe coding](https://en.wikipedia.org/wiki/Vibe_coding) interactions with [Google Jules](https://jules.google.com) 
+*   **Secure Coding Practices**: We adhere to secure coding standards to minimize vulnerabilities. This includes practices like input validation to prevent common security flaws. A large part of the codebase has been created through [vibe coding](https://en.wikipedia.org/wiki/Vibe_coding) interactions with [Google Jules](https://jules.google.com)
 *   **Dependency Management**: We actively manage our open-source dependencies and use tools to scan for known vulnerabilities. We strive to keep all libraries up-to-date to protect against security threats.
 *   **LLM Security**: For the AI components, we are mindful of risks such as prompt injection. We design our prompts and agentic workflows to be robust against malicious inputs and to ensure the Large Language Model (LLM) behaves within its intended scope.
 
@@ -90,33 +90,33 @@ To further elevate the capabilities and value of the this Project Proposal Gener
 
 ###  💰 AI-Powered Budget Builder with Calibrated Costing Tool
 
-**Pain Point:**  
+**Pain Point:**
 Developing budgets that align with real costs and institutional norms is time-consuming and error-prone. There is often inconsistency in pricing across proposals and a lack of reference to standard costing.
 
-**Solution:**  
+**Solution:**
 An AI agent that generates budget lines using a calibrated costing tool referencing standard rates and historical financial data, in a similar approach than [IRC SCAN](https://www.rescue.org/sites/default/files/document/964/ircscantool2pager.pdf). The system ensures consistency, transparency, and realism in project budgeting.
 
-**Added Benefits:**  
-- Saves time and increases accuracy in budget development  
-- Promotes financial coherence across projects and missions  
-- Builds donor confidence through realistic and traceable costing  
-- Facilitates rapid budget iteration for concept notes and revisions  
+**Added Benefits:**
+- Saves time and increases accuracy in budget development
+- Promotes financial coherence across projects and missions
+- Builds donor confidence through realistic and traceable costing
+- Facilitates rapid budget iteration for concept notes and revisions
 
 ---
 
 ### 📝 AI-Supported Reporting & Documentation Toolkit
 
-**Pain Point:**  
+**Pain Point:**
 Project teams often struggle with reporting due to inconsistent formats, fragmented data sources, and unclear requirements. Generating accurate, timely, and donor-compliant reports can be burdensome, especially when field data is lacking or not well-structured.
 
-**Solution:**  
+**Solution:**
 An integrated module that provides tailored reporting templates aligned with donor and institutional requirements. It includes data collection form generators and AI assistants that help extract, summarize, and format content for interim and final reports.
 
-**Added Benefits:**  
-- Standardizes and simplifies reporting practices across projects  
-- Reduces staff burden with ready-to-use templates and content suggestions  
-- Increases quality, timeliness, and compliance of submitted reports  
-- Supports continuous learning by linking reported outcomes to future project design  
+**Added Benefits:**
+- Standardizes and simplifies reporting practices across projects
+- Reduces staff burden with ready-to-use templates and content suggestions
+- Increases quality, timeliness, and compliance of submitted reports
+- Supports continuous learning by linking reported outcomes to future project design
 - Facilitates better data collection through context-aware form generation
 
 
@@ -133,4 +133,3 @@ Similar (but Proprietary...) Projects
 * [grantassistant](https://www.grantassistant.ai)
 * [ai-grant-writing-assistant](https://www.grantable.co)
 * [bidnexus](https://www.bidnexus.ai)
-

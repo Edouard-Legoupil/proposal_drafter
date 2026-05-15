@@ -9,7 +9,7 @@ WORKDIR /app
 COPY frontend/package*.json ./
 RUN npm ci && echo "✅ NPM modules installed"
 
-# Diagnostic step 
+# Diagnostic step
 RUN ls -lah node_modules/.bin && npm list vite || true && echo "Checking vite installation"
 RUN npm ls vite && ls -lah node_modules/.bin/ && cat package-lock.json | grep vite
 

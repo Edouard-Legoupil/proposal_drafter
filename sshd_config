@@ -12,4 +12,3 @@ SyslogFacility DAEMON
 PasswordAuthentication yes
 PermitEmptyPasswords no
 PermitPermitRootLogin yes
-

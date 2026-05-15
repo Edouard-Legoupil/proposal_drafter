@@ -42,3 +42,6 @@ backend/sp_connector.log
 db/migrations/*
 docs/plans/*
 scratch.py
+db/migrations/*
+docs/arc/*
+playwright/test-results/*

@@ -55,7 +55,7 @@ docker-compose -f docker-compose-local.yml up --build
 ## 📏 Code Style Guidelines
 
 - **Backend (Python)**:
-  - We use **Ruff** for linting and formatting. 
+  - We use **Ruff** for linting and formatting.
   - Follow FastAPI best practices: type hints, Pydantic models for validation, and dependency injection.
 - **Frontend (JavaScript/React)**:
   - We use **ESLint** and **Prettier**.
