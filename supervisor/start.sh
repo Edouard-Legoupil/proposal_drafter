@@ -58,7 +58,7 @@ else
     # Default fallback
     BIND_PORT="8080"
     echo "🟢 Using default: ${BIND_PORT}"
-    
+
     if [ "$IS_AZURE" = true ]; then
         echo "   ⚠️  For Azure, set WEBSITES_PORT=8080 in Application Settings"
     fi
