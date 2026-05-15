@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS user_field_contexts (
 );
 
 
--- Create Donors table 
+-- Create Donors table
 CREATE TABLE IF NOT EXISTS donors (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     account_id TEXT UNIQUE,
@@ -93,7 +93,7 @@ CREATE TABLE IF NOT EXISTS donors (
     last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create Outcomes table  
+-- Create Outcomes table
 CREATE TABLE IF NOT EXISTS outcomes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT UNIQUE NOT NULL,
@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS outcomes (
     last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create Field Contexts table  
+-- Create Field Contexts table
 CREATE TABLE IF NOT EXISTS field_contexts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT,
@@ -160,7 +160,7 @@ CREATE TABLE IF NOT EXISTS proposal_status_history (
 );
 
 
--- Create Proposal Peer Reviews table   
+-- Create Proposal Peer Reviews table
 CREATE TABLE IF NOT EXISTS proposal_peer_reviews (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     proposal_id UUID NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
@@ -227,12 +227,12 @@ CREATE TABLE IF NOT EXISTS knowledge_card_reviews (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create Knowledge Card References table  
+-- Create Knowledge Card References table
 CREATE TABLE IF NOT EXISTS knowledge_card_references (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     url TEXT NOT NULL UNIQUE,
     reference_type TEXT NOT NULL,
-    summary TEXT NOT NULL,    
+    summary TEXT NOT NULL,
     created_by UUID NOT NULL REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_by UUID NOT NULL REFERENCES users(id),
@@ -301,7 +301,7 @@ CREATE TABLE IF NOT EXISTS knowledge_card_reference_errors (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create join tables for many-to-many relationships  
+-- Create join tables for many-to-many relationships
 CREATE TABLE IF NOT EXISTS proposal_donors (
     proposal_id UUID NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
     donor_id UUID NOT NULL REFERENCES donors(id) ON DELETE CASCADE,
@@ -354,10 +354,10 @@ CREATE TABLE IF NOT EXISTS donor_template_comments (
 
 -- Create index for faster user lookup
 CREATE INDEX IF NOT EXISTS idx_proposals_user_id ON proposals(user_id);
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(email); 
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_knowledge_cards_donor_id ON knowledge_cards(donor_id);
 CREATE INDEX IF NOT EXISTS idx_knowledge_cards_outcome_id ON knowledge_cards(outcome_id);
-CREATE INDEX IF NOT EXISTS idx_knowledge_cards_field_context_id ON knowledge_cards(field_context_id); 
+CREATE INDEX IF NOT EXISTS idx_knowledge_cards_field_context_id ON knowledge_cards(field_context_id);
 
 CREATE INDEX IF NOT EXISTS idx_knowledge_card_to_references_card_id ON knowledge_card_to_references(knowledge_card_id);
 CREATE INDEX IF NOT EXISTS idx_knowledge_card_to_references_reference_id ON knowledge_card_to_references(reference_id);
@@ -373,8 +373,8 @@ CREATE INDEX IF NOT EXISTS idx_donor_template_requests_creator ON donor_template
 CREATE INDEX IF NOT EXISTS idx_donor_template_comments_request ON donor_template_comments(template_request_id);
 CREATE INDEX IF NOT EXISTS idx_donor_template_comments_section ON donor_template_comments(template_request_id, section_name);
 CREATE INDEX IF NOT EXISTS idx_donor_template_comments_user ON donor_template_comments(user_id);
- 
- 
+
+
 
 -- Grant table permissions to application user
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO <DB_USERNAME>;
@@ -450,7 +450,7 @@ ON template_registry(template_key, template_type);
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_single_prod_version
 ON template_versions(template_registry_id)
-WHERE environment = 'prod' AND status = 'promoted_to_prod'; 
+WHERE environment = 'prod' AND status = 'promoted_to_prod';
 
 -- Create a trigger to update the updated_at timestamp for templates
 CREATE OR REPLACE FUNCTION update_template_timestamp()
@@ -482,7 +482,7 @@ $$ LANGUAGE plpgsql;
 
 -- Create views for querying template data
 CREATE OR REPLACE VIEW vw_template_summary AS
-SELECT 
+SELECT
     t.id AS template_id,
     t.name AS template_name,
     t.filename,
@@ -505,7 +505,7 @@ LEFT JOIN donors d ON td.donor_id = d.id
 GROUP BY t.id, tv.version_number, tv.created_at, tv.status;
 
 CREATE OR REPLACE VIEW vw_template_version_history AS
-SELECT 
+SELECT
     tv.id AS version_id,
     tv.template_registry_id,
     t.name AS template_name,
@@ -655,7 +655,7 @@ EXECUTE FUNCTION update_knowledge_card_sharepoint_link_timestamp();
 
 -- View for monitoring SharePoint upload status
 CREATE OR REPLACE VIEW vw_sharepoint_upload_status AS
-SELECT 
+SELECT
     'proposal' AS artifact_type,
     psl.proposal_id AS artifact_id,
     p.id AS link_id,
@@ -675,11 +675,11 @@ FROM proposal_sharepoint_links psl
 JOIN proposals p ON psl.proposal_id = p.id
 JOIN users u ON psl.user_id = u.id
 LEFT JOIN sharepoint_upload_events sue ON psl.id = sue.sharepoint_link_id
-GROUP BY psl.proposal_id, p.id, psl.user_id, u.name, psl.sharepoint_url, psl.filename, 
-         psl.status, psl.error_type, psl.error_message, psl.retry_count, 
+GROUP BY psl.proposal_id, p.id, psl.user_id, u.name, psl.sharepoint_url, psl.filename,
+         psl.status, psl.error_type, psl.error_message, psl.retry_count,
          psl.last_attempt_at, psl.uploaded_at, psl.created_at
 UNION ALL
-SELECT 
+SELECT
     'knowledge_card' AS artifact_type,
     kcsl.knowledge_card_id AS artifact_id,
     kc.id AS link_id,
@@ -699,8 +699,8 @@ FROM knowledge_card_sharepoint_links kcsl
 JOIN knowledge_cards kc ON kcsl.knowledge_card_id = kc.id
 JOIN users u ON kcsl.user_id = u.id
 LEFT JOIN sharepoint_upload_events sue ON kcsl.id = sue.sharepoint_link_id
-GROUP BY kcsl.knowledge_card_id, kc.id, kcsl.user_id, u.name, kcsl.sharepoint_url, kcsl.filename, 
-         kcsl.status, kcsl.error_type, kcsl.error_message, kcsl.retry_count, 
+GROUP BY kcsl.knowledge_card_id, kc.id, kcsl.user_id, u.name, kcsl.sharepoint_url, kcsl.filename,
+         kcsl.status, kcsl.error_type, kcsl.error_message, kcsl.retry_count,
          kcsl.last_attempt_at, kcsl.uploaded_at, kcsl.created_at;
 
 -- Function to check if a SharePoint link exists and is valid for an artifact
@@ -718,37 +718,37 @@ CREATE OR REPLACE FUNCTION get_valid_sharepoint_link(
 BEGIN
     IF p_artifact_type = 'proposal' THEN
         RETURN QUERY
-        SELECT 
+        SELECT
             psl.id,
             psl.sharepoint_url,
             psl.filename,
             psl.status,
-            CASE 
+            CASE
                 WHEN psl.status = 'uploaded' THEN FALSE
                 WHEN psl.status = 'failed' AND psl.retry_count < 3 THEN TRUE
                 WHEN psl.status = 'expired' THEN TRUE
                 ELSE FALSE
             END AS needs_retry
         FROM proposal_sharepoint_links psl
-        WHERE psl.proposal_id = p_artifact_id 
+        WHERE psl.proposal_id = p_artifact_id
           AND psl.user_id = p_user_id
         ORDER BY psl.created_at DESC
         LIMIT 1;
     ELSIF p_artifact_type = 'knowledge_card' THEN
         RETURN QUERY
-        SELECT 
+        SELECT
             kcsl.id,
             kcsl.sharepoint_url,
             kcsl.filename,
             kcsl.status,
-            CASE 
+            CASE
                 WHEN kcsl.status = 'uploaded' THEN FALSE
                 WHEN kcsl.status = 'failed' AND kcsl.retry_count < 3 THEN TRUE
                 WHEN kcsl.status = 'expired' THEN TRUE
                 ELSE FALSE
             END AS needs_retry
         FROM knowledge_card_sharepoint_links kcsl
-        WHERE kcsl.knowledge_card_id = p_artifact_id 
+        WHERE kcsl.knowledge_card_id = p_artifact_id
           AND kcsl.user_id = p_user_id
         ORDER BY kcsl.created_at DESC
         LIMIT 1;
@@ -825,25 +825,25 @@ CREATE TABLE IF NOT EXISTS sharepoint_file_versions (
 );
 
 -- Indexes for sync tables
-CREATE INDEX IF NOT EXISTS idx_sharepoint_sync_history_status 
+CREATE INDEX IF NOT EXISTS idx_sharepoint_sync_history_status
     ON sharepoint_sync_history(status);
 
-CREATE INDEX IF NOT EXISTS idx_sharepoint_sync_history_created 
+CREATE INDEX IF NOT EXISTS idx_sharepoint_sync_history_created
     ON sharepoint_sync_history(created_at);
 
-CREATE INDEX IF NOT EXISTS idx_sharepoint_file_versions_link 
+CREATE INDEX IF NOT EXISTS idx_sharepoint_file_versions_link
     ON sharepoint_file_versions(sharepoint_link_id);
 
-CREATE INDEX IF NOT EXISTS idx_sharepoint_file_versions_artifact 
+CREATE INDEX IF NOT EXISTS idx_sharepoint_file_versions_artifact
     ON sharepoint_file_versions(artifact_type, artifact_id);
 
-CREATE INDEX IF NOT EXISTS idx_sharepoint_file_versions_current 
-    ON sharepoint_file_versions(sharepoint_link_id, is_current) 
+CREATE INDEX IF NOT EXISTS idx_sharepoint_file_versions_current
+    ON sharepoint_file_versions(sharepoint_link_id, is_current)
     WHERE is_current = TRUE;
 
 -- View for file version history
 CREATE OR REPLACE VIEW vw_file_version_history AS
-SELECT 
+SELECT
     sfv.id,
     sfv.artifact_type,
     sfv.artifact_id,
@@ -861,11 +861,11 @@ SELECT
     sfv.is_current,
     sfv.created_at,
     -- Get artifact info
-    CASE 
+    CASE
         WHEN sfv.artifact_type = 'proposal' THEN p.template_name
         WHEN sfv.artifact_type = 'knowledge_card' THEN kc.template_name
     END AS template_name,
-    CASE 
+    CASE
         WHEN sfv.artifact_type = 'proposal' THEN p.status::TEXT
         WHEN sfv.artifact_type = 'knowledge_card' THEN kc.status::TEXT
     END AS artifact_status
@@ -876,7 +876,7 @@ LEFT JOIN knowledge_cards kc ON sfv.artifact_type = 'knowledge_card' AND sfv.art
 
 -- View for sync history with details
 CREATE OR REPLACE VIEW vw_sync_history_details AS
-SELECT 
+SELECT
     ssh.id,
     ssh.sync_started_at,
     ssh.sync_completed_at,
@@ -909,7 +909,7 @@ CREATE OR REPLACE FUNCTION get_file_version_history(
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         sfv.version_number,
         sfv.sharepoint_url,
         sfv.filename,
@@ -920,9 +920,9 @@ BEGIN
         sfv.change_type,
         sfv.is_current,
         sfv.created_at,
-        CASE 
-            WHEN sfv.diff_from_previous IS NOT NULL 
-            THEN LEFT(sfv.diff_from_previous, 500) || '...' 
+        CASE
+            WHEN sfv.diff_from_previous IS NOT NULL
+            THEN LEFT(sfv.diff_from_previous, 500) || '...'
             ELSE NULL
         END AS diff_preview
     FROM sharepoint_file_versions sfv
@@ -936,7 +936,7 @@ $$ LANGUAGE plpgsql;
 
 CREATE TYPE run_status AS ENUM (
     'drafting',
-    'completed', 
+    'completed',
     'failed',
     'cancelled'
 );
@@ -947,43 +947,43 @@ CREATE TABLE IF NOT EXISTS artifact_runs (
     artifact_type TEXT NOT NULL CHECK (artifact_type IN ('proposal', 'knowledge_card')),
     artifact_id UUID NOT NULL,
     user_id UUID NOT NULL REFERENCES users(id),
-    
+
     -- Run metadata
     run_status run_status NOT NULL DEFAULT 'drafting',
     start_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     end_time TIMESTAMPTZ,
-    
+
     -- Agent execution details
     agents_executed TEXT[],  -- Array of agent names
     model_deployment TEXT,    -- Model/deployment used
-    
+
     -- Token usage and cost
     tokens_input INTEGER DEFAULT 0,
     tokens_output INTEGER DEFAULT 0,
     estimated_cost NUMERIC(10,6) DEFAULT 0.0,
-    
+
     -- Performance metrics
     step_count INTEGER DEFAULT 0,
     retry_count INTEGER DEFAULT 0,
     failure_count INTEGER DEFAULT 0,
-    
+
     -- Timing information
     total_latency_ms INTEGER,  -- Total execution time in milliseconds
     stage_latencies JSONB,     -- Latency per stage/agent
-    
+
     -- Output metrics
     sections_generated INTEGER DEFAULT 0,
     pages_generated INTEGER DEFAULT 0,
     words_generated INTEGER DEFAULT 0,
-    
+
     -- Export events
     export_events JSONB,  -- Word/PDF export events with timestamps
-    
+
     -- Additional context
     template_name TEXT,
     template_version TEXT,
     metadata JSONB,
-    
+
     -- Timestamps
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -1013,7 +1013,7 @@ EXECUTE FUNCTION update_artifact_run_timestamp();
 
 -- Create views for querying telemetry data
 CREATE OR REPLACE VIEW vw_proposal_run_telemetry AS
-SELECT 
+SELECT
     ar.id AS run_id,
     ar.artifact_id AS proposal_id,
     ar.user_id,
@@ -1044,7 +1044,7 @@ JOIN proposals p ON ar.artifact_id = p.id
 WHERE ar.artifact_type = 'proposal';
 
 CREATE OR REPLACE VIEW vw_knowledge_card_run_telemetry AS
-SELECT 
+SELECT
     ar.id AS run_id,
     ar.artifact_id AS knowledge_card_id,
     ar.user_id,
@@ -1080,7 +1080,7 @@ WHERE ar.artifact_type = 'knowledge_card';
 
 
 -- ============================================================================
--- - Incident Analysis + Template Qualification 
+-- - Incident Analysis + Template Qualification
 -- ============================================================================
 -- PURPOSE
 --   1) Persisting incident-analysis / agentic QA outputs
@@ -1260,7 +1260,7 @@ CREATE TABLE IF NOT EXISTS template_versions (
     initial_file_content JSONB,
     release_notes TEXT,
     template_data JSONB NOT NULL,
-    
+
     created_by UUID REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_by UUID REFERENCES users(id),
@@ -1825,7 +1825,7 @@ BEGIN
     RETURN NEXT;
 END;
 $_$;
- 
+
 
 -------------
 
@@ -1966,4 +1966,3 @@ WHERE kc.id = src.knowledge_card_id;
 
 
 ---
-
