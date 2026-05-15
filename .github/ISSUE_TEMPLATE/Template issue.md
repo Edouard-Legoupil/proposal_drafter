@@ -6,7 +6,7 @@ title: "As <user/dev/...>, I would like to ... in order to ..."
 
 <!-- This part should be helping to understand why is this issue important. What is the final objective ? -->
 
-## Client - Validation 
+## Client - Validation
 
 + [ ] First thing to do to validate this as an external user / client
 + [ ] Second thing to do to validate this as an external user / client
