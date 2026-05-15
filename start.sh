@@ -282,9 +282,10 @@ main() {
     fi
 
     # Start backend with Gunicorn
-    gunicorn main:app --conf gunicorn.conf.py >> "$LOG_FILE" 2>&1 &
-    BACKEND_PID=$!
+    # Run from parent directory to ensure proper Python path resolution
     cd ..
+    gunicorn backend.main:app --conf backend/gunicorn.conf.py >> "$LOG_FILE" 2>&1 &
+    BACKEND_PID=$!
 
     log_info "Backend server started with PID: $BACKEND_PID"
     log_debug "Backend logs are being written to $LOG_FILE"
