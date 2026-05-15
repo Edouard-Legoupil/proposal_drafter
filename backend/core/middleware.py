@@ -22,7 +22,9 @@ def setup_security_middleware(app):
     This includes security headers, trusted host middleware, and other security enhancements.
     """
     # Add TrustedHostMiddleware to prevent HTTP Host header attacks
-    app.add_middleware(TrustedHostMiddleware, allowed_hosts=origins)
+    # For development, allow localhost and 127.0.0.1 in addition to the CORS origins
+    allowed_hosts = list(origins) + ["localhost", "127.0.0.1"]
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
 
     # Add security headers middleware
     @app.middleware("http")
