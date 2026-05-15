@@ -187,23 +187,6 @@ export default function KnowledgeCard() {
         }
     }
 
-    async function handleSubmitReview() {
-        const comments = Object.entries(reviewComments)
-            .map(([section_name, comment_data]) => ({
-                section_name,
-                ...comment_data
-            }));
-
-        const response = await authenticatedFetch(`${API_BASE_URL}/knowledge-cards/${id}/review`, {
-            method: "POST",
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ comments })
-        });
-        if (response.ok) {
-            navigate("/dashboard");
-        }
-    }
-
     const handleSaveResponse = async (section, responseText) => {
         try {
             const commentData = reviewComments[section];
@@ -272,18 +255,20 @@ export default function KnowledgeCard() {
     }, []);
 
     // Cleanup effect for EventSource and other resources
-    useEffect(() => {
-        return () => {
-            // Cleanup EventSource on component unmount
-            if (eventSourceRef.current) {
-                eventSourceRef.current.close();
-            }
-            // Cleanup polling interval on unmount
-            if (pollingRef.current.intervalId) {
-                clearInterval(pollingRef.current.intervalId);
-            }
-        };
-    }, []);
+	useEffect(() => {
+		const eventSource = eventSourceRef.current;
+		const polling = pollingRef.current;
+		return () => {
+			// Cleanup EventSource on component unmount
+			if (eventSource) {
+				eventSource.close();
+			}
+			// Cleanup polling interval on unmount
+			if (polling?.intervalId) {
+				clearInterval(polling.intervalId);
+			}
+		};
+	}, []);
 
     const authenticatedFetch = useCallback(async (url, options) => {
         const response = await fetch(url, options);
@@ -661,13 +646,15 @@ export default function KnowledgeCard() {
             setLoading(false);
             setLoadingMessage('');
         }
-    }, [id, navigate, authenticatedFetch, newDonors, newOutcomes, newFieldContexts]);
+	}, [id, navigate, authenticatedFetch]);
 
     const handleSave = useCallback(async (navigateOnSuccess = true) => {
         return proceedWithSave(navigateOnSuccess);
     }, [proceedWithSave]);
 
-    const handleIdentifyReferences = useCallback(async () => {
+
+	/* eslint-disable react-hooks/exhaustive-deps */
+	const handleIdentifyReferences = useCallback(async () => {
         //  Validate required fields before proceeding
         if (!linkType || !linkedId) {
             alert("Please select a link type and item before identifying references.");
@@ -735,7 +722,8 @@ export default function KnowledgeCard() {
         }
     }, [id, linkType, linkedId, handleSave, navigate, linkOptions, selectedGeoCoverage, authenticatedFetch, fetchData]);
 
-    const handleIngestReferences = useCallback(async (referenceId = null) => {
+
+	const handleIngestReferences = useCallback(async (referenceId = null) => {
         let cardId = id;
 
         if (!cardId) {
@@ -815,7 +803,9 @@ export default function KnowledgeCard() {
             setLoading(false);
             setLoadingMessage('');
         }
-    }, [id, handleSave, navigate, authenticatedFetch, fetchData, getStatus]);
+	}, [linkType, linkedId, selectedGeoCoverage, linkOptions, references, id, handleSave, navigate, authenticatedFetch, fetchData, getStatus]);
+	/* eslint-enable react-hooks/exhaustive-deps */
+
 
     useEffect(() => {
         const fromAction = location.state?.fromAction;
@@ -829,7 +819,7 @@ export default function KnowledgeCard() {
                 handleIngestReferences();
             }
         }
-    }, [id, location.state, navigate, handleIdentifyReferences, handleIngestReferences]);
+	}, [id, location.state, location.pathname, navigate, handleIdentifyReferences, handleIngestReferences]);
 
     const handleAddReference = () => {
         const newReferences = [...references, { url: '', reference_type: '', summary: '', isNew: true }];
@@ -1077,11 +1067,11 @@ export default function KnowledgeCard() {
         }
     };
 
-    // SharePoint Link State Management
-    const [sharepointStatus, setSharepointStatus] = useState(null); // null, 'uploading', 'failed', 'uploaded'
-    const [sharepointLink, setSharepointLink] = useState(null);
-    const [sharepointError, setSharepointError] = useState(null);
-    const [isCheckingLink, setIsCheckingLink] = useState(false);
+	// SharePoint Link State Management
+	const [, setSharepointStatus] = useState(null); // null, 'uploading', 'failed', 'uploaded'
+	const [, setSharepointLink] = useState(null);
+	const [, setSharepointError] = useState(null);
+	const [, setIsCheckingLink] = useState(false);
 
     // Check for existing SharePoint link
     async function checkSharepointLink(cardId) {
@@ -1496,9 +1486,6 @@ export default function KnowledgeCard() {
                             if (!content) return null;
 
                             // Filter reviews for this specific section
-                            const sectionReviews = reviews.filter(r => r.section_name === section);
-                            const sectionReviewsCount = sectionReviews.length;
-
                             return (
                                 <div key={section} className={`kc-section ${editingSection === section ? 'kc-section-editing' : ''}`} data-testid={`generated-section-${section}`}>
                                     <h3>{section}</h3>

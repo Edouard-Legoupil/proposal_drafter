@@ -1,17 +1,17 @@
 import Base from '../../components/Base/Base'
 import { useState, useEffect } from 'react'
-import { 
-    Box, 
-    Card, 
-    CardContent, 
-    Typography, 
-    Grid, 
-    Table, 
-    TableBody, 
-    TableCell, 
-    TableContainer, 
-    TableHead, 
-    TableRow, 
+import {
+    Box,
+    Card,
+    CardContent,
+    Typography,
+    Grid,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
     Paper,
     Chip,
     CircularProgress,
@@ -27,16 +27,15 @@ import {
     TextField,
     TablePagination
 } from '@mui/material'
-import { useNavigate, Link } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faTriangleExclamation, faCircleExclamation, faInfoCircle, faCheckCircle, faFilter, faSkullCrossbones, faExclamationTriangle, faExclamationCircle } from '@fortawesome/free-solid-svg-icons'
+import { faInfoCircle, faSkullCrossbones, faExclamationTriangle, faExclamationCircle } from '@fortawesome/free-solid-svg-icons'
 import './QualityGate.css'
 import AnalysisModal from '../../components/AnalysisModal/AnalysisModal'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
 
 export default function QualityGate() {
-    const navigate = useNavigate()
     const [incidents, setIncidents] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
@@ -162,16 +161,16 @@ export default function QualityGate() {
 
     const getFilteredAndSortedQualData = () => {
         const arr = Array.isArray(qualData) ? [...qualData] : []
-        
+
         // Filter by search term (template name)
         let filtered = arr
         if (qualSearch) {
             const searchLower = qualSearch.toLowerCase()
-            filtered = arr.filter(row => 
+            filtered = arr.filter(row =>
                 (row.template_name || '').toLowerCase().includes(searchLower)
             )
         }
-        
+
         // Sort
         if (qualSortConfig.key) {
             filtered.sort((a, b) => {
@@ -186,7 +185,7 @@ export default function QualityGate() {
                     av = a.results[qualSortConfig.key] ? 1 : 0;
                     bv = b.results[qualSortConfig.key] ? 1 : 0;
                 }
-                
+
                 if (av < bv) return qualSortConfig.direction === 'asc' ? -1 : 1
                 if (av > bv) return qualSortConfig.direction === 'asc' ? 1 : -1
                 return 0
@@ -194,7 +193,7 @@ export default function QualityGate() {
         }
         return filtered
     }
-    
+
     const getQualDataForDisplay = () => {
         const filteredAndSorted = getFilteredAndSortedQualData()
         return filteredAndSorted.slice(
@@ -202,11 +201,11 @@ export default function QualityGate() {
             qualPage * qualRowsPerPage + qualRowsPerPage
         )
     }
-    
+
     const handleQualPageChange = (event, newPage) => {
         setQualPage(newPage)
     }
-    
+
     const handleQualRowsPerPageChange = (event) => {
         setQualRowsPerPage(parseInt(event.target.value, 10))
         setQualPage(0)
@@ -234,19 +233,19 @@ export default function QualityGate() {
 
     const getSourceLabel = (incident) => {
         if (!incident.source_type) return 'Unknown source'
-        
+
         const typeLabels = {
             'proposal': 'Proposal',
             'knowledge_card': 'Knowledge Card',
             'template': 'Template'
         }
-        
+
         const typeLabel = typeLabels[incident.source_type] || incident.source_type
-        
+
         if (incident.source_name) {
             return `${typeLabel}: ${incident.source_name}`
         }
-        
+
         // Fallback when no name is available
         return `${typeLabel} (ID: ${incident.source_id})`
     }
@@ -261,27 +260,23 @@ export default function QualityGate() {
                 }
                 return '/dashboard?tab=templates';
             }
-            
+
             // Handle Knowledge Cards - use the source ID to view the specific card
-            if (incident.source_type.includes('knowledge_card_') && incident.source_type.endsWith('_template.json')) {
-                // Extract the type from the filename (e.g., "knowledge_card_donor_template.json" -> "donor")
-                const typeMatch = incident.source_type.match(/knowledge_card_(\w+)_template\.json/);
-                const cardType = typeMatch ? typeMatch[1] : 'donor';
-                
-                // Use the source ID to construct a direct URL to the knowledge card
-                return `/knowledge-card/${incident.source_id}`;
-            }
-            
+		if (incident.source_type.includes('knowledge_card_') && incident.source_type.endsWith('_template.json')) {
+			// Use the source ID to construct a direct URL to the knowledge card
+			return `/knowledge-card/${incident.source_id}`;
+		}
+
             // Handle Proposals - use the source ID to view the specific proposal through chat
             if (incident.source_type === 'Proposal') {
                 // Use the source ID to construct a URL to the chat interface for this proposal
                 return `/chat/${incident.source_id}`;
             }
-            
+
             // Fallback for unknown types
             console.warn('Unknown source type pattern:', incident.source_type);
             return '/dashboard';
-            
+
         } catch (error) {
             console.error('Error constructing URL for incident:', incident.incident_id || incident.id, error);
             return '/dashboard';
@@ -614,12 +609,12 @@ export default function QualityGate() {
                             {getSortedIncidents().map((incident) => (
                                 <TableRow key={incident.id} hover>
                                     <TableCell>
-                                        <Chip 
+                                        <Chip
                                             icon={<FontAwesomeIcon icon={getSeverityIcon(incident.severity)} style={{ color: '#fff' }} />}
                                             label={incident.severity}
                                             size="small"
-                                            sx={{ 
-                                                bgcolor: getSeverityColor(incident.severity), 
+                                            sx={{
+                                                bgcolor: getSeverityColor(incident.severity),
                                                 color: '#fff',
                                                 fontWeight: 'bold'
                                             }}
@@ -629,7 +624,7 @@ export default function QualityGate() {
                                         {(() => {
                                             const url = getSourceUrl(incident);
                                             console.log('Source URL:', url, 'for incident:', incident);
-                                            
+
                                             return (
                                                 <Link
                                                     to={url}
@@ -637,14 +632,14 @@ export default function QualityGate() {
                                                     title={`View ${getSourceLabel(incident)}`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    style={{ 
-                                                        display: 'block', 
-                                                        color: 'inherit', 
+                                                    style={{
+                                                        display: 'block',
+                                                        color: 'inherit',
                                                         textDecoration: 'none',
                                                         width: '100%'
                                                     }}
                                                 >
-                                                    <Typography variant="body2" sx={{ 
+                                                    <Typography variant="body2" sx={{
                                                         '&:hover': {
                                                             textDecoration: 'underline'
                                                         }
@@ -660,11 +655,11 @@ export default function QualityGate() {
                                         <Chip label={incident.type_of_comment} variant="outlined" size="small" />
                                     </TableCell>
                                     <TableCell>
-                                        <Chip 
+                                        <Chip
                                             label={incident.status || 'active'}
                                             size="small"
                                             sx={{
-                                                bgcolor: incident.status === 'resolved' ? '#4caf50' : 
+                                                bgcolor: incident.status === 'resolved' ? '#4caf50' :
                                                        incident.status === 'acknowledged' ? '#2196f3' :
                                                        incident.status === 'needs-more-info' ? '#ff9800' :
                                                        '#9e9e9e',

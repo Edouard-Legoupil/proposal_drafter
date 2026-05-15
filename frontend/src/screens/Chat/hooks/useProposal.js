@@ -1,6 +1,6 @@
 /**
  * Custom hook for managing proposal state and logic in the Chat component
- * 
+ *
  * Handles proposal data, generation, editing, and related state.
  */
 
@@ -20,7 +20,7 @@ const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api";
 export const useProposal = ({ setCurrentUser, setIsAdmin, setIsReviewer } = {}) => {
   const navigate = useNavigate();
   const { id } = useParams();
-  
+
   // Proposal state
   const [proposal, setProposal] = useState({});
   const [proposalTemplate, setProposalTemplate] = useState(null);
@@ -29,25 +29,25 @@ export const useProposal = ({ setCurrentUser, setIsAdmin, setIsReviewer } = {}) 
   const [generateLabel, setGenerateLabel] = useState("Generate");
   const [contributionId, setContributionId] = useState("");
   const [statusHistory, setStatusHistory] = useState([]);
-  
+
   // Section editing state
   const [isEdit, setIsEdit] = useState(false);
   const [editorContent, setEditorContent] = useState("");
   const [selectedSectionName, setSelectedSectionName] = useState(null);
   const [isCopied, setIsCopied] = useState(false);
   const copyResetTimerRef = useRef(null);
-  
+
   // Generation state
   const isGenerating = useRef(false);
   const fromFollowUpModalRef = useRef(false);
-  
+
   // Refs
   const topRef = useRef();
   const proposalRef = useRef();
 
   // Associated knowledge cards
   const [associatedKnowledgeCards, setAssociatedKnowledgeCards] = useState([]);
-  
+
   // Reviews
   const [reviews, setReviews] = useState([]);
   const [reviewComments, setReviewComments] = useState({});
@@ -162,21 +162,21 @@ export const useProposal = ({ setCurrentUser, setIsAdmin, setIsReviewer } = {}) 
   /**
    * Handles comment deletion
    */
-  const handleDeleteComment = useCallback(async (commentOrSection) => {
+  const handleDeleteComment = useCallback(async () => {
     // Implementation can be added here
   }, []);
 
   /**
    * Handles reply to feedback
    */
-  const handleReplyToFeedback = useCallback(async (feedbackId, replyText, replyStatus) => {
+  const handleReplyToFeedback = useCallback(async () => {
     // Implementation can be added here
   }, []);
 
   /**
    * Handles saving a response
    */
-  const handleSaveResponse = useCallback(async (section, responseText) => {
+  const handleSaveResponse = useCallback(async () => {
     // Implementation can be added here
   }, []);
 
@@ -186,7 +186,7 @@ export const useProposal = ({ setCurrentUser, setIsAdmin, setIsReviewer } = {}) 
   const handleSidebarSectionClick = useCallback((sectionIndex) => {
     setSelectedSectionName(null);
     setIsEdit(false);
-    
+
     if (sectionIndex === -1 && topRef?.current) {
       topRef?.current?.scroll({ top: 0, behavior: "smooth" });
     } else if (proposalRef.current) {
@@ -315,56 +315,6 @@ export const useProposal = ({ setCurrentUser, setIsAdmin, setIsReviewer } = {}) 
     }
   }, [contributionId]);
 
-  /**
-   * Handles proposal generation
-   */
-  const handleGenerateClick = useCallback(async (
-    userPrompt,
-    formData,
-    documentType,
-    setValidationMissingFields,
-    setIsValidationModalOpen,
-    setShowFollowUpModal,
-    fromFollowUpModalRef,
-    followUpInstruction,
-    setGenerateLoading,
-    setFormExpanded,
-    setGenerationProgress,
-    setGenerationMessage,
-    setIsProgressModalOpen,
-    setGenerateLabel,
-    setNotif
-  ) => {
-    // Check if this is a regeneration (proposal already exists)
-    const existingProposalId = sessionStorage.getItem("proposal_id");
-    const existingSessionId = sessionStorage.getItem("session_id");
-
-    // For regeneration, skip missing fields check (fields should already be filled)
-    // For initial generation, check for missing fields
-    if (!existingProposalId || !existingSessionId) {
-      // This would need getMissingFields from useFormData
-      // const missing = getMissingFields(userPrompt, formData);
-      // if (missing.length > 0) {
-      //   setValidationMissingFields(missing);
-      //   setIsValidationModalOpen(true);
-      //   return;
-      // }
-    }
-
-    // Show follow-up modal for regeneration unless coming from the modal itself
-    if (existingProposalId && existingSessionId) {
-      if (!fromFollowUpModalRef.current) {
-        setShowFollowUpModal(true);
-        return;
-      }
-      fromFollowUpModalRef.current = false;
-      // Implementation continues...
-    }
-
-    // For now, this is a placeholder
-    console.log("handleGenerateClick called");
-  }, []);
-
   return {
     // Proposal state
     proposal,
@@ -381,7 +331,7 @@ export const useProposal = ({ setCurrentUser, setIsAdmin, setIsReviewer } = {}) 
     setContributionId,
     statusHistory,
     setStatusHistory,
-    
+
     // Editing state
     isEdit,
     setIsEdit,
@@ -391,19 +341,19 @@ export const useProposal = ({ setCurrentUser, setIsAdmin, setIsReviewer } = {}) 
     setSelectedSectionName,
     isCopied,
     setIsCopied,
-    
+
     // Generation state
     isGenerating,
     fromFollowUpModalRef,
-    
+
     // Refs
     topRef,
     proposalRef,
-    
+
     // Associated knowledge
     associatedKnowledgeCards,
     setAssociatedKnowledgeCards,
-    
+
     // Reviews
     reviews,
     setReviews,
@@ -411,11 +361,11 @@ export const useProposal = ({ setCurrentUser, setIsAdmin, setIsReviewer } = {}) 
     setReviewComments,
     reviewStatus,
     setReviewStatus,
-    
+
     // Nav
     navigate,
     id,
-    
+
     // Handlers
     handleCopyClick,
     handleExpanderToggle,
@@ -427,13 +377,12 @@ export const useProposal = ({ setCurrentUser, setIsAdmin, setIsReviewer } = {}) 
     handleReplyToFeedback,
     handleSaveResponse,
     handleSidebarSectionClick,
-    
+
     // New handlers
     getContent,
     getPeerReviews,
     getStatusHistory,
-    handleSaveContributionId,
-    handleGenerateClick
+    handleSaveContributionId
   };
 };
 

@@ -34,8 +34,8 @@ export default function ForgotPassword(props) {
                                 props?.setErrorText(data.error || "Submit failed. Try again.")
                                 props?.errorPopoverRef.current.showPopover()
                         }
-                }
-                catch (error) {
+		}
+		catch {
                         props?.setErrorText("Error occured. Try again.")
                         props?.errorPopoverRef.current.showPopover()
                 }

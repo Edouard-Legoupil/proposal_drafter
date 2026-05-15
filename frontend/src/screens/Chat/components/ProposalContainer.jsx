@@ -1,6 +1,6 @@
 /**
  * ProposalContainer Component
- * 
+ *
  * Renders all proposal sections with their content and options.
  */
 
@@ -27,7 +27,7 @@ const ProposalContainer = ({
   editorContent,
   setEditorContent,
   isCopied,
-  setIsCopied,
+  setIsEdit,
   regenerateSectionLoading,
   edit,
   save,

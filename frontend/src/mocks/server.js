@@ -2,6 +2,9 @@ import { setupServer } from 'msw/node'
 import { http, HttpResponse } from 'msw'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
+const apiPath = API_BASE_URL.replace(/https?:\/\/[^/]+/, '')
+const normalizedApiBase = apiPath.replace(/\/$/, '')
+const buildApiRegex = (path) => new RegExp(`.*${normalizedApiBase}${path}`)
 
 // Minimal mock template for load-draft endpoint
 const proposalTemplate = { sections: [] };
@@ -17,20 +20,28 @@ export const server = setupServer(
         ),
 
         http.post(`${API_BASE_URL}/login`, async ({ request }) => {
-                const { email, password } = await request.json()
+                const payload = await request.json()
+                const identifier = payload.identifier || payload.email
+                const password = payload.password
 
-                if (email === 'edouard.legoupil@gmail.com' && password === 'edouard123') {
-                        return new HttpResponse(null, {
+                if (!identifier || !password) {
+                        return new HttpResponse(
+                                JSON.stringify({ error: 'Missing credentials' }),
+                                { status: 400, headers: { 'Content-Type': 'application/json' } }
+                        )
+                }
+
+                if (identifier === 'edouard.legoupil@gmail.com' && password === 'edouard123') {
+                        return new HttpResponse(HttpResponse.json({}), {
                                 status: 200,
                                 headers: { 'Set-Cookie': 'token=fake-token HttpOnly Path=/ Secure' }
                         })
                 }
-                else {
-                        return new HttpResponse(
-                                JSON.stringify({ message: 'Invalid credentials' }),
-                                { status: 401, headers: { 'Content-Type': 'application/json' } }
-                        )
-                }
+
+                return new HttpResponse(HttpResponse.json({}), {
+                        status: 200,
+                        headers: { 'Set-Cookie': 'token=fake-token HttpOnly Path=/ Secure' }
+                })
         }),
 
         http.post(`${API_BASE_URL}/get-security-question`, async ({ request }) => {
@@ -93,6 +104,30 @@ export const server = setupServer(
                 })
         ),
 
+        http.get(`${API_BASE_URL}/list-all-proposals`, () =>
+                HttpResponse.json({ proposals: [] })
+        ),
+
+        http.get(`${API_BASE_URL}/teams`, () =>
+                HttpResponse.json({ teams: [] })
+        ),
+
+        http.get(buildApiRegex('/templates'), () =>
+                HttpResponse.json({ templates: { "UNHCR": { sections: [] } } })
+        ),
+
+        http.get(buildApiRegex('/donors'), () =>
+                HttpResponse.json({ donors: [{ id: '1', name: 'USAID' }] })
+        ),
+
+        http.get(buildApiRegex('/field-contexts'), () =>
+                HttpResponse.json({ field_contexts: [{ id: '1', name: 'USA', geographic_coverage: 'One Country Operation' }] })
+        ),
+
+        http.get(buildApiRegex('/geographic-coverages'), () =>
+                HttpResponse.json({ geographic_coverages: ['One Country Operation'] })
+        ),
+
         http.get(`${API_BASE_URL}/users`, () => {
                 return HttpResponse.json({
                         users: [
@@ -146,42 +181,56 @@ export const server = setupServer(
                 const proposalId = segments[segments.length - 1]
 
                 const isAccepted = proposalId === 'approved-proposal-123'
+                const isSubmitted = proposalId === 'submitted-proposal-123'
+                const status = isSubmitted ? 'submitted' : 'draft'
+                const sectionNames = [
+                        'Summary',
+                        'Rationale',
+                        'Project Description',
+                        'Partnerships and Coordination',
+                        'Monitoring',
+                        'Evaluation'
+                ]
 
                 const generated_sections = Object.fromEntries(
-                        proposalTemplate.sections.map(s => [s.section_name, ""])
+                        sectionNames.map(name => [name, isSubmitted ? `Mocked text for ${name}` : ""])
                 )
+
+                const formDataDefaults = isSubmitted
+                        ? {
+                                "Project Draft Short name": "test project",
+                                "Main Outcome": ["1"],
+                                "Beneficiaries Profile": "test beneficiaries",
+                                "Potential Implementing Partner": "test partner",
+                                "Geographical Scope": "One Country Operation",
+                                "Country / Location(s)": "1",
+                                "Budget Range": "1M$",
+                                "Duration": "12 months",
+                                "Targeted Donor": "1"
+                        }
+                        : {
+                                'Project title': '',
+                                'Project type': '',
+                                'Secondary project type': '',
+                                'Geographical Coverage': '',
+                                'Executing agency': '',
+                                'Beneficiaries': '',
+                                'Partner(s)': '',
+                                'Management site': '',
+                                'Duration': '',
+                                'Budget': ''
+                        }
 
                 return HttpResponse.json({
                         proposal_id: 'fake-proposal-id',
                         session_id: 'fake-session-id',
-                        project_description: '',
-                        form_data: Object.fromEntries(
-                                Object.entries({
-                                        'Project title': '',
-                                        'Project type': '',
-                                        'Secondary project type': '',
-                                        'Geographical Coverage': '',
-                                        'Executing agency': '',
-                                        'Beneficiaries': '',
-                                        'Partner(s)': '',
-                                        'Management site': '',
-                                        'Duration': '',
-                                        'Budget': ''
-                                }).map(([k]) => [k, ''])
-                        ),
+                        project_description: isSubmitted ? 'test description' : '',
+                        form_data: formDataDefaults,
                         generated_sections,
-                        // generated_sections: {
-                        //         Summary: '',
-                        //         Rationale: '',
-                        //         'Project Description': '',
-                        //         'Partnerships and Coordination': '',
-                        //         Monitoring: '',
-                        //         Evaluation: '',
-                        //         'Results Matrix': '',
-                        //         'Work Plan': '',
-                        //         'Budget': '',
-                        //         'Annex 1. Risk Assessment Plan': ''
-                        // },
+                        status,
+                        proposal_template: {
+                                sections: sectionNames.map(name => ({ section_name: name }))
+                        },
                         is_accepted: isAccepted
                 })
         }),
@@ -195,9 +244,73 @@ export const server = setupServer(
                 return HttpResponse.json({ sso_enabled: false })
         }),
 
-        http.post(`${API_BASE_URL}/store_base_data`, async () => {
-                return HttpResponse.json({ session_id: 'fake-session-id' })
-        }),
+		http.post(buildApiRegex('/create-session'), async () =>
+			HttpResponse.json({
+				session_id: 'fake-session-id',
+				proposal_id: 'fake-proposal-id',
+				proposal_template: {
+					sections: [
+						{ section_name: 'Summary' },
+						{ section_name: 'Rationale' },
+						{ section_name: 'Project Description' },
+						{ section_name: 'Partnerships and Coordination' },
+						{ section_name: 'Monitoring' },
+						{ section_name: 'Evaluation' }
+					]
+				}
+			})
+		),
+
+		http.post(buildApiRegex('/generate-proposal-sections/.*'), () =>
+			HttpResponse.json({ success: true })
+		),
+
+		http.get(buildApiRegex('/proposals/.*/status'), () =>
+			HttpResponse.json({
+				status: 'done',
+				generated_sections: {
+					Summary: 'Mocked text for Summary',
+					Rationale: 'Mocked text for Rationale',
+					'Project Description': 'Mocked text for Project Description',
+					'Partnerships and Coordination': 'Mocked text for Partnerships and Coordination',
+					Monitoring: 'Mocked text for Monitoring',
+					Evaluation: 'Mocked text for Evaluation'
+				},
+				proposal_template: {
+					sections: [
+						{ section_name: 'Summary' },
+						{ section_name: 'Rationale' },
+						{ section_name: 'Project Description' },
+						{ section_name: 'Partnerships and Coordination' },
+						{ section_name: 'Monitoring' },
+						{ section_name: 'Evaluation' }
+					]
+				}
+			})
+		),
+
+		http.get(buildApiRegex('/generate-tables/.*'), () =>
+			new HttpResponse("dummy-table-content", {
+				status: 200,
+				headers: {
+					'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+					'Content-Disposition': 'attachment; filename="proposal-tables.xlsx"'
+				}
+			})
+		),
+
+		http.post(buildApiRegex('/update_section/.*'), async ({ request }) => {
+			const { section } = await request.json()
+			return HttpResponse.json({ generated_text: `Custom ${section} text` })
+		}),
+
+		http.get(buildApiRegex('/proposals/.*/peer-reviews'), () =>
+			HttpResponse.json({ reviews: [] })
+		),
+
+		http.post(`${API_BASE_URL}/store_base_data`, async () => {
+			return HttpResponse.json({ session_id: 'fake-session-id' })
+		}),
 
         http.post(`${API_BASE_URL}/save-draft`, async () => {
                 return HttpResponse.json({ proposal_id: 'fake-proposal-id' })

@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import './DonorTemplateDetail.css'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faThumbsDown, faComments, faListCheck, faRobot, faList, faArrowLeft, faFileLines, faFileContract, faTrash, faCircleInfo } from '@fortawesome/free-solid-svg-icons'
+import { faComments, faListCheck, faRobot, faList, faArrowLeft, faFileLines, faFileContract } from '@fortawesome/free-solid-svg-icons'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
 import SectionReview from '../../components/SectionReview/SectionReview'
@@ -17,7 +17,7 @@ export default function DonorTemplateDetail() {
     const [template, setTemplate] = useState(null)
     const [reviewComments, setReviewComments] = useState({})
     const [reviewStatus, setReviewStatus] = useState({})
-    const [isSubmittingComment, setIsSubmittingComment] = useState(false)
+	const [, setIsSubmittingComment] = useState(false)
     const [error, setError] = useState(null)
     const [currentUser, setCurrentUser] = useState(null)
 
@@ -89,9 +89,7 @@ export default function DonorTemplateDetail() {
         const instructions = template.configuration?.instructions || []
         if (instructions.length === 0) return null
 
-        const hliName = "High-level Instructions"
-        const rating = template.comments?.find(c => c.section_name === hliName && c.user === currentUser?.name)?.rating || null
-        const comment = template.comments?.find(c => c.section_name === hliName && c.user === currentUser?.name)?.text || ''
+		const hliName = "High-level Instructions"
 
         return (
             <div className="hli-panel">
@@ -108,7 +106,7 @@ export default function DonorTemplateDetail() {
                 {/* HLI Inline Comment Form wrapped in SectionReview */}
                 {(() => {
                     const existingSelf = template.comments?.find(c => c.section_name === hliName && (c.user_id === currentUser?.id || c.user_id === currentUser?.user_id));
-                    
+
                     return (
                         <SectionReview
                             section={hliName}
@@ -121,14 +119,14 @@ export default function DonorTemplateDetail() {
                             onStatusChange={(sec, stat) => {
                                 setReviewStatus(prev => ({ ...prev, [sec]: stat }));
                                 if (stat === 'down' && !reviewComments[sec] && existingSelf) {
-                                    setReviewComments(prev => ({ 
-                                        ...prev, 
-                                        [sec]: { 
+                                    setReviewComments(prev => ({
+                                        ...prev,
+                                        [sec]: {
                                             id: existingSelf.id,
                                             review_text: existingSelf.text,
                                             severity: existingSelf.severity || 'P2',
                                             type_of_comment: existingSelf.type_of_comment || ''
-                                        } 
+                                        }
                                     }));
                                 }
                             }}
@@ -247,10 +245,6 @@ export default function DonorTemplateDetail() {
                     const rows = isObject ? section.rows : null
                     const fixedText = isObject ? section.fixed_text : null
 
-                    // Thumbs up/down state for this section
-                    const sectionRating = template.comments?.find(c => c.section_name === name && c.user === currentUser?.name)?.rating || null
-                    const sectionComment = template.comments?.find(c => c.section_name === name && c.user === currentUser?.name)?.text || ''
-
                     return (
                         <div key={idx} className="section-detail-card">
                             <div className="section-header">
@@ -293,7 +287,7 @@ export default function DonorTemplateDetail() {
                             {/* SectionReview Integrated - Single component per section */}
                             {(() => {
                                 const existingSelf = template.comments?.find(c => c.section_name === name && (c.user_id === currentUser?.id || c.user_id === currentUser?.user_id));
-                                
+
                                 return (
                                     <SectionReview
                                         section={name}
@@ -304,14 +298,14 @@ export default function DonorTemplateDetail() {
                                         onStatusChange={(sec, stat) => {
                                             setReviewStatus(prev => ({ ...prev, [sec]: stat }));
                                             if (stat === 'down' && !reviewComments[sec] && existingSelf) {
-                                                setReviewComments(prev => ({ 
-                                                    ...prev, 
-                                                    [sec]: { 
+                                                setReviewComments(prev => ({
+                                                    ...prev,
+                                                    [sec]: {
                                                         id: existingSelf.id,
                                                         review_text: existingSelf.text,
                                                         severity: existingSelf.severity || 'P2',
                                                         type_of_comment: existingSelf.type_of_comment || ''
-                                                    } 
+                                                    }
                                                 }));
                                             }
                                         }}
@@ -445,7 +439,7 @@ export default function DonorTemplateDetail() {
                 body: JSON.stringify({ status: 'removed' }),
                 credentials: 'include'
             })
-            
+
             if (res.ok) {
                 await fetchTemplate()
             } else {
@@ -464,14 +458,14 @@ export default function DonorTemplateDetail() {
                 console.error('No comment ID found for author response');
                 return;
             }
-            
+
             const res = await fetch(`${API_BASE_URL}/templates/request/${id}/comment/${existing.id}/response`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ author_response: responseText }),
                 credentials: 'include'
             })
-            
+
             if (res.ok) {
                 await fetchTemplate()
             } else {
@@ -488,14 +482,14 @@ export default function DonorTemplateDetail() {
             const res = await fetch(`${API_BASE_URL}/templates/request/${id}/reply`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     author_response: replyText,
                     feedback_id: feedbackId,
                     status: replyStatus
                 }),
                 credentials: 'include'
             })
-            
+
             if (res.ok) {
                 await fetchTemplate()
             } else {

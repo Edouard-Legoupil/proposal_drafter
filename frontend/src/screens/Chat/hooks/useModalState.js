@@ -1,6 +1,6 @@
 /**
  * Custom hook for managing modal state in the Chat component
- * 
+ *
  * Centralizes all modal-related state and handlers.
  */
 
@@ -51,7 +51,7 @@ export const useModalState = () => {
     setIsMobile,
     isMobileMenuOpen,
     setIsMobileMenuOpen,
-    
+
     // Modal visibility
     isPeerReviewModalOpen,
     setIsPeerReviewModalOpen,
@@ -69,7 +69,7 @@ export const useModalState = () => {
     setIsProgressModalOpen,
     isRegenerateModalOpen,
     setIsRegenerateModalOpen,
-    
+
     // Form state for modals
     selectedUsers,
     setSelectedUsers,
@@ -85,11 +85,11 @@ export const useModalState = () => {
     setRegenerateInput,
     regenerateSectionLoading,
     setRegenerateSectionLoading,
-    
+
     // Notification
     notif,
     setNotif,
-    
+
     // Handlers
     handleResize
   };

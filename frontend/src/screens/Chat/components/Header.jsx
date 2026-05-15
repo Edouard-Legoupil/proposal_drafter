@@ -1,6 +1,6 @@
 /**
  * Header Component
- * 
+ *
  * Displays the chat header with title, document type switcher, main prompt, and parameter form.
  */
 
@@ -17,19 +17,9 @@ const Header = ({
   setUserPrompt,
   formExpanded,
   setFormExpanded,
-  toKebabCase,
   renderFormField,
   formData,
-  setFormData,
-  outcomes,
-  donors,
-  filteredFieldContexts,
-  geographicCoverages,
-  newDurations,
-  setNewDurations,
-  newBudgetRanges,
-  setNewBudgetRanges,
-  handleFormInput
+  setFormData
 }) => {
   return (
     <>
@@ -108,7 +98,7 @@ const Header = ({
                 <span className="tooltip-text">surface Situation Analysis and Needs Assessment</span>
               </div>
               {renderFormField("Geographical Scope", proposalStatus !== 'draft')}
-              
+
               <div className="Chat_form_inputContainer" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
                 <input
                   type="checkbox"
@@ -136,7 +126,7 @@ const Header = ({
               </div>
               {renderFormField("Budget Range", proposalStatus !== 'draft')}
               {renderFormField("Duration", proposalStatus !== 'draft')}
-              
+
               <div className="Chat_form_inputContainer" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
                 <input
                   type="checkbox"

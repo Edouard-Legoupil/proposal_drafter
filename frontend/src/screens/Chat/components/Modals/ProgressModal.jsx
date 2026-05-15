@@ -6,15 +6,15 @@
 import React from 'react';
 import CommonButton from '../../../../components/CommonButton/CommonButton';
 
-const ProgressModal = ({ 
-  isOpen, 
+const ProgressModal = ({
+  isOpen,
   progress = 0,
   message = '',
   onClose
 }) => {
   // Determine if generation failed based on message
   const isFailed = message?.includes('failed') || message?.includes('Failed');
-  
+
   return (
     <dialog open={isOpen} className="Chat_regenerate" style={{ height: '360px' }}>
       <header className="Chat_regenerate_header" style={{ padding: '20px' }}>

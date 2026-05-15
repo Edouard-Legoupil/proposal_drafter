@@ -1,10 +1,11 @@
-import { vi, describe, it, expect } from 'vitest'
+import { vi, describe, it, expect, beforeAll } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BrowserRouter } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
-import Login from './Login'
+
+let Login
 
 const mockNavigate = vi.fn()
 
@@ -14,6 +15,12 @@ vi.mock('react-router-dom', async () => {
                 ...actual,
                 useNavigate: () => mockNavigate,
         }
+})
+
+beforeAll(async () => {
+        vi.stubEnv('VITE_ENABLE_DIRECT_LOGIN', 'true')
+        const module = await import('./Login')
+        Login = module.default
 })
 
 describe('Login Form Validation', () => {

@@ -1,30 +1,20 @@
 import '../Chat.css';
 import { Snackbar, Alert } from '@mui/material';
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import Markdown from 'react-markdown';
-import rehypeSanitize from 'rehype-sanitize';
-import remarkGfm from 'remark-gfm';
 
 import Base from '../../../components/Base/Base';
-import CommonButton from '../../../components/CommonButton/CommonButton';
 import MultiSelectModal from '../../../components/MultiSelectModal/MultiSelectModal';
 import AssociateKnowledgeModal from '../../../components/AssociateKnowledgeModal/AssociateKnowledgeModal';
 import PdfUploadModal from '../../../components/PdfUploadModal/PdfUploadModal';
-import Select from 'react-select';
-import CreatableSelect from 'react-select/creatable';
 import SingleSelectUserModal from '../../../components/SingleSelectUserModal/SingleSelectUserModal';
-import SectionReview from '../../../components/SectionReview/SectionReview';
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api";
 
 import fileIcon from "../../../assets/images/chat-titleIcon.svg";
 import arrow from "../../../assets/images/expanderArrow.svg";
 import generateIcon from "../../../assets/images/generateIcon.svg";
-import knowIcon from "../../../assets/images/knowIcon.svg";
-import resultsIcon from "../../../assets/images/Chat_resultsIcon.svg";
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import edit from "../../../assets/images/Chat_edit.svg";
 import save from "../../../assets/images/Chat_save.svg";
 import cancel from "../../../assets/images/Chat_editCancel.svg";
@@ -32,79 +22,84 @@ import copy from "../../../assets/images/Chat_copy.svg";
 import tick from "../../../assets/images/Chat_copiedTick.svg";
 import regenerate from "../../../assets/images/Chat_regenerate.svg";
 import regenerateClose from "../../../assets/images/Chat_regenerateClose.svg";
-import word_icon from "../../../assets/images/word.svg";
 import excel_icon from "../../../assets/images/excel.svg";
-import { FollowUpModal, ValidationModal, ProgressModal, RegenerateModal, Sidebar, Header, ProposalContainer } from './index';
+import { FollowUpModal, ValidationModal, ProgressModal, RegenerateModal } from './index';
+import ChatHeader from './ChatHeader';
+import ChatControls from './ChatControls';
+import ChatMain from './ChatMain';
+import ChatSidebar from './ChatSidebar';
 import { toKebabCase } from '../utils';
-import { useFormData, OUTCOME_ORDER } from '../hooks/useFormData';
+import { useFormData } from '../hooks/useFormData';
 import { useChatApi } from '../hooks/useChatApi';
 import { useProposal } from '../hooks/useProposal';
 
 const ChatContainer = (props) => {
         // Initialize custom hooks
-        const {
-                formData,
-                setFormData,
-                formExpanded,
-                setFormExpanded,
-                handleFormInput,
-                getMissingFields,
-                getOptions,
-                handleCreate,
-                renderFormField
-        } = useFormData();
+	const {
+		formData,
+		setFormData,
+		formExpanded,
+		setFormExpanded,
+		handleFormInput,
+		getMissingFields,
+		renderFormField
+	} = useFormData();
 
-        const {
-                donors,
-                outcomes,
-                fieldContexts,
-                filteredFieldContexts,
-                newBudgetRanges,
-                newDurations,
-                geographicCoverages,
-                users,
-                transferUsers,
-                currentUser,
-                setCurrentUser,
-                isReviewer,
-                setIsReviewer,
-                isAdmin,
-                setIsAdmin,
-                setFilteredFieldContexts,
-                fetchData,
-                getUsers,
-                getTransferUsers,
-                getProfile
-        } = useChatApi();
+	const {
+		donors,
+		outcomes,
+		fieldContexts,
+		filteredFieldContexts,
+		newBudgetRanges,
+		newDurations,
+		geographicCoverages,
+		setDonors,
+		setOutcomes,
+		setFieldContexts,
+		setFilteredFieldContexts,
+		setNewBudgetRanges,
+		setNewDurations: setNewDurationsFromApi,
+		setGeographicCoverages,
+		users,
+		transferUsers,
+		currentUser,
+		setCurrentUser,
+		isReviewer,
+		setIsReviewer,
+		isAdmin,
+		setIsAdmin,
+		fetchData,
+		getUsers,
+		getTransferUsers,
+		getProfile
+	} = useChatApi();
 
-        const {
-                proposal,
-                setProposal,
-                proposalTemplate,
-                setProposalTemplate,
-                proposalStatus,
-                setProposalStatus,
-                generateLoading,
-                setGenerateLoading,
-                generateLabel,
-                setGenerateLabel,
-                contributionId,
-                setContributionId,
-                isEdit,
+	const {
+		proposal,
+		setProposal,
+		proposalTemplate,
+		setProposalTemplate,
+		proposalStatus,
+		setProposalStatus,
+		generateLoading,
+		setGenerateLoading,
+		generateLabel,
+		setGenerateLabel,
+		contributionId,
+		setContributionId,
+		statusHistory,
+		isEdit,
                 setIsEdit,
                 editorContent,
                 setEditorContent,
-                selectedSectionName,
-                setSelectedSectionName,
-                isCopied,
-                setIsCopied,
+		selectedSectionName,
+		isCopied,
                 fromFollowUpModalRef,
                 topRef,
                 proposalRef,
                 associatedKnowledgeCards,
                 setAssociatedKnowledgeCards,
-                reviews,
-                setReviews,
+		reviews,
                 reviewComments,
                 setReviewComments,
                 reviewStatus,
@@ -126,13 +121,10 @@ const ChatContainer = (props) => {
 
         const [documentType, setDocumentType] = useState("proposal")
 
-        // Local state (not in hooks yet)
-        const [titleName, setTitleName] = useState(props?.title ?? "Generate Draft Proposal")
-        const [userPrompt, setUserPrompt] = useState("")
-        const [buttonEnable, setButtonEnable] = useState(false)
-        const autoSaveTimers = useRef({})
-        const copyResetTimerRef = useRef(null)
-        const isGenerating = useRef(false)
+	// Local state (not in hooks yet)
+	const [titleName, setTitleName] = useState(props?.title ?? "Generate Draft Proposal")
+	const [userPrompt, setUserPrompt] = useState("")
+	const [buttonEnable, setButtonEnable] = useState(false)
 
         // Modal state (could be in useModalState but needs local for now)
         const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -140,73 +132,97 @@ const ChatContainer = (props) => {
         const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
         const [isPeerReviewModalOpen, setIsPeerReviewModalOpen] = useState(false)
         const [isAssociateKnowledgeModalOpen, setIsAssociateKnowledgeModalOpen] = useState(false)
-        const [isPdfUploadModalOpen, setIsPdfUploadModalOpen] = useState(false)
-        const [selectedUsers, setSelectedUsers] = useState([])
-        const [validationMissingFields, setValidationMissingFields] = useState([])
-        const [isValidationModalOpen, setIsValidationModalOpen] = useState(false)
-        const [isTransferModalOpen, setIsTransferModalOpen] = useState(false)
-        const [showFollowUpModal, setShowFollowUpModal] = useState(false)
-        const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
-        const [followUpInstruction, setFollowUpInstruction] = useState("");
-        const [generationProgress, setGenerationProgress] = useState(0);
-        const [generationMessage, setGenerationMessage] = useState("");
-        const [isRegenerateModalOpen, setIsRegenerateModalOpen] = useState(false)
-        const [regenerateInput, setRegenerateInput] = useState("");
-        const [regenerateSectionLoading, setRegenerateSectionLoading] = useState(false);
-        const [notif, setNotif] = useState({ open: false, message: '', severity: 'info' });
+	const [isPdfUploadModalOpen, setIsPdfUploadModalOpen] = useState(false)
+	const [selectedUsers, setSelectedUsers] = useState([])
+	const [validationMissingFields, setValidationMissingFields] = useState([])
+	const [isValidationModalOpen, setIsValidationModalOpen] = useState(false)
+	const [isTransferModalOpen, setIsTransferModalOpen] = useState(false)
+	const [showFollowUpModal, setShowFollowUpModal] = useState(false)
+	const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
+	const [followUpInstruction, setFollowUpInstruction] = useState("");
+	const [generationProgress, setGenerationProgress] = useState(0);
+	const [generationMessage, setGenerationMessage] = useState("");
+	const [isRegenerateModalOpen, setIsRegenerateModalOpen] = useState(false)
+	const [regenerateInput, setRegenerateInput] = useState("");
+	const [regenerateSectionLoading, setRegenerateSectionLoading] = useState(false);
+	const [notif, setNotif] = useState({ open: false, message: '', severity: 'info' });
+	const [isSubmittedProposalLoaded, setIsSubmittedProposalLoaded] = useState(false);
 
-        useEffect(() => {
-                function handleResize() {
-                        setIsMobile(window.innerWidth < 768);
-                }
+	const renderFormFieldWithContext = useCallback((label, disabled) => {
+		return renderFormField(
+			label,
+			disabled,
+			formData,
+			handleFormInput,
+			outcomes,
+			donors,
+			filteredFieldContexts,
+			geographicCoverages,
+			newDurations,
+			newBudgetRanges,
+			setNewDurationsFromApi,
+			setNewBudgetRanges
+		);
+	}, [renderFormField, formData, handleFormInput, outcomes, donors, filteredFieldContexts, geographicCoverages, newDurations, newBudgetRanges, setNewDurationsFromApi, setNewBudgetRanges]);
 
-                window.addEventListener('resize', handleResize);
-                return () => window.removeEventListener('resize', handleResize);
-        }, []);
+	useEffect(() => {
+		function handleResize() {
+			setIsMobile(window.innerWidth < 768);
+		}
+
+		window.addEventListener('resize', handleResize);
+		return () => window.removeEventListener('resize', handleResize);
+	}, []);
+
+	useEffect(() => {
+		const missingFields = getMissingFields(userPrompt);
+		const hasPrompt = userPrompt.trim().length > 0;
+		setButtonEnable(proposalStatus === 'draft' && hasPrompt && missingFields.length === 0);
+	}, [getMissingFields, userPrompt, proposalStatus]);
 
         // Use hook functions
-        const fetchFormData = async () => {
-                try {
-                        const [donorsRes, outcomesRes, fieldContextsRes, geoCoveragesRes] = await Promise.all([
-                                fetch(`${API_BASE_URL}/donors`, { credentials: 'include' }),
-                                fetch(`${API_BASE_URL}/outcomes`, { credentials: 'include' }),
-                                fetch(`${API_BASE_URL}/field-contexts`, { credentials: 'include' }),
-                                fetch(`${API_BASE_URL}/geographic-coverages`, { credentials: 'include' })
-                        ]);
+	const fetchFormData = useCallback(async () => {
+		try {
+			const [donorsRes, outcomesRes, fieldContextsRes, geoCoveragesRes] = await Promise.all([
+				fetch(`${API_BASE_URL}/donors`, { credentials: 'include' }),
+				fetch(`${API_BASE_URL}/outcomes`, { credentials: 'include' }),
+				fetch(`${API_BASE_URL}/field-contexts`, { credentials: 'include' }),
+				fetch(`${API_BASE_URL}/geographic-coverages`, { credentials: 'include' })
+			]);
 
-                        if (donorsRes.ok) {
-                                const data = await donorsRes.json();
-                                setDonors(data.donors);
-                        }
-                        if (outcomesRes.ok) {
-                                const data = await outcomesRes.json();
-                                setOutcomes(data.outcomes);
-                        }
-                        if (fieldContextsRes.ok) {
-                                const data = await fieldContextsRes.json();
-                                const sortedFieldContexts = data.field_contexts.sort((a, b) => a.name.localeCompare(b.name));
-                                setFieldContexts(sortedFieldContexts);
-                                setFilteredFieldContexts(sortedFieldContexts);
-                        }
-                        if (geoCoveragesRes.ok) {
-                                const data = await geoCoveragesRes.json();
-                                setGeographicCoverages(data.geographic_coverages || []);
-                        }
-                } catch (error) {
-                        console.error("Error fetching form data:", error);
-                }
-        }
+			if (donorsRes.ok) {
+				const data = await donorsRes.json();
+				setDonors(data.donors);
+			}
+			if (outcomesRes.ok) {
+				const data = await outcomesRes.json();
+				setOutcomes(data.outcomes);
+			}
+			if (fieldContextsRes.ok) {
+				const data = await fieldContextsRes.json();
+				const sortedFieldContexts = data.field_contexts.sort((a, b) => a.name.localeCompare(b.name));
+				setFieldContexts(sortedFieldContexts);
+				setFilteredFieldContexts(sortedFieldContexts);
+			}
+			if (geoCoveragesRes.ok) {
+				const data = await geoCoveragesRes.json();
+				setGeographicCoverages(data.geographic_coverages || []);
+			}
+		} catch (error) {
+			console.error("Error fetching form data:", error);
+		}
+	}, [setDonors, setOutcomes, setFieldContexts, setFilteredFieldContexts, setGeographicCoverages]);
 
-        useEffect(() => {
-                if (id) {
-                        sessionStorage.setItem("proposal_id", id);
-                }
-                fetchData().then(() => {
-                        if (sessionStorage.getItem("proposal_id")) {
-                                fetchFormData();
-                        }
-                });
-        }, [id]);
+	useEffect(() => {
+		if (id) {
+			sessionStorage.setItem("proposal_id", id);
+		}
+		fetchData().then(() => {
+			if (sessionStorage.getItem("proposal_id")) {
+				fetchFormData();
+			}
+		});
+	}, [id, fetchData, fetchFormData]);
 
         // getUsers and getTransferUsers are imported from useChatApi hook
 
@@ -231,57 +247,60 @@ const ChatContainer = (props) => {
                 }
         }, [isPeerReviewModalOpen, users, formData]);
 
-        useEffect(() => {
-                getUsers()
-                getTransferUsers()
-                getProfile()
-        }, [])
+	useEffect(() => {
+		getUsers()
+		getTransferUsers()
+		getProfile()
+	}, [getUsers, getTransferUsers, getProfile])
 
-        useEffect(() => {
-                const scope = formData['Geographical Scope'].value;
-                const filtered = scope
-                        ? fieldContexts.filter(fc => fc.geographic_coverage === scope)
-                        : fieldContexts;
-                setFilteredFieldContexts(filtered);
+	const geographicalScopeValue = formData['Geographical Scope'].value;
+	const locationFieldValue = formData['Country / Location(s)'].value;
 
-                const locationValue = formData['Country / Location(s)'].value;
-                if (locationValue) {
-                        if (Array.isArray(locationValue)) {
-                                const validLocations = locationValue.filter(id => filtered.some(fc => fc.id === id));
-                                if (validLocations.length !== locationValue.length) {
-                                        handleFormInput({ target: { value: validLocations } }, "Country / Location(s)");
-                                }
-                        } else {
-                                const isLocationStillValid = filtered.some(fc => fc.id === locationValue);
-                                if (fieldContexts.length > 0 && !isLocationStillValid) {
-                                        handleFormInput({ target: { value: "" } }, "Country / Location(s)");
-                                }
-                        }
-                }
-        }, [formData['Geographical Scope'].value, fieldContexts]);
+	useEffect(() => {
+		const scope = geographicalScopeValue;
+		const filtered = scope
+			? fieldContexts.filter(fc => fc.geographic_coverage === scope)
+			: fieldContexts;
+		setFilteredFieldContexts(filtered);
+
+		const locationValue = locationFieldValue;
+		if (locationValue) {
+			if (Array.isArray(locationValue)) {
+				const validLocations = locationValue.filter(id => filtered.some(fc => fc.id === id));
+				if (validLocations.length !== locationValue.length) {
+					handleFormInput({ target: { value: validLocations } }, "Country / Location(s)");
+				}
+			} else {
+				const isLocationStillValid = filtered.some(fc => fc.id === locationValue);
+				if (fieldContexts.length > 0 && !isLocationStillValid) {
+					handleFormInput({ target: { value: "" } }, "Country / Location(s)");
+				}
+			}
+		}
+	}, [geographicalScopeValue, locationFieldValue, fieldContexts, handleFormInput, setFilteredFieldContexts]);
 
         // Set label to Regenerate if there's an existing proposal
-        useEffect(() => {
-                if (sessionStorage.getItem("proposal_id")) {
-                        setGenerateLabel("Regenerate");
-                }
-        }, []);
+	useEffect(() => {
+		if (sessionStorage.getItem("proposal_id")) {
+			setGenerateLabel("Regenerate");
+		}
+	}, [setGenerateLabel]);
 
-        useEffect(() => {
-                if (titleName === "Generate Draft Proposal" || titleName === "Generate Concept Note") {
-                        if (documentType === "concept note") {
-                                setTitleName("Generate Concept Note");
-                        } else {
-                                setTitleName("Generate Draft Proposal");
-                        }
-                }
-        }, [documentType]);
+	useEffect(() => {
+		if (titleName === "Generate Draft Proposal" || titleName === "Generate Concept Note") {
+			if (documentType === "concept note") {
+				setTitleName("Generate Concept Note");
+			} else {
+				setTitleName("Generate Draft Proposal");
+			}
+		}
+	}, [documentType, titleName, setTitleName]);
 
-        useEffect(() => {
-                if (!generateLoading && proposal && Object.values(proposal).every(section => section.content)) {
-                        topRef.current?.scrollIntoView({ behavior: "smooth" });
-                }
-        }, [generateLoading, proposal]);
+	useEffect(() => {
+		if (!generateLoading && proposal && Object.values(proposal).every(section => section.content)) {
+			topRef.current?.scrollIntoView({ behavior: "smooth" });
+		}
+	}, [generateLoading, proposal, topRef]);
 
         // --- Streaming polling logic for proposal generation ---
         useEffect(() => {
@@ -343,14 +362,14 @@ const ChatContainer = (props) => {
                                                 pollingActive = false;
                                                 clearInterval(pollInterval);
                                                 setTimeout(() => setIsProgressModalOpen(false), 1000); // Small delay to show 100%
-                                                
+
                                                 // Change button label to Regenerate after successful generation
                                                 if (!isFailed && hasAllSections) {
                                                         setGenerateLabel("Regenerate");
                                                 }
                                         }
                                 } else throw new Error('Non-200 response');
-                        } catch (err) {
+				} catch {
                                 setGenerateLoading(false);
                                 setGenerationProgress(0);
                                 setNotif({ open: true, message: 'Error streaming proposal content. Try again.', severity: 'error' });
@@ -360,7 +379,7 @@ const ChatContainer = (props) => {
                         }
                 }, 1000);
                 return () => { pollingActive = false; clearInterval(pollInterval); };
-        }, [generateLoading]);
+	}, [generateLoading, setGenerateLabel, setGenerateLoading, setProposal, setGenerationProgress, setGenerationMessage, setNotif, setIsProgressModalOpen]);
 
 
         async function fetchAndAssociateKnowledgeCards() {
@@ -436,8 +455,9 @@ const ChatContainer = (props) => {
                 fromFollowUpModalRef.current = false;
         }
 
-        async function handleGenerateClick() {
-                // Check if this is a regeneration (proposal already exists)
+	async function handleGenerateClick() {
+		setIsSubmittedProposalLoaded(false);
+		// Check if this is a regeneration (proposal already exists)
                 const existingProposalId = sessionStorage.getItem("proposal_id");
                 const existingSessionId = sessionStorage.getItem("session_id");
 
@@ -522,30 +542,6 @@ const ChatContainer = (props) => {
                         const finalAssociatedCards = (await fetchAndAssociateKnowledgeCards()).filter(card => card.generated_section != null);
                         const updatedFormData = { ...Object.fromEntries(Object.entries(formData).map(item => [item[0], item[1].value])) };
 
-                        const createNewOption = async (endpoint, value) => {
-                                let body = { name: value.substring(4) };
-                                if (endpoint === 'field-contexts') {
-                                        body.geographic_coverage = formData['Geographical Scope'].value;
-                                        body.category = 'Country'; // Default category
-                                }
-
-                                const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify(body),
-                                        credentials: 'include'
-                                });
-
-                                if (!response.ok) {
-                                        const errorData = await response.json();
-                                        console.error("Failed to create new option:", errorData);
-                                        throw new Error(`Failed to create new ${endpoint}`);
-                                }
-
-                                const data = await response.json();
-                                return data.id;
-                        };
-
                         // Call the new, streamlined endpoint to create the session and initial draft.
                         const response = await fetch(`${API_BASE_URL}/create-session`, {
                                 method: 'POST',
@@ -604,7 +600,7 @@ const ChatContainer = (props) => {
                 }
         }
 
-        const [selectedSection, setSelectedSection] = useState(-1)
+	const [selectedSection] = useState(-1)
         async function handleRegenerateButtonClick(ip = regenerateInput) {
                 setRegenerateSectionLoading(true)
                 const sectionName = selectedSectionName;
@@ -661,9 +657,15 @@ const ChatContainer = (props) => {
                         console.error("Failed to save Contribution ID");
                         alert("Failed to save Contribution ID.");
                 }
-        }
+	}
 
-        // getPeerReviews and getStatusHistory are imported from useProposal hook
+        useEffect(() => {
+                if (sessionStorage.getItem("proposal_id")) {
+                        getContent();
+                }
+        }, [id]);
+
+	// getPeerReviews and getStatusHistory are imported from useProposal hook
 
         // getProfile is imported from useChatApi hook
 
@@ -692,7 +694,7 @@ const ChatContainer = (props) => {
 
                                         if (!isOwner) {
                                                 setIsReviewer(true);
-                                        }
+	}
                                 }
 
                                 sessionStorage.setItem("proposal_id", data.proposal_id)
@@ -730,7 +732,8 @@ const ChatContainer = (props) => {
                                         setDocumentType("proposal");
                                 }
 
-                                setProposalStatus(data.status)
+				setProposalStatus(data.status)
+				setIsSubmittedProposalLoaded(data.status === 'submitted')
                                 setContributionId(data.contribution_id || "")
                                 setSidebarOpen(true)
                                 getStatusHistory()
@@ -769,7 +772,8 @@ const ChatContainer = (props) => {
                                                 sectionState[key] = { content: value, open: true };
                                         });
                                         setProposal(sectionState);
-                                        setProposalStatus(reviewData.status);
+				setProposalStatus(reviewData.status);
+				setIsSubmittedProposalLoaded(reviewData.status === 'submitted');
 
                                         const initialComments = {};
                                         const initialStatus = {};
@@ -790,18 +794,18 @@ const ChatContainer = (props) => {
                                         setSidebarOpen(true);
 
                                         // Load template so section list renders correctly
-                                        try {
-                                                const tplRes = await fetch(`${API_BASE_URL}/templates/proposal_template_unhcr.json/sections`, { credentials: 'include' });
-                                                if (tplRes.ok) {
-                                                        const tplData = await tplRes.json();
-                                                        // tplData is { sections: [...] }
-                                                        setProposalTemplate(tplData);
-                                                } else {
-                                                        // Fallback: build template from section keys
-                                                        const syntheticSections = Object.keys(reviewData.generated_sections || {}).map(name => ({ section_name: name }));
-                                                        setProposalTemplate({ sections: syntheticSections });
-                                                }
-                                        } catch (e) {
+			try {
+				const tplRes = await fetch(`${API_BASE_URL}/templates/proposal_template_unhcr.json/sections`, { credentials: 'include' });
+				if (tplRes.ok) {
+					const tplData = await tplRes.json();
+					// tplData is { sections: [...] }
+					setProposalTemplate(tplData);
+				} else {
+					// Fallback: build template from section keys
+					const syntheticSections = Object.keys(reviewData.generated_sections || {}).map(name => ({ section_name: name }));
+					setProposalTemplate({ sections: syntheticSections });
+				}
+			} catch {
                                                 // Fallback: build template from section keys
                                                 const syntheticSections = Object.keys(reviewData.generated_sections || {}).map(name => ({ section_name: name }));
                                                 setProposalTemplate({ sections: syntheticSections });
@@ -819,67 +823,33 @@ const ChatContainer = (props) => {
                 }
         }
 
-        // ── Review handler functions ────────────────────────────────────────
-        const autoSaveSection = useCallback((section, commentData) => {
-                if (autoSaveTimers.current[section]) clearTimeout(autoSaveTimers.current[section]);
-                autoSaveTimers.current[section] = setTimeout(async () => {
-                        const proposalId = sessionStorage.getItem('proposal_id');
-                        if (!proposalId) return;
-                        try {
-                                await fetch(`${API_BASE_URL}/proposals/${proposalId}/save-draft-review`, {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ comments: [{ section_name: section, ...commentData }] }),
-                                        credentials: 'include'
-                                });
-                        } catch (e) { void e; }
-                }, 800);
-        }, []);
-
-        const handleReplyToFeedback = async (feedbackId, replyText, replyStatus) => {
-                const proposalId = sessionStorage.getItem('proposal_id');
-                if (!proposalId) return;
-                try {
-                        const res = await fetch(`${API_BASE_URL}/proposals/${proposalId}/reply-to-feedback`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                        feedback_id: feedbackId,
-                                        author_response: replyText,
-                                        status: replyStatus
-                                }),
-                                credentials: 'include'
-                        });
-                        if (res.ok) getPeerReviews();
-                } catch (error) { console.error('Error replying to feedback:', error); }
-        };
-
-        async function handleSubmitReview() {
-                const proposalId = sessionStorage.getItem('proposal_id');
-                if (!proposalId) return;
-                const comments = Object.entries(reviewComments).map(([section_name, comment_data]) => ({
-                        section_name, ...comment_data
-                }));
-                const response = await fetch(`${API_BASE_URL}/proposals/${proposalId}/review`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ comments }),
-                        credentials: 'include'
-                });
-                if (response.ok) {
-                        sessionStorage.setItem('selectedDashboardTab', 'reviews');
-                        navigate('/dashboard');
-                }
-        }
-        // ───────────────────────────────────────────────────────────────────
+	// ── Review handler functions ────────────────────────────────────────
+	const handleReplyToFeedback = async (feedbackId, replyText, replyStatus) => {
+		const proposalId = sessionStorage.getItem('proposal_id');
+		if (!proposalId) return;
+		try {
+			const res = await fetch(`${API_BASE_URL}/proposals/${proposalId}/reply-to-feedback`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					feedback_id: feedbackId,
+					author_response: replyText,
+					status: replyStatus
+				}),
+				credentials: 'include'
+			});
+			if (res.ok) getPeerReviews();
+		} catch (error) { console.error('Error replying to feedback:', error); }
+	};
+	// ───────────────────────────────────────────────────────────────────
         // SharePoint Link State Management
         // ───────────────────────────────────────────────────────────────────
 
-        // State for tracking SharePoint upload status
-        const [sharepointStatus, setSharepointStatus] = useState(null); // null, 'uploading', 'failed', 'uploaded'
-        const [sharepointLink, setSharepointLink] = useState(null);
-        const [sharepointError, setSharepointError] = useState(null);
-        const [isCheckingLink, setIsCheckingLink] = useState(false);
+	// State for tracking SharePoint upload status
+	const [, setSharepointStatus] = useState(null); // null, 'uploading', 'failed', 'uploaded'
+	const [, setSharepointLink] = useState(null);
+	const [, setSharepointError] = useState(null);
+	const [, setIsCheckingLink] = useState(false);
 
         // Check for existing SharePoint link
         async function checkSharepointLink(proposalId) {
@@ -959,8 +929,8 @@ const ChatContainer = (props) => {
         }
 
         // Handle export with SharePoint caching and retry logic
-        async function handleExport(format) {
-                const proposalId = sessionStorage.getItem("proposal_id");
+	async function handleExport(format) {
+		const proposalId = sessionStorage.getItem("proposal_id");
 
                 if (!proposalId || proposalId === "undefined") {
                         setNotif({ open: true, message: "No draft available to export. Please create or load a draft first.", severity: 'error' });
@@ -1044,57 +1014,60 @@ const ChatContainer = (props) => {
                                 const errorData = await response.json();
                                 throw new Error(errorData.detail || `Upload failed: ${response.status} ${response.statusText}`);
                         }
-                } catch (error) {
-                        setSharepointStatus('failed');
-                        setSharepointError(error.message);
-                        setNotif({ open: true, message: `Error: ${error.message}`, severity: 'error' });
-                        console.error("SharePoint upload error:", error);
-                }
-        }
+		} catch (error) {
+			setSharepointStatus('failed');
+			setSharepointError(error.message);
+			setNotif({ open: true, message: `Error: ${error.message}`, severity: 'error' });
+			console.error("SharePoint upload error:", error);
+		}
+	}
 
-        async function handleExportTables() {
-                const proposalId = sessionStorage.getItem("proposal_id");
+	async function handleExportTables() {
+		const proposalId = sessionStorage.getItem("proposal_id");
 
-                if (!proposalId || proposalId === "undefined") {
-                        setNotif({ open: true, message: "No draft available to export. Please create or load a draft first.", severity: 'error' });
-                        return;
-                }
+		if (!proposalId || proposalId === "undefined") {
+			setNotif({ open: true, message: "No draft available to export tables. Please create or load a draft first.", severity: 'error' });
+			return;
+		}
 
-                const response = await fetch(`${API_BASE_URL}/generate-tables/${sessionStorage.getItem("proposal_id")}`, {
-                        method: "GET",
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: "include"
-                })
+		try {
+			const response = await fetch(`${API_BASE_URL}/generate-tables/${proposalId}`, {
+				method: "GET",
+				headers: { 'Content-Type': 'application/json' },
+				credentials: "include"
+			});
 
-                if (response.ok) {
-                        const contentDisposition = response.headers.get('Content-Disposition');
-                        let filename = "proposal-tables.xlsx"; // Default filename
-                        if (contentDisposition) {
-                                const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
-                                if (filenameMatch && filenameMatch[1]) {
-                                        filename = filenameMatch[1];
-                                }
-                        }
+			if (response.ok) {
+				const contentDisposition = response.headers.get('Content-Disposition');
+				let filename = "proposal-tables.xlsx";
+				if (contentDisposition) {
+					const match = contentDisposition.match(/filename="?([^";]+)"?/);
+					if (match && match[1]) {
+						filename = match[1];
+					}
+				}
 
-                        const blob = await response.blob();
-                        const link = document.createElement('a');
-                        link.href = URL.createObjectURL(blob);
-                        link.download = filename;
-                        document.body.appendChild(link);
-                        link.click();
-                        link.remove();
+				const blob = await response.blob();
+				const link = document.createElement('a');
+				link.href = URL.createObjectURL(blob);
+				link.download = filename;
+				document.body.appendChild(link);
+				link.click();
+				link.remove();
+				setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+			} else if (response.status === 401) {
+				sessionStorage.setItem("session_expired", "Session expired. Please login again.");
+				navigate("/login");
+			} else {
+				throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+			}
+		} catch (error) {
+			setNotif({ open: true, message: `Error: ${error.message}`, severity: 'error' });
+			console.error("Table download error:", error);
+		}
+	}
 
-                        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-                }
-                else if (response.status === 401) {
-                        sessionStorage.setItem("session_expired", "Session expired. Please login again.")
-                        navigate("/login")
-                }
-                else
-                        throw new Error(`Download failed: ${response.status} ${response.statusText}`);
-        }
-
-        async function handleRevert(status) {
+	async function handleRevert(status) {
                 const response = await fetch(`${API_BASE_URL}/proposals/${sessionStorage.getItem("proposal_id")}/revert-to-status/${status}`, {
                         method: "PUT",
                         headers: { 'Content-Type': 'application/json' },
@@ -1268,238 +1241,106 @@ const ChatContainer = (props) => {
                                         generateIcon={generateIcon}
                                 />
 
-                                <Sidebar
-                                        isMobile={isMobile}
-                                        isMobileMenuOpen={isMobileMenuOpen}
-                                        sidebarOpen={sidebarOpen}
-                                        selectedSection={selectedSection}
-                                        proposalTemplate={proposalTemplate}
-                                        proposal={proposal}
-                                        onSectionClick={handleSidebarSectionClick}
-                                        toKebabCase={toKebabCase}
-                                />
+			<ChatSidebar
+				isMobile={isMobile}
+				isMobileMenuOpen={isMobileMenuOpen}
+				sidebarOpen={sidebarOpen}
+				selectedSection={selectedSection}
+				proposalTemplate={proposalTemplate}
+				proposal={proposal}
+				handleSidebarSectionClick={handleSidebarSectionClick}
+				toKebabCase={toKebabCase}
+			/>
 
-                                <main className="Chat_right" ref={topRef} data-testid="chat-main">
-                                        <button className="Chat_menuButton" onClick={() => setIsMobileMenuOpen(p => !p)} data-testid="mobile-menu-button">
-                                                <i className="fa-solid fa-bars"></i>
-                                        </button>
+			<main className="Chat_right" ref={topRef} data-testid="chat-main">
+				<button className="Chat_menuButton" onClick={() => setIsMobileMenuOpen(p => !p)} data-testid="mobile-menu-button">
+					<i className="fa-solid fa-bars"></i>
+				</button>
 
-                                        {proposalStatus !== 'submitted' ? (
-                                                <>
-                                                        <Header
-                                                                titleName={titleName}
-                                                                documentType={documentType}
-                                                                setDocumentType={setDocumentType}
-                                                                proposalStatus={proposalStatus}
-                                                                fileIcon={fileIcon}
-                                                                userPrompt={userPrompt}
-                                                                setUserPrompt={setUserPrompt}
-                                                                formExpanded={formExpanded}
-                                                                setFormExpanded={setFormExpanded}
-                                                                toKebabCase={toKebabCase}
-                                                                renderFormField={renderFormField}
-                                                                formData={formData}
-                                                                setFormData={setFormData}
-                                                                outcomes={outcomes}
-                                                                donors={donors}
-                                                                filteredFieldContexts={filteredFieldContexts}
-                                                                geographicCoverages={geographicCoverages}
-                                                                newDurations={newDurations}
-                                                                setNewDurations={setNewDurations}
-                                                                newBudgetRanges={newBudgetRanges}
-                                                                setNewBudgetRanges={setNewBudgetRanges}
-                                                                handleFormInput={handleFormInput}
-                                                        />
+			{!isSubmittedProposalLoaded && proposalStatus !== 'submitted' && (
+					<>
+						<ChatHeader
+							titleName={titleName}
+							documentType={documentType}
+							setDocumentType={setDocumentType}
+							proposalStatus={proposalStatus}
+							fileIcon={fileIcon}
+							userPrompt={userPrompt}
+							setUserPrompt={setUserPrompt}
+							formExpanded={formExpanded}
+							setFormExpanded={setFormExpanded}
+							renderFormField={renderFormFieldWithContext}
+							formData={formData}
+							setFormData={setFormData}
+						/>
+						<ChatControls
+							proposal={proposal}
+							proposalStatus={proposalStatus}
+							buttonEnable={buttonEnable}
+							getMissingFields={getMissingFields}
+							setValidationMissingFields={setValidationMissingFields}
+							setIsValidationModalOpen={setIsValidationModalOpen}
+							setIsAssociateKnowledgeModalOpen={setIsAssociateKnowledgeModalOpen}
+							associatedKnowledgeCards={associatedKnowledgeCards}
+							handleGenerateClick={handleGenerateClick}
+							generateLabel={generateLabel}
+							generateLoading={generateLoading}
+							userPrompt={userPrompt}
+						/>
+					</>
+				)}
 
-                                                                <div className="Chat_inputArea_buttonContainer">
-                                                                        {Object.keys(proposal).length > 0 && (
-                                                                                <div style={{ position: 'relative' }}>
-                                                                                        <CommonButton
-                                                                                                onClick={() => {
-                                                                                                        const missing = getMissingFields(userPrompt);
-                                                                                                        if (missing.length > 0) {
-                                                                                                                setValidationMissingFields(missing);
-                                                                                                                setIsValidationModalOpen(true);
-                                                                                                        } else {
-                                                                                                                setIsAssociateKnowledgeModalOpen(true);
-                                                                                                        }
-                                                                                                }}
-                                                                                                label="Manage Knowledge"
-                                                                                                disabled={proposalStatus !== 'draft' || !buttonEnable}
-                                                                                                className={!buttonEnable ? "inactive" : ""}
-                                                                                                icon={knowIcon}
-                                                                                                data-testid="manage-knowledge-button"
-                                                                                        />
-                                                                                        {associatedKnowledgeCards.length > 0 && (
-                                                                                                <div className="associated-knowledge-display" data-testid="associated-knowledge-cards">
-                                                                                                        <h4>Associated Knowledge Cards:</h4>
-                                                                                                        <ul>
-                                                                                                                {associatedKnowledgeCards.map(card => {
-                                                                                                                        const title = [
-                                                                                                                                card.title,
-                                                                                                                                card.donor_name,
-                                                                                                                                card.outcome_name,
-                                                                                                                                card.field_context_name,
-                                                                                                                        ].filter(Boolean).join(' - ');
-                                                                                                                        return (
-                                                                                                                                <li key={card.id}>
-                                                                                                                                        <a href={`/knowledge-card/${card.id}`} target="_blank" rel="noopener noreferrer">
-                                                                                                                                                {title}
-                                                                                                                                        </a>
-                                                                                                                                </li>
-                                                                                                                        );
-                                                                                                                })}
-                                                                                                        </ul>
-                                                                                                </div>
-                                                                                        )}
-                                                                                </div>
-                                                                        )}
+				<ChatMain
+					sidebarOpen={sidebarOpen}
+					proposalStatus={proposalStatus}
+					proposal={proposal}
+					proposalTemplate={proposalTemplate}
+					proposalRef={proposalRef}
+					generateLoading={generateLoading}
+					selectedSectionName={selectedSectionName}
+					isEdit={isEdit}
+					isReviewer={isReviewer}
+					isAdmin={isAdmin}
+					currentUser={currentUser}
+					reviews={reviews}
+					reviewComments={reviewComments}
+					reviewStatus={reviewStatus}
+					editorContent={editorContent}
+					setEditorContent={setEditorContent}
+					isCopied={isCopied}
+					setIsEdit={setIsEdit}
+					regenerateSectionLoading={regenerateSectionLoading}
+					edit={edit}
+					save={save}
+					copy={copy}
+					tick={tick}
+					cancel={cancel}
+					regenerate={regenerate}
+					arrow={arrow}
+					toKebabCase={toKebabCase}
+					handleEditClick={handleEditClick}
+					handleCopyClick={handleCopyClick}
+					handleExpanderToggle={handleExpanderToggle}
+					handleRegenerateIconClick={handleRegenerateIconClick}
+					handleCommentChange={handleCommentChange}
+					handleStatusChange={handleStatusChange}
+					handleDeleteComment={handleDeleteComment}
+					handleReplyToFeedback={handleReplyToFeedback}
+					handleSaveResponse={handleSaveResponse}
+					handleExport={handleExport}
+					handleExportTables={handleExportTables}
+					setIsTransferModalOpen={setIsTransferModalOpen}
+					handleSetStatus={handleSetStatus}
+					handleSubmit={handleSubmit}
+					handleRevert={handleRevert}
+					statusHistory={statusHistory}
+					setIsPeerReviewModalOpen={setIsPeerReviewModalOpen}
+					handleSaveContributionId={handleSaveContributionId}
+					contributionId={contributionId}
+					setContributionId={setContributionId}
+				/>
+			</main>
 
-                                                                        <div style={{ marginLeft: 'auto' }}>
-                                                                                <CommonButton
-                                                                                        onClick={handleGenerateClick}
-                                                                                        icon={generateIcon}
-                                                                                        label={generateLabel}
-                                                                                        loading={generateLoading}
-                                                                                        loadingLabel={generateLabel === "Generate" ? "Generating (~ 2 mins of patience...) " : "Regenerating (~ 2 mins of patience...)"}
-                                                                                        disabled={generateLoading || (generateLabel === "Generate" && (proposalStatus !== 'draft' || !buttonEnable))}
-                                                                                        className={(generateLoading || (generateLabel === "Generate" && (proposalStatus !== 'draft' || !buttonEnable))) ? "inactive" : ""}
-                                                                                        data-testid="generate-button"
-                                                                                />
-                                                                        </div>
-                                                                </div>
-                                                </>
-                                        ) : null}
-
-                                        {sidebarOpen && (
-                                                <>
-                                                        <div className='Dashboard_top'>
-                                                                <div className='Dashboard_label'>
-                                                                        <img className='Dashboard_label_fileIcon' src={resultsIcon} alt="" />
-                                                                        Results
-                                                                </div>
-
-                                                                {Object.keys(proposal).length > 0 && (
-                                                                        <div className='Chat_exportButtons'>
-                                                                                <button type="button" onClick={() => handleExport("docx")} data-testid="export-word-button">
-                                                                                        <img src={word_icon} alt="" />
-                                                                                        Edit in Word
-                                                                                </button>
-
-                                                                                <button type="button" onClick={() => handleExportTables()} data-testid="export-excel-button">
-                                                                                        <img src={excel_icon} alt="" />
-                                                                                        Download Tables
-                                                                                </button>
-                                                                                <button type="button" onClick={() => setIsTransferModalOpen(true)} data-testid="transfer-ownership-button" style={{ marginLeft: '10px', background: '#f5f5f5', color: '#333' }}>
-                                                                                        Transfer Ownership
-                                                                                </button>
-                                                                                <div className="Chat_workflow_status_container">
-                                                                                        <div className="workflow-stage-box">
-                                                                                                <span className="workflow-stage-label">Workflow Stage</span>
-                                                                                                <div className="workflow-badges">
-                                                                                                        {['draft', 'in_review', 'pre_submission', 'submitted'].map(status => {
-                                                                                                                const statusDetails = {
-                                                                                                                        draft: { text: 'Drafting', className: 'status-draft', message: "Initial drafting stage - Author + AI" },
-                                                                                                                        in_review: { text: 'Peer Review', className: 'status-review', message: "Wait while proposal sent for quality review to other users" },
-                                                                                                                        pre_submission: { text: 'Pre-Submission', className: 'status-submission', message: "Edit to address the comments from all your reviewers" },
-                                                                                                                        submitted: { text: 'Submitted', className: 'status-submitted', message: "Non editable Record of Initial version as submitted to donor" }
-                                                                                                                };
-                                                                                                                const isActive = proposalStatus === status;
-                                                                                                                const isClickable = (proposalStatus === 'draft' && (status === 'in_review' || status === 'submitted')) ||
-                                                                                                                        (proposalStatus === 'in_review' && (status === 'pre_submission' || status === 'draft')) ||
-                                                                                                                        (proposalStatus === 'pre_submission' && status === 'submitted');
-
-                                                                                                                return (
-                                                                                                                        <div key={status} className="status-badge-container">
-                                                                                                                                <button
-                                                                                                                                        type="button"
-                                                                                                                                        title={statusDetails[status].message}
-                                                                                                                                        className={`status-badge ${statusDetails[status].className} ${isActive ? 'active' : 'inactive'}`}
-                                                                                                                                        onClick={() => {
-                                                                                                                                                if (status === 'in_review' && proposalStatus === 'draft') setIsPeerReviewModalOpen(true);
-                                                                                                                                                if (status === 'draft' && proposalStatus === 'in_review') handleSetStatus('draft');
-                                                                                                                                                if (status === 'submitted' && (proposalStatus === 'pre_submission' || proposalStatus === 'draft')) handleSubmit();
-                                                                                                                                        }}
-                                                                                                                                        disabled={!isClickable && !isActive}
-                                                                                                                                        data-testid={`workflow-status-badge-${status}`}
-                                                                                                                                >
-                                                                                                                                        {statusDetails[status].text}
-                                                                                                                                </button>
-                                                                                                                                {statusHistory.includes(status) && !isActive && (
-                                                                                                                                        <button className="revert-btn" onClick={() => handleRevert(status)} data-testid={`revert-button-${status}`}>
-                                                                                                                                                Revert
-                                                                                                                                        </button>
-                                                                                                                                )}
-                                                                                                                        </div>
-                                                                                                                );
-                                                                                                        })}
-                                                                                                </div>
-                                                                                                {proposalStatus === 'pre_submission' && (
-                                                                                                        <button className="revert-btn" onClick={() => handleRevert('draft')} data-testid="revert-to-draft-button">
-                                                                                                                Revert to Draft
-                                                                                                        </button>
-                                                                                                )}
-                                                                                        </div>
-                                                                                </div>
-                                                                        </div>
-                                                                )}
-                                                        </div>
-
-                                                        {proposalStatus === 'submitted' && (
-                                                                <div className="contribution-id-container">
-                                                                        <label htmlFor="contribution-id">Contribution ID:</label>
-                                                                        <p>Only submitted proposal with a confirmed ContributionID are counted as approved</p>
-                                                                        <input
-                                                                                type="text"
-                                                                                id="contribution-id"
-                                                                                value={contributionId}
-                                                                                onChange={(e) => setContributionId(e.target.value)}
-                                                                                data-testid="contribution-id-input"
-                                                                        />
-                                                                        <CommonButton onClick={handleSaveContributionId} label="Save ID" data-testid="save-contribution-id-button" />
-                                                                </div>
-                                                        )}
-
-                                                        <ProposalContainer
-                                                                proposal={proposal}
-                                                                proposalTemplate={proposalTemplate}
-                                                                proposalRef={proposalRef}
-                                                                proposalStatus={proposalStatus}
-                                                                generateLoading={generateLoading}
-                                                                selectedSectionName={selectedSectionName}
-                                                                isEdit={isEdit}
-                                                                isReviewer={isReviewer}
-                                                                isAdmin={isAdmin}
-                                                                currentUser={currentUser}
-                                                                reviews={reviews}
-                                                                reviewComments={reviewComments}
-                                                                reviewStatus={reviewStatus}
-                                                                editorContent={editorContent}
-                                                                setEditorContent={setEditorContent}
-                                                                isCopied={isCopied}
-                                                                setIsCopied={setIsCopied}
-                                                                regenerateSectionLoading={regenerateSectionLoading}
-                                                                edit={edit}
-                                                                save={save}
-                                                                copy={copy}
-                                                                tick={tick}
-                                                                cancel={cancel}
-                                                                regenerate={regenerate}
-                                                                arrow={arrow}
-                                                                toKebabCase={toKebabCase}
-                                                                handleEditClick={handleEditClick}
-                                                                handleCopyClick={handleCopyClick}
-                                                                handleExpanderToggle={handleExpanderToggle}
-                                                                handleRegenerateIconClick={handleRegenerateIconClick}
-                                                                handleCommentChange={handleCommentChange}
-                                                                handleStatusChange={handleStatusChange}
-                                                                handleDeleteComment={handleDeleteComment}
-                                                                handleReplyToFeedback={handleReplyToFeedback}
-                                                                handleSaveResponse={handleSaveResponse}
-                                                        />
-                                                </>
-                                        )}
-                                </main>
 
                                 <RegenerateModal
                                         isOpen={isRegenerateModalOpen}

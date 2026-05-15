@@ -1,6 +1,6 @@
 /**
  * Sidebar Component
- * 
+ *
  * Displays the navigation sidebar with proposal sections.
  */
 
@@ -31,7 +31,7 @@ const Sidebar = ({
           Proposal Prompt
         </li>
 
-        {proposalTemplate ? 
+        {proposalTemplate ?
           proposalTemplate.sections.map((section, i) => (
             <li
               key={i}
@@ -41,7 +41,7 @@ const Sidebar = ({
             >
               {section.section_name}
             </li>
-          )) : 
+          )) :
           Object.keys(proposal).map((section, i) => (
             <li
               key={i}

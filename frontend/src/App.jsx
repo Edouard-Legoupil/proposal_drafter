@@ -7,6 +7,7 @@ import KnowledgeCard from './screens/KnowledgeCard/KnowledgeCard'
 import DonorTemplateRequest from './screens/DonorTemplateRequest/DonorTemplateRequest'
 import DonorTemplateDetail from './screens/DonorTemplateDetail/DonorTemplateDetail'
 import QualityGate from './screens/QualityGate/QualityGate'
+import AccessManagement from './screens/Admin/AccessManagement'
 
 export default function App()
 {
@@ -27,5 +28,6 @@ export default function App()
                 <Route path="/donor-templates/new" element={<DonorTemplateRequest />} />
                 <Route path="/donor-templates/:id" element={<DonorTemplateDetail />} />
                 <Route path="/quality-gate" element={<QualityGate />} />
+                <Route path="/admin/access/:resourceType/:resourceId" element={<AccessManagement />} />
         </Routes>
 }

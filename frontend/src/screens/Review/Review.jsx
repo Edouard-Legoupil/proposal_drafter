@@ -45,7 +45,7 @@ export default function Review() {
     const [submittedReviews, setSubmittedReviews] = useState([]); // list of fully saved review objects with DB ids
     const autoSaveTimers = useRef({});
 
-    async function getProfile() {
+    const getProfile = useCallback(async () => {
         const response = await fetch(`${API_BASE_URL}/profile`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' },
@@ -55,9 +55,9 @@ export default function Review() {
             const result = await response.json();
             setCurrentUser(result.user);
         }
-    }
+    }, []);
 
-    async function fetchData() {
+    const fetchData = useCallback(async () => {
         const endpoint = type === 'proposal'
             ? `${API_BASE_URL}/review-proposal/${id}`
             : `${API_BASE_URL}/review-knowledge-card/${id}`;
@@ -115,17 +115,17 @@ export default function Review() {
                 else if (card.field_context_id) templateType = 'field_context';
                 if (templateType) {
                     const templateName = `knowledge_card_${templateType}_template.json`;
-                    try {
-                        const templateRes = await fetch(`${API_BASE_URL}/templates/${templateName}`, { credentials: 'include' });
-                        if (templateRes.ok) {
-                            const templateData = await templateRes.json();
-                            setProposalTemplate(templateData);
-                        } else {
-                            setProposalTemplate(null);
-                        }
-                    } catch (err) {
-                        setProposalTemplate(null);
-                    }
+				try {
+					const templateRes = await fetch(`${API_BASE_URL}/templates/${templateName}`, { credentials: 'include' });
+					if (templateRes.ok) {
+						const templateData = await templateRes.json();
+						setProposalTemplate(templateData);
+					} else {
+						setProposalTemplate(null);
+					}
+				} catch {
+					setProposalTemplate(null);
+				}
                 } else {
                     setProposalTemplate(null);
                 }
@@ -135,12 +135,12 @@ export default function Review() {
             sessionStorage.setItem("session_expired", "Session expired. Please login again.")
             navigate("/login")
         }
-    }
+    }, [type, id, navigate]);
 
-    useEffect(() => {
-        getProfile()
-        fetchData()
-    }, [type, id])
+	useEffect(() => {
+		getProfile()
+		fetchData()
+	}, [type, id, fetchData, getProfile])
 
     // PATCH: Automatically redirect unauthorized users to Review interface
     useEffect(() => {

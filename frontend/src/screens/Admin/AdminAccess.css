@@ -1,0 +1,527 @@
+.admin-access-shell {
+  padding: 32px;
+  background: #f9fbff;
+  min-height: 100vh;
+  color: #1e1e1e;
+}
+
+.admin-access-shell header {
+  margin-bottom: 24px;
+}
+
+.admin-access-shell h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.admin-access-subtitle {
+  max-width: 680px;
+  margin: 4px 0 0;
+  color: #5a5f72;
+}
+
+.admin-access-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.admin-access-tabs button {
+  border: 1px solid transparent;
+  padding: 8px 16px;
+  background: #fff;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.admin-access-tabs button.active {
+  color: #fff;
+  background: #1f6bed;
+  border-color: rgba(31, 107, 237, 0.5);
+}
+
+.admin-access-panel {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+}
+
+.section-header {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.panel-loading,
+.panel-error,
+.grant-table-empty,
+.audit-empty {
+  padding: 24px;
+  background: #fff6eb;
+  border-radius: 12px;
+  color: #5a4630;
+  border: 1px solid #f5d4a5;
+}
+
+.proposal-access,
+.knowledge-card-access,
+.template-access,
+.metrics-access,
+.quality-gate-access {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.proposal-access-header,
+.knowledge-card-access header,
+.template-access header,
+.metrics-access header,
+.quality-gate-access header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.proposal-access h2,
+.knowledge-card-access h2,
+.template-access h2,
+.metrics-access h2,
+.quality-gate-access h2 {
+  margin: 0;
+}
+
+.grant-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+.grant-table th,
+.grant-table td {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid #eef1f7;
+}
+
+.grant-table th {
+  font-size: 0.85rem;
+  color: #5c6475;
+}
+
+.grant-permissions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.grant-permission-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #e3ecff;
+  font-size: 0.75rem;
+}
+
+.grant-form,
+.tester-form,
+.ownership-form,
+.auditor-form,
+.workflow-form {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 16px;
+}
+
+.grant-form label,
+.tester-form label,
+.ownership-form label,
+.workflow-form label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+  color: #5a5f72;
+  flex: 1;
+}
+
+.grant-form input,
+.tester-form input,
+.ownership-form input,
+.grant-form select,
+.tester-form select,
+.workflow-form input,
+.workflow-form select {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid #d8dfec;
+  margin-top: 6px;
+  font-size: 0.95rem;
+}
+
+.permissions-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  border: none;
+  padding: 0;
+}
+
+.permissions-row label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: unset;
+}
+
+.ghost-button,
+.primary-button {
+  border: 0;
+  padding: 8px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform 0.2s ease;
+}
+
+.ghost-button {
+  background: #fff;
+  color: #1f6bed;
+  border: 1px solid #d8dfec;
+}
+
+.ghost-button:hover,
+.primary-button:hover {
+  transform: translateY(-1px);
+}
+
+.primary-button {
+  background: linear-gradient(135deg, #1f6bed, #0534c4);
+  color: #fff;
+}
+
+.tester-result {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f4f7ff;
+  border-radius: 12px;
+}
+
+.audit-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.audit-list li {
+  padding: 12px;
+  border-radius: 12px;
+  background: #fafafa;
+  border: 1px solid #f0f1f5;
+}
+
+.audit-headline {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.85rem;
+  color: #5a5f72;
+}
+
+.audit-headline strong {
+  color: #1f2933;
+}
+
+.audit-timestamp {
+  white-space: nowrap;
+}
+
+/* ============================================================
+   SUMMARY STAT CARDS
+   ============================================================ */
+.admin-stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.admin-stat-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+  border: 1px solid #eef1f7;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.admin-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+}
+
+.admin-stat-card.accent {
+  border-left: 4px solid #f59e0b;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1f6bed;
+  line-height: 1;
+}
+
+.admin-stat-card.accent .stat-value {
+  color: #f59e0b;
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: #5a5f72;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+/* ============================================================
+   BULK ACTION TOOLBAR
+   ============================================================ */
+.bulk-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #e8f0fe, #dbeafe);
+  border-radius: 12px;
+  margin-bottom: 16px;
+  border: 1px solid #93c5fd;
+  animation: slideDown 0.25s ease-out;
+  flex-wrap: wrap;
+}
+
+.bulk-count {
+  font-weight: 700;
+  color: #1e40af;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.bulk-toolbar select {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #93c5fd;
+  background: #fff;
+  font-size: 0.875rem;
+}
+
+.bulk-select {
+  min-width: 200px;
+}
+
+.bulk-warning {
+  color: #dc2626;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.row-selected {
+  background-color: #eff6ff !important;
+}
+
+/* ============================================================
+   RESOURCE PICKER
+   ============================================================ */
+.resource-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.resource-picker-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.resource-picker-search i {
+  color: #94a3b8;
+}
+
+.resource-picker-search input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 0.95rem;
+  background: transparent;
+}
+
+.resource-count {
+  color: #94a3b8;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.resource-picker-table-wrap {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+
+.resource-picker-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.resource-picker-table th {
+  background: #f1f5f9;
+  padding: 12px 16px;
+  font-weight: 600;
+  color: #475569;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: left;
+}
+
+.resource-picker-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.resource-picker-table tbody tr {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.resource-picker-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.resource-picker-table tbody tr.row-active {
+  background: #eff6ff;
+}
+
+.resource-select-btn {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid #d8dfec;
+  background: #fff;
+  color: #1f6bed;
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.resource-select-btn:hover {
+  background: #1f6bed;
+  color: #fff;
+  border-color: #1f6bed;
+}
+
+.resource-select-btn.active {
+  background: #1f6bed;
+  color: #fff;
+  border-color: #1f6bed;
+}
+
+.resource-picker-loading {
+  text-align: center;
+  padding: 48px;
+  color: #64748b;
+}
+
+.resource-picker-empty {
+  text-align: center;
+  padding: 48px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* ============================================================
+   BACK BUTTON
+   ============================================================ */
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  font-size: 0.875rem;
+}
+
+.back-btn i {
+  font-size: 0.75rem;
+}
+
+/* ============================================================
+   STATUS BADGES (extended)
+   ============================================================ */
+.status-badge.draft { background: #f1f5f9; color: #475569; }
+.status-badge.in_review { background: #fef3c7; color: #92400e; }
+.status-badge.submitted { background: #d1fae5; color: #065f46; }
+.status-badge.generating_sections { background: #e0e7ff; color: #3730a3; }
+.status-badge.active { background: #d1fae5; color: #065f46; }
+.status-badge.deprecated { background: #fef3c7; color: #92400e; }
+.status-badge.archived { background: #f1f5f9; color: #475569; }
+
+/* ============================================================
+   STATUS MESSAGE
+   ============================================================ */
+.status-msg {
+  color: #1f6bed;
+  font-size: 0.85rem;
+  font-weight: 500;
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* ============================================================
+   LOADING DOTS ANIMATION
+   ============================================================ */
+.loading-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.loading-dots span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #1f6bed;
+  animation: bounce 1.2s infinite ease-in-out;
+}
+
+.loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+.loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}

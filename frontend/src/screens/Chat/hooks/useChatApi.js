@@ -1,6 +1,6 @@
 /**
  * Custom hook for API calls in the Chat component
- * 
+ *
  * Handles data fetching for donors, outcomes, field contexts, geographic coverages, users, etc.
  */
 
@@ -13,14 +13,15 @@ const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api";
  * @param {Object} initialData - Optional initial data
  * @returns {Object} API state and functions
  */
+
 export const useChatApi = () => {
-  const [donors, setDonors] = useState([]);
-  const [outcomes, setOutcomes] = useState([]);
-  const [fieldContexts, setFieldContexts] = useState([]);
-  const [filteredFieldContexts, setFilteredFieldContexts] = useState([]);
-  const [newBudgetRanges, setNewBudgetRanges] = useState([]);
-  const [newDurations, setNewDurations] = useState([]);
-  const [geographicCoverages, setGeographicCoverages] = useState([]);
+	const [donors, setDonors] = useState([{ id: '1', name: 'USAID' }]);
+	const [outcomes, setOutcomes] = useState([{ id: '1', name: 'OA1-Access/Documentation' }]);
+	const [fieldContexts, setFieldContexts] = useState([{ id: '1', name: 'USA', geographic_coverage: 'One Country Operation' }]);
+	const [filteredFieldContexts, setFilteredFieldContexts] = useState([{ id: '1', name: 'USA', geographic_coverage: 'One Country Operation' }]);
+	const [newBudgetRanges, setNewBudgetRanges] = useState([]);
+	const [newDurations, setNewDurations] = useState([]);
+	const [geographicCoverages, setGeographicCoverages] = useState(['One Country Operation']);
   const [users, setUsers] = useState([]);
   const [transferUsers, setTransferUsers] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);

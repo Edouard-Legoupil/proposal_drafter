@@ -18,25 +18,25 @@ const FollowUpModal = ({
   generateIcon
 }) => {
   return (
-    <dialog 
-      open={isOpen} 
-      className="Chat_regenerate" 
-      style={{ 
-        height: 'auto', 
-        maxHeight: '80vh', 
-        top: '10%', 
-        width: '60vw', 
-        maxWidth: '800px' 
-      }} 
+    <dialog
+      open={isOpen}
+      className="Chat_regenerate"
+      style={{
+        height: 'auto',
+        maxHeight: '80vh',
+        top: '10%',
+        width: '60vw',
+        maxWidth: '800px'
+      }}
       data-testid="followup-modal"
     >
       <header className="Chat_regenerate_header">
         Provide Follow-up Instructions
-        <img 
-          src={regenerateCloseIcon} 
-          alt="" 
-          onClick={onClose} 
-          style={{ cursor: 'pointer' }} 
+        <img
+          src={regenerateCloseIcon}
+          alt=""
+          onClick={onClose}
+          style={{ cursor: 'pointer' }}
         />
       </header>
       <main className="Chat_right" style={{ padding: '20px' }}>
@@ -55,10 +55,10 @@ const FollowUpModal = ({
           data-testid="followup-instruction-input"
         />
         <div className="Chat_inputArea_buttonContainer" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-          <CommonButton 
-            onClick={onSkip} 
-            label="Skip" 
-            data-testid="followup-skip-button" 
+          <CommonButton
+            onClick={onSkip}
+            label="Skip"
+            data-testid="followup-skip-button"
           />
           <CommonButton
             onClick={onSaveForLater}

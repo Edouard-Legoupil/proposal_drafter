@@ -1,6 +1,6 @@
 /**
  * Custom hook for managing form data in the Chat component
- * 
+ *
  * Handles form state, input changes, validation, and utility functions.
  */
 
@@ -207,7 +207,7 @@ export const useFormData = (initialData = null) => {
    * @returns {JSX.Element} The rendered form field
    */
   const renderFormField = useCallback((
-    label, 
+    label,
     disabled,
     formData,
     handleFormInput,
@@ -226,8 +226,8 @@ export const useFormData = (initialData = null) => {
     const fieldId = kebabCase(label);
     const isCreatableSelect = ["Duration", "Budget Range"].includes(label);
     const isSelect = ["Targeted Donor", "Country / Location(s)"].includes(label);
-    const isMultiSelect = label === "Main Outcome" || 
-      (label === "Targeted Donor" && formData["multiple donors"]?.value) || 
+    const isMultiSelect = label === "Main Outcome" ||
+      (label === "Targeted Donor" && formData["multiple donors"]?.value) ||
       (label === "Country / Location(s)" && formData["multiple countries"]?.value);
     const isNormalSelect = label === "Geographical Scope";
 
@@ -322,7 +322,7 @@ export const useFormData = (initialData = null) => {
         )}
       </div>
     );
-  }, [getOptions]);
+  }, [getOptions, handleCreate]);
 
   return {
     formData,

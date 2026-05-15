@@ -161,7 +161,7 @@ export default function Dashboard() {
                 }
         }, []);
 
-        const hasKnowledgeManagerRole = useMemo(() => {
+	const _hasKnowledgeManagerRole = useMemo(() => {
                 const requiredRoles = [
                         "knowledge manager donors",
                         "knowledge manager outcome",

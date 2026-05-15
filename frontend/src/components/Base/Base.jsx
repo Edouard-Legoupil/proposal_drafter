@@ -6,7 +6,6 @@ import { useNavigate } from 'react-router-dom'
 import OSSFooter from '../OSSFooter/OSSFooter'
 import UserSettingsModal from '../UserSettingsModal/UserSettingsModal'
 import Sidebar from '../Sidebar/Sidebar'
-import UserAdminModal from '../UserAdminModal/UserAdminModal'
 import RoleRequestModal from '../RoleRequestModal/RoleRequestModal'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
@@ -27,9 +26,8 @@ export default function Base(props) {
         })
         const [userRoles, setUserRoles] = useState([])
         const [sidebarOpen, setSidebarOpen] = useState(true)
-        const [showSettingsModal, setShowSettingsModal] = useState(false)
-        const [showAdminModal, setShowAdminModal] = useState(false)
-        const [showRoleModal, setShowRoleModal] = useState(false)
+    const [showSettingsModal, setShowSettingsModal] = useState(false)
+    const [showRoleModal, setShowRoleModal] = useState(false)
 
         function handleLogoClick() {
                 navigate("/dashboard")
@@ -112,12 +110,12 @@ export default function Base(props) {
                                         <i className="fa-solid fa-gear" style={{ marginRight: '8px' }}></i>
                                         Settings
                                 </div>
-                                {userDetails.is_admin && (
-                                        <div onClick={() => setShowAdminModal(true)} data-testid="admin-button">
-                                                <img src={settings_icon} style={{ filter: 'hue-rotate(90deg)' }} />
-                                                Admin
-                                        </div>
-                                )}
+                                 {userDetails.is_admin && (
+                                         <div onClick={() => navigate('/admin/access/users/latest')} data-testid="admin-button">
+                                                 <img src={settings_icon} style={{ filter: 'hue-rotate(90deg)' }} />
+                                                 Admin
+                                         </div>
+                                 )}
                                 <div onClick={handleLogoutClick} data-testid="logout-button">
                                         <img src={logout_icon} alt="Logout" />
                                         Logout
@@ -143,8 +141,7 @@ export default function Base(props) {
                         </main>
                 </div>
 
-                <UserSettingsModal show={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
-                <UserAdminModal show={showAdminModal} onClose={() => setShowAdminModal(false)} />
+                 <UserSettingsModal show={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
                 <RoleRequestModal
                         show={showRoleModal}
                         onClose={() => setShowRoleModal(false)}

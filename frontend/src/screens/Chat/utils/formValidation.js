@@ -10,11 +10,11 @@
  */
 export function getMissingFields(userPrompt, formData) {
   const missing = [];
-  
+
   if (!userPrompt?.trim()) {
     missing.push("Proposal Prompt Details");
   }
-  
+
   for (const label in formData) {
     const field = formData[label];
     if (field?.mandatory) {
@@ -25,6 +25,6 @@ export function getMissingFields(userPrompt, formData) {
       }
     }
   }
-  
+
   return missing;
 }

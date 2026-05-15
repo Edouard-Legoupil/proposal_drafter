@@ -29,8 +29,8 @@ const SEVERITY_OPTIONS = {
 };
 
 // I have a system generating proposals based on requirements and knowledge cards and aliging with templates. I have a process to collect user feedback based on predifine incident types.
-// desing an agentic system that will turn them into 1. suggestions made to the user to quickly correct the proposal. 2. analysis of root cause of the issue. 3. suggested fix to the issue. 
-// here are the type of incident par criticality level.     
+// desing an agentic system that will turn them into 1. suggestions made to the user to quickly correct the proposal. 2. analysis of root cause of the issue. 3. suggested fix to the issue.
+// here are the type of incident par criticality level.
 const TYPE_OF_COMMENT_OPTIONS = {
     proposal: {
         P0: ['Factual Error', 'Compliance Violation', 'Security Risk'],
@@ -56,7 +56,7 @@ const TYPE_OF_COMMENT_OPTIONS = {
 const getSeverityColor = (sev) => {
     switch (sev) {
         case 'P0': return '#c0392b' // Red
-        case 'P1': return '#e67e22' // Orange  
+        case 'P1': return '#e67e22' // Orange
         case 'P2': return '#2980b9' // Blue
         case 'P3': return '#27ae60' // Green
         default: return '#7f8c8d' // Gray
@@ -103,21 +103,23 @@ export default function SectionReview({
     const [replyText, setReplyText] = useState('');
     const [replyStatus, setReplyStatus] = useState('pending');
     const [analysis, setAnalysis] = useState(null);
-    const [analysisLoading, setAnalysisLoading] = useState(false);
     const [analysisModalOpen, setAnalysisModalOpen] = useState(false);
 
     const INITIAL_ANALYSIS_MSG = 'Your feedback has been received and is currently being analyzed by our AI agents. A detailed response will follow shortly.';
     const CONSULT_ANALYSIS_MSG = 'Your feedback has been received. Consult the review from our AI agents.';
 
-    // Find feedback items that have a system reply still showing the "analyzing" message
-    const feedbackWithPendingAnalysis = previousFeedback.find(
+    const pendingAnalysisReviewId = previousFeedback.find(
         f => f.replies?.some(r => r.author === 'system' && r.text === INITIAL_ANALYSIS_MSG)
-    );
+    )?.id;
+    const completedAnalysisReviewId = previousFeedback.find(
+        f => f.replies?.some(r => r.author === 'system' && r.text === CONSULT_ANALYSIS_MSG)
+    )?.id;
+    const analysisLoading = Boolean(pendingAnalysisReviewId && !analysis);
 
     useEffect(() => {
         // Poll for analysis when a system reply with the initial message is present
-        if (!feedbackWithPendingAnalysis || analysis) return;
-        const reviewId = feedbackWithPendingAnalysis.id;
+        if (!pendingAnalysisReviewId || analysis) return;
+        const reviewId = pendingAnalysisReviewId;
         let retries = 0;
         const MAX_RETRIES = 60; // 60 * 30s = 30 minutes max polling
         let cancelled = false;
@@ -147,17 +149,12 @@ export default function SectionReview({
         }, 30000);
 
         return () => { cancelled = true; clearInterval(interval); };
-    }, [feedbackWithPendingAnalysis?.id, analysis]);
-
-    // Also check for feedback with the consult message (analysis already done)
-    const feedbackWithCompletedAnalysis = previousFeedback.find(
-        f => f.replies?.some(r => r.author === 'system' && r.text === CONSULT_ANALYSIS_MSG)
-    );
+    }, [pendingAnalysisReviewId, analysis]);
 
     // Load analysis on mount if system reply already shows the consult message
     useEffect(() => {
-        if (!feedbackWithCompletedAnalysis || analysis) return;
-        const reviewId = feedbackWithCompletedAnalysis.id;
+        if (!completedAnalysisReviewId || analysis) return;
+        const reviewId = completedAnalysisReviewId;
         let cancelled = false;
         (async () => {
             try {
@@ -169,7 +166,7 @@ export default function SectionReview({
             } catch { /* ignore */ }
         })();
         return () => { cancelled = true; };
-    }, [feedbackWithCompletedAnalysis?.id]);
+    }, [completedAnalysisReviewId, analysis]);
 
     // Update system reply text when analysis is loaded, and keep original otherwise
     const displayedFeedback = previousFeedback.map(f => ({

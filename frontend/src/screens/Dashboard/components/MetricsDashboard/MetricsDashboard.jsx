@@ -276,8 +276,8 @@ function MetricHeatmap({ title, data, onExpand }) {
 
   return (
     <div className="metric-card">
-      <h3>Donor to Outcome</h3>
-      <IconButton size="small" className="expand-btn" onClick={() => onExpand({ title: "Donor to Outcome", type: 'matrix', data: heatmapData, options })}>
+      <h3>{title}</h3>
+      <IconButton size="small" className="expand-btn" onClick={() => onExpand({ title, type: 'matrix', data: heatmapData, options })}>
         <ZoomInIcon fontSize="small" />
       </IconButton>
       <div className="chart-container">

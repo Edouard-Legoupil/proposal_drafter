@@ -107,4 +107,3 @@ The core of the user experience is handled by two main screen components:
 -   **New Features**:
     -   **Scrollable View**: The review screen is now scrollable to accommodate long proposals.
     -   **Enhanced Comments**: The review form for each section now includes dropdowns for "Type of Comment" and "Severity".
-
