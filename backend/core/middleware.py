@@ -36,18 +36,20 @@ def setup_security_middleware(app):
         response = await call_next(request)
 
         # Content Security Policy - strict policy to prevent XSS
-        csp = (
-            "default-src 'self'; "
-            "script-src 'self'; "
-            "style-src 'self' 'unsafe-inline'; "  # Allow inline styles for now
-            "img-src 'self' data:; "
-            "font-src 'self'; "
-            "connect-src 'self'; "
-            "frame-src 'none'; "
-            "object-src 'none'; "
-            "base-uri 'self'; "
-            "form-action 'self'"
-        )
+        # Allow external resources needed by the frontend
+        csp_parts = [
+            "default-src 'self'",
+            "script-src 'self'",
+            ("style-src 'self' 'unsafe-inline' " "https://cdnjs.cloudflare.com " "https://fonts.googleapis.com"),
+            "img-src 'self' data:",
+            "font-src 'self' https://fonts.gstatic.com",
+            "connect-src 'self'",
+            "frame-src 'none'",
+            "object-src 'none'",
+            "base-uri 'self'",
+            "form-action 'self'",
+        ]
+        csp = "; ".join(csp_parts)
         response.headers["Content-Security-Policy"] = csp
 
         # X-Content-Type-Options - prevent MIME sniffing
