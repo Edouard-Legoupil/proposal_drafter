@@ -63,7 +63,7 @@ def log_rag_output(output):
 class VectorSearchTool(BaseTool):
     name: str = "Vector Search"
     description: str = "Searches for relevant information in the knowledge base using vector similarity."
-    knowledge_card_id: str = None
+    knowledge_card_id: str | None = None
 
     def __init__(self, knowledge_card_id: str):
         super().__init__()
@@ -148,7 +148,7 @@ class ContentGenerationCrew:
 
     agents_config = "config/agents_knowledge.yaml"
     tasks_config = "config/tasks_knowledge.yaml"
-    knowledge_card_id: str = None
+    knowledge_card_id: str | None = None
     pre_prompt: str = ""
 
     def __init__(self, knowledge_card_id: str, pre_prompt: str = ""):
@@ -176,14 +176,14 @@ class ContentGenerationCrew:
 
     @task
     def research_task(self) -> Task:
-        research_task_config = self.tasks_config["research_task"].copy()
-        research_task_config["description"] = self.pre_prompt + research_task_config["description"]
+        research_task_config = self.tasks_config["research_task"].copy()  # type: ignore[misc]
+        research_task_config["description"] = self.pre_prompt + research_task_config["description"]  # type: ignore[misc]
         return Task(config=research_task_config, agent=self.researcher())
 
     @task
     def write_task(self) -> Task:
-        write_task_config = self.tasks_config["write_task"].copy()
-        write_task_config["description"] = self.pre_prompt + write_task_config["description"]
+        write_task_config = self.tasks_config["write_task"].copy()  # type: ignore[misc]
+        write_task_config["description"] = self.pre_prompt + write_task_config["description"]  # type: ignore[misc]
         return Task(
             config=write_task_config,
             agent=self.writer(),

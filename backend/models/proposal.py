@@ -12,7 +12,7 @@ from sqlalchemy.dialects.postgresql import UUID
 Base = declarative_base()  # type: ignore[misc]
 
 
-class Proposal(Base):
+class Proposal(Base):  # type: ignore[misc]
     """
     Proposal model representing a proposal in the Proposal Drafter system.
 

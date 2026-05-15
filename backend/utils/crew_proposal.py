@@ -49,7 +49,7 @@ class ProposalCrew:
         Raises:
             HTTPException: If dangerous input is detected
         """
-        sanitized_inputs = {}
+        sanitized_inputs: dict[str, Any] = {}
 
         for key, value in inputs.items():
             if isinstance(value, str):

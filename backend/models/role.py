@@ -10,9 +10,14 @@ from sqlalchemy.orm import declarative_base, relationship
 # Use the same base as other models
 # This will be set in each model file to avoid circular imports
 Base = declarative_base()  # type: ignore[misc]
+# Type alias for mypy
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from sqlalchemy.orm import DeclarativeBase
+    Base: type[DeclarativeBase]  # type: ignore[misc]
 
 
-class Role(Base):
+class Role(Base):  # type: ignore[misc]
     """
     Role model representing user roles in the system.
 
@@ -39,7 +44,7 @@ class Role(Base):
         return session.query(cls).filter_by(name=name).first()
 
 
-class UserRole(Base):
+class UserRole(Base):  # type: ignore[misc]
     """
     Association table for the many-to-many relationship between Users and Roles.
 

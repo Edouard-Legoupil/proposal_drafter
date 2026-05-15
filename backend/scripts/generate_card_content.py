@@ -5,7 +5,7 @@ import sys
 import uuid
 import logging
 from dotenv import load_dotenv
-from slugify import slugify
+from slugify import slugify  # type: ignore[import-untyped]
 import psycopg2
 from psycopg2.extras import register_uuid
 

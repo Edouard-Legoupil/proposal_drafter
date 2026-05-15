@@ -12,7 +12,7 @@ from sqlalchemy.dialects.postgresql import UUID
 Base = declarative_base()  # type: ignore[misc]
 
 
-class KnowledgeCard(Base):
+class KnowledgeCard(Base):  # type: ignore[misc]
     """
     KnowledgeCard model representing a knowledge card in the Proposal Drafter system.
 

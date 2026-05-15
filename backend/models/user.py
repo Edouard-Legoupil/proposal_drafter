@@ -23,7 +23,7 @@ Base = declarative_base()  # type: ignore[misc]
 logger = logging.getLogger("security.authorization")
 
 
-class User(Base):
+class User(Base):  # type: ignore[misc]
     """
     User model representing a user in the Proposal Drafter system.
 

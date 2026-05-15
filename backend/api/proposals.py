@@ -10,7 +10,7 @@ from typing import Optional, Dict, Any
 
 #  Third-Party Libraries
 import pdfplumber
-from fastapi import (
+from fastapi import (  # noqa: B008
     APIRouter,
     Depends,
     HTTPException,
@@ -23,6 +23,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from slugify import slugify  # type: ignore[import-untyped]
 
 #  Internal Modules
+# Note: B008 (function calls in argument defaults) is disabled for FastAPI Depends()
+# as this is a standard FastAPI pattern for dependency injection
 from backend.core.authorization import (
     check_proposal_access,
     require_ownership,
@@ -69,6 +71,7 @@ from backend.utils.proposal_logic import (
     resolve_form_data_labels,
 )
 from backend.utils.crew_proposal import ProposalCrew
+
 # Import knowledge card content saving function
 from backend.scripts.generate_card_content import _save_knowledge_card_content_to_file
 
@@ -479,7 +482,7 @@ def generate_all_sections_background(session_id: str, proposal_id: str, user_id:
     Runs the proposal generation process for all sections in the background.
     """
     logger.info(f"Starting background generation for proposal {proposal_id}")
-    knowledge_file_paths = []
+    knowledge_file_paths: list[str] = []
 
     # Initialize telemetry logging
     from backend.utils.proposal_run_logger import (
@@ -553,7 +556,7 @@ def generate_all_sections_background(session_id: str, proposal_id: str, user_id:
 
         if associated_knowledge_cards:
             with get_engine().connect() as connection:
-                for card in associated_knowledge_cards:
+                for _card in associated_knowledge_cards:
                     card_id = card.get("id")
                     if not card_id:
                         logger.warning("Associated knowledge card missing 'id', skipping.")
@@ -1306,7 +1309,7 @@ def regenerate_all_sections_with_context(
         os.makedirs(knowledge_dir, exist_ok=True)
 
         # Process knowledge cards if they exist
-        knowledge_file_paths = []
+        knowledge_file_paths: list[str] = []
         associated_knowledge_cards = session_data.get("associated_knowledge_cards", [])
 
         if associated_knowledge_cards:

@@ -10,7 +10,7 @@ from sqlalchemy.orm import declarative_base, relationship
 Base = declarative_base()  # type: ignore[misc]
 
 
-class Team(Base):
+class Team(Base):  # type: ignore[misc]
     """
     Team model representing a team in the Proposal Drafter system.
 
@@ -38,7 +38,7 @@ class Team(Base):
         return session.query(cls).filter_by(name=name).first()
 
 
-class TeamMember(Base):
+class TeamMember(Base):  # type: ignore[misc]
     """
     Association table for the many-to-many relationship between Users and Teams.
 

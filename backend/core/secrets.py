@@ -221,6 +221,9 @@ class SecretsManager:
                 self.azure_client.set_secret(secret_name, secret_value)
                 logger.info(f"Successfully updated secret in Azure Key Vault: {secret_name}")
                 return True
+            else:
+                logger.error(f"No valid secret provider configured for {self.secret_provider}")
+                return False
 
         except Exception as e:
             logger.error(f"Failed to create/update secret {secret_name}: {e}")

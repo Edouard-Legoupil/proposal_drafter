@@ -10,7 +10,7 @@ from sqlalchemy.orm import declarative_base
 Base = declarative_base()  # type: ignore[misc]
 
 
-class DonorGroupMember(Base):
+class DonorGroupMember(Base):  # type: ignore[misc]
     """
     Association table for the many-to-many relationship between Users and Donor Groups.
 

@@ -27,7 +27,7 @@ class TemplateStatus(str, PyEnum):
     archived = "archived"
 
 
-class Template(Base):
+class Template(Base):  # type: ignore[misc]
     """
     Template model representing a template in the Proposal Drafter system.
 
