@@ -7,7 +7,7 @@ This guide walks you through progressive steps for setting up the **Proposal Dra
 2. **Docker-based development**
 
 
- 
+
 
 
 
@@ -24,11 +24,11 @@ The app has four core components:
 
 Install these tools before you begin:
 
-- [x] Docker & Docker Compose  
-- [x] Node.js + npm  
-- [x] Python 3.11+  
-- [x] Git  
-- [x] Azure CLI (for deployment)  
+- [x] Docker & Docker Compose
+- [x] Node.js + npm
+- [x] Python 3.11+
+- [x] Git
+- [x] Azure CLI (for deployment)
 - [x] Azure Subscription (for deployment)
 
 ---
@@ -60,10 +60,10 @@ psql postgresql://postgres:postgres@localhost:5432/proposalgen -f db/seed.sql
 
 ### Step 3: Set Environment Variables
 
- 
+
 
 The application uses environment variables for configuration. You can find a list of the required variables in `backend/.env.example`. Create a `.env` file in this directory with your own values when running locally.
- 
+
 
 Create a `.env` file in the `backend` directory - see `.env.example` for reference:
 
@@ -119,7 +119,7 @@ for further deployment, it is easier if both frontend and backend run on the sam
 ./start.sh
 ```
 
-The application should now be running at http://localhost:8502 
+The application should now be running at http://localhost:8502
 
 ---
 
@@ -132,7 +132,7 @@ On windows, You can use [Docker Destop](https://docs.docker.com/desktop/setup/in
 ### Step 1: Start Docker containers
 
 A specific `docker-compose-local.yml` file is provided to run the application locally with Docker. This file includes services for the frontend, backend, PostgreSQL database, and Redis.
-Make sure you have Docker and Docker Compose installed. 
+Make sure you have Docker and Docker Compose installed.
 
 Create a `.env` file in the `root` directory - see `.env.example` for reference:
 
@@ -163,7 +163,7 @@ sleep 10
 psql postgresql://postgres:postgres@localhost:5432/proposalgen -f database-setup.sql
 ```
 
-Congrat if you have everything working locally, you can go to the next step - getting this on the cloud: 
+Congrat if you have everything working locally, you can go to the next step - getting this on the cloud:
 
 For cloud deployement, see the  `doc_cloud-deployment.md`
 
@@ -176,4 +176,3 @@ Note that you can also run all the built-in test with playwright, see the doc `p
 cd frontend && npm run lint && npm run test
 cd backend  && pytest
 ```
-

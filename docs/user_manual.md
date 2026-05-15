@@ -1,5 +1,5 @@
-# The Proposal Lifecycle 
- 
+# The Proposal Lifecycle
+
  * __Draft:__ The initial stage after a proposal is generated.
  * __In Review:__ The proposal is with colleagues for feedback.
  * __Pre-submission:__ Addressing feedback before finalizing.
@@ -35,7 +35,7 @@ Your central hub for managing proposals and knowledge cards.
 * **Knowledge Management:** Monitor the coverage and health of your knowledge card library.
 
 # Proposal Generation
- 
+
 1. **Initiation:** Select a donor, outcome, and field context from the dashboard.
 2. **Drafting:** Provide a concise project description. The AI dynamically selects the appropriate template (e.g., UNHCR Proposal vs. CERF Concept Note).
 3. **AI Generation:** The system orchestrates multiple AI agents to draft sections based on relevant knowledge cards and references.

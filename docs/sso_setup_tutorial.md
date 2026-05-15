@@ -48,5 +48,5 @@ Update your `.env` file (or your deployment environment variables) with the foll
 
 ## 5. Role Management
 
-By default, all new users logging in via SSO are assigned the **"proposal writer"** role. 
+By default, all new users logging in via SSO are assigned the **"proposal writer"** role.
 Users can request elevated permissions through the application UI, which an administrator can then approve in the **System Administration** panel.

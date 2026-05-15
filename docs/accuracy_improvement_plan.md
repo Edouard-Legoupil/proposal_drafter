@@ -4,16 +4,16 @@ This document outlines an integrated optimisation framework for a **CrewAI-power
 
 The system relies on **two hierarchical context layers**:
 
-1. **Level 1 – Knowledge Card Construction:**  
-   Retrieve, chunk, and synthesise relevant information from the RAG database into structured, reusable **Knowledge Cards**.  
+1. **Level 1 – Knowledge Card Construction:**
+   Retrieve, chunk, and synthesise relevant information from the RAG database into structured, reusable **Knowledge Cards**.
 
-2. **Level 2 – Proposal Drafting:**  
+2. **Level 2 – Proposal Drafting:**
    Use these Knowledge Cards as the authoritative context for the **CrewAI proposal drafting agent**, ensuring factual grounding, narrative consistency, and alignment with donor or organisational requirements.
 
 To achieve optimal results, three dimensions of optimisation are applied:
 
-1. **Prompt Optimisation**  
-2. **Context Optimisation (RAG Layer)**  
+1. **Prompt Optimisation**
+2. **Context Optimisation (RAG Layer)**
 3. **Model Optimisation**
 
 ---
@@ -35,14 +35,14 @@ Each agent in the CrewAI pipeline (e.g., *Retriever*, *Knowledge Curator*, *Prop
 
 ### 1.2 Prompt Design Principles
 
-* **Instruction Clarity:** Explicitly separate *source material* (Knowledge Card) from *generation tasks* (writing, summarising, evaluating).  
-* **Context Anchoring:** Embed the Knowledge Card text in the system prompt before proposal generation.  
-* **Hierarchical Consistency:** Ensure every agent passes clean, structured outputs downstream — for example, the *Curator* agent outputs JSON-formatted Knowledge Cards that the *Writer* agent can parse directly.  
-* **Adaptive Framing:** Adjust prompts dynamically based on donor type, project scope, or language preference.  
+* **Instruction Clarity:** Explicitly separate *source material* (Knowledge Card) from *generation tasks* (writing, summarising, evaluating).
+* **Context Anchoring:** Embed the Knowledge Card text in the system prompt before proposal generation.
+* **Hierarchical Consistency:** Ensure every agent passes clean, structured outputs downstream — for example, the *Curator* agent outputs JSON-formatted Knowledge Cards that the *Writer* agent can parse directly.
+* **Adaptive Framing:** Adjust prompts dynamically based on donor type, project scope, or language preference.
 
 ### 1.3 Evaluation
 
-* Conduct A/B testing of prompts for **faithfulness**, **style coherence**, and **information density**.  
+* Conduct A/B testing of prompts for **faithfulness**, **style coherence**, and **information density**.
 * Use a *proposal validation script* comparing outputs across CrewAI runs with identical inputs but different prompt templates.
 
 ---
@@ -58,9 +58,9 @@ The context layer underpins Level 1 (Knowledge Card generation) and determines h
 
 
 **RAG Retrieval Process:**
-1. **Chunk Documents:** Apply one of the strategies below (Semantic, Agentic, or Content-Aware).  
-2. **Embed and Store:** Vectorise each chunk using the selected embedding model.  
-3. **Query Expansion:** Optionally use **HyDE** to create a hypothetical “ideal” summary before retrieval.  
+1. **Chunk Documents:** Apply one of the strategies below (Semantic, Agentic, or Content-Aware).
+2. **Embed and Store:** Vectorise each chunk using the selected embedding model.
+3. **Query Expansion:** Optionally use **HyDE** to create a hypothetical “ideal” summary before retrieval.
 4. **Curate:** Synthesize retrieved chunks into concise, verified Knowledge Cards.
 
 
@@ -76,7 +76,7 @@ Semantic chunking splits text based on meaning, using NLP libraries to identify 
 **Cons:**
 *   **Complexity:** Requires NLP libraries (e.g., NLTK, spaCy), adding dependencies and processing overhead.
 *   **Variable Chunk Size:** Chunks will have inconsistent lengths, which may be suboptimal for some embedding models.
- 
+
 
 #### b. Agentic Chunking
 
@@ -129,14 +129,14 @@ HyDE can be implemented as a layer on top of our existing retrieval system. It w
 At this stage, the **CrewAI Proposal Writer** agent uses the Knowledge Cards as the factual anchor for drafting coherent and consistent proposal narratives.
 
 **Mechanism:**
-1. Retrieve Knowledge Cards relevant to the current proposal section.  
-2. Pass them into the CrewAI prompt as structured input.  
-3. Generate text grounded strictly on these cards.  
+1. Retrieve Knowledge Cards relevant to the current proposal section.
+2. Pass them into the CrewAI prompt as structured input.
+3. Generate text grounded strictly on these cards.
 4. The **Evaluator Agent** then validates consistency.
 
 This two-level design ensures:
-* All generated text remains **traceable** to a factual evidence base.  
-* Proposal narratives maintain **semantic consistency** across multiple sections.  
+* All generated text remains **traceable** to a factual evidence base.
+* Proposal narratives maintain **semantic consistency** across multiple sections.
 * Knowledge Cards can be **reused** across different proposals or donors.
 
 
@@ -146,15 +146,15 @@ This two-level design ensures:
 We employ a **RAG evaluation pipeline** with a *Judge LLM* and metrics inspired by **RAGAs**.
 
 **Key Metrics:**
-* **Faithfulness:** Does each Knowledge Card accurately represent its sources?  
-* **Context Precision:** Are retrieved chunks relevant to the query?  
-* **Proposal Consistency:** Does the proposal text align with the Knowledge Card content?  
+* **Faithfulness:** Does each Knowledge Card accurately represent its sources?
+* **Context Precision:** Are retrieved chunks relevant to the query?
+* **Proposal Consistency:** Does the proposal text align with the Knowledge Card content?
 
 **Pipeline Steps:**
-1. Log all RAG retrievals and outputs in `rag_evaluation_logs`.  
-2. Periodically sample records for evaluation.  
-3. Submit `(query, retrieved_context, knowledge_card, generated_answer)` to a judge LLM.  
-4. Compute automated scores and store results.  
+1. Log all RAG retrievals and outputs in `rag_evaluation_logs`.
+2. Periodically sample records for evaluation.
+3. Submit `(query, retrieved_context, knowledge_card, generated_answer)` to a judge LLM.
+4. Compute automated scores and store results.
 
 ---
 
@@ -164,24 +164,24 @@ Model optimisation enhances both retrieval and generation efficiency while maint
 
 ### 3.1 Embedding Model Optimisation
 
-* Use **domain-tuned embeddings** (e.g., `text-embedding-3-large` or `bge-m3`) fine-tuned on humanitarian texts.  
-* Apply **semantic clustering** in Redis or Postgres pgvector to group thematically related knowledge chunks.  
-* Optimise query speed with FAISS or HNSW indexing.  
-* Employ **hybrid retrieval** (vector + BM25) for keyword-rich technical documents.  
+* Use **domain-tuned embeddings** (e.g., `text-embedding-3-large` or `bge-m3`) fine-tuned on humanitarian texts.
+* Apply **semantic clustering** in Redis or Postgres pgvector to group thematically related knowledge chunks.
+* Optimise query speed with FAISS or HNSW indexing.
+* Employ **hybrid retrieval** (vector + BM25) for keyword-rich technical documents.
 
 ### 3.2 Generation Model and Instruction Optimisation
 
-* Fine-tune the **Proposal Writer** agent using **LoRA adapters** on a corpus of approved proposals.  
-* Adjust temperature and `top_p` values to maintain factual precision over creative variability.  
-* Include **Knowledge Card verification layers** before final text output (the Evaluator agent can reject ungrounded statements).  
-* Maintain deterministic “style adapters” for specific donors (e.g., ECHO, USAID, UN OCHA).  
+* Fine-tune the **Proposal Writer** agent using **LoRA adapters** on a corpus of approved proposals.
+* Adjust temperature and `top_p` values to maintain factual precision over creative variability.
+* Include **Knowledge Card verification layers** before final text output (the Evaluator agent can reject ungrounded statements).
+* Maintain deterministic “style adapters” for specific donors (e.g., ECHO, USAID, UN OCHA).
 
 ### 3.3 System-Level Optimisations
 
-* **Caching:** Cache embeddings and generated Knowledge Cards to minimise recomputation.  
-* **Batch Inference:** Embed multiple documents or queries concurrently.  
-* **Async Retrieval:** Run parallel searches across RAG sources.  
-* **Feedback Loop:** Store proposal sections and validation results for iterative fine-tuning of both retrieval and generation layers.  
+* **Caching:** Cache embeddings and generated Knowledge Cards to minimise recomputation.
+* **Batch Inference:** Embed multiple documents or queries concurrently.
+* **Async Retrieval:** Run parallel searches across RAG sources.
+* **Feedback Loop:** Store proposal sections and validation results for iterative fine-tuning of both retrieval and generation layers.
 
 ---
 
@@ -200,9 +200,8 @@ Model optimisation enhances both retrieval and generation efficiency while maint
 By combining **Prompt**, **Context**, and **Model Optimisation**, this CrewAI-enhanced RAG system enables proposal teams to move from *document retrieval* to *knowledge synthesis and narrative generation*.
 
 The **two-level context management**—Knowledge Cards (Level 1) feeding grounded proposal drafts (Level 2)—ensures:
-* **Traceability** of all facts used in proposal writing  
-* **Consistency** across proposal sections and iterations  
-* **Scalability** across multiple donors and response contexts  
+* **Traceability** of all facts used in proposal writing
+* **Consistency** across proposal sections and iterations
+* **Scalability** across multiple donors and response contexts
 
 This framework represents a foundational step toward **AI-assisted, evidence-grounded humanitarian proposal generation** that balances automation with control and transparency.
-

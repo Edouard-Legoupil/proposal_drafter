@@ -22,7 +22,7 @@ This document summarizes how the app addresses application security concerns, ba
 
 ## 5. Authentication
 - **Token/session based auth:** FastAPI. Passwords and secrets are never stored in plaintext. Strong password hashing (bcrypt/PBKDF2/argon2) is used.
-- **Session expiration** and re-auth enforced. 
+- **Session expiration** and re-auth enforced.
 
 ## 6. Cryptographic Best Practices
 - **HTTPS enforced** for all app endpoints (App Service and API Gateway level). Secrets are injected via environment variables and never checked-in.

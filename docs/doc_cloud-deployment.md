@@ -185,7 +185,7 @@ Before you begin, ensure you have the following:
 
  * Google Cloud Account: A GCP account with billing enabled.
 
- * Google Cloud SDK (gcloud CLI): Installed and configured on your local machine. Install instructions: https://cloud.google.com/sdk/docs/install 
+ * Google Cloud SDK (gcloud CLI): Installed and configured on your local machine. Install instructions: https://cloud.google.com/sdk/docs/install
 
  * Docker: Installed on your local machine: Install instructions: https://docs.docker.com/get-docker/
 
@@ -208,7 +208,7 @@ If you don't have a project, create one:
 
 
 ```bash
-## Initialize connection 
+## Initialize connection
 gcloud init
 gcloud projects create YOUR_PROJECT_ID --name="Your Proposal Drafter Project"
 
@@ -270,7 +270,7 @@ you may use a different port- for instance 5431- if you have already postgres ru
 ```bash
 gcloud auth application-default login
 
-./cloud-sql-proxy --port 5431 YOUR_PROJECT_ID:europe-west1:proposal-drafter-db 
+./cloud-sql-proxy --port 5431 YOUR_PROJECT_ID:europe-west1:proposal-drafter-db
 ```
 
 ### 4.2 Create a Database and User
@@ -294,8 +294,8 @@ gcloud sql databases create proposal_drafter --instance=proposal-drafter-db
 gcloud sql users create proposal_user --instance=proposal-drafter-db \
     --password=YOUR_DB_USER_PASSWORD --host=%
 ```
- 
-Note that the connection string is slightly different if using cloudd SQl than local settings - this is managed within main.py by checking if we have 
+
+Note that the connection string is slightly different if using cloudd SQl than local settings - this is managed within main.py by checking if we have
 
 `if os.getenv("GAE_ENV") == "standard" or os.getenv("K_SERVICE"): # Running on Cloud Run/App Engine`
 
@@ -310,11 +310,11 @@ Note that the connection string is slightly different if using cloudd SQl than l
 
 * Under "IAM authentication", ensure Allow IAM authentication for all connections is checked. If not, check it and save.
 
-you should see --  
-Database flags and parameters 
+you should see --
+Database flags and parameters
 cloudsql.iam_authentication on -
 
- 
+
 
 Next create a service account that your containerized application will use to authenticate with Cloud SQL and grant it access.
 
@@ -349,11 +349,11 @@ Before deploying, ensure the Cloud Run service account has Secret Manager permis
 gcloud secrets add-iam-policy-binding DB_USER_PASSWORD \
     --member="serviceAccount:cloud-sql-connector-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com"  \
     --role="roles/secretmanager.secretAccessor" \
-    --project=YOUR_PROJECT_ID  
+    --project=YOUR_PROJECT_ID
 ```
 
 
-Now you need to give access to this user to the specific database created in the previous step 
+Now you need to give access to this user to the specific database created in the previous step
 
 ```sql
 GRANT CONNECT ON DATABASE proposal TO "cloud-sql-connector-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com";
@@ -387,7 +387,7 @@ uvicorn main:app --host 0.0.0.0 --port 8502 --reload
 
 ### 5.2 Deploy to Cloud Run with Docker Registry
 
-Loging to your docker desktop and configure Docker to authenticate with Container Registry 
+Loging to your docker desktop and configure Docker to authenticate with Container Registry
 
 ```bash
 gcloud auth configure-docker
@@ -422,7 +422,7 @@ gcloud run services describe proposaldrafter-service \
 
 
 ### 5.3 Deploy to Cloud Run with Artifact Registry
- 
+
 Alternatively, you can have Docker to authenticate with **Google Cloud's Artifact Registry**. Artifact Registry is the newer, recommended service.
 
 ```bash
@@ -470,7 +470,7 @@ gcloud run deploy proposal-drafter-backend \
     --add-cloudsql-instances YOUR_PROJECT_ID:europe-west1:proposal-drafter-db \
     --set-env-vars DB_USER=proposal_user,DB_NAME=proposal_drafter,CLOUD_SQL_CONNECTION_NAME=YOUR_PROJECT_ID:europe-west1:proposal-drafter-db \
     # Use Secret Manager for production!
-    --update-secrets DB_PASSWORD=DB_USER_PASSWORD:latest 
+    --update-secrets DB_PASSWORD=DB_USER_PASSWORD:latest
 ```
 
 --allow-unauthenticated: Makes the service publicly accessible. For production, consider using Identity-Aware Proxy (IAP) or internal access.
@@ -504,7 +504,7 @@ After deployment, Cloud Run will provide a URL for your backend service (e.g., h
 
 
 
-## 6. Deploy React Frontend 
+## 6. Deploy React Frontend
 
 We'll build your React application and serve the static files from a Cloud Storage bucket, optionally using Cloud CDN for performance.
 
@@ -515,8 +515,8 @@ Navigate to your frontend directory:
 ```bash
 cd ../frontend
 # Install dependencies and build the project:
-npm install  
-npm run build 
+npm install
+npm run build
 ```
 
 This will create a build/ directory containing your static HTML, CSS, and JavaScript files.
@@ -647,7 +647,7 @@ Then, rebuild your frontend and re-upload the files to Cloud Storage as describe
 
 ```bash
 cd ../frontend # if you're not already there
-npm run build  
+npm run build
 gsutil -m cp -r dist/* gs://your-proposal-drafter-frontend-bucket/
 ```
 ### 7.2 CORS Configuration
@@ -680,13 +680,13 @@ Important: Be specific with your allow_origins in production to only include you
 
 Google Cloud Setup: Workload Identity Federation (WIF): You need to have Workload Identity Federation set up in your GCP project.
 
-Create a Workload Identity Pool: 
+Create a Workload Identity Pool:
 
 ```bash
 gcloud iam workload-identity-pools create github-pool --location=global --display-name="GitHub Actions Pool"
 ```
 
-Create a Provider within the pool: 
+Create a Provider within the pool:
 
 ```bash
 gcloud iam workload-identity-pools providers create-oidc github-provider --location=global --workload-identity-pool=github-pool --display-name="GitHub Actions Provider" --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository" --issuer-uri="https://token.actions.githubusercontent.com"
@@ -709,12 +709,12 @@ gcloud projects describe YOUR_PROJECT_ID_ALPHANUMERIC --format="value(projectNum
 ## First get your project numeric id
 gcloud projects describe YOUR_PROJECT_ID_ALPHANUMERIC --format="value(projectNumber)"
 
-gcloud iam service-accounts add-iam-policy-binding YOUR_SERVICE_ACCOUNT_EMAIL  --member="principalSet://iam.googleapis.com/projects/NUMERIC_PROJECT_ID/locations/global/workloadIdentityPools/github-pool/attribute.repository/YOUR_GITHUB_ORG/YOUR_REPO_NAME"  
+gcloud iam service-accounts add-iam-policy-binding YOUR_SERVICE_ACCOUNT_EMAIL  --member="principalSet://iam.googleapis.com/projects/NUMERIC_PROJECT_ID/locations/global/workloadIdentityPools/github-pool/attribute.repository/YOUR_GITHUB_ORG/YOUR_REPO_NAME"
 ```
 
 Ensure the service_account used in the workflow (github-actions-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com) exists and has the necessary roles for Cloud Run deployment and Artifact Registry access.
 
-Artifact Registry: Create a Docker repository in Artifact Registry in the specified GAR_LOCATION (e.g., 
+Artifact Registry: Create a Docker repository in Artifact Registry in the specified GAR_LOCATION (e.g.,
 
 gcloud artifacts repositories create proposalgen-backend --repository-format=docker --location=europe-west1 --description="Docker repository for proposalgen backend").
 

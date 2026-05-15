@@ -1,6 +1,6 @@
 # Proposal Drafter Metrics API Reference
 
-This document details the API contract for dashboard metrics, analytical depth for each endpoint, and advanced brainstorming of valuable analytics for ongoing platform growth. 
+This document details the API contract for dashboard metrics, analytical depth for each endpoint, and advanced brainstorming of valuable analytics for ongoing platform growth.
 
 Each endpoint **must return the listed structure**; use valid empty arrays or zeroes when no data, never null/undefined.
 
@@ -18,8 +18,8 @@ Each endpoint **must return the listed structure**; use valid empty arrays or ze
 **SQL Query:**
 ```sql
 WITH filtered_proposals AS (
-    SELECT p.*, 
-        CASE 
+    SELECT p.*,
+        CASE
             WHEN p.form_data->>'Budget Range' ~* 'k' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000)
             WHEN p.form_data->>'Budget Range' ~* 'M' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000000)
             ELSE NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric
@@ -28,7 +28,7 @@ WITH filtered_proposals AS (
     {WHERE_CLAUSE}
 ),
 cycle_times AS (
-    SELECT 
+    SELECT
         p.id,
         EXTRACT(EPOCH FROM (
             SELECT MIN(created_at) FROM proposal_status_history WHERE proposal_id = p.id AND status = 'submitted'
@@ -36,7 +36,7 @@ cycle_times AS (
     FROM filtered_proposals p
 ),
 counts AS (
-    SELECT 
+    SELECT
         COALESCE(SUM(budget_value), 0) as total_funding,
         COUNT(*) as total_proposals,
         COUNT(DISTINCT (SELECT donor_id FROM proposal_donors WHERE proposal_id = p.id LIMIT 1)) as total_donors,
@@ -46,7 +46,7 @@ counts AS (
         COUNT(*) FILTER (WHERE status = 'deleted') as count_deleted
     FROM filtered_proposals p
 )
-SELECT 
+SELECT
     total_funding,
     total_proposals,
     CASE WHEN total_proposals > 0 THEN total_funding / total_proposals ELSE 0 END as avg_value,
@@ -79,9 +79,9 @@ FROM counts;
 **Description:** Total value and counts per donor. Excludes deleted proposals by default.
 **SQL Query:**
 ```sql
-SELECT 
+SELECT
     d.name as donor,
-    SUM(CASE 
+    SUM(CASE
         WHEN p.form_data->>'Budget Range' ~* 'k' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000)
         WHEN p.form_data->>'Budget Range' ~* 'M' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000000)
         ELSE NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric
@@ -107,7 +107,7 @@ ORDER BY total_value DESC;
 **Description:** Heatmap data showing outcome references per donor. Excludes deleted proposals by default.
 **SQL Query:**
 ```sql
-SELECT 
+SELECT
     d.name as donor,
     o.name as outcome,
     COUNT(p.id) as count
@@ -132,10 +132,10 @@ ORDER BY count DESC;
 **Description:** Treemap data for field context, aggregated by region.
 **SQL Query:**
 ```sql
-SELECT 
+SELECT
     fc.unhcr_region as region,
     fc.name as context,
-    SUM(CASE 
+    SUM(CASE
         WHEN p.form_data->>'Budget Range' ~* 'k' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000)
         WHEN p.form_data->>'Budget Range' ~* 'M' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000000)
         ELSE NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric
@@ -162,10 +162,10 @@ ORDER BY total_value DESC;
 **SQL Query:**
 ```sql
 WITH base_data AS (
-    SELECT 
+    SELECT
         tm.name as team_name,
         p.status,
-        CASE 
+        CASE
             WHEN p.form_data->>'Budget Range' ~* 'k' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000)
             WHEN p.form_data->>'Budget Range' ~* 'M' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000000)
             ELSE NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric
@@ -177,13 +177,13 @@ WITH base_data AS (
     {WHERE_CLAUSE}
 ),
 team_totals AS (
-    SELECT 
+    SELECT
         team_name,
         COUNT(proposal_id) as total_proposals
     FROM base_data
     GROUP BY team_name
 )
-SELECT 
+SELECT
     bd.team_name || ' (' || tt.total_proposals || ')' as team,
     bd.status,
     SUM(bd.budget_value) as value,
@@ -206,10 +206,10 @@ ORDER BY SUM(bd.budget_value) OVER (PARTITION BY bd.team_name) DESC, bd.team_nam
 **Description:** Stacked area data showing total value per status over time.
 **SQL Query:**
 ```sql
-SELECT 
+SELECT
     TO_CHAR(p.created_at, 'YYYY-MM') as period,
     p.status,
-    SUM(CASE 
+    SUM(CASE
         WHEN p.form_data->>'Budget Range' ~* 'k' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000)
         WHEN p.form_data->>'Budget Range' ~* 'M' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000000)
         ELSE NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric
@@ -290,8 +290,8 @@ ORDER BY review_count;
 **Questions Answered:** Who/what drives content? Where are the gaps?
 **SQL Query:**
 ```sql
-SELECT kc.type, COUNT(kc.id) as count 
-FROM knowledge_cards kc 
+SELECT kc.type, COUNT(kc.id) as count
+FROM knowledge_cards kc
 GROUP BY kc.type;
 ```
 ```json
@@ -307,9 +307,9 @@ GROUP BY kc.type;
 **Questions Answered:** Which cards are most curated? Any maintenance patterns?
 **SQL Query:**
 ```sql
-SELECT kc.id as card_id, COUNT(kr.id) as revisions 
-FROM knowledge_card_history kr 
-JOIN knowledge_cards kc ON kr.knowledge_card_id = kc.id 
+SELECT kc.id as card_id, COUNT(kr.id) as revisions
+FROM knowledge_card_history kr
+JOIN knowledge_cards kc ON kr.knowledge_card_id = kc.id
 GROUP BY kc.id;
 ```
 ```json
@@ -324,10 +324,10 @@ GROUP BY kc.id;
 **Questions Answered:** Who cites most? Which types rely on outside info?
 **SQL Query:**
 ```sql
-SELECT kc.type, COUNT(kcr.id) as references 
-FROM knowledge_card_references kcr 
-JOIN knowledge_card_to_references kctr ON kcr.id = kctr.reference_id 
-JOIN knowledge_cards kc ON kctr.knowledge_card_id = kc.id 
+SELECT kc.type, COUNT(kcr.id) as references
+FROM knowledge_card_references kcr
+JOIN knowledge_card_to_references kctr ON kcr.id = kctr.reference_id
+JOIN knowledge_cards kc ON kctr.knowledge_card_id = kc.id
 GROUP BY kc.type;
 ```
 ```json
@@ -342,10 +342,10 @@ GROUP BY kc.type;
 **Questions Answered:** Which references are most central? Any silos or overlap?
 **SQL Query:**
 ```sql
-SELECT kcr.url, COUNT(DISTINCT kctr.knowledge_card_id) as usage_count 
-FROM knowledge_card_references kcr 
-JOIN knowledge_card_to_references kctr ON kcr.id = kctr.reference_id 
-GROUP BY kcr.url 
+SELECT kcr.url, COUNT(DISTINCT kctr.knowledge_card_id) as usage_count
+FROM knowledge_card_references kcr
+JOIN knowledge_card_to_references kctr ON kcr.id = kctr.reference_id
+GROUP BY kcr.url
 HAVING COUNT(DISTINCT kctr.knowledge_card_id) > 1;
 ```
 ```json
@@ -369,10 +369,10 @@ HAVING COUNT(DISTINCT kctr.knowledge_card_id) > 1;
 *Edit cadence per card/team (average edits/month).*
 **SQL Query:**
 ```sql
-SELECT kc.id as card_id, 
-       COUNT(kr.id)/GREATEST(1, EXTRACT(MONTH FROM AGE(NOW(), kc.created_at))) as edit_frequency 
-FROM knowledge_card_history kr 
-JOIN knowledge_cards kc ON kr.knowledge_card_id = kc.id 
+SELECT kc.id as card_id,
+       COUNT(kr.id)/GREATEST(1, EXTRACT(MONTH FROM AGE(NOW(), kc.created_at))) as edit_frequency
+FROM knowledge_card_history kr
+JOIN knowledge_cards kc ON kr.knowledge_card_id = kc.id
 GROUP BY kc.id, kc.created_at;
 ```
 ```json
@@ -395,14 +395,14 @@ GROUP BY kc.id, kc.created_at;
 *Cards/references only used by one team/cluster*.
 **SQL Query:**
 ```sql
-SELECT kc.id as isolated_card_id, t.name as silo_team 
-FROM knowledge_cards kc 
-JOIN users u ON kc.created_by = u.id 
-JOIN teams t ON u.team_id = t.id 
+SELECT kc.id as isolated_card_id, t.name as silo_team
+FROM knowledge_cards kc
+JOIN users u ON kc.created_by = u.id
+JOIN teams t ON u.team_id = t.id
 WHERE kc.id IN (
-    SELECT kctr.knowledge_card_id 
-    FROM knowledge_card_to_references kctr 
-    GROUP BY kctr.knowledge_card_id 
+    SELECT kctr.knowledge_card_id
+    FROM knowledge_card_to_references kctr
+    GROUP BY kctr.knowledge_card_id
     HAVING COUNT(DISTINCT kctr.reference_id) = 1
 );
 ```
@@ -412,4 +412,3 @@ WHERE kc.id IN (
   "silo_teams": ["TeamZ"]
 }
 ```
-

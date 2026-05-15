@@ -6,7 +6,7 @@ A guide for handling common support incidents, scaling operations, and database 
 
 ## 1. Azure OpenAI Service Unavailable
 
-**Symptoms:**  
+**Symptoms:**
 - Errors in AI-generated proposals, chat, or knowledge cards
 - API calls to OpenAI service fail (timeouts, 500, quota, auth errors)
 
@@ -35,7 +35,7 @@ A guide for handling common support incidents, scaling operations, and database 
 
 ## 2. Scaling Up App Service During Usage Spikes
 
-**Symptoms:**  
+**Symptoms:**
 - Slow UI, delayed responses, timeouts, HTTP 503/429 errors.
 
 **Step-by-Step:**
@@ -74,7 +74,7 @@ A guide for handling common support incidents, scaling operations, and database 
 1. **Via Azure Portal**
    - Go to Azure Database for PostgreSQL server.
    - Under "Backups", confirm latest available.
-   - Create a manual backup:  
+   - Create a manual backup:
      - Connect using `pg_dump` (from local, VM, or cloud shell):
 
        ```sh

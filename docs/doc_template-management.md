@@ -232,7 +232,7 @@ python backend/scripts/seed_templates.py [--dry-run] [--verbose]
 
 2. **Reads JSON files**: Parses each template JSON file
 
-3. **Creates database records**: 
+3. **Creates database records**:
    - Creates a record in the `templates` table
    - Creates version 1.0 in the `template_versions` table
    - Creates donor mappings in `template_donors` table if donors are specified
@@ -324,8 +324,8 @@ update_request = TemplateUpdate(
 )
 
 updated_template = await service.update_template_metadata(
-    template_id, 
-    update_request, 
+    template_id,
+    update_request,
     current_user_id
 )
 ```
@@ -353,8 +353,8 @@ version_request = TemplateVersionCreate(
 )
 
 new_version = await service.create_template_version(
-    template_id, 
-    version_request, 
+    template_id,
+    version_request,
     current_user_id
 )
 ```
