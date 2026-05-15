@@ -25,7 +25,8 @@ class PersistenceRepository:
         analysis_payload: dict[str, Any],
     ) -> str:
         try:
-            query = text("""
+            query = text(
+                """
                 INSERT INTO incident_analysis_results (
                     artifact_type,
                     source_review_id,
@@ -56,7 +57,8 @@ class PersistenceRepository:
                     analysis_payload = EXCLUDED.analysis_payload,
                     updated_at = CURRENT_TIMESTAMP
                 RETURNING id::text
-            """)
+            """
+            )
             result = self.connection.execute(
                 query,
                 {
@@ -71,18 +73,15 @@ class PersistenceRepository:
                 },
             )
             row = result.first()
-            logger.info(
-                f"Saved incident analysis for {artifact_type}/{source_review_id}"
-            )
+            logger.info(f"Saved incident analysis for {artifact_type}/{source_review_id}")
             return row[0]
         except Exception as e:
-            logger.error(
-                f"Error saving incident analysis for {artifact_type}/{source_review_id}: {e}"
-            )
+            logger.error(f"Error saving incident analysis for {artifact_type}/{source_review_id}: {e}")
             raise
 
     def get_analysis_result(self, analysis_id: str) -> dict[str, Any] | None:
-        query = text("""
+        query = text(
+            """
             SELECT
                 id::text AS id,
                 artifact_type,
@@ -99,7 +98,8 @@ class PersistenceRepository:
             FROM incident_analysis_results
             WHERE id = :analysis_id
             LIMIT 1
-        """)
+        """
+        )
         result = self.connection.execute(query, {"analysis_id": analysis_id})
         row = result.mappings().first()
         return dict(row) if row else None

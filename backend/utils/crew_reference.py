@@ -8,20 +8,23 @@ from backend.core.llm import llm
 
 os.environ["SERPER_API_KEY"] = os.getenv("SERPER_API_KEY")
 
+
 class SerperSearchSchema(BaseModel):
     search_query: str = Field(description="The search query.")
+
 
 class CustomSerperSearchTool(SerperDevTool):
     name: str = "Serper Search"
     description: str = "A search tool that uses the Serper API to find information on the web."
     args_schema: Type[BaseModel] = SerperSearchSchema
 
+
 @CrewBase
 class ReferenceIdentificationCrew:
     """ReferenceIdentificationCrew for identifying references"""
 
-    agents_config = 'config/agents_reference.yaml'
-    tasks_config = 'config/tasks_reference.yaml'
+    agents_config = "config/agents_reference.yaml"
+    tasks_config = "config/tasks_reference.yaml"
 
     def _get_instructions(self, link_type: str):
         instructions = {
@@ -49,7 +52,6 @@ class ReferenceIdentificationCrew:
 - Include publication dates and source URLs for web content
 - Include document titles and sections for document content
 - Focus on actionable intelligence for UNHCR engagement""",
-
             "outcome": """You are an expert researcher specializing in humanitarian outcomes for UNHCR. Your mission is to gather accurate, relevant, and up-to-date information about specific outcomes from various sources including web articles, official documents, and existing reports.
 **RESEARCH OBJECTIVES:**
 - Collect comprehensive factual information about {topic}
@@ -73,7 +75,6 @@ class ReferenceIdentificationCrew:
 - Include publication dates and source URLs for web content
 - Include document titles and sections for document content
 - Focus on actionable intelligence for UNHCR programming""",
-
             "field_context": """You are an expert researcher specializing in field context analysis for UNHCR. Your mission is to gather accurate, relevant, and up-to-date information about specific field contexts from various sources including web articles, official documents, and existing reports.
 **RESEARCH OBJECTIVES:**
 - Collect comprehensive factual information about {topic}
@@ -96,7 +97,7 @@ class ReferenceIdentificationCrew:
 - Flag conflicting or uncertain information
 - Include publication dates and source URLs for web content
 - Include document titles and sections for document content
-- Focus on actionable intelligence for UNHCR operations"""
+- Focus on actionable intelligence for UNHCR operations""",
         }
         selected_instructions = instructions.get(link_type)
         if not selected_instructions:
@@ -106,19 +107,16 @@ class ReferenceIdentificationCrew:
     @agent
     def researcher(self) -> Agent:
         return Agent(
-            config=self.agents_config['researcher'],
+            config=self.agents_config["researcher"],
             llm=llm,
             verbose=True,
             allow_delegation=False,
-            tools=[CustomSerperSearchTool()]
+            tools=[CustomSerperSearchTool()],
         )
 
     @task
     def research_task(self) -> Task:
-        return Task(
-            config=self.tasks_config['research_task'],
-            agent=self.researcher()
-        )
+        return Task(config=self.tasks_config["research_task"], agent=self.researcher())
 
     @crew
     def identify_references_crew(self) -> Crew:
@@ -132,7 +130,7 @@ class ReferenceIdentificationCrew:
         return Crew(
             agents=[self.researcher()],
             tasks=[self.research_task()],
-            verbose=True #,
+            verbose=True  # ,
             # output_log_file=log_file
         )
 
@@ -144,6 +142,6 @@ class ReferenceIdentificationCrew:
         inputs = {
             "link_type": link_type,
             "topic": topic,
-            "description": instructions.format(topic=topic)
+            "description": instructions.format(topic=topic),
         }
         return self.identify_references_crew().kickoff(inputs=inputs)

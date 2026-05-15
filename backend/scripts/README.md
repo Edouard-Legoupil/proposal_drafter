@@ -12,7 +12,7 @@ This script populates the database with initial data from a multi-sheet Excel fi
 
 2.  **User ID**: You must provide the UUID of an existing user in the database. The created records will be associated with this user.
 
-3.  **Dependencies**: activate the app virtual environment 
+3.  **Dependencies**: activate the app virtual environment
 
 ```bash
 source backend/venv/bin/activate

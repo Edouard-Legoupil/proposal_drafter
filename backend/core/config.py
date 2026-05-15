@@ -1,15 +1,13 @@
 #  Standard Library
 import os
-import sys
-import importlib
 import json
 import logging
 from typing import Dict, Any, Optional
 
 #  Third-Party Libraries
 from fastapi import HTTPException
-import os
 from backend.core.llm import llm as crew_llm
+from backend.core.secrets import get_secret, get_database_secrets
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -76,24 +74,25 @@ logger = logging.getLogger(__name__)
 
 # Secret key for JWT encoding and decoding.
 # It's crucial to set this in the environment for production.
-SECRET_KEY = os.getenv("SECRET_KEY", "your_default_dev_secret")
+SECRET_KEY = get_secret("secret_key") or os.getenv("SECRET_KEY", "your_default_dev_secret")
 
 # --- EntraID Configuration ---
-ENTRA_TENANT_ID = os.getenv("ENTRA_TENANT_ID")
-ENTRA_CLIENT_ID = os.getenv("ENTRA_CLIENT_ID")
-ENTRA_CLIENT_SECRET = os.getenv("ENTRA_CLIENT_SECRET")
+ENTRA_TENANT_ID = get_secret("entra_tenant_id") or os.getenv("ENTRA_TENANT_ID")
+ENTRA_CLIENT_ID = get_secret("entra_client_id") or os.getenv("ENTRA_CLIENT_ID")
+ENTRA_CLIENT_SECRET = get_secret("entra_client_secret") or os.getenv("ENTRA_CLIENT_SECRET")
 ENTRA_REDIRECT_URI = os.getenv("ENTRA_REDIRECT_URI")
 
 # --- Database Configuration ---
 
-# Load database credentials and settings from environment variables.
-db_username = os.getenv("DB_USERNAME")
-db_password = os.getenv("DB_PASSWORD")
+# Load database credentials and settings from secrets manager or environment variables.
+db_secrets = get_database_secrets()
+db_username = db_secrets.get("DB_USERNAME") or os.getenv("DB_USERNAME")
+db_password = db_secrets.get("DB_PASSWORD") or os.getenv("DB_PASSWORD")
 
 
-db_host = os.getenv("DB_HOST")
-db_port = os.getenv("DB_PORT", "5432")
-db_name = os.getenv("DB_NAME")
+db_host = db_secrets.get("DB_HOST") or os.getenv("DB_HOST")
+db_port = db_secrets.get("DB_PORT") or os.getenv("DB_PORT", "5432")
+db_name = db_secrets.get("DB_NAME") or os.getenv("DB_NAME")
 
 
 # Flag to enable/disable Google Cloud IAM database authentication.
@@ -114,9 +113,7 @@ if not db_username:
     logger.error("db_username environment variable is missing or empty.")
     raise ValueError("db_username environment variable is missing or empty.")
 if not db_password:
-    logger.error(
-        "db_password environment variable is missing or empty. Cannot authenticate with database."
-    )
+    logger.error("db_password environment variable is missing or empty. Cannot authenticate with database.")
     raise ValueError("db_password environment variable is missing or empty.")
 if not db_host:
     logger.error("db_host environment variable is missing. Cannot connect to database.")
@@ -125,9 +122,7 @@ if not db_name:
     logger.error("db_name environment variable is missing. Cannot select database.")
     raise ValueError("db_name environment variable is missing.")
 if not db_password and not enable_iam_auth:
-    logger.warning(
-        "DB_PASSWORD is missing but ENABLE_IAM_AUTH is false. Connection may fail without credentials."
-    )
+    logger.warning("DB_PASSWORD is missing but ENABLE_IAM_AUTH is false. Connection may fail without credentials.")
 
 # --- Environment Detection ---
 
@@ -178,9 +173,7 @@ class Settings:
     llm_model = crew_llm
     debug: bool = os.getenv("DEBUG", "false").lower() in ("1", "true")
     # Persist incident analysis results to database/storage
-    persist_analysis_results: bool = os.getenv(
-        "PERSIST_ANALYSIS_RESULTS", "false"
-    ).lower() in ("1", "true")
+    persist_analysis_results: bool = os.getenv("PERSIST_ANALYSIS_RESULTS", "false").lower() in ("1", "true")
 
 
 # Create a settings instance for easy access
@@ -245,9 +238,7 @@ def get_available_templates():
                 templates_map[filename] = filename
 
             except (json.JSONDecodeError, IOError) as e:
-                logger.error(
-                    f"Failed to read or parse template file: {filename}. Error: {e}"
-                )
+                logger.error(f"Failed to read or parse template file: {filename}. Error: {e}")
                 continue
 
     # Ensure "Not Yet Specified" option points to the default UNHCR template.
@@ -277,9 +268,7 @@ def load_proposal_template(template_name: str, use_db_first: bool = True):
     available_templates = get_available_templates()
     if template_name not in available_templates.values():
         logger.error(f"Invalid or non-existent template requested: {template_name}")
-        raise HTTPException(
-            status_code=400, detail=f"Template '{template_name}' not found."
-        )
+        raise HTTPException(status_code=400, detail=f"Template '{template_name}' not found.")
 
     template_path = _find_template_path(template_name)
     if not template_path:
@@ -292,12 +281,8 @@ def load_proposal_template(template_name: str, use_db_first: bool = True):
             logger.info(f"Proposal template loaded successfully from {template_path}")
             return proposal_data
     except json.JSONDecodeError:
-        logger.error(
-            f"Error decoding JSON from proposal template file: {template_path}"
-        )
-        raise HTTPException(
-            status_code=500, detail="Error parsing proposal template file."
-        )
+        logger.error(f"Error decoding JSON from proposal template file: {template_path}")
+        raise HTTPException(status_code=500, detail="Error parsing proposal template file.")
 
 
 def _load_template_from_db(template_name: str) -> Optional[Dict[str, Any]]:
@@ -308,28 +293,30 @@ def _load_template_from_db(template_name: str) -> Optional[Dict[str, Any]]:
     try:
         from backend.core.db import get_engine
         from sqlalchemy import text
-        
+
         engine = get_engine()
         with engine.begin() as connection:
-            query = text("""
+            query = text(
+                """
                 SELECT template_data
                 FROM template_versions tv
                 JOIN templates t ON tv.template_id = t.id
                 WHERE t.filename = :template_name AND tv.status = 'active'
                 ORDER BY tv.created_at DESC
                 LIMIT 1
-            """)
+            """
+            )
             result = connection.execute(query, {"template_name": template_name})
             row = result.fetchone()
-            
+
             if row and row[0]:
                 template_data = row[0]
                 if isinstance(template_data, str):
                     return json.loads(template_data)
                 return template_data
-            
+
             return None
-            
+
     except Exception as e:
         logger.debug(f"Database template loading error: {e}")
         return None

@@ -1,6 +1,5 @@
 #  Standard Library
 import logging
-import uuid
 from typing import List
 
 #  Third-Party Libraries
@@ -35,7 +34,7 @@ async def get_teams():
 
 
 @router.get("/users", response_model=List[User])
-async def get_users(role: str = None, current_user: dict = Depends(get_current_user)):
+async def get_users(role: str | None = None, current_user: dict = Depends(get_current_user)):
     """
     Returns a list of users in the system.
     If 'role' is provided, filters by that role.
@@ -46,7 +45,7 @@ async def get_users(role: str = None, current_user: dict = Depends(get_current_u
             # We need to fetch donor_ids, outcomes, and field_contexts for preselection logic
             # Using subqueries or CTEs for aggregation
             base_query = """
-                SELECT 
+                SELECT
                     u.id, u.name, u.email, t.name as team_name,
                     COALESCE(ARRAY_AGG(DISTINCT ud.donor_id) FILTER (WHERE ud.donor_id IS NOT NULL), '{{}}') as donor_ids,
                     COALESCE(ARRAY_AGG(DISTINCT uo.outcome_id) FILTER (WHERE uo.outcome_id IS NOT NULL), '{{}}') as outcomes,
@@ -65,42 +64,47 @@ async def get_users(role: str = None, current_user: dict = Depends(get_current_u
 
             if role:
                 role_names = [role.lower()]
-                if 'drafter' in role.lower():
-                    role_names.append(role.lower().replace('drafter', 'writer'))
-                elif 'writer' in role.lower():
-                    role_names.append(role.lower().replace('writer', 'drafter'))
+                if "drafter" in role.lower():
+                    role_names.append(role.lower().replace("drafter", "writer"))
+                elif "writer" in role.lower():
+                    role_names.append(role.lower().replace("writer", "drafter"))
 
                 logger.info(f"[GET USERS] Filtering by roles: {role_names}")
                 query = text(base_query.format(where_clause="LOWER(r.name) IN :role_names"))
                 result = connection.execute(query, {"role_names": tuple(role_names)})
             else:
                 logger.info("[GET USERS] Fetching reviewers")
-                query = text(base_query.format(where_clause="LOWER(r.name) IN ('project reviewer', 'proposal reviewer')"))
+                query = text(
+                    base_query.format(where_clause="LOWER(r.name) IN ('project reviewer', 'proposal reviewer')")
+                )
                 result = connection.execute(query)
-            
+
             users = []
             for row in result.mappings():
-                users.append(User(
-                    id=row['id'],
-                    name=row['name'],
-                    email=row['email'],
-                    team_name=row['team_name'],
-                    donor_ids=row['donor_ids'],
-                    outcomes=row['outcomes'],
-                    field_contexts=row['field_contexts']
-                ))
+                users.append(
+                    User(
+                        id=row["id"],
+                        name=row["name"],
+                        email=row["email"],
+                        team_name=row["team_name"],
+                        donor_ids=row["donor_ids"],
+                        outcomes=row["outcomes"],
+                        field_contexts=row["field_contexts"],
+                    )
+                )
 
             logger.info(f"[GET USERS] Found {len(users)} users total")
-            
+
             # Exclude the current user from the list
             current_user_id = str(current_user["user_id"])
             users = [user for user in users if str(user.id) != current_user_id]
             logger.info(f"[GET USERS] Returning {len(users)} users after filtering current user")
-            
+
             return users
     except Exception as e:
         logger.error(f"[GET USERS ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Could not retrieve users.")
+
 
 @router.get("/roles", response_model=List[Role])
 async def get_roles():
@@ -116,6 +120,7 @@ async def get_roles():
         logger.error(f"[GET ROLES ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Could not retrieve roles.")
 
+
 @router.get("/donors/groups")
 async def get_donor_groups():
     """
@@ -129,6 +134,7 @@ async def get_donor_groups():
     except Exception as e:
         logger.error(f"[GET DONOR GROUPS ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Could not retrieve donor groups.")
+
 
 @router.get("/outcomes")
 async def get_outcomes():
@@ -153,7 +159,9 @@ async def get_user_settings(current_user: dict = Depends(get_current_user)):
     user_id = current_user["user_id"]
     try:
         with get_engine().connect() as connection:
-            user_query = text("SELECT geographic_coverage_type, geographic_coverage_region, geographic_coverage_country FROM users WHERE id = :user_id")
+            user_query = text(
+                "SELECT geographic_coverage_type, geographic_coverage_region, geographic_coverage_country FROM users WHERE id = :user_id"
+            )
             user_result = connection.execute(user_query, {"user_id": user_id}).fetchone()
             if not user_result:
                 raise HTTPException(status_code=404, detail="User not found.")
@@ -191,11 +199,12 @@ async def get_user_settings(current_user: dict = Depends(get_current_user)):
                 donor_groups=donor_groups,
                 donor_ids=donor_ids,
                 outcomes=outcomes,
-                field_contexts=field_contexts
+                field_contexts=field_contexts,
             )
     except Exception as e:
         logger.error(f"[GET USER SETTINGS ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Could not retrieve user settings.")
+
 
 @router.put("/users/me/settings", status_code=204)
 async def update_user_settings(settings: UserSettings, current_user: dict = Depends(get_current_user)):
@@ -207,27 +216,50 @@ async def update_user_settings(settings: UserSettings, current_user: dict = Depe
         with get_engine().connect() as connection:
             with connection.begin():
                 # Update user's geographic coverage
-                user_update_query = text("""
+                user_update_query = text(
+                    """
                     UPDATE users
                     SET geographic_coverage_type = :geographic_coverage_type,
                         geographic_coverage_region = :geographic_coverage_region,
                         geographic_coverage_country = :geographic_coverage_country
                     WHERE id = :user_id
-                """)
-                connection.execute(user_update_query, {
-                    "geographic_coverage_type": settings.geographic_coverage_type,
-                    "geographic_coverage_region": settings.geographic_coverage_region,
-                    "geographic_coverage_country": settings.geographic_coverage_country,
-                    "user_id": user_id
-                })
+                """
+                )
+                connection.execute(
+                    user_update_query,
+                    {
+                        "geographic_coverage_type": settings.geographic_coverage_type,
+                        "geographic_coverage_region": settings.geographic_coverage_region,
+                        "geographic_coverage_country": settings.geographic_coverage_country,
+                        "user_id": user_id,
+                    },
+                )
 
                 # Clear existing user roles, donor groups, outcomes, and field contexts
-                connection.execute(text("DELETE FROM user_roles WHERE user_id = :user_id"), {"user_id": user_id})
-                connection.execute(text("DELETE FROM user_role_requests WHERE user_id = :user_id"), {"user_id": user_id})
-                connection.execute(text("DELETE FROM user_donor_groups WHERE user_id = :user_id"), {"user_id": user_id})
-                connection.execute(text("DELETE FROM user_donors WHERE user_id = :user_id"), {"user_id": user_id})
-                connection.execute(text("DELETE FROM user_outcomes WHERE user_id = :user_id"), {"user_id": user_id})
-                connection.execute(text("DELETE FROM user_field_contexts WHERE user_id = :user_id"), {"user_id": user_id})
+                connection.execute(
+                    text("DELETE FROM user_roles WHERE user_id = :user_id"),
+                    {"user_id": user_id},
+                )
+                connection.execute(
+                    text("DELETE FROM user_role_requests WHERE user_id = :user_id"),
+                    {"user_id": user_id},
+                )
+                connection.execute(
+                    text("DELETE FROM user_donor_groups WHERE user_id = :user_id"),
+                    {"user_id": user_id},
+                )
+                connection.execute(
+                    text("DELETE FROM user_donors WHERE user_id = :user_id"),
+                    {"user_id": user_id},
+                )
+                connection.execute(
+                    text("DELETE FROM user_outcomes WHERE user_id = :user_id"),
+                    {"user_id": user_id},
+                )
+                connection.execute(
+                    text("DELETE FROM user_field_contexts WHERE user_id = :user_id"),
+                    {"user_id": user_id},
+                )
 
                 # Insert new roles (actual roles - but wait, should a user be able to update their own actual roles?)
                 # Actually, the user says "prepopulated with the list of role the user already has".
@@ -237,38 +269,66 @@ async def update_user_settings(settings: UserSettings, current_user: dict = Depe
                 # but I'll stick close to existing logic while adding the requested roles.
                 if settings.roles:
                     role_insert_query = text("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, :role_id)")
-                    connection.execute(role_insert_query, [{"user_id": user_id, "role_id": role_id} for role_id in settings.roles])
+                    connection.execute(
+                        role_insert_query,
+                        [{"user_id": user_id, "role_id": role_id} for role_id in settings.roles],
+                    )
 
                 # Insert new requested roles
                 if settings.requested_roles:
-                    # Only insert into requests if they don't already HAVE the role? 
+                    # Only insert into requests if they don't already HAVE the role?
                     # The prompt says "remain colored in orange until the system admin grant the role".
                     # So if I have A, and I request B, A is in user_roles, B is in user_role_requests.
                     # Wait, if I save, and I haven't been granted B yet, B should stay in user_role_requests.
-                    
+
                     # For now, let's just save whatever requested_roles they sent.
-                    req_role_insert_query = text("INSERT INTO user_role_requests (user_id, role_id) VALUES (:user_id, :role_id)")
-                    connection.execute(req_role_insert_query, [{"user_id": user_id, "role_id": role_id} for role_id in settings.requested_roles])
+                    req_role_insert_query = text(
+                        "INSERT INTO user_role_requests (user_id, role_id) VALUES (:user_id, :role_id)"
+                    )
+                    connection.execute(
+                        req_role_insert_query,
+                        [{"user_id": user_id, "role_id": role_id} for role_id in settings.requested_roles],
+                    )
 
                 # Insert new donor groups
                 if settings.donor_groups:
-                    donor_group_insert_query = text("INSERT INTO user_donor_groups (user_id, donor_group) VALUES (:user_id, :donor_group)")
-                    connection.execute(donor_group_insert_query, [{"user_id": user_id, "donor_group": dg} for dg in settings.donor_groups])
+                    donor_group_insert_query = text(
+                        "INSERT INTO user_donor_groups (user_id, donor_group) VALUES (:user_id, :donor_group)"
+                    )
+                    connection.execute(
+                        donor_group_insert_query,
+                        [{"user_id": user_id, "donor_group": dg} for dg in settings.donor_groups],
+                    )
 
                 # Insert new donors
                 if settings.donor_ids:
-                    donor_insert_query = text("INSERT INTO user_donors (user_id, donor_id) VALUES (:user_id, :donor_id)")
-                    connection.execute(donor_insert_query, [{"user_id": user_id, "donor_id": did} for did in settings.donor_ids])
+                    donor_insert_query = text(
+                        "INSERT INTO user_donors (user_id, donor_id) VALUES (:user_id, :donor_id)"
+                    )
+                    connection.execute(
+                        donor_insert_query,
+                        [{"user_id": user_id, "donor_id": did} for did in settings.donor_ids],
+                    )
 
                 # Insert new outcomes
                 if settings.outcomes:
-                    outcome_insert_query = text("INSERT INTO user_outcomes (user_id, outcome_id) VALUES (:user_id, :outcome_id)")
-                    connection.execute(outcome_insert_query, [{"user_id": user_id, "outcome_id": outcome_id} for outcome_id in settings.outcomes])
+                    outcome_insert_query = text(
+                        "INSERT INTO user_outcomes (user_id, outcome_id) VALUES (:user_id, :outcome_id)"
+                    )
+                    connection.execute(
+                        outcome_insert_query,
+                        [{"user_id": user_id, "outcome_id": outcome_id} for outcome_id in settings.outcomes],
+                    )
 
                 # Insert new field contexts
                 if settings.field_contexts:
-                    fc_insert_query = text("INSERT INTO user_field_contexts (user_id, field_context_id) VALUES (:user_id, :fc_id)")
-                    connection.execute(fc_insert_query, [{"user_id": user_id, "fc_id": fc_id} for fc_id in settings.field_contexts])
+                    fc_insert_query = text(
+                        "INSERT INTO user_field_contexts (user_id, field_context_id) VALUES (:user_id, :fc_id)"
+                    )
+                    connection.execute(
+                        fc_insert_query,
+                        [{"user_id": user_id, "fc_id": fc_id} for fc_id in settings.field_contexts],
+                    )
     except Exception as e:
         logger.error(f"[UPDATE USER SETTINGS ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Could not update user settings.")

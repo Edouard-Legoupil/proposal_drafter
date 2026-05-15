@@ -1,16 +1,12 @@
-import pytest
-from fastapi.testclient import TestClient
-from backend.main import app
-
 def test_store_base_data(authenticated_client):
     client = authenticated_client
     payload = {
         "form_data": {
             "Project title": "Migration Support",
-            "Project type": "Humanitarian Aid"
+            "Project type": "Humanitarian Aid",
         },
         "project_description": "A test description for unit testing.",
-        "template_name": "proposal_template_unhcr.json"
+        "template_name": "proposal_template_unhcr.json",
     }
 
     response = client.post("/api/store_base_data", json=payload)

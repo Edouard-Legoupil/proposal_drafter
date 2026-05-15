@@ -1,7 +1,6 @@
 import re
-import uuid
 import os
-from playwright.sync_api import Playwright, sync_playwright, Page, expect
+from playwright.sync_api import sync_playwright, expect
 
 
 def test_user_registration():  # page: Page argument is removed when using sync_playwright() block
@@ -11,29 +10,27 @@ def test_user_registration():  # page: Page argument is removed when using sync_
     # Base URL for the application
     base_url = "http://localhost:8502"
 
-
     # Define where the video will be saved.
     VIDEO_DIR = "playwright/test-results/videos"
 
     # Ensure the directory exists
     os.makedirs(VIDEO_DIR, exist_ok=True)
 
-
     # Use the sync_playwright context manager to launch and control the browser lifecycle
     with sync_playwright() as playwright:
         # Launch browser (use chromium, firefox, or webkit)
         browser = playwright.chromium.launch(headless=False, slow_mo=500)
-        
+
         # 2. Create a new context and set the video recording directory
         # Video recording starts now.
         context = browser.new_context(
             record_video_dir=VIDEO_DIR,
             # Set viewport to a high resolution (e.g., Full HD) for maximum screen space
-            viewport={"width": 1920, "height": 1080}, 
+            viewport={"width": 1920, "height": 1080},
             # Set the video output size to match the viewport for best quality
-            record_video_size={"width": 1920, "height": 1080}
+            record_video_size={"width": 1920, "height": 1080},
         )
-        
+
         # 3. Get a new page from the context
         page = context.new_page()
 
@@ -47,14 +44,13 @@ def test_user_registration():  # page: Page argument is removed when using sync_
 
         page.goto(f"{base_url}")
 
-        # Take screenshot landing 
+        # Take screenshot landing
         page.screenshot(path="playwright/test-results/register_landing.png")
 
         # Navigate to the registration page
 
         page.get_by_test_id("register-link").click()
         # Assuming the registration page is at /register
-
 
         # Fill out the registration form
         # These are common labels, but might need adjustment
@@ -68,7 +64,7 @@ def test_user_registration():  # page: Page argument is removed when using sync_
 
         # Create test-results directory if it doesn't exist
         os.makedirs("playwright/test-results", exist_ok=True)
-        
+
         # Take screenshot before clicking register
         page.screenshot(path="playwright/test-results/register_page_before_submit.png")
 
@@ -76,12 +72,12 @@ def test_user_registration():  # page: Page argument is removed when using sync_
         # Assuming the button has the text "Register"
         page.get_by_role("button", name="Register").click()
 
-
-
         # Expect to be redirected to the dashboard
         expect(page).to_have_url(re.compile(".*dashboard"))
         # The dashboard heading might be different
-        expect(page.get_by_text("Draft Smart Project Proposals with AI, Curated Knowledge and Peer Review.")).to_be_visible()
+        expect(
+            page.get_by_text("Draft Smart Project Proposals with AI, Curated Knowledge and Peer Review.")
+        ).to_be_visible()
 
         # Take screenshot after clicking register
         page.screenshot(path="playwright/test-results/register_page_after_submit.png")
@@ -101,7 +97,6 @@ def test_user_registration():  # page: Page argument is removed when using sync_
         # Expect to be redirected to the dashboard
         expect(page).to_have_url(re.compile(".*dashboard"))
 
-
         # -------------------
         # End of Test Logic
         # -------------------
@@ -111,12 +106,8 @@ def test_user_registration():  # page: Page argument is removed when using sync_
         video_path = page.video.path()
         context.close()
         browser.close()
-        
+
         # Optional: Rename the file to something more descriptive
         new_video_path = os.path.join(VIDEO_DIR, "user_registration.webm")
         os.rename(video_path, new_video_path)
         print(f"Video saved successfully to: {new_video_path}")
-
-
-
-

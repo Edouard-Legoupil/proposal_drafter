@@ -1,11 +1,10 @@
 #  Third-Party Libraries
-from fastapi import APIRouter, Request
-from datetime import datetime 
-import psutil  
+from fastapi import APIRouter
+from datetime import datetime
+import psutil
 
 #  Internal Modules
-from backend.core.db import test_connection
-from backend.core.redis import redis_client
+from backend.core.error_handlers import get_error_handler
 
 # This module provides health check and debugging endpoints.
 # These are useful for monitoring the application's status and for troubleshooting.
@@ -13,28 +12,49 @@ from backend.core.redis import redis_client
 # Create a new router for health-related endpoints.
 router = APIRouter()
 
+
 @router.get("/health")
 def health():
     """
     A simple endpoint to confirm that the API is running and responsive.
     """
     return {
-        "status": "لْحَمْدُ لِلَّٰهِ -- API is running", 
+        "status": "لْحَمْدُ لِلَّٰهِ -- API is running",
         "timestamp": datetime.now().isoformat(),
-        "memory_usage": psutil.Process().memory_info().rss / 1024 / 1024
-        }
+        "memory_usage": psutil.Process().memory_info().rss / 1024 / 1024,
+    }
+
 
 # very cheap health endpoint
 @router.get("/healthz")
 async def kubernetes_health():
     """Health check for Kubernetes/Azure"""
-    return {"status": "ok"}   
+    return {"status": "ok"}
 
-# /robots933456.txt (the platform’s classic warm‑up path): 
+
+# /robots933456.txt (the platform’s classic warm‑up path):
 @router.get("/robots933456.txt")
 def warmup():
     return "ok"
-       
+
+
+@router.get("/health/circuit-breaker")
+def circuit_breaker_status():
+    """
+    Get the current status of the LLM circuit breaker.
+
+    Returns:
+        Current state and metrics of the LLM circuit breaker
+    """
+    error_handler = get_error_handler()
+    status = error_handler.get_llm_circuit_breaker_status()
+
+    return {
+        "status": "success",
+        "llm_circuit_breaker": status,
+        "message": "LLM circuit breaker is protecting the system from cascading failures",
+    }
+
 
 # --- Debugging Endpoints ---
 # These endpoints are intended for development and debugging purposes only.

@@ -1,8 +1,8 @@
 # Quickstart Guide: Proposal Drafter
 
-**Version:** 1.0  
-**Date:** 2025-05-13  
-**Input:** Feature specification from `/specs/001-proposal_drafter/spec.md`  
+**Version:** 1.0
+**Date:** 2025-05-13
+**Input:** Feature specification from `/specs/001-proposal_drafter/spec.md`
 **Purpose:** Phase 1 - Quickstart Guide
 
 ---
@@ -211,7 +211,116 @@ CORS_ORIGINS="http://localhost:3000,http://127.0.0.1:3000"
 
 # Debug
 DEBUG=true
+
+# Secrets Management (Production)
+USE_SECRET_MANAGER=false
+SECRET_MANAGER_PROJECT_ID=your-gcp-project-id
 ```
+
+### Secrets Management
+
+The Proposal Drafter supports three modes for secrets management:
+
+#### 1. Development Mode (Environment Variables)
+
+For local development, secrets are loaded from `.env` files:
+
+```bash
+# Copy example files
+cp .env.example .env
+cp backend/.env.example backend/.env
+
+# Edit the files with your actual secrets
+nano .env
+nano backend/.env
+```
+
+**Important:** Never commit `.env` files with real secrets to Git. The `.gitignore` file already excludes these files.
+
+#### 2. Production Mode (Google Cloud Secret Manager)
+
+For production deployments on Google Cloud, use Google Cloud Secret Manager:
+
+```bash
+# Enable secret manager mode
+export USE_SECRET_MANAGER=true
+export SECRET_PROVIDER=gcp
+export SECRET_MANAGER_PROJECT_ID=your-gcp-project-id
+
+# Create secrets in Google Cloud Secret Manager
+gcloud secrets create SECRET_KEY --replication-policy="automatic"
+gcloud secrets create DB_PASSWORD --replication-policy="automatic"
+# ... create other secrets as needed
+
+# Add secret values
+echo "your-strong-secret-key" | gcloud secrets versions add SECRET_KEY --data-file=-
+echo "your-db-password" | gcloud secrets versions add DB_PASSWORD --data-file=-
+
+# The application will automatically fetch secrets from Google Cloud Secret Manager
+```
+
+#### 3. Production Mode (Azure Key Vault)
+
+For production deployments on Azure, use Azure Key Vault:
+
+```bash
+# Enable secret manager mode
+export USE_SECRET_MANAGER=true
+export SECRET_PROVIDER=azure
+export AZURE_KEY_VAULT_NAME=your-key-vault-name
+
+# Install Azure CLI and login
+az login
+
+# Create secrets in Azure Key Vault
+az keyvault secret set --vault-name $AZURE_KEY_VAULT_NAME --name SECRET-KEY --value "your-strong-secret-key"
+az keyvault secret set --vault-name $AZURE_KEY_VAULT_NAME --name DB-PASSWORD --value "your-db-password"
+# ... create other secrets as needed
+
+# The application will automatically fetch secrets from Azure Key Vault
+```
+
+### Secrets Rotation
+
+The project includes a secrets rotation script to automate key rotation:
+
+```bash
+# Dry run (shows what would be rotated)
+./scripts/secrets-rotation.sh --dry-run
+
+# Actual rotation
+./scripts/secrets-rotation.sh
+
+# Force update .env files (use with caution)
+./scripts/secrets-rotation.sh --force
+```
+
+**Rotation Policy:**
+- Secrets are rotated every 90 days
+- The script keeps the last 2 versions of each secret
+- Old versions are disabled but not deleted
+
+### Pre-commit Hooks
+
+The project includes pre-commit hooks to prevent secrets from being committed:
+
+```bash
+# Install pre-commit hooks
+pre-commit install
+
+# Run hooks on all files
+pre-commit run --all-files
+
+# Update hooks to latest versions
+pre-commit autoupdate
+```
+
+**Hooks include:**
+- `detect-secrets`: Scans for potential secrets in code
+- `detect-private-key`: Prevents private keys from being committed
+- `black`: Python code formatting
+- `flake8`: Python linting
+- `mypy`: Type checking
 
 ### Frontend (.env)
 

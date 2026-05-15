@@ -22,20 +22,17 @@ except LookupError:
     logger.info("NLTK punkt tokenizer not found, downloading...")
     nltk.download("punkt", download_dir=NLTK_DATA_PATH)
 
+
 # --- Embedding helper ---
 def get_embedding(chunk, model, embedder_config):
     """Get embedding for a text chunk with error handling"""
     try:
-        response = litellm.embedding(
-            model=model,
-            input=[chunk],
-            max_retries=3,
-            **embedder_config
-        )
-        return chunk, response.data[0]['embedding']
+        response = litellm.embedding(model=model, input=[chunk], max_retries=3, **embedder_config)
+        return chunk, response.data[0]["embedding"]
     except Exception as e:
         logger.error(f"[EMBEDDING ERROR] Failed to get embedding for chunk: {e}")
         raise
+
 
 # --- Main processing function ---
 async def process_and_store_text(reference_id, text_content, connection):
@@ -49,11 +46,11 @@ async def process_and_store_text(reference_id, text_content, connection):
         logger.info(f"Deleting existing vectors for reference_id: {reference_id}")
         connection.execute(
             text("DELETE FROM knowledge_card_reference_vectors WHERE reference_id = :ref_id"),
-            {"ref_id": reference_id}
+            {"ref_id": reference_id},
         )
 
         # Chunk the text
-        sentences = sent_tokenize(text_content.replace('\x00', ''))
+        sentences = sent_tokenize(text_content.replace("\x00", ""))
 
         chunks = []
         current_chunk = ""
@@ -74,7 +71,7 @@ async def process_and_store_text(reference_id, text_content, connection):
         # Embedding configuration
         embedder_config = get_embedder_config()["config"]
         model = f"azure/{embedder_config.pop('deployment_id')}"
-        embedder_config.pop('model', None)
+        embedder_config.pop("model", None)
 
         # Generate embeddings in parallel
         logger.info(f"Starting parallel embedding generation for {len(chunks)} chunks...")
@@ -88,11 +85,17 @@ async def process_and_store_text(reference_id, text_content, connection):
 
                     # Insert chunk and embedding into database
                     connection.execute(
-                        text("""
+                        text(
+                            """
                             INSERT INTO knowledge_card_reference_vectors (reference_id, text_chunk, embedding)
                             VALUES (:ref_id, :chunk, :embedding)
-                        """),
-                        {"ref_id": reference_id, "chunk": chunk, "embedding": str(embedding)}
+                        """
+                        ),
+                        {
+                            "ref_id": reference_id,
+                            "chunk": chunk,
+                            "embedding": str(embedding),
+                        },
                     )
 
                 except Exception as e:
@@ -101,15 +104,19 @@ async def process_and_store_text(reference_id, text_content, connection):
 
         # Update scraped_at timestamp
         connection.execute(
-            text("UPDATE knowledge_card_references SET scraped_at = CURRENT_TIMESTAMP, scraping_error = FALSE WHERE id = :id"),
-            {"id": reference_id}
+            text(
+                "UPDATE knowledge_card_references SET scraped_at = CURRENT_TIMESTAMP, scraping_error = FALSE WHERE id = :id"
+            ),
+            {"id": reference_id},
         )
 
     except Exception as e:
         logger.error(f"[PROCESS AND STORE TEXT ERROR] {e}", exc_info=True)
         # Mark as error
         connection.execute(
-            text("UPDATE knowledge_card_references SET scraping_error = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = :id"),
-            {"id": reference_id}
+            text(
+                "UPDATE knowledge_card_references SET scraping_error = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = :id"
+            ),
+            {"id": reference_id},
         )
         raise

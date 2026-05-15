@@ -5,7 +5,7 @@ files = glob.glob("/home/edouard/python/proposal_drafter/backend/templates/propo
 errors = []
 for f in files:
     try:
-        with open(f, 'r') as fp:
+        with open(f, "r") as fp:
             json.load(fp)
     except Exception as e:
         errors.append(f"{f}: {e}")

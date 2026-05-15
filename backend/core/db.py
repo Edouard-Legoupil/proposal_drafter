@@ -1,4 +1,3 @@
-
 #  Standard Library
 import logging
 import urllib.parse
@@ -6,9 +5,6 @@ import os
 
 #  Third-Party Libraries
 from sqlalchemy import create_engine, text
-from sqlalchemy.exc import SQLAlchemyError
-import pg8000.dbapi
-import psycopg2
 
 #  Internal Modules
 from backend.core.config import db_host, db_name, db_username, db_password
@@ -21,6 +17,7 @@ cloud_provider = os.getenv("CLOUD_PROVIDER", "local").lower()  # gcp | azure | l
 
 # <--- Start with None, lazy-load later
 engine = None
+connector = None
 
 
 def get_engine():
@@ -35,6 +32,7 @@ def get_engine():
 
     if os.getenv("TESTING"):
         from unittest.mock import MagicMock
+
         logger.info("TESTING mode: using MagicMock engine")
         engine = MagicMock()
         return engine
@@ -42,13 +40,12 @@ def get_engine():
     try:
         if cloud_provider == "gcp":
             # --- Cloud SQL Connector Initialization ---
-            connector = None
-
-            def get_connector() -> "Connector":
+            def get_connector():
                 """Initializes and returns a Cloud SQL Connector instance."""
                 global connector
                 if connector is None:
                     from google.cloud.sql.connector import Connector
+
                     connector = Connector()
                 return connector
 
@@ -93,9 +90,7 @@ def get_engine():
         else:  # local or default
             logger.info(f"Creating local engine for {db_host}")
             encoded_password = urllib.parse.quote_plus(db_password) if db_password else ""
-            connection_string = (
-                f"postgresql+psycopg2://{db_username}:{encoded_password}@{db_host}:5432/{db_name}"
-            )
+            connection_string = f"postgresql+psycopg2://{db_username}:{encoded_password}@{db_host}:5432/{db_name}"
             engine = create_engine(
                 connection_string,
                 pool_pre_ping=True,
@@ -114,9 +109,6 @@ def get_engine():
     return engine
 
 
-
-
-
 def test_connection():
     """
     Explicitly test database connectivity.
@@ -125,12 +117,14 @@ def test_connection():
         eng = get_engine()
         with eng.connect() as conn:
             from sqlalchemy import text
+
             result = conn.execute(text("SELECT CURRENT_TIMESTAMP as current_time, version() as db_version"))
             logger.info(f"✅ Database connection successful. Current time: {result.scalar()}")
             return True
     except Exception as e:
         logger.error(f"❌ Failed to connect to database: {e}")
         return False
+
 
 # def getconn():
 #     """
@@ -201,4 +195,3 @@ def test_connection():
 #         # Re-raising the exception to prevent the application from starting
 #         # with a faulty database connection.
 #         raise
-

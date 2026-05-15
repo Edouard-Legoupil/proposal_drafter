@@ -16,37 +16,42 @@ def repair_json_string(json_str):
     """
     # Clean only truly problematic control characters
     clean_json_str = re.sub(r"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]", "", json_str)
-    
+
     try:
         return json.loads(clean_json_str)
     except json.JSONDecodeError as e:
         logger.warning(f"Initial JSON parse failed, attempting repair: {e}")
-        
+
         # Step 1: Escape literal newlines inside JSON strings
         # Use a NON-GREEDY match for strings to avoid matching across properties
         def escape_newlines_callback(match):
             return match.group(0).replace("\n", "\\n").replace("\r", "\\r")
-        
-        repaired = re.sub(r'"(?:[^"\\]|\\.)*?"', escape_newlines_callback, clean_json_str, flags=re.DOTALL)
-        
+
+        repaired = re.sub(
+            r'"(?:[^"\\]|\\.)*?"',
+            escape_newlines_callback,
+            clean_json_str,
+            flags=re.DOTALL,
+        )
+
         # Step 2: Fix numbers with commas (thousands separators like 1,800.00)
         for _ in range(3):
-            repaired = re.sub(r'(\d),(\d{3})(?!\d)', r'\1\2', repaired)
+            repaired = re.sub(r"(\d),(\d{3})(?!\d)", r"\1\2", repaired)
 
         # Step 3: Remove trailing commas within objects and arrays
         repaired = re.sub(r",\s*([}\]])", r"\1", repaired)
-        
+
         # Step 4: Quote unquoted keys
         # We look for words followed by a colon. We exclude things already in quotes.
         # This is safer: find {key: or ,key:
         repaired = re.sub(r"([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)(\s*:)", r'\1"\2"\3', repaired)
-        
+
         # Step 5: Handle single quote usage for keys/values
         # Keys: {'key': ...} -> {"key": ...}
         repaired = re.sub(r"([{,]\s*)'([a-zA-Z_][a-zA-Z0-9_]*)'(\s*:)", r'\1"\2"\3', repaired)
         # Values: {..., "key": 'value'} -> {..., "key": "value"}
         repaired = re.sub(r"(:\s*)'([^']*)'(\s*[,}])", r'\1"\2"\3', repaired)
-        
+
         try:
             return json.loads(repaired)
         except Exception as repair_err:
@@ -67,7 +72,7 @@ def extract_json_from_crew_output(result):
         json_match = re.search(r"\{.*\}", raw_output, re.DOTALL)
         if not json_match:
             return None
-        
+
         return repair_json_string(json_match.group(0))
     except Exception as e:
         logger.error(f"Critical error in extract_json_from_crew_output: {e}")
@@ -135,9 +140,7 @@ def handle_text_format(
     #     generated_text = " ".join(generated_text.split()[:limit_value])
 
     if evaluation_status.lower() == "flagged" and feedback:
-        generated_text = regenerate_section_logic(
-            session_id, section_name, feedback, proposal_id
-        )
+        generated_text = regenerate_section_logic(session_id, section_name, feedback, proposal_id)
 
     return generated_text
 
@@ -151,7 +154,7 @@ def handle_text_format_with_context(
     proposal_id,
     special_requirements="None",
     follow_up_instruction="",
-    previous_content=""
+    previous_content="",
 ):
     """Handles 'text' format_type with previous content context and follow-up instructions."""
     section_name = section_config["section_name"]
@@ -187,14 +190,16 @@ def handle_text_format_with_context(
         inputs["char_limit"] = limit_value
     else:
         inputs["word_limit"] = limit_value
-    
+
     # Add follow-up instruction and previous content to context
     if follow_up_instruction:
         inputs["follow_up_instruction"] = follow_up_instruction
     if previous_content:
         inputs["previous_content"] = previous_content
-        inputs["context_instruction"] = "Use the previous content as a starting point and improve it based on the follow-up instructions. Maintain the structure and key points from the previous version."
-    
+        inputs[
+            "context_instruction"
+        ] = "Use the previous content as a starting point and improve it based on the follow-up instructions. Maintain the structure and key points from the previous version."
+
     result = crew_instance.kickoff(inputs=inputs)
     parsed = extract_json_from_crew_output(result)
     if not parsed:
@@ -208,9 +213,7 @@ def handle_text_format_with_context(
 
     if evaluation_status.lower() == "flagged" and feedback:
         # If flagged, try to regenerate with the feedback
-        generated_text = regenerate_section_logic(
-            session_id, section_name, feedback, proposal_id, previous_content
-        )
+        generated_text = regenerate_section_logic(session_id, section_name, feedback, proposal_id, previous_content)
 
     return generated_text
 
@@ -322,9 +325,7 @@ def handle_table_format(
         return ""
 
     generated_content = parsed_crew_output.get("generated_content", "")
-    logger.info(
-        f"Generated content for section '{section_name}':\n{json.dumps(generated_content, indent=2)}"
-    )
+    logger.info(f"Generated content for section '{section_name}':\n{json.dumps(generated_content, indent=2)}")
 
     table_data = {}
     pre_text = ""
@@ -345,9 +346,7 @@ def handle_table_format(
                 try:
                     table_data = repair_json_string(json_str) or {}
                 except Exception:
-                    logger.warning(
-                        f"Could not parse JSON from string for section '{section_name}'. Returning as is."
-                    )
+                    logger.warning(f"Could not parse JSON from string for section '{section_name}'. Returning as is.")
                     return generated_content
             else:
                 logger.warning(
@@ -363,7 +362,7 @@ def handle_table_format(
             # Fallback: check if table is at the top level (happens when LLM skips section name key)
             table_rows = table_data.get("table", [])
             notes = table_data.get("notes", "")
-        
+
         # REMOVED AGGRESSIVE SANITISATION ON NOTES
         # Use LLM compliance for length control
         # if (
@@ -378,23 +377,23 @@ def handle_table_format(
 
         if not table_rows:
             # If table is empty, return original text content containing the error/message
-            logger.warning(
-                f"No rows found in the table for section '{section_name}'. Returning original content."
-            )
+            logger.warning(f"No rows found in the table for section '{section_name}'. Returning original content.")
             return json.dumps(table_data) if table_data else ""
 
         # --- VALIDATION STEP ---
         if not isinstance(table_rows, list):
-             logger.error(f"Table data for section '{section_name}' is not a list. Skipping table formatting.")
-             return json.dumps(table_data)
-        
+            logger.error(f"Table data for section '{section_name}' is not a list. Skipping table formatting.")
+            return json.dumps(table_data)
+
         # Check for missing columns in the first row (and warn)
         if table_rows and isinstance(table_rows[0], dict):
-             expected_columns = [col["name"] for col in columns]
-             actual_columns = table_rows[0].keys()
-             missing_cols = set(expected_columns) - set(actual_columns)
-             if missing_cols:
-                  logger.warning(f"Table for section '{section_name}' is missing columns: {missing_cols}. Proceeding with available data.")
+            expected_columns = [col["name"] for col in columns]
+            actual_columns = table_rows[0].keys()
+            missing_cols = set(expected_columns) - set(actual_columns)
+            if missing_cols:
+                logger.warning(
+                    f"Table for section '{section_name}' is missing columns: {missing_cols}. Proceeding with available data."
+                )
         # -----------------------
 
         # Use headers from the first row to maintain order
@@ -427,13 +426,12 @@ def handle_table_format(
             final_content.append(f"\n{post_text}")
 
         final_output = "\n".join(final_content)
-        logger.info(
-            f"Successfully formatted section '{section_name}' with a Markdown table."
-        )
+        logger.info(f"Successfully formatted section '{section_name}' with a Markdown table.")
         return final_output
 
     except Exception as e:
         logger.error(
-            f"[CREWAI TABLE FORMAT ERROR] for section {section_name}: {e}", exc_info=True
+            f"[CREWAI TABLE FORMAT ERROR] for section {section_name}: {e}",
+            exc_info=True,
         )
         return ""

@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS user_field_contexts (
 );
 
 
--- Create Donors table 
+-- Create Donors table
 CREATE TABLE IF NOT EXISTS donors (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     account_id TEXT UNIQUE,
@@ -93,7 +93,7 @@ CREATE TABLE IF NOT EXISTS donors (
     last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create Outcomes table  
+-- Create Outcomes table
 CREATE TABLE IF NOT EXISTS outcomes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT UNIQUE NOT NULL,
@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS outcomes (
     last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create Field Contexts table  
+-- Create Field Contexts table
 CREATE TABLE IF NOT EXISTS field_contexts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT,
@@ -160,7 +160,7 @@ CREATE TABLE IF NOT EXISTS proposal_status_history (
 );
 
 
--- Create Proposal Peer Reviews table   
+-- Create Proposal Peer Reviews table
 CREATE TABLE IF NOT EXISTS proposal_peer_reviews (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     proposal_id UUID NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
@@ -227,12 +227,12 @@ CREATE TABLE IF NOT EXISTS knowledge_card_reviews (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create Knowledge Card References table  
+-- Create Knowledge Card References table
 CREATE TABLE IF NOT EXISTS knowledge_card_references (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     url TEXT NOT NULL UNIQUE,
     reference_type TEXT NOT NULL,
-    summary TEXT NOT NULL,    
+    summary TEXT NOT NULL,
     created_by UUID NOT NULL REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_by UUID NOT NULL REFERENCES users(id),
@@ -301,7 +301,7 @@ CREATE TABLE IF NOT EXISTS knowledge_card_reference_errors (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create join tables for many-to-many relationships  
+-- Create join tables for many-to-many relationships
 CREATE TABLE IF NOT EXISTS proposal_donors (
     proposal_id UUID NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
     donor_id UUID NOT NULL REFERENCES donors(id) ON DELETE CASCADE,
@@ -354,10 +354,10 @@ CREATE TABLE IF NOT EXISTS donor_template_comments (
 
 -- Create index for faster user lookup
 CREATE INDEX IF NOT EXISTS idx_proposals_user_id ON proposals(user_id);
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(email); 
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_knowledge_cards_donor_id ON knowledge_cards(donor_id);
 CREATE INDEX IF NOT EXISTS idx_knowledge_cards_outcome_id ON knowledge_cards(outcome_id);
-CREATE INDEX IF NOT EXISTS idx_knowledge_cards_field_context_id ON knowledge_cards(field_context_id); 
+CREATE INDEX IF NOT EXISTS idx_knowledge_cards_field_context_id ON knowledge_cards(field_context_id);
 
 CREATE INDEX IF NOT EXISTS idx_knowledge_card_to_references_card_id ON knowledge_card_to_references(knowledge_card_id);
 CREATE INDEX IF NOT EXISTS idx_knowledge_card_to_references_reference_id ON knowledge_card_to_references(reference_id);
@@ -373,8 +373,8 @@ CREATE INDEX IF NOT EXISTS idx_donor_template_requests_creator ON donor_template
 CREATE INDEX IF NOT EXISTS idx_donor_template_comments_request ON donor_template_comments(template_request_id);
 CREATE INDEX IF NOT EXISTS idx_donor_template_comments_section ON donor_template_comments(template_request_id, section_name);
 CREATE INDEX IF NOT EXISTS idx_donor_template_comments_user ON donor_template_comments(user_id);
- 
- 
+
+
 
 -- Grant table permissions to application user
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO <DB_USERNAME>;
@@ -450,7 +450,7 @@ ON template_registry(template_key, template_type);
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_single_prod_version
 ON template_versions(template_registry_id)
-WHERE environment = 'prod' AND status = 'promoted_to_prod'; 
+WHERE environment = 'prod' AND status = 'promoted_to_prod';
 
 -- Create a trigger to update the updated_at timestamp for templates
 CREATE OR REPLACE FUNCTION update_template_timestamp()
@@ -482,7 +482,7 @@ $$ LANGUAGE plpgsql;
 
 -- Create views for querying template data
 CREATE OR REPLACE VIEW vw_template_summary AS
-SELECT 
+SELECT
     t.id AS template_id,
     t.name AS template_name,
     t.filename,
@@ -505,7 +505,7 @@ LEFT JOIN donors d ON td.donor_id = d.id
 GROUP BY t.id, tv.version_number, tv.created_at, tv.status;
 
 CREATE OR REPLACE VIEW vw_template_version_history AS
-SELECT 
+SELECT
     tv.id AS version_id,
     tv.template_registry_id,
     t.name AS template_name,
@@ -525,7 +525,7 @@ ORDER BY tv.created_at DESC;
 
 CREATE TYPE run_status AS ENUM (
     'drafting',
-    'completed', 
+    'completed',
     'failed',
     'cancelled'
 );
@@ -536,43 +536,43 @@ CREATE TABLE IF NOT EXISTS artifact_runs (
     artifact_type TEXT NOT NULL CHECK (artifact_type IN ('proposal', 'knowledge_card')),
     artifact_id UUID NOT NULL,
     user_id UUID NOT NULL REFERENCES users(id),
-    
+
     -- Run metadata
     run_status run_status NOT NULL DEFAULT 'drafting',
     start_time TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     end_time TIMESTAMPTZ,
-    
+
     -- Agent execution details
     agents_executed TEXT[],  -- Array of agent names
     model_deployment TEXT,    -- Model/deployment used
-    
+
     -- Token usage and cost
     tokens_input INTEGER DEFAULT 0,
     tokens_output INTEGER DEFAULT 0,
     estimated_cost NUMERIC(10,6) DEFAULT 0.0,
-    
+
     -- Performance metrics
     step_count INTEGER DEFAULT 0,
     retry_count INTEGER DEFAULT 0,
     failure_count INTEGER DEFAULT 0,
-    
+
     -- Timing information
     total_latency_ms INTEGER,  -- Total execution time in milliseconds
     stage_latencies JSONB,     -- Latency per stage/agent
-    
+
     -- Output metrics
     sections_generated INTEGER DEFAULT 0,
     pages_generated INTEGER DEFAULT 0,
     words_generated INTEGER DEFAULT 0,
-    
+
     -- Export events
     export_events JSONB,  -- Word/PDF export events with timestamps
-    
+
     -- Additional context
     template_name TEXT,
     template_version TEXT,
     metadata JSONB,
-    
+
     -- Timestamps
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -602,7 +602,7 @@ EXECUTE FUNCTION update_artifact_run_timestamp();
 
 -- Create views for querying telemetry data
 CREATE OR REPLACE VIEW vw_proposal_run_telemetry AS
-SELECT 
+SELECT
     ar.id AS run_id,
     ar.artifact_id AS proposal_id,
     ar.user_id,
@@ -633,7 +633,7 @@ JOIN proposals p ON ar.artifact_id = p.id
 WHERE ar.artifact_type = 'proposal';
 
 CREATE OR REPLACE VIEW vw_knowledge_card_run_telemetry AS
-SELECT 
+SELECT
     ar.id AS run_id,
     ar.artifact_id AS knowledge_card_id,
     ar.user_id,
@@ -669,7 +669,7 @@ WHERE ar.artifact_type = 'knowledge_card';
 
 
 -- ============================================================================
--- - Incident Analysis + Template Qualification 
+-- - Incident Analysis + Template Qualification
 -- ============================================================================
 -- PURPOSE
 --   1) Persisting incident-analysis / agentic QA outputs
@@ -849,7 +849,7 @@ CREATE TABLE IF NOT EXISTS template_versions (
     initial_file_content JSONB,
     release_notes TEXT,
     template_data JSONB NOT NULL,
-    
+
     created_by UUID REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_by UUID REFERENCES users(id),
@@ -1414,7 +1414,7 @@ BEGIN
     RETURN NEXT;
 END;
 $_$;
- 
+
 
 -------------
 
@@ -1555,4 +1555,3 @@ WHERE kc.id = src.knowledge_card_id;
 
 
 ---
-

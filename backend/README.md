@@ -262,7 +262,7 @@ These endpoints handle user and team management.
     -   **What it needs**: Nothing.
     -   **What it returns**: A list of all users in the system, excluding the current user.
 
- 
+
 
 ## Proposal Generation Workflow
 
@@ -322,5 +322,3 @@ Example:
   "sections": [ ... ]
 }
 ```
-
-

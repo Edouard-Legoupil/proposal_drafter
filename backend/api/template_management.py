@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Body
-from typing import List, Optional, Dict, Any
+from typing import List, Dict, Any
 import uuid
 import logging
 
@@ -8,10 +8,9 @@ from backend.models.template_models import (
     TemplateCreate,
     TemplateUpdate,
     TemplateVersionCreate,
-    TemplateVersionUpdate,
     TemplateResponse,
     TemplateVersionResponse,
-    TemplateFullResponse
+    TemplateFullResponse,
 )
 from backend.services.template_service import TemplateService
 from backend.core.db import get_engine
@@ -29,7 +28,7 @@ def get_template_service():
 @router.get("/templates", response_model=List[TemplateResponse])
 async def get_all_templates(
     current_user: uuid.UUID = Depends(get_current_user),
-    service: TemplateService = Depends(get_template_service)
+    service: TemplateService = Depends(get_template_service),
 ):
     """Get all templates with summary information"""
     try:
@@ -44,22 +43,22 @@ async def get_all_templates(
 async def get_template_by_id(
     template_id: uuid.UUID,
     current_user: uuid.UUID = Depends(get_current_user),
-    service: TemplateService = Depends(get_template_service)
+    service: TemplateService = Depends(get_template_service),
 ):
     """Get template by ID with full details"""
     try:
         template = await service.get_template_by_id(template_id)
         if not template:
             raise HTTPException(status_code=404, detail="Template not found")
-        
+
         version = await service.get_active_template_version(template_id)
         donors = await service.get_template_donors(template_id)
-        
+
         return {
             "template": template,
             "version": version,
             "template_data": version["template_data"] if version else None,
-            "donors": donors
+            "donors": donors,
         }
     except Exception as e:
         logger.error(f"Error getting template: {e}")
@@ -70,23 +69,23 @@ async def get_template_by_id(
 async def get_template_by_filename(
     filename: str,
     current_user: uuid.UUID = Depends(get_current_user),
-    service: TemplateService = Depends(get_template_service)
+    service: TemplateService = Depends(get_template_service),
 ):
     """Get template by filename (for backward compatibility)"""
     try:
         template_data = await service.get_template_by_filename(filename)
         if not template_data:
             raise HTTPException(status_code=404, detail="Template not found")
-        
+
         template_id = template_data["id"]
         version = await service.get_active_template_version(template_id)
         donors = await service.get_template_donors(template_id)
-        
+
         return {
             "template": template_data,
             "version": version,
             "template_data": version["template_data"] if version else None,
-            "donors": donors
+            "donors": donors,
         }
     except Exception as e:
         logger.error(f"Error getting template by filename: {e}")
@@ -97,7 +96,7 @@ async def get_template_by_filename(
 async def create_template(
     template_data: TemplateCreate = Body(...),
     current_user: uuid.UUID = Depends(get_current_user),
-    service: TemplateService = Depends(get_template_service)
+    service: TemplateService = Depends(get_template_service),
 ):
     """Create a new template"""
     try:
@@ -105,7 +104,7 @@ async def create_template(
         return {
             "message": "Template created successfully",
             "template": result["template"],
-            "version": result["version"]
+            "version": result["version"],
         }
     except HTTPException:
         raise
@@ -119,7 +118,7 @@ async def update_template_metadata(
     template_id: uuid.UUID,
     update_data: TemplateUpdate = Body(...),
     current_user: uuid.UUID = Depends(get_current_user),
-    service: TemplateService = Depends(get_template_service)
+    service: TemplateService = Depends(get_template_service),
 ):
     """Update template metadata"""
     try:
@@ -139,7 +138,7 @@ async def create_template_version(
     template_id: uuid.UUID,
     version_data: TemplateVersionCreate = Body(...),
     current_user: uuid.UUID = Depends(get_current_user),
-    service: TemplateService = Depends(get_template_service)
+    service: TemplateService = Depends(get_template_service),
 ):
     """Create a new version of a template"""
     try:
@@ -156,7 +155,7 @@ async def create_template_version(
 async def get_template_versions(
     template_id: uuid.UUID,
     current_user: uuid.UUID = Depends(get_current_user),
-    service: TemplateService = Depends(get_template_service)
+    service: TemplateService = Depends(get_template_service),
 ):
     """Get all versions of a template"""
     try:
@@ -172,7 +171,7 @@ async def get_template_versions(
 async def get_template_audit_log(
     template_id: uuid.UUID,
     current_user: uuid.UUID = Depends(get_current_user),
-    service: TemplateService = Depends(get_template_service)
+    service: TemplateService = Depends(get_template_service),
 ):
     """Get audit log for a template"""
     try:

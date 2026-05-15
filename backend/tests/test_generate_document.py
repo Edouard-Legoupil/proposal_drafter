@@ -22,32 +22,41 @@ async def test_generate_document(authenticated_client, db_session, mocker):
             {"section_name": "Results Matrix"},
             {"section_name": "Work Plan"},
             {"section_name": "Budget"},
-            {"section_name": "Annex 1. Risk Assessment Plan"}
+            {"section_name": "Annex 1. Risk Assessment Plan"},
         ]
     }
-    mocker.patch('backend.api.documents.load_proposal_template', return_value=dummy_template)
+    mocker.patch("backend.api.documents.load_proposal_template", return_value=dummy_template)
 
     # Mock the database engine for this specific test
     mock_engine = MagicMock()
     mock_connection = db_session
     mock_engine.connect.return_value.__enter__.return_value = mock_connection
-    mocker.patch('backend.api.documents.get_engine', return_value=mock_engine)
+    mocker.patch("backend.api.documents.get_engine", return_value=mock_engine)
 
     client = authenticated_client
-    user_id = app.dependency_overrides[get_current_user]()['user_id']
+    user_id = app.dependency_overrides[get_current_user]()["user_id"]
     proposal_id = str(uuid.uuid4())
 
     # Insert a mock proposal for the authenticated user
     db_session.execute(
-        text("""
+        text(
+            """
             INSERT INTO proposals (id, user_id, form_data, project_description, generated_sections, template_name, is_accepted)
             VALUES (:id, :user_id, :form_data, :project_description, :generated_sections, :template_name, :is_accepted)
-        """),
+        """
+        ),
         {
-            "id": proposal_id, "user_id": user_id,
-            "form_data": json.dumps({"Project Draft Short name": "Disaster Relief", "Main Outcome": [str(uuid.uuid4())]}),
+            "id": proposal_id,
+            "user_id": user_id,
+            "form_data": json.dumps(
+                {
+                    "Project Draft Short name": "Disaster Relief",
+                    "Main Outcome": [str(uuid.uuid4())],
+                }
+            ),
             "project_description": "Testing document generation.",
-                "generated_sections": json.dumps({
+            "generated_sections": json.dumps(
+                {
                     "Summary": "Content",
                     "Rationale": "Content",
                     "Project Description": "Content",
@@ -57,10 +66,12 @@ async def test_generate_document(authenticated_client, db_session, mocker):
                     "Results Matrix": "Content",
                     "Work Plan": "Content",
                     "Budget": "Content",
-                    "Annex 1. Risk Assessment Plan": "Content"
-                }),
-            "template_name": "proposal_template_unhcr.json", "is_accepted": False
-        }
+                    "Annex 1. Risk Assessment Plan": "Content",
+                }
+            ),
+            "template_name": "proposal_template_unhcr.json",
+            "is_accepted": False,
+        },
     )
 
     # Call the endpoint
@@ -68,4 +79,4 @@ async def test_generate_document(authenticated_client, db_session, mocker):
 
     # Assertions
     assert response.status_code == 200
-    assert 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' in response.headers['content-type']
+    assert "application/vnd.openxmlformats-officedocument.wordprocessingml.document" in response.headers["content-type"]

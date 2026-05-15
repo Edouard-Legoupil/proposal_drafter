@@ -1,8 +1,8 @@
 # Data Model: Proposal Drafter
 
-**Version:** 1.0  
-**Date:** 2025-05-13  
-**Input:** Feature specification from `/specs/001-proposal_drafter/spec.md`  
+**Version:** 1.0
+**Date:** 2025-05-13
+**Input:** Feature specification from `/specs/001-proposal_drafter/spec.md`
 **Purpose:** Phase 1 - Data Model Design
 
 ---
@@ -338,7 +338,7 @@ pending → approved → active
 
 ### 1. PostgreSQL with pgvector
 
-**Decision:** Use PostgreSQL with pgvector extension  
+**Decision:** Use PostgreSQL with pgvector extension
 **Rationale:**
 - ACID compliance for transactional data
 - pgvector provides efficient vector similarity search
@@ -348,7 +348,7 @@ pending → approved → active
 
 ### 2. UUID Primary Keys
 
-**Decision:** Use UUID v4 for most primary keys  
+**Decision:** Use UUID v4 for most primary keys
 **Rationale:**
 - Avoids ID collisions in distributed systems
 - No sequential information leakage
@@ -361,7 +361,7 @@ pending → approved → active
 
 ### 3. JSONB for Flexible Data
 
-**Decision:** Use JSONB for form_data, generated_sections, etc.  
+**Decision:** Use JSONB for form_data, generated_sections, etc.
 **Rationale:**
 - Proposal structures evolve over time
 - Avoids frequent schema migrations
@@ -376,7 +376,7 @@ pending → approved → active
 
 ### 4. Association Tables for Many-to-Many
 
-**Decision:** Explicit association tables for M:N relationships  
+**Decision:** Explicit association tables for M:N relationships
 **Rationale:**
 - Clear schema structure
 - Can include additional metadata in associations
@@ -385,7 +385,7 @@ pending → approved → active
 
 ### 5. Audit Tables for History Tracking
 
-**Decision:** Separate history tables for mutable entities  
+**Decision:** Separate history tables for mutable entities
 **Rationale:**
 - Complete audit trail
 - No data loss on updates
@@ -394,7 +394,7 @@ pending → approved → active
 
 ### 6. pgvector Configuration
 
-**Decision:** HNSW index with m=16, ef_construction=64  
+**Decision:** HNSW index with m=16, ef_construction=64
 **Rationale:**
 - Good balance between accuracy and performance
 - m=16: 16 bidirectional links per node

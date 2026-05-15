@@ -1,6 +1,7 @@
 import requests
 
-API_BASE_URL = "http://localhost:8502/api" # Adjust if necessary
+API_BASE_URL = "http://localhost:8502/api"  # Adjust if necessary
+
 
 def test_geographic_coverages():
     try:
@@ -19,6 +20,7 @@ def test_geographic_coverages():
             print("Response:", response.text)
     except Exception as e:
         print(f"An error occurred: {e}")
+
 
 if __name__ == "__main__":
     test_geographic_coverages()

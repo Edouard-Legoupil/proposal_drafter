@@ -1,9 +1,9 @@
 # Proposal Drafter: Complete Technical Specification
 
-**Spec ID:** 001-proposal-drafter  
-**Version:** 2.0  
-**Last Updated:** April 2025  
-**Status:** Active Implementation  
+**Spec ID:** 001-proposal-drafter
+**Version:** 2.0
+**Last Updated:** April 2025
+**Status:** Active Implementation
 ---
 
 ## Table of Contents
@@ -178,21 +178,25 @@ The frontend uses a **component-based architecture** with React and Material UI:
 
 The backend exposes the following API routers:
 
-| Router | Prefix | Purpose | Status |
-|--------|--------|---------|--------|
-| auth.py | /api | Authentication (JWT, SSO) | ✅ |
-| proposals.py | /api | Proposal CRUD operations | ✅ |
-| documents.py | /api | Document generation/export | ✅ |
-| knowledge.py | /api | Knowledge card management | ✅ |
-| templates.py | /api/templates | Template management | ✅ |
-| template_management.py | /api/admin | Admin template operations | ✅ |
-| incident.py | /api | Incident analysis | ✅ |
-| qualification.py | /api | Qualification validation | ✅ |
-| session.py | /api | Session management | ✅ |
-| users.py | /api | User management | ✅ |
-| admin.py | /api/admin | System administration | ✅ |
-| metrics.py | /api | Metrics and analytics | ✅ |
-| health.py | / | Health checks | ✅ |
+| Router | Prefix | Purpose | Authorization | Status |
+|--------|--------|---------|---------------|--------|
+| auth.py | /api | Authentication (JWT, SSO) | Public | ✅ |
+| proposals.py | /api | Proposal CRUD operations | Object-level (ownership/team) | ✅ |
+| documents.py | /api | Document generation/export | Object-level (ownership) | ✅ |
+| knowledge.py | /api | Knowledge card management | Object-level (role-based) | ✅ |
+| templates.py | /api/templates | Template management | Object-level (ownership/permission) | ✅ |
+| template_management.py | /api/admin | Admin template operations | Admin only | ✅ |
+| incident.py | /api/incidents | Incident analysis | Object-level (source artifact access) | ✅ |
+| qualification.py | /api | Qualification validation | Public (system) | ✅ |
+| session.py | /api | Session management | Session-based | ✅ |
+| users.py | /api | User management | Admin only | ✅ |
+| admin.py | /api/admin | System administration | Admin only | ✅ |
+| metrics.py | /api | Metrics and analytics | Object-level (filtered by access) | ✅ |
+| sharepoint.py | /api | SharePoint integration | Object-level (ownership) | ✅ |
+| health.py | / | Health checks | Public | ✅ |
+
+**Note on Object-Level Authorization:**
+All API routers that access user-specific resources (proposals, knowledge cards, templates, metrics, sharepoint, incidents) implement object-level authorization checks to prevent Insecure Direct Object Reference (IDOR) vulnerabilities. This ensures users can only access resources they own or have explicit permission to access.
 
 ### 4.2 Key Services
 
@@ -309,11 +313,52 @@ The backend exposes the following API routers:
 
 ### 5.9 Health & Metrics Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | / | Health check / SPA fallback |
-| GET | /api/health | System health |
-| GET | /api/metrics | System metrics |
+| Method | Endpoint | Description | Auth Required | Authorization |
+|--------|----------|-------------|---------------|---------------|
+| GET | / | Health check / SPA fallback | ❌ | Public |
+| GET | /api/health | System health | ❌ | Public |
+| GET | /api/metrics | System metrics | ✅ | Object-level (filtered by user access) |
+
+**Metrics Endpoint Authorization:**
+- All metrics endpoints in `backend/api/metrics.py` implement filtering based on the current user's access rights
+- Metrics are automatically filtered to only include data for resources the user can access (proposals, knowledge cards, templates)
+- System admin users can view all metrics without filtering
+- The `_get_filter_clauses()` function applies user, team, and role-based filtering to all metric queries
+
+### 5.10 SharePoint Endpoints
+
+| Method | Endpoint | Description | Auth Required | Authorization |
+|--------|----------|-------------|---------------|---------------|
+| POST | /upload-to-sharepoint/ | Upload document to SharePoint | ✅ | User authenticated |
+| POST | /upload-proposal-to-sharepoint/{proposal_id} | Upload proposal to SharePoint | ✅ | Object-level (proposal ownership) |
+| POST | /upload-knowledge-card-to-sharepoint/{card_id} | Upload KC to SharePoint | ✅ | Object-level (KC role-based access) |
+| POST | /retry-sharepoint-upload/{artifact_type}/{artifact_id} | Retry failed upload | ✅ | Object-level (same as artifact) |
+| GET | /sharepoint-link-status/{artifact_type}/{artifact_id} | Get upload status | ✅ | Object-level (same as artifact) |
+
+**SharePoint Endpoint Authorization:**
+- All SharePoint upload endpoints in `backend/api/sharepoint.py` verify object-level access before processing
+- Proposal uploads: Verify user owns the proposal or has team access via `check_proposal_access()`
+- Knowledge card uploads: Verify user has appropriate knowledge manager role via `check_user_group_access()`
+- Status checks: Apply the same authorization as the upload operation
+- Artifact type validation ensures only supported types (proposal, knowledge_card) are processed
+
+### 5.11 Incident Analysis Endpoints
+
+| Method | Endpoint | Description | Auth Required | Authorization |
+|--------|----------|-------------|---------------|---------------|
+| POST | /api/incidents/analyze | Analyze incident | ✅ | Object-level (source artifact) |
+| POST | /api/incidents/analyze/proposal-review/{review_id} | Analyze proposal review | ✅ | Object-level (proposal access) |
+| POST | /api/incidents/analyze/knowledge-card-review/{review_id} | Analyze KC review | ✅ | Object-level (KC access) |
+| POST | /api/incidents/analyze/template-review/{review_id} | Analyze template review | ✅ | Object-level (template access) |
+| GET | /api/incidents/result/{analysis_id} | Get analysis result | ✅ | Object-level (source artifact) |
+| GET | /api/reviews/{review_id}/analysis | Get review analysis | ✅ | Object-level (source artifact) |
+
+**Incident Endpoint Authorization:**
+- All incident analysis endpoints in `backend/api/incident.py` verify access to the source artifact
+- Proposal-related incidents: Verify user has access to the proposal via `check_proposal_access()`
+- Knowledge card-related incidents: Verify user has appropriate knowledge manager role via `check_user_group_access()`
+- Template-related incidents: Verify user has access to the template via `check_template_access()`
+- Analysis results can only be retrieved by users with access to the original source artifact
 
 ---
 
@@ -1179,6 +1224,76 @@ def check_user_group_access(current_user, donor_id, outcome_id, field_context_id
     # ...
 ```
 
+#### Object-Level Authorization
+
+**Implementation Location**: `backend/core/authorization.py`
+
+The system implements comprehensive object-level authorization to prevent Insecure Direct Object Reference (IDOR) vulnerabilities (OWASP A01:2025-Broken Access Control, CWE-284). This ensures users can only access resources they own or have explicit permission to access.
+
+**Core Authorization Functions**:
+- `check_proposal_access(proposal_id, current_user)`: Verifies access to proposals via ownership, team membership, or donor group membership
+- `check_knowledge_card_access(card_id, current_user)`: Verifies access to knowledge cards via ownership or shared access list
+- `check_template_access(template_id, current_user, required_permission)`: Verifies access to templates via ownership, organization membership, or public status
+
+**Decorator-Based Authorization**:
+- `@require_ownership(resource_type)`: Verifies the current user owns the resource
+- `@require_permission(permission)`: Verifies the user has the specified RBAC permission
+- `@require_team_membership()`: Verifies the user is a member of the resource's team
+- `@require_donor_group_membership()`: Verifies the user is a member of the resource's donor group
+
+**Module-Specific Authorization Application**:
+
+1. **proposals.py**: Implements ownership checks in all endpoints (e.g., `WHERE id = :id AND user_id = :uid`)
+2. **knowledge.py**: Uses `authorize_knowledge_manager` dependency and `check_user_group_access()` for all mutations
+3. **templates.py**: Uses `check_template_access()`, `require_ownership()`, and `require_permission()` decorators
+4. **metrics.py**: All endpoints filter data using `_get_filter_clauses()` which applies user, team, and role-based filtering
+5. **sharepoint.py**: All artifact-specific endpoints verify object-level access before processing uploads
+6. **incident.py**: All analysis endpoints verify access to the source artifact (proposal, knowledge card, or template)
+
+**Authorization Pattern**:
+```python
+# Example: Proposal endpoint with authorization
+@router.get("/proposals/{proposal_id}")
+async def get_proposal(
+    proposal_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    # Verify user has access to this proposal
+    await check_proposal_access(proposal_id, current_user)
+    # ... proceed with query
+
+# Example: Knowledge card endpoint with role-based authorization
+@router.post("/knowledge-cards")
+async def create_knowledge_card(
+    card: KnowledgeCardIn,
+    current_user: dict = Depends(authorize_knowledge_manager)
+):
+    # authorize_knowledge_manager ensures user has appropriate role
+    # check_user_group_access verifies group-level permissions
+    check_user_group_access(current_user, card.donor_id, card.outcome_id, card.field_context_id)
+    # ... proceed with creation
+
+# Example: Metrics endpoint with filtered queries
+@router.get("/metrics/pipeline-kpis")
+async def get_pipeline_kpis(
+    current_user: dict = Depends(get_current_user),
+    filter_by: Optional[str] = Query("all"),
+    # ... other filters
+):
+    # _get_filter_clauses applies user-specific filtering
+    where_clause, params = _get_filter_clauses(
+        current_user,
+        filter_by=filter_by,
+        # ... other filter params
+    )
+    # ... execute query with filtered where_clause
+```
+
+**Audit Logging**:
+- All authorization decisions (access granted/denied) are logged to the `security.authorization` logger
+- Authorization failures return HTTP 403 Forbidden without revealing whether the resource exists (to prevent information leakage)
+- Successful accesses are logged with user ID, resource type, resource ID, and action
+
 ### 13.3 Audit Trail
 
 - **Database**: All changes logged with timestamps and user IDs
@@ -1430,7 +1545,7 @@ CMD ["npx", "serve", "-s", "build", "-l", "80"]
 
 **Database**: Cloud SQL PostgreSQL with pgvector extension
 
-**Authentication**: 
+**Authentication**:
 - OAuth 2.0 for user auth
 - IAM-based database auth
 

@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 class TemplateBase(BaseModel):
     """Base template model"""
+
     name: str
     filename: str
     template_type: str
@@ -19,6 +20,7 @@ class TemplateBase(BaseModel):
 
 class TemplateCreate(TemplateBase):
     """Model for creating a new template"""
+
     template_data: Dict[str, Any]
     version_notes: Optional[str] = None
     donor_ids: Optional[List[uuid.UUID]] = None
@@ -26,6 +28,7 @@ class TemplateCreate(TemplateBase):
 
 class TemplateUpdate(BaseModel):
     """Model for updating template metadata"""
+
     name: Optional[str] = None
     description: Optional[str] = None
     status: Optional[str] = None
@@ -34,6 +37,7 @@ class TemplateUpdate(BaseModel):
 
 class TemplateVersionBase(BaseModel):
     """Base template version model"""
+
     version_number: str
     version_notes: Optional[str] = None
     status: str = "draft"
@@ -41,29 +45,34 @@ class TemplateVersionBase(BaseModel):
 
 class TemplateVersionCreate(TemplateVersionBase):
     """Model for creating a new template version"""
+
     template_data: Dict[str, Any]
 
 
 class TemplateVersionUpdate(BaseModel):
     """Model for updating template version metadata"""
+
     version_notes: Optional[str] = None
     status: Optional[str] = None
 
 
 class TemplateDonor(BaseModel):
     """Model for template-donor mapping"""
+
     template_id: uuid.UUID
     donor_id: uuid.UUID
 
 
 class TemplateAuditLog(BaseModel):
     """Model for template audit log entries"""
+
     action: str
     action_details: Optional[Dict[str, Any]] = None
 
 
 class TemplateResponse(BaseModel):
     """Response model for template with metadata"""
+
     id: uuid.UUID
     name: str
     filename: str
@@ -82,6 +91,7 @@ class TemplateResponse(BaseModel):
 
 class TemplateVersionResponse(BaseModel):
     """Response model for template version"""
+
     id: uuid.UUID
     template_id: uuid.UUID
     version_number: str
@@ -95,6 +105,7 @@ class TemplateVersionResponse(BaseModel):
 
 class TemplateFullResponse(BaseModel):
     """Response model for full template with data"""
+
     template: TemplateResponse
     version: TemplateVersionResponse
     template_data: Dict[str, Any]

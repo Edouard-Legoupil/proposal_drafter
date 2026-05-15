@@ -1,8 +1,7 @@
 import logging
+
 #  Standard Library
-from datetime import datetime, timedelta
-from typing import Optional, List, Any
-import uuid
+from typing import Optional, Any
 
 #  Third-Party Libraries
 import jwt
@@ -62,7 +61,7 @@ def get_current_user(request: Request) -> dict:
         with get_engine().connect() as connection:
             result = connection.execute(
                 text("SELECT id, name, email, password, requested_role_id FROM users WHERE email = :email"),
-                {"email": email}
+                {"email": email},
             )
             user = result.fetchone()
 
@@ -73,12 +72,14 @@ def get_current_user(request: Request) -> dict:
             is_sso = user[3] == "SSO_USER_NO_PASSWORD"
 
             # Try to fetch roles, donor_groups, and outcomes, but handle empty results gracefully.
-            # We use nested transactions (savepoints) to ensure that if one query fails, 
+            # We use nested transactions (savepoints) to ensure that if one query fails,
             # it doesn't poison the entire connection/transaction.
             roles = []
             try:
                 with connection.begin_nested():
-                    roles_query = text("SELECT r.name FROM roles r JOIN user_roles ur ON r.id = ur.role_id WHERE ur.user_id = :user_id")
+                    roles_query = text(
+                        "SELECT r.name FROM roles r JOIN user_roles ur ON r.id = ur.role_id WHERE ur.user_id = :user_id"
+                    )
                     roles_result = connection.execute(roles_query, {"user_id": user_id}).fetchall()
                     roles = [row[0] for row in roles_result] if roles_result else []
             except Exception as e:
@@ -91,7 +92,7 @@ def get_current_user(request: Request) -> dict:
                 "roles": roles,
                 "is_admin": "system admin" in roles,
                 "is_sso": is_sso,
-                "requested_role_id": user[4]
+                "requested_role_id": user[4],
             }
 
     except jwt.ExpiredSignatureError:
@@ -102,7 +103,10 @@ def get_current_user(request: Request) -> dict:
         raise
     except Exception as e:
         # Generic error for other potential issues.
-        logger.error(f"Authentication error for user {email if 'email' in locals() else 'unknown'}: {e}", exc_info=True)
+        logger.error(
+            f"Authentication error for user {email if 'email' in locals() else 'unknown'}: {e}",
+            exc_info=True,
+        )
         raise HTTPException(status_code=500, detail="Authentication error")
 
 
@@ -115,7 +119,13 @@ def is_system_admin(current_user: dict = Depends(get_current_user)):
     return current_user
 
 
-def check_user_group_access(current_user: dict, donor_id: Optional[Any] = None, outcome_id: Optional[Any] = None, field_context_id: Optional[Any] = None, owner_id: Optional[str] = None):
+def check_user_group_access(
+    current_user: dict,
+    donor_id: Optional[Any] = None,
+    outcome_id: Optional[Any] = None,
+    field_context_id: Optional[Any] = None,
+    owner_id: Optional[str] = None,
+):
     """
     Checks if the user has permission to edit content based on roles and ownership.
     - Donor cards: needs 'knowledge manager donors' role.
@@ -123,14 +133,14 @@ def check_user_group_access(current_user: dict, donor_id: Optional[Any] = None, 
     - Field context cards: needs 'knowledge manager field context' role AND must be the owner.
     """
     user_roles = current_user.get("roles", [])
-    user_id = current_user.get("user_id")
+    current_user.get("user_id")
 
     # Donor check
     if donor_id:
         if "knowledge manager donors" not in user_roles:
             raise HTTPException(
                 status_code=403,
-                detail="Access denied. You do not have the 'knowledge manager donors' role required to edit donor cards."
+                detail="Access denied. You do not have the 'knowledge manager donors' role required to edit donor cards.",
             )
 
     # Outcome check
@@ -138,7 +148,7 @@ def check_user_group_access(current_user: dict, donor_id: Optional[Any] = None, 
         if "knowledge manager outcome" not in user_roles:
             raise HTTPException(
                 status_code=403,
-                detail="Access denied. You do not have the 'knowledge manager outcome' role required to edit outcome cards."
+                detail="Access denied. You do not have the 'knowledge manager outcome' role required to edit outcome cards.",
             )
 
     # Field context check (role-based)
@@ -146,8 +156,9 @@ def check_user_group_access(current_user: dict, donor_id: Optional[Any] = None, 
         if "knowledge manager field context" not in user_roles:
             raise HTTPException(
                 status_code=403,
-                detail="Access denied. You do not have the 'knowledge manager field context' role required to edit field context cards."
+                detail="Access denied. You do not have the 'knowledge manager field context' role required to edit field context cards.",
             )
+
 
 # Exposing functions for use in other parts of the application.
 __all__ = [

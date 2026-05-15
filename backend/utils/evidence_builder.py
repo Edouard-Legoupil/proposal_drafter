@@ -33,7 +33,7 @@ class EvidenceBuilder:
             },
             "evidence": {
                 "evidence_quality": "low",
-                "note": "Evidence was supplied manually rather than loaded from review tables."
+                "note": "Evidence was supplied manually rather than loaded from review tables.",
             },
             "priors": ROOT_CAUSE_PRIORS[request.artifact_type.value].get(request.incident_type, []),
         }

@@ -1,5 +1,5 @@
 #  Third-Party Libraries
-import redis
+import redis  # type: ignore[import-untyped]
 import asyncio
 
 # --- Redis Client Initialization ---
@@ -28,6 +28,7 @@ except redis.ConnectionError:
         functionality of the Redis client (`setex`, `get`, `delete`).
         This is used as a fallback for local development when Redis is not running.
         """
+
         def __init__(self):
             self.storage = {}
 

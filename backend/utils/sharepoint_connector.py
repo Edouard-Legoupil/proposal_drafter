@@ -2,7 +2,7 @@
 SharePoint Connector Module
 ============================
 
-A comprehensive, class-based SharePoint connector for interacting with SharePoint 
+A comprehensive, class-based SharePoint connector for interacting with SharePoint
 folders and files via Microsoft Graph API.
 
 This module provides a unified interface for:
@@ -31,25 +31,25 @@ Optional Environment Variables:
 Usage Example:
 --------------
     from backend.utils.sharepoint_connector import SharePointConnector
-    
+
     # Initialize the connector
     connector = SharePointConnector()
-    
+
     # Connect to SharePoint
     connector.connect()
-    
+
     # List files in the configured folder
     files = connector.list_files()
-    
+
     # Upload a file
     connector.upload_file("my_document.docx", "Hello World")
-    
+
     # Download a file
     content = connector.download_file("my_document.docx")
-    
+
     # Get folder tree
     connector.print_folder_tree()
-    
+
     # Clean up
     connector.disconnect()
 
@@ -81,7 +81,6 @@ Co-Authored-By: Mistral Vibe <vibe@mistral.ai>
 """
 
 import io
-import json
 import os
 import difflib
 import zipfile
@@ -91,7 +90,7 @@ import datetime
 import schedule
 import time
 from pathlib import Path
-from typing import Any, BinaryIO, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 from xml.etree import ElementTree as ET
 
 import msal
@@ -121,38 +120,39 @@ SCOPES = ["https://graph.microsoft.com/.default"]
 # CONFIGURATION
 # =============================================================================
 
+
 class SharePointConfig:
     """
     Configuration container for SharePoint connector settings.
-    
+
     All settings are loaded from environment variables with sensible defaults.
     """
-    
+
     def __init__(self):
         """Initialize configuration from environment variables."""
         load_dotenv()
-        
+
         # Authentication settings
         self.tenant_id = os.getenv("SHAREPOINT_TENANT_ID")
         self.client_id = os.getenv("SHAREPOINT_CLIENT_ID")
         self.client_secret = os.getenv("SHAREPOINT_CLIENT_SECRET")
-        
+
         # SharePoint site settings
         self.hostname = os.getenv("SHAREPOINT_HOSTNAME")
         self.site_path = os.getenv("SHAREPOINT_SITE_PATH", "")
         self.library_name = os.getenv("SHAREPOINT_LIBRARY_NAME", "Shared%20Documents")
         self.folder_path = os.getenv("SHAREPOINT_FOLDER_PATH", "")
-        
+
         # Derived settings
         self.site_url = f"https://{self.hostname}{self.site_path}" if self.hostname else None
-        
+
         # Local storage settings
         self.snapshot_dir = os.getenv("SNAPSHOT_DIR", "./sp_snapshots")
         self.log_file = os.getenv("LOG_FILE", "./sp_connector.log")
-        
+
         # Validate required settings
         self._validate()
-    
+
     def _validate(self):
         """Validate that required configuration values are present."""
         required = {
@@ -161,31 +161,30 @@ class SharePointConfig:
             "SHAREPOINT_CLIENT_SECRET": self.client_secret,
             "SHAREPOINT_HOSTNAME": self.hostname,
         }
-        
+
         missing = [key for key, value in required.items() if not value]
         if missing:
-            raise ValueError(
-                f"Missing required environment variables: {', '.join(missing)}"
-            )
+            raise ValueError(f"Missing required environment variables: {', '.join(missing)}")
 
 
 # =============================================================================
 # MAIN CONNECTOR CLASS
 # =============================================================================
 
+
 class SharePointConnector:
     """
     Main SharePoint connector class for interacting with SharePoint via Microsoft Graph API.
-    
+
     This class provides a comprehensive interface for SharePoint operations including:
     - Authentication and token management
     - File and folder operations
     - Document parsing and analysis
     - Version comparison and diff reporting
     - Snapshot management for change tracking
-    
+
     The connector uses OAuth 2.0 client credentials flow for authentication.
-    
+
     Attributes:
         config (SharePointConfig): Configuration object with all settings
         token (str): Current access token (None if not connected)
@@ -193,15 +192,15 @@ class SharePointConnector:
         drive_id (str): Document library drive ID (None if not initialized)
         logger (logging.Logger): Logger instance for this connector
     """
-    
+
     def __init__(self, config: Optional[SharePointConfig] = None):
         """
         Initialize the SharePoint connector.
-        
+
         Args:
-            config (SharePointConfig, optional): Configuration object. 
+            config (SharePointConfig, optional): Configuration object.
                 If None, a new SharePointConfig will be created.
-        
+
         Raises:
             ValueError: If required environment variables are missing.
         """
@@ -209,15 +208,15 @@ class SharePointConnector:
         self.token: Optional[str] = None
         self.site_id: Optional[str] = None
         self.drive_id: Optional[str] = None
-        
+
         # Setup logging
         self._setup_logging()
         self.logger = logging.getLogger(__name__)
-    
+
     # -------------------------------------------------------------------------
     # Logging Setup
     # -------------------------------------------------------------------------
-    
+
     def _setup_logging(self):
         """Configure logging for the connector."""
         logging.basicConfig(
@@ -228,26 +227,26 @@ class SharePointConnector:
                 logging.StreamHandler(),
             ],
         )
-    
+
     # -------------------------------------------------------------------------
     # Connection Management
     # -------------------------------------------------------------------------
-    
+
     def connect(self) -> bool:
         """
         Establish connection to SharePoint by obtaining an access token.
-        
+
         This method performs the OAuth 2.0 client credentials flow to get an
         access token for Microsoft Graph API.
-        
+
         Returns:
             bool: True if connection was successful, False otherwise.
-        
+
         Raises:
             RuntimeError: If authentication fails.
         """
         self.logger.info("Connecting to SharePoint...")
-        
+
         try:
             self.token = self._get_access_token()
             self.logger.info("Successfully authenticated")
@@ -255,47 +254,47 @@ class SharePointConnector:
         except Exception as e:
             self.logger.error(f"Authentication failed: {e}")
             raise RuntimeError(f"Failed to connect to SharePoint: {e}")
-    
+
     def disconnect(self):
         """Clean up connection resources."""
         self.token = None
         self.site_id = None
         self.drive_id = None
         self.logger.info("Disconnected from SharePoint")
-    
+
     def is_connected(self) -> bool:
         """
         Check if the connector is currently connected.
-        
+
         Returns:
             bool: True if connected (has valid token), False otherwise.
         """
         return self.token is not None
-    
+
     def ensure_connected(self):
         """
         Ensure the connector is connected, reconnecting if necessary.
-        
+
         Raises:
             RuntimeError: If connection cannot be established.
         """
         if not self.is_connected():
             self.connect()
-    
+
     # -------------------------------------------------------------------------
     # Authentication
     # -------------------------------------------------------------------------
-    
+
     def _get_access_token(self) -> str:
         """
         Obtain an OAuth2 access token via client-credentials flow.
-        
+
         This is an internal method that performs the actual authentication.
         Use connect() for public API.
-        
+
         Returns:
             str: Access token for Microsoft Graph API.
-        
+
         Raises:
             RuntimeError: If authentication fails.
         """
@@ -304,385 +303,386 @@ class SharePointConnector:
             authority=f"https://login.microsoftonline.com/{self.config.tenant_id}",
             client_credential=self.config.client_secret,
         )
-        
+
         result = app.acquire_token_for_client(scopes=SCOPES)
-        
+
         if "access_token" not in result:
             error_desc = result.get("error_description", "Unknown error")
             raise RuntimeError(f"Authentication failed: {error_desc}")
-        
-        return result["access_token"]
-    
+
+        access_token = result["access_token"]
+        if not access_token:
+            raise RuntimeError("Received empty access token from authentication")
+        return access_token
+
     def _get_headers(self) -> Dict[str, str]:
         """
         Get HTTP headers for authenticated requests.
-        
+
         Returns:
             Dict[str, str]: Headers dictionary with Authorization and Content-Type.
-        
+
         Raises:
             RuntimeError: If not connected.
         """
         if not self.token:
             raise RuntimeError("Not connected. Call connect() first.")
-        
+
         return {
             "Authorization": f"Bearer {self.token}",
             "Content-Type": "application/json",
         }
-    
+
     # -------------------------------------------------------------------------
     # Site and Drive Management
     # -------------------------------------------------------------------------
-    
+
     def get_site_id(self) -> str:
         """
         Get the SharePoint site ID from Microsoft Graph.
-        
+
         Returns:
             str: The SharePoint site ID.
-        
+
         Raises:
             RuntimeError: If site cannot be found or accessed.
         """
         if self.site_id:
             return self.site_id
-        
+
         self.ensure_connected()
-        
+
         url = f"{GRAPH_BASE}/sites/{self.config.hostname}:{self.config.site_path}"
         response = requests.get(url, headers=self._get_headers())
         response.raise_for_status()
-        
+
         self.site_id = response.json()["id"]
         self.logger.info(f"Site ID retrieved: {self.site_id}")
-        
+
+        if not self.site_id:
+            raise RuntimeError("Received empty site ID from SharePoint")
         return self.site_id
-    
-    def get_drive_id(self) -> str:
+
+    def get_drive_id(self) -> str | None:
         """
         Get the document library (drive) ID for the SharePoint site.
-        
+
         Attempts to find the drive in the following order:
         1. Default document library
         2. Library matching LIBRARY_NAME
         3. First available library
-        
+
         Returns:
             str: The drive ID.
-        
+
         Raises:
             RuntimeError: If no document library can be found.
         """
         if self.drive_id:
             return self.drive_id
-        
+
         site_id = self.get_site_id()
-        
+
         # Try default document library first
         url = f"{GRAPH_BASE}/sites/{site_id}/drive"
         response = requests.get(url, headers=self._get_headers())
-        
+
         if response.status_code == 200:
             drive = response.json()
             self.logger.info(f"Using default library: {drive['name']}")
             self.drive_id = drive["id"]
             return self.drive_id
-        
+
         # List all libraries if default not found
         url = f"{GRAPH_BASE}/sites/{site_id}/drives"
         response = requests.get(url, headers=self._get_headers())
         response.raise_for_status()
-        
+
         drives = response.json()["value"]
-        
+
         # Try to find by library name
         for drive in drives:
             if drive["name"].lower() in [
                 self.config.library_name.lower().replace("%20", " "),
                 "shared documents",
                 "documents",
-                "shareddocuments"
+                "shareddocuments",
             ]:
                 self.drive_id = drive["id"]
                 self.logger.info(f"Found library by name: {drive['name']}")
                 return self.drive_id
-        
+
         # Use first available if none matched
         if drives:
             self.logger.warning(
-                f"Using first available library: {drives[0]['name']}. "
-                f"Consider setting SHAREPOINT_LIBRARY_NAME."
+                f"Using first available library: {drives[0]['name']}. " f"Consider setting SHAREPOINT_LIBRARY_NAME."
             )
             self.drive_id = drives[0]["id"]
             return self.drive_id
-        
+
         raise RuntimeError("No document libraries found on the SharePoint site")
-    
+
     # -------------------------------------------------------------------------
     # File Operations
     # -------------------------------------------------------------------------
-    
+
     def list_files(self, folder_path: Optional[str] = None, recursive: bool = False) -> List[Dict[str, Any]]:
         """
         List all files in a SharePoint folder.
-        
+
         Args:
             folder_path (str, optional): Path to the folder relative to the root.
                 If None, uses the configured FOLDER_PATH.
             recursive (bool): If True, list files recursively in subfolders.
-        
+
         Returns:
             List[Dict[str, Any]]: List of file information dictionaries.
-        
+
         Raises:
             RuntimeError: If folder cannot be accessed.
         """
         self.ensure_connected()
         drive_id = self.get_drive_id()
-        
+
         target_path = folder_path if folder_path is not None else self.config.folder_path
-        
+
         self.logger.info(f"Listing files in: {target_path}")
-        
+
         return self._list_folder_contents(drive_id, target_path, recursive, include_folders=False)
-    
-    def upload_file(self, file_name: str, content: Union[str, bytes], folder_path: Optional[str] = None) -> bool:
+
+    def upload_file(
+        self,
+        file_name: str,
+        content: Union[str, bytes],
+        folder_path: Optional[str] = None,
+    ) -> bool:
         """
         Upload a file to SharePoint.
-        
+
         Args:
             file_name (str): Name of the file to upload.
-            content (Union[str, bytes]): Content to upload. Strings will be 
+            content (Union[str, bytes]): Content to upload. Strings will be
                 encoded as UTF-8.
-            folder_path (str, optional): Target folder path. If None, uses 
+            folder_path (str, optional): Target folder path. If None, uses
                 the configured FOLDER_PATH.
-        
+
         Returns:
             bool: True if upload was successful.
-        
+
         Raises:
             RuntimeError: If upload fails.
         """
         self.ensure_connected()
         drive_id = self.get_drive_id()
-        
+
         target_path = folder_path if folder_path is not None else self.config.folder_path
-        
+
         # Ensure content is bytes
         if isinstance(content, str):
             content = content.encode("utf-8")
-        
+
         # Build the URL for the file
         path_parts = [p for p in [target_path, file_name] if p]
         file_path = "/".join(path_parts)
         url = f"{GRAPH_BASE}/drives/{drive_id}/root:/{file_path}:/content"
-        
+
         headers = self._get_headers()
         headers["Content-Type"] = "application/octet-stream"
-        
+
         response = requests.put(url, headers=headers, data=content)
         response.raise_for_status()
-        
+
         self.logger.info(f"Uploaded file: {file_path}")
         return True
-    
+
     def download_file(self, file_name: str, folder_path: Optional[str] = None) -> bytes:
         """
         Download a file from SharePoint.
-        
+
         Args:
             file_name (str): Name of the file to download.
             folder_path (str, optional): Path to the folder containing the file.
                 If None, uses the configured FOLDER_PATH.
-        
+
         Returns:
             bytes: The file content.
-        
+
         Raises:
             RuntimeError: If download fails.
         """
         self.ensure_connected()
         drive_id = self.get_drive_id()
-        
+
         target_path = folder_path if folder_path is not None else self.config.folder_path
-        
+
         # Build the URL for the file
         path_parts = [p for p in [target_path, file_name] if p]
         file_path = "/".join(path_parts)
         url = f"{GRAPH_BASE}/drives/{drive_id}/root:/{file_path}:/content"
-        
+
         headers = self._get_headers()
-        
+
         response = requests.get(url, headers=headers, timeout=30)
         response.raise_for_status()
-        
+
         self.logger.info(f"Downloaded file: {file_path}")
         return response.content
-    
+
     def get_file_metadata(self, file_name: str, folder_path: Optional[str] = None) -> Dict[str, Any]:
         """
         Get metadata for a specific file.
-        
+
         Args:
             file_name (str): Name of the file.
             folder_path (str, optional): Path to the folder containing the file.
                 If None, uses the configured FOLDER_PATH.
-        
+
         Returns:
             Dict[str, Any]: File metadata including name, size, dates, etc.
-        
+
         Raises:
             RuntimeError: If metadata cannot be retrieved.
         """
         self.ensure_connected()
         drive_id = self.get_drive_id()
-        
+
         target_path = folder_path if folder_path is not None else self.config.folder_path
-        
+
         # Build the URL for the file
         path_parts = [p for p in [target_path, file_name] if p]
         file_path = "/".join(path_parts)
         url = f"{GRAPH_BASE}/drives/{drive_id}/root:/{file_path}"
-        
+
         headers = self._get_headers()
-        
+
         response = requests.get(url, headers=headers, timeout=15)
         response.raise_for_status()
-        
+
         return response.json()
-    
+
     def delete_file(self, file_name: str, folder_path: Optional[str] = None) -> bool:
         """
         Delete a file from SharePoint.
-        
+
         Args:
             file_name (str): Name of the file to delete.
             folder_path (str, optional): Path to the folder containing the file.
                 If None, uses the configured FOLDER_PATH.
-        
+
         Returns:
             bool: True if deletion was successful.
-        
+
         Raises:
             RuntimeError: If deletion fails.
         """
         self.ensure_connected()
         drive_id = self.get_drive_id()
-        
+
         target_path = folder_path if folder_path is not None else self.config.folder_path
-        
+
         # Build the URL for the file
         path_parts = [p for p in [target_path, file_name] if p]
         file_path = "/".join(path_parts)
         url = f"{GRAPH_BASE}/drives/{drive_id}/root:/{file_path}"
-        
+
         headers = self._get_headers()
-        
+
         response = requests.delete(url, headers=headers)
         response.raise_for_status()
-        
+
         self.logger.info(f"Deleted file: {file_path}")
         return True
-    
+
     # -------------------------------------------------------------------------
     # Folder Operations
     # -------------------------------------------------------------------------
-    
-    def list_folder_contents(
-        self, 
-        folder_path: Optional[str] = None, 
-        recursive: bool = True
-    ) -> Dict[str, Any]:
+
+    def list_folder_contents(self, folder_path: Optional[str] = None, recursive: bool = True) -> Dict[str, Any]:
         """
         List all contents (files and folders) of a SharePoint folder.
-        
+
         Args:
-            folder_path (str, optional): Path to the folder. If None, uses 
+            folder_path (str, optional): Path to the folder. If None, uses
                 the configured FOLDER_PATH.
             recursive (bool): If True, list contents recursively.
-        
+
         Returns:
             Dict[str, Any]: Dictionary containing:
                 - folders: List of folder information
                 - files: List of file information
-        
+
         Raises:
             RuntimeError: If folder cannot be accessed.
         """
         self.ensure_connected()
         drive_id = self.get_drive_id()
-        
+
         target_path = folder_path if folder_path is not None else self.config.folder_path
-        
+
         self.logger.info(f"Listing contents of: {target_path}")
-        
+
         result = self._list_folder_contents(drive_id, target_path, recursive, include_folders=True)
-        
+
         # Separate folders and files
         folders = [item for item in result if "folder" in item]
         files = [item for item in result if "file" in item]
-        
+
         return {"folders": folders, "files": files}
-    
+
     def print_folder_tree(self, folder_path: Optional[str] = None, max_depth: int = 10):
         """
         Print a tree-like representation of the folder structure.
-        
+
         Args:
-            folder_path (str, optional): Starting folder path. If None, uses 
+            folder_path (str, optional): Starting folder path. If None, uses
                 the configured FOLDER_PATH.
             max_depth (int): Maximum depth to traverse.
-        
+
         Raises:
             RuntimeError: If folder cannot be accessed.
         """
         self.ensure_connected()
         drive_id = self.get_drive_id()
-        
+
         target_path = folder_path if folder_path is not None else self.config.folder_path
-        
+
         self.logger.info(f"Printing folder tree for: {target_path}")
         self._print_folder_tree(drive_id, target_path, 0, max_depth)
-    
+
     def get_all_files_recursive(self, folder_path: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Get a flat list of all files in a folder and its subfolders.
-        
+
         Args:
-            folder_path (str, optional): Starting folder path. If None, uses 
+            folder_path (str, optional): Starting folder path. If None, uses
                 the configured FOLDER_PATH.
-        
+
         Returns:
             List[Dict[str, Any]]: List of file information with full paths.
         """
         self.ensure_connected()
         drive_id = self.get_drive_id()
-        
+
         target_path = folder_path if folder_path is not None else self.config.folder_path
-        
+
         return self._get_all_files_in_folder(drive_id, target_path)
-    
+
     # -------------------------------------------------------------------------
     # Private Helper Methods
     # -------------------------------------------------------------------------
-    
+
     def _list_folder_contents(
-        self, 
-        drive_id: str, 
-        folder_path: str, 
-        recursive: bool, 
-        include_folders: bool
+        self, drive_id: str, folder_path: str, recursive: bool, include_folders: bool
     ) -> List[Dict[str, Any]]:
         """
         Internal method to list folder contents.
-        
+
         Args:
             drive_id: SharePoint drive ID
             folder_path: Path to the folder
             recursive: Whether to include subfolders
             include_folders: Whether to include folders in results
-        
+
         Returns:
             List of items (files and/or folders)
         """
@@ -691,36 +691,28 @@ class SharePointConnector:
             url = f"{GRAPH_BASE}/drives/{drive_id}/root:/{folder_path}:/children"
         else:
             url = f"{GRAPH_BASE}/drives/{drive_id}/root/children"
-        
+
         response = requests.get(url, headers=self._get_headers())
         response.raise_for_status()
-        
+
         items = response.json().get("value", [])
         result = []
-        
+
         for item in items:
             if "folder" in item and include_folders:
                 result.append(item)
                 if recursive:
-                    subfolder_path = f"{folder_path}/{item['name']}" if folder_path else item['name']
-                    result.extend(self._list_folder_contents(
-                        drive_id, subfolder_path, recursive, include_folders
-                    ))
+                    subfolder_path = f"{folder_path}/{item['name']}" if folder_path else item["name"]
+                    result.extend(self._list_folder_contents(drive_id, subfolder_path, recursive, include_folders))
             elif "file" in item:
                 result.append(item)
-        
+
         return result
-    
-    def _print_folder_tree(
-        self, 
-        drive_id: str, 
-        folder_path: str, 
-        indent: int = 0, 
-        max_depth: int = 10
-    ):
+
+    def _print_folder_tree(self, drive_id: str, folder_path: str, indent: int = 0, max_depth: int = 10):
         """
         Internal method to print folder tree recursively.
-        
+
         Args:
             drive_id: SharePoint drive ID
             folder_path: Current folder path
@@ -729,134 +721,136 @@ class SharePointConnector:
         """
         if indent > max_depth:
             return
-        
+
         # Build the URL
         if folder_path:
             url = f"{GRAPH_BASE}/drives/{drive_id}/root:/{folder_path}:/children"
         else:
             url = f"{GRAPH_BASE}/drives/{drive_id}/root/children"
-        
+
         try:
             response = requests.get(url, headers=self._get_headers())
             response.raise_for_status()
-            
+
             items = response.json().get("value", [])
-            
+
             for item in items:
                 prefix = "  " * indent + ("├── " if indent > 0 else "")
-                
+
                 if "folder" in item:
                     print(f"{prefix}📁 {item['name']}/")
                     # Recursively print subfolder
-                    subfolder_path = f"{folder_path}/{item['name']}" if folder_path else item['name']
+                    subfolder_path = f"{folder_path}/{item['name']}" if folder_path else item["name"]
                     self._print_folder_tree(drive_id, subfolder_path, indent + 1, max_depth)
                 elif "file" in item:
-                    size = self.format_file_size(item.get('size', 0))
+                    size = self.format_file_size(item.get("size", 0))
                     print(f"{prefix}📄 {item['name']} ({size})")
         except requests.exceptions.RequestException as e:
             prefix = "  " * indent
             print(f"{prefix}❌ Error: {e}")
-    
+
     def _get_all_files_in_folder(
-        self, 
-        drive_id: str, 
+        self,
+        drive_id: str,
         folder_path: str,
-        files_list: Optional[List[Dict[str, Any]]] = None
+        files_list: Optional[List[Dict[str, Any]]] = None,
     ) -> List[Dict[str, Any]]:
         """
         Internal method to recursively get all files in a folder.
-        
+
         Args:
             drive_id: SharePoint drive ID
             folder_path: Current folder path
             files_list: Accumulator for file results
-        
+
         Returns:
             List of file information dictionaries
         """
         if files_list is None:
             files_list = []
-        
+
         # Build the URL
         if folder_path:
             url = f"{GRAPH_BASE}/drives/{drive_id}/root:/{folder_path}:/children"
         else:
             url = f"{GRAPH_BASE}/drives/{drive_id}/root/children"
-        
+
         try:
             response = requests.get(url, headers=self._get_headers())
             response.raise_for_status()
-            
+
             items = response.json().get("value", [])
-            
+
             for item in items:
                 if "folder" in item:
                     # Recursively process subfolder
-                    subfolder_path = f"{folder_path}/{item['name']}" if folder_path else item['name']
+                    subfolder_path = f"{folder_path}/{item['name']}" if folder_path else item["name"]
                     self._get_all_files_in_folder(drive_id, subfolder_path, files_list)
                 elif "file" in item:
                     # Add file info to the list
-                    full_path = f"{folder_path}/{item['name']}" if folder_path else item['name']
-                    files_list.append({
-                        'name': item['name'],
-                        'path': folder_path,
-                        'full_path': full_path,
-                        'size': item.get('size', 0),
-                        'size_formatted': self.format_file_size(item.get('size', 0)),
-                        'last_modified': item.get('lastModifiedDateTime', 'Unknown'),
-                        'created': item.get('createdDateTime', 'Unknown'),
-                        'web_url': item.get('webUrl', 'N/A')
-                    })
+                    full_path = f"{folder_path}/{item['name']}" if folder_path else item["name"]
+                    files_list.append(
+                        {
+                            "name": item["name"],
+                            "path": folder_path,
+                            "full_path": full_path,
+                            "size": item.get("size", 0),
+                            "size_formatted": self.format_file_size(item.get("size", 0)),
+                            "last_modified": item.get("lastModifiedDateTime", "Unknown"),
+                            "created": item.get("createdDateTime", "Unknown"),
+                            "web_url": item.get("webUrl", "N/A"),
+                        }
+                    )
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Error accessing folder {folder_path}: {e}")
-        
+
         return files_list
-    
+
     # -------------------------------------------------------------------------
     # Utility Methods
     # -------------------------------------------------------------------------
-    
+
     @staticmethod
     def format_file_size(size_bytes: int) -> str:
         """
         Format file size from bytes to human-readable format.
-        
+
         Args:
             size_bytes (int): Size in bytes.
-        
+
         Returns:
             str: Human-readable size string (e.g., "1.5 MB").
         """
         if size_bytes == 0:
             return "0 B"
-        
+
         size_names = ["B", "KB", "MB", "GB", "TB"]
         i = 0
         size = float(size_bytes)
-        
+
         while size >= 1024 and i < len(size_names) - 1:
             size /= 1024.0
             i += 1
-        
+
         return f"{size:.1f} {size_names[i]}"
-    
+
     # -------------------------------------------------------------------------
     # DOCX Parsing Methods
     # -------------------------------------------------------------------------
-    
+
     @staticmethod
     def extract_plain_text(docx_bytes: bytes) -> List[str]:
         """
         Extract plain text from a DOCX file.
-        
+
         This method parses the DOCX file and returns a list of paragraph texts.
-        
+
         Args:
             docx_bytes (bytes): Raw bytes of a DOCX file.
-        
+
         Returns:
             List[str]: List of paragraph texts.
-        
+
         Raises:
             ValueError: If the file is not a valid DOCX.
         """
@@ -865,18 +859,18 @@ class SharePointConnector:
             return [para.text for para in doc.paragraphs]
         except Exception as e:
             raise ValueError(f"Failed to parse DOCX file: {e}")
-    
+
     @staticmethod
     def extract_tracked_changes(docx_bytes: bytes) -> List[Dict[str, str]]:
         """
         Extract tracked changes (insertions and deletions) from a DOCX file.
-        
-        This method parses the DOCX XML directly to find <w:ins> and <w:del> 
+
+        This method parses the DOCX XML directly to find <w:ins> and <w:del>
         elements which represent Word's tracked changes.
-        
+
         Args:
             docx_bytes (bytes): Raw bytes of a DOCX file.
-        
+
         Returns:
             List[Dict[str, str]]: List of change dictionaries with keys:
                 - type: "insertion" or "deletion"
@@ -884,56 +878,60 @@ class SharePointConnector:
                 - date: Date of the change
                 - text: The changed text
         """
-        changes = []
-        
+        changes: list[dict[str, str]] = []
+
         try:
             with zipfile.ZipFile(io.BytesIO(docx_bytes)) as z:
                 if "word/document.xml" not in z.namelist():
                     return changes
                 xml_data = z.read("word/document.xml")
-            
+
             root = ET.fromstring(xml_data)
-            
+
             def get_text(elem: ET.Element, tag: str) -> str:
                 """Extract text from XML element."""
                 return "".join(t.text or "" for t in elem.iter(f"{{{NS['w']}}}{tag}"))
-            
+
             # Process insertions
             for el in root.iter(f"{{{NS['w']}}}ins"):
                 text = get_text(el, "t").strip()
                 if text:
-                    changes.append({
-                        "type": "insertion",
-                        "author": el.get(f"{{{NS['w']}}}author", "Unknown"),
-                        "date": el.get(f"{{{NS['w']}}}date", ""),
-                        "text": text,
-                    })
-            
+                    changes.append(
+                        {
+                            "type": "insertion",
+                            "author": el.get(f"{{{NS['w']}}}author", "Unknown"),
+                            "date": el.get(f"{{{NS['w']}}}date", ""),
+                            "text": text,
+                        }
+                    )
+
             # Process deletions
             for el in root.iter(f"{{{NS['w']}}}del"):
                 text = get_text(el, "delText").strip()
                 if text:
-                    changes.append({
-                        "type": "deletion",
-                        "author": el.get(f"{{{NS['w']}}}author", "Unknown"),
-                        "date": el.get(f"{{{NS['w']}}}date", ""),
-                        "text": text,
-                    })
-        except Exception as e:
+                    changes.append(
+                        {
+                            "type": "deletion",
+                            "author": el.get(f"{{{NS['w']}}}author", "Unknown"),
+                            "date": el.get(f"{{{NS['w']}}}date", ""),
+                            "text": text,
+                        }
+                    )
+        except Exception:
             pass  # Silently handle parsing errors
-        
+
         return changes
-    
+
     @staticmethod
-    def extract_comments(docx_bytes: bytes) -> List[Dict[str, str]]:
+    def extract_comments(docx_bytes: bytes) -> List[Dict[str, str | None]]:
         """
         Extract comments from a DOCX file.
-        
+
         This method parses the DOCX XML to find comments in word/comments.xml.
-        
+
         Args:
             docx_bytes (bytes): Raw bytes of a DOCX file.
-        
+
         Returns:
             List[Dict[str, str]]: List of comment dictionaries with keys:
                 - id: Comment ID
@@ -941,116 +939,116 @@ class SharePointConnector:
                 - date: Comment date
                 - text: Comment text
         """
-        comments = []
-        
+        comments: list[dict[str, str]] = []
+
         try:
             with zipfile.ZipFile(io.BytesIO(docx_bytes)) as z:
                 if "word/comments.xml" not in z.namelist():
                     return comments
                 xml_data = z.read("word/comments.xml")
-            
+
             root = ET.fromstring(xml_data)
-            
+
             for comment in root.iter(f"{{{NS['w']}}}comment"):
-                text = "".join(
-                    t.text or "" for t in comment.iter(f"{{{NS['w']}}}t")
-                ).strip()
-                
+                text = "".join(t.text or "" for t in comment.iter(f"{{{NS['w']}}}t")).strip()
+
                 if text:
-                    comments.append({
-                        "id": comment.get(f"{{{NS['w']}}}id"),
-                        "author": comment.get(f"{{{NS['w']}}}author", "Unknown"),
-                        "date": comment.get(f"{{{NS['w']}}}date", ""),
-                        "text": text,
-                    })
-        except Exception as e:
+                    comments.append(
+                        {
+                            "id": comment.get(f"{{{NS['w']}}}id"),
+                            "author": comment.get(f"{{{NS['w']}}}author", "Unknown"),
+                            "date": comment.get(f"{{{NS['w']}}}date", ""),
+                            "text": text,
+                        }
+                    )
+        except Exception:
             pass  # Silently handle parsing errors
-        
+
         return comments
-    
+
     # -------------------------------------------------------------------------
     # Snapshot Management
     # -------------------------------------------------------------------------
-    
+
     def save_snapshot(self, content: bytes, date: datetime.date) -> Path:
         """
         Save a snapshot of a file for later comparison.
-        
+
         Args:
             content (bytes): File content to snapshot.
             date (datetime.date): Date for the snapshot.
-        
+
         Returns:
             Path: Path to the saved snapshot file.
         """
         snapshot_dir = Path(self.config.snapshot_dir)
         snapshot_dir.mkdir(parents=True, exist_ok=True)
-        
+
         path = snapshot_dir / f"snapshot_{date.isoformat()}.docx"
         path.write_bytes(content)
-        
+
         self.logger.info(f"Snapshot saved: {path}")
         return path
-    
+
     def load_latest_snapshot(self, before: datetime.date) -> Tuple[Optional[bytes], Optional[datetime.date]]:
         """
         Load the most recent snapshot before a given date.
-        
+
         Args:
             before (datetime.date): Find snapshot strictly before this date.
-        
+
         Returns:
-            Tuple[Optional[bytes], Optional[datetime.date]]: 
+            Tuple[Optional[bytes], Optional[datetime.date]]:
                 Tuple of (content, date) or (None, None) if not found.
         """
         snap_dir = Path(self.config.snapshot_dir)
-        
+
         if not snap_dir.exists():
             return None, None
-        
+
         # Get all snapshot files sorted by date (newest first)
         candidates = sorted(snap_dir.glob("snapshot_*.docx"), reverse=True)
-        
+
         for path in candidates:
             try:
                 # Extract date from filename
                 stem = path.stem.replace("snapshot_", "")
                 d = datetime.date.fromisoformat(stem)
-                
+
                 if d < before:
                     return path.read_bytes(), d
             except ValueError:
                 continue
-        
+
         return None, None
-    
+
     # -------------------------------------------------------------------------
     # Diff Reporting
     # -------------------------------------------------------------------------
-    
+
     def build_diff_report(
         self,
         old_bytes: bytes,
         new_bytes: bytes,
         old_date: datetime.date,
         new_date: datetime.date,
-        metadata: Dict[str, Any]
+        metadata: Dict[str, Any],
     ) -> str:
         """
         Build a comprehensive diff report between two versions of a file.
-        
+
         This method compares two DOCX files and generates a report showing:
         - Paragraph-level text differences
         - Word tracked changes (insertions and deletions)
         - Comments in the document
-        
+
         Args:
             old_bytes (bytes): Content of the old version.
             new_bytes (bytes): Content of the new version.
             old_date (datetime.date): Date of the old version.
             new_date (datetime.date): Date of the new version.
             metadata (Dict[str, Any]): Metadata about the file.
-        
+
         Returns:
             str: Formatted diff report.
         """
@@ -1063,24 +1061,27 @@ class SharePointConnector:
             f"  Modified by: {metadata.get('lastModifiedBy', {}).get('user', {}).get('displayName', 'N/A')}",
             "=" * 60,
         ]
-        
+
         # Text paragraph diff
         old_lines = self.extract_plain_text(old_bytes)
         new_lines = self.extract_plain_text(new_bytes)
-        
-        diff = list(difflib.unified_diff(
-            old_lines, new_lines,
-            fromfile=f"version_{old_date}",
-            tofile=f"version_{new_date}",
-            lineterm="",
-        ))
-        
+
+        diff = list(
+            difflib.unified_diff(
+                old_lines,
+                new_lines,
+                fromfile=f"version_{old_date}",
+                tofile=f"version_{new_date}",
+                lineterm="",
+            )
+        )
+
         lines.append("\n── Text Diff (paragraph level) ──")
         if diff:
             lines.extend(diff)
         else:
             lines.append("  (no paragraph-level changes detected)")
-        
+
         # Tracked changes in new version
         tc = self.extract_tracked_changes(new_bytes)
         lines.append("\n── Word Tracked Changes (in current version) ──")
@@ -1095,7 +1096,7 @@ class SharePointConnector:
                 )
         else:
             lines.append("  (no tracked changes found)")
-        
+
         # Comments in new version
         comments = self.extract_comments(new_bytes)
         lines.append("\n── Comments (in current version) ──")
@@ -1108,89 +1109,89 @@ class SharePointConnector:
                 )
         else:
             lines.append("  (no comments found)")
-        
+
         lines.append("\n" + "=" * 60)
         return "\n".join(lines)
-    
+
     # -------------------------------------------------------------------------
     # Daily Check (Legacy Support)
     # -------------------------------------------------------------------------
-    
+
     def run_daily_check(self):
         """
         Run the daily file diff check (legacy method from original script).
-        
+
         This method:
         1. Gets the current file from SharePoint
         2. Compares it with the latest snapshot
         3. Generates a diff report if changes are found
         4. Saves a new snapshot
-        
+
         This is maintained for backward compatibility with the original
         daily diff monitoring functionality.
         """
         today = datetime.date.today()
         self.logger.info(f"Starting daily diff check for {today}")
-        
+
         try:
             self.ensure_connected()
-            
+
             # Get file metadata
             metadata = self.get_file_metadata(self.config.folder_path.split("/")[-1] if self.config.folder_path else "")
-            
+
             # Check file modification
             last_mod = metadata.get("lastModifiedDateTime", "")
             self.logger.info(f"File last modified: {last_mod}")
-            
+
             # Download current file
             new_bytes = self.download_file(self.config.folder_path.split("/")[-1] if self.config.folder_path else "")
-            
+
             # Load previous snapshot
             old_bytes, old_date = self.load_latest_snapshot(before=today)
-            
+
             if old_bytes is None:
                 self.logger.info("No previous snapshot found. Saving first snapshot.")
                 self.save_snapshot(new_bytes, today)
                 return
-            
+
             # Skip if unchanged
             if hashlib.md5(old_bytes).hexdigest() == hashlib.md5(new_bytes).hexdigest():
                 self.logger.info("File unchanged since last snapshot. Nothing to report.")
                 self.save_snapshot(new_bytes, today)
                 return
-            
+
             # Build and print report
             report = self.build_diff_report(old_bytes, new_bytes, old_date, today, metadata)
             print(report)
             self.logger.info("Diff report generated successfully.")
-            
+
             # Save report
             report_path = Path(self.config.snapshot_dir) / f"report_{today.isoformat()}.txt"
             report_path.write_text(report, encoding="utf-8")
             self.logger.info(f"Report saved to {report_path}")
-            
+
             # Save today's snapshot
             self.save_snapshot(new_bytes, today)
-            
+
         except Exception as e:
             self.logger.exception(f"Error during daily check: {e}")
-    
+
     def start_daily_scheduler(self):
         """
         Start the daily scheduler for automatic file diff checks.
-        
+
         This method schedules the daily check to run every day at 08:00.
         It also runs once immediately on startup.
-        
+
         Note: This method blocks the current thread.
         """
         # Run immediately
         self.run_daily_check()
-        
+
         # Schedule daily
         schedule.every().day.at("08:00").do(self.run_daily_check)
         self.logger.info("Scheduler running. Press Ctrl+C to stop.")
-        
+
         while True:
             schedule.run_pending()
             time.sleep(60)
@@ -1210,7 +1211,7 @@ _default_connector: Optional[SharePointConnector] = None
 def get_connector() -> SharePointConnector:
     """
     Get the default SharePoint connector instance.
-    
+
     Returns:
         SharePointConnector: The default connector (creates one if needed).
     """
@@ -1227,14 +1228,14 @@ def get_connector() -> SharePointConnector:
 if __name__ == "__main__":
     # Initialize and run the connector
     connector = SharePointConnector()
-    
+
     try:
         # Connect
         connector.connect()
-        
+
         # Run daily check
         connector.run_daily_check()
-        
+
         # Start scheduler (this will block)
         connector.start_daily_scheduler()
     except KeyboardInterrupt:

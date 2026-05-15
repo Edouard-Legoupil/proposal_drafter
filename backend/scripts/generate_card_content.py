@@ -1,22 +1,21 @@
 import argparse
-import asyncio
 import json
 import os
 import sys
 import uuid
 import logging
-import pathlib
 from dotenv import load_dotenv
+from slugify import slugify
 import psycopg2
 from psycopg2.extras import register_uuid
 
 # Add the project root to the Python path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-register_uuid()
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from backend.utils.crew_knowledge import ContentGenerationCrew
 from backend.core.config import load_proposal_template
 
+register_uuid()
 
 
 def _save_knowledge_card_content_to_file(cur, card_id: uuid.UUID, generated_sections: dict):
@@ -25,7 +24,8 @@ def _save_knowledge_card_content_to_file(cur, card_id: uuid.UUID, generated_sect
     """
     try:
         # Fetch the knowledge card's details and the name of the linked entity
-        cur.execute("""
+        cur.execute(
+            """
             SELECT
                 kc.summary,
                 kc.donor_id,
@@ -44,7 +44,9 @@ def _save_knowledge_card_content_to_file(cur, card_id: uuid.UUID, generated_sect
                 field_contexts fc ON kc.field_context_id = fc.id
             WHERE
                 kc.id = %s
-        """, (str(card_id),))
+        """,
+            (str(card_id),),
+        )
         card_details = cur.fetchone()
 
         if not card_details:
@@ -90,13 +92,16 @@ def _save_knowledge_card_content_to_file(cur, card_id: uuid.UUID, generated_sect
         os.makedirs(knowledge_dir, exist_ok=True)
 
         # Write the generated sections to the JSON file
-        with open(filepath, 'w') as f:
+        with open(filepath, "w") as f:
             json.dump(generated_sections, f, indent=4)
 
         logging.info(f"Knowledge card content saved to {filepath}")
 
     except Exception as e:
-        logging.error(f"Failed to save knowledge card content to file for card {card_id}: {e}", exc_info=True)
+        logging.error(
+            f"Failed to save knowledge card content to file for card {card_id}: {e}",
+            exc_info=True,
+        )
 
 
 def create_knowledge_card_history_entry(cur, card_id, generated_sections, user_id):
@@ -104,31 +109,49 @@ def create_knowledge_card_history_entry(cur, card_id, generated_sections, user_i
     Creates a history entry for a knowledge card.
     """
     try:
-        cur.execute("""
+        cur.execute(
+            """
             INSERT INTO knowledge_card_history (knowledge_card_id, generated_sections_snapshot, created_by, created_at)
             VALUES (%s, %s, %s, CURRENT_TIMESTAMP)
-        """, (card_id, json.dumps(generated_sections), user_id))
+        """,
+            (card_id, json.dumps(generated_sections), user_id),
+        )
     except Exception as e:
         logging.error(f"Failed to create history entry for card {card_id}: {e}", exc_info=True)
 
+
 def main():
     parser = argparse.ArgumentParser(description="Generate content for knowledge cards.")
-    parser.add_argument("--force", action="store_true", help="Force regeneration of content for all knowledge cards.")
-    parser.add_argument("--generate-if-null", action="store_true", help="Generate content for knowledge cards only when generated_sections is NULL or empty.")
-    parser.add_argument("--card-type", choices=["all", "donor", "outcome", "field_context"], default="all", help="Filter processing by card type (donor, outcome, field_context). Default is all.")
-    parser.add_argument("--user-id", required=True, help="The UUID of the user to associate with the created records.")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Force regeneration of content for all knowledge cards.",
+    )
+    parser.add_argument(
+        "--generate-if-null",
+        action="store_true",
+        help="Generate content for knowledge cards only when generated_sections is NULL or empty.",
+    )
+    parser.add_argument(
+        "--card-type",
+        choices=["all", "donor", "outcome", "field_context"],
+        default="all",
+        help="Filter processing by card type (donor, outcome, field_context). Default is all.",
+    )
+    parser.add_argument(
+        "--user-id",
+        required=True,
+        help="The UUID of the user to associate with the created records.",
+    )
     args = parser.parse_args()
 
-    log_file = os.path.join(os.path.dirname(__file__), 'generate_card_content.log')
-    
+    log_file = os.path.join(os.path.dirname(__file__), "generate_card_content.log")
+
     # Configure root logger
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler(log_file),
-            logging.StreamHandler(sys.stdout)
-        ]
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        handlers=[logging.FileHandler(log_file), logging.StreamHandler(sys.stdout)],
     )
 
     # Configure specific loggers to capture API calls and other external libs
@@ -137,15 +160,15 @@ def main():
         logger.setLevel(logging.INFO)
         # Avoid adding duplicate handlers if they already propagate to root or have handlers
         if not logger.handlers and not logger.propagate:
-             for handler in logging.getLogger().handlers:
-                 logger.addHandler(handler)
+            for handler in logging.getLogger().handlers:
+                logger.addHandler(handler)
 
     logging.info("Starting content generation process...")
 
     conn = None
     try:
         # Load environment variables from .env file
-        load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+        load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
         # Database connection
         db_username = os.getenv("DB_USERNAME").strip('"')
@@ -159,16 +182,16 @@ def main():
             user=db_username,
             password=db_password,
             host=db_host,
-            port=db_port
+            port=db_port,
         )
         with conn.cursor() as cur:
             user_id = uuid.UUID(args.user_id)
 
             query = """
-                SELECT 
-                    kc.id, 
-                    kc.template_name, 
-                    kc.generated_sections, 
+                SELECT
+                    kc.id,
+                    kc.template_name,
+                    kc.generated_sections,
                     kc.updated_at,
                     d.name as donor_name,
                     o.name as outcome_name,
@@ -181,8 +204,10 @@ def main():
 
             where_clauses = []
             if args.generate_if_null:
-                where_clauses.append("(kc.generated_sections IS NULL OR kc.generated_sections::text = '{}' OR kc.generated_sections::text = 'null')")
-            
+                where_clauses.append(
+                    "(kc.generated_sections IS NULL OR kc.generated_sections::text = '{}' OR kc.generated_sections::text = 'null')"
+                )
+
             if args.card_type != "all":
                 if args.card_type == "donor":
                     where_clauses.append("kc.donor_id IS NOT NULL")
@@ -199,9 +224,17 @@ def main():
             logging.info(f"Found {len(knowledge_cards)} knowledge cards to process.")
 
             for card in knowledge_cards:
-                card_id, template_name, generated_sections, card_updated_at, donor_name, outcome_name, field_context_name = card
+                (
+                    card_id,
+                    template_name,
+                    generated_sections,
+                    card_updated_at,
+                    donor_name,
+                    outcome_name,
+                    field_context_name,
+                ) = card
                 card_name = donor_name or outcome_name or field_context_name or f"Card {card_id}"
-                
+
                 should_generate = False
                 try:
                     if args.force:
@@ -210,12 +243,15 @@ def main():
                         should_generate = True
                     else:
                         # Check if any reference is newer than the card
-                        cur.execute("""
+                        cur.execute(
+                            """
                             SELECT COUNT(*)
                             FROM knowledge_card_to_references kctr
                             JOIN knowledge_card_references kcr ON kctr.reference_id = kcr.id
                             WHERE kctr.knowledge_card_id = %s AND kcr.updated_at > %s
-                        """, (card_id, card_updated_at))
+                        """,
+                            (card_id, card_updated_at),
+                        )
                         if cur.fetchone()[0] > 0:
                             should_generate = True
 
@@ -237,27 +273,35 @@ def main():
                             new_generated_sections[section_name] = str(result)
 
                         # Update the knowledge card
-                        cur.execute("""
+                        cur.execute(
+                            """
                             UPDATE knowledge_cards
                             SET generated_sections = %s, updated_at = CURRENT_TIMESTAMP
                             WHERE id = %s
-                        """, (json.dumps(new_generated_sections), card_id))
-                        
+                        """,
+                            (json.dumps(new_generated_sections), card_id),
+                        )
+
                         # Verification
-                        cur.execute("SELECT generated_sections FROM knowledge_cards WHERE id = %s", (card_id,))
+                        cur.execute(
+                            "SELECT generated_sections FROM knowledge_cards WHERE id = %s",
+                            (card_id,),
+                        )
                         updated_data = cur.fetchone()
                         if updated_data and updated_data[0]:
-                             logging.info(f"Verification successful: Content persisted for {card_name}")
+                            logging.info(f"Verification successful: Content persisted for {card_name}")
                         else:
-                             logging.error(f"Verification FAILED: Content NOT persisted for {card_name}")
+                            logging.error(f"Verification FAILED: Content NOT persisted for {card_name}")
 
                         # Create a history entry
                         create_knowledge_card_history_entry(cur, card_id, new_generated_sections, user_id)
                         logging.info(f"Successfully generated content for knowledge card: {card_name}")
                 except Exception as e:
-                    logging.error(f"Error processing knowledge card {card_name}: {e}", exc_info=True)
-                    conn.rollback() # Rollback the transaction for the failed card
-
+                    logging.error(
+                        f"Error processing knowledge card {card_name}: {e}",
+                        exc_info=True,
+                    )
+                    conn.rollback()  # Rollback the transaction for the failed card
 
             conn.commit()
             logging.info("Content generation process finished.")
@@ -271,6 +315,7 @@ def main():
         if conn:
             conn.close()
         logging.info("Content generation process finished.")
+
 
 if __name__ == "__main__":
     main()

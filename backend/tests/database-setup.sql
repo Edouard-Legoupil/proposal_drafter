@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 
--- Create Donors table 
+-- Create Donors table
 CREATE TABLE IF NOT EXISTS donors (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     account_id TEXT NOT NULL UNIQUE,
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS donors (
     last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create Outcomes table  
+-- Create Outcomes table
 CREATE TABLE IF NOT EXISTS outcomes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT UNIQUE NOT NULL,
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS outcomes (
     last_updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create Field Contexts table  
+-- Create Field Contexts table
 CREATE TABLE IF NOT EXISTS field_contexts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL,
@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS proposals (
     generated_sections JSONB,
     reviews JSONB,
     is_accepted BOOLEAN DEFAULT FALSE,
-    status proposal_status DEFAULT 'draft', 
+    status proposal_status DEFAULT 'draft',
     created_by UUID NOT NULL REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_by UUID NOT NULL REFERENCES users(id),
@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS proposal_status_history (
 );
 
 
--- Create Proposal Peer Reviews table   
+-- Create Proposal Peer Reviews table
 CREATE TABLE IF NOT EXISTS proposal_peer_reviews (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     proposal_id UUID NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
@@ -160,13 +160,13 @@ CREATE TABLE IF NOT EXISTS knowledge_card_history (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create Knowledge Card References table  
+-- Create Knowledge Card References table
 CREATE TABLE IF NOT EXISTS knowledge_card_references (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     knowledge_card_id UUID NOT NULL REFERENCES knowledge_cards(id) ON DELETE CASCADE,
     url TEXT NOT NULL,
     reference_type TEXT NOT NULL,
-    summary TEXT NOT NULL,    
+    summary TEXT NOT NULL,
     created_by UUID NOT NULL REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_by UUID NOT NULL REFERENCES users(id),
@@ -184,7 +184,7 @@ CREATE TABLE IF NOT EXISTS knowledge_card_reference_vectors (
     embedding vector(1536)
 );
 
--- Create join tables for many-to-many relationships  
+-- Create join tables for many-to-many relationships
 CREATE TABLE IF NOT EXISTS proposal_donors (
     proposal_id UUID NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
     donor_id UUID NOT NULL REFERENCES donors(id) ON DELETE CASCADE,
@@ -215,8 +215,8 @@ CREATE INDEX IF NOT EXISTS idx_proposal_peer_reviews_proposal_id ON proposal_pee
 CREATE INDEX IF NOT EXISTS idx_proposal_peer_reviews_reviewer_id ON proposal_peer_reviews(reviewer_id);
 CREATE INDEX IF NOT EXISTS idx_proposal_status_history_proposal_id ON proposal_status_history(proposal_id);
 
- 
- 
+
+
 
 -- Grant table permissions to application user
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO <DB_USERNAME>;

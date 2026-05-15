@@ -5,9 +5,13 @@ from sqlalchemy import text
 from typing import Optional
 from backend.core.db import get_engine
 from backend.core.security import get_current_user, is_system_admin
+from backend.core.authorization import get_user_roles, is_admin, get_user_id
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+# Initialize authorization logger
+auth_logger = logging.getLogger("security.authorization")
 
 
 def _get_filter_clauses(
@@ -22,25 +26,59 @@ def _get_filter_clauses(
     donor_group=None,
     template_name=None,
 ):
+    """
+    Generate WHERE clause and parameters for filtering metrics queries.
+
+    Object-Level Authorization (T099):
+    - System admins can view all metrics (no filtering)
+    - Regular users default to viewing their own metrics (filter_by defaults to 'user')
+    - Users can explicitly request team metrics if they have team access
+    """
     where_clauses = []
     params = {}
 
+    user_id = get_user_id(current_user)
+    user_roles = get_user_roles(current_user)
+
+    # Log the access attempt for audit purposes
+    auth_logger.info(
+        "Metrics access attempt",
+        extra={
+            "user_id": user_id,
+            "filter_by": filter_by,
+            "roles": user_roles,
+            "action": "metrics_filter",
+        },
+    )
+
     # Basic filter_by logic
+    # T099: Apply default filtering for non-admin users
+    if filter_by == "all":
+        # For non-admin users, default to user-level filtering unless explicitly overridden
+        if not is_admin(current_user):
+            filter_by = "user"
+            auth_logger.info(
+                "Defaulting to user-level filtering for non-admin",
+                extra={"user_id": user_id, "action": "metrics_filter_default"},
+            )
+
     if filter_by == "user":
         where_clauses.append("p.user_id = :current_user_id")
-        params["current_user_id"] = current_user["user_id"]
+        params["current_user_id"] = user_id
     elif filter_by == "team":
         user_team_id = None
         with get_engine().connect() as connection:
             user_team_id = connection.execute(
                 text("SELECT team_id FROM users WHERE id = :uid"),
-                {"uid": current_user["user_id"]},
+                {"uid": user_id},
             ).scalar()
         if user_team_id:
-            where_clauses.append(
-                "p.user_id IN (SELECT id FROM users WHERE team_id = :user_team_id)"
-            )
+            where_clauses.append("p.user_id IN (SELECT id FROM users WHERE team_id = :user_team_id)")
             params["user_team_id"] = user_team_id
+        else:
+            # If user has no team, default to user-level filtering
+            where_clauses.append("p.user_id = :current_user_id")
+            params["current_user_id"] = user_id
 
     # Rich filtering
     if status and status != "all":
@@ -56,14 +94,10 @@ def _get_filter_clauses(
         where_clauses.append("p.user_id = :author_id")
         params["author_id"] = author_id
     if team_id:
-        where_clauses.append(
-            "p.user_id IN (SELECT id FROM users WHERE team_id = :team_id)"
-        )
+        where_clauses.append("p.user_id IN (SELECT id FROM users WHERE team_id = :team_id)")
         params["team_id"] = team_id
     if donor_id:
-        where_clauses.append(
-            "p.id IN (SELECT proposal_id FROM proposal_donors WHERE donor_id = :donor_id)"
-        )
+        where_clauses.append("p.id IN (SELECT proposal_id FROM proposal_donors WHERE donor_id = :donor_id)")
         params["donor_id"] = donor_id
     if donor_group:
         where_clauses.append(
@@ -138,7 +172,7 @@ async def get_pipeline_kpis(
             where_clause = "WHERE p.status != 'deleted'"
 
     budget_sql = """
-        CASE 
+        CASE
             WHEN p.form_data->>'Budget Range' ~* 'k' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000)
             WHEN p.form_data->>'Budget Range' ~* 'M' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000000)
             ELSE NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric
@@ -152,7 +186,7 @@ async def get_pipeline_kpis(
         {where_clause}
     ),
     cycle_times AS (
-        SELECT 
+        SELECT
             p.id,
             EXTRACT(EPOCH FROM (
                 SELECT MIN(created_at) FROM proposal_status_history WHERE proposal_id = p.id AND status = 'submitted'
@@ -160,7 +194,7 @@ async def get_pipeline_kpis(
         FROM filtered_proposals p
     ),
     counts AS (
-        SELECT 
+        SELECT
             COALESCE(SUM(budget_value), 0) as total_funding,
             COUNT(*) as total_proposals,
             COUNT(DISTINCT (SELECT donor_id FROM proposal_donors WHERE proposal_id = p.id LIMIT 1)) as total_donors,
@@ -170,7 +204,7 @@ async def get_pipeline_kpis(
             COUNT(*) FILTER (WHERE status = 'deleted') as count_deleted
         FROM filtered_proposals p
     )
-    SELECT 
+    SELECT
         total_funding,
         total_proposals,
         CASE WHEN total_proposals > 0 THEN total_funding / total_proposals ELSE 0 END as avg_value,
@@ -241,7 +275,7 @@ async def get_proposals_by_donor(
             where_clause = "WHERE p.status != 'deleted'"
 
     budget_sql = """
-        CASE 
+        CASE
             WHEN p.form_data->>'Budget Range' ~* 'k' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000)
             WHEN p.form_data->>'Budget Range' ~* 'M' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000000)
             ELSE NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric
@@ -249,7 +283,7 @@ async def get_proposals_by_donor(
     """
 
     q = f"""
-    SELECT 
+    SELECT
         d.name as donor,
         SUM({budget_sql}) as total_value,
         COUNT(p.id) as proposal_count,
@@ -302,7 +336,7 @@ async def get_proposals_by_outcome(
             where_clause = "WHERE p.status != 'deleted'"
 
     q = f"""
-    SELECT 
+    SELECT
         d.name as donor,
         o.name as outcome,
         COUNT(p.id) as count
@@ -355,7 +389,7 @@ async def get_proposals_by_context(
             where_clause = "WHERE p.status != 'deleted'"
 
     budget_sql = """
-        CASE 
+        CASE
             WHEN p.form_data->>'Budget Range' ~* 'k' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000)
             WHEN p.form_data->>'Budget Range' ~* 'M' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000000)
             ELSE NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric
@@ -363,7 +397,7 @@ async def get_proposals_by_context(
     """
 
     q = f"""
-    SELECT 
+    SELECT
         COALESCE(fc.unhcr_region, 'Other') as region,
         fc.name as context,
         SUM({budget_sql}) as total_value,
@@ -416,7 +450,7 @@ async def get_proposals_by_team(
             where_clause = "WHERE p.status != 'deleted'"
 
     budget_sql = """
-        CASE 
+        CASE
             WHEN p.form_data->>'Budget Range' ~* 'k' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000)
             WHEN p.form_data->>'Budget Range' ~* 'M' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000000)
             ELSE NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric
@@ -425,7 +459,7 @@ async def get_proposals_by_team(
 
     q = f"""
     WITH base_data AS (
-        SELECT 
+        SELECT
             tm.name as team_name,
             p.status,
             {budget_sql} as budget_value,
@@ -436,14 +470,14 @@ async def get_proposals_by_team(
         {where_clause}
     ),
     team_totals AS (
-        SELECT 
+        SELECT
             team_name,
             COUNT(proposal_id) as total_proposals,
             COALESCE(SUM(budget_value), 0) as total_team_value
         FROM base_data
         GROUP BY team_name
     )
-    SELECT 
+    SELECT
         bd.team_name || ' (' || tt.total_proposals || ')' as team,
         bd.status,
         SUM(bd.budget_value) as value,
@@ -480,7 +514,7 @@ async def get_proposals_by_time(
         "quarter": "TO_CHAR(p.created_at, 'YYYY') || '-Q' || EXTRACT(QUARTER FROM p.created_at)",
         "year": "TO_CHAR(p.created_at, 'YYYY')",
     }
-    period_expr = periods.get(period, periods["month"])
+    period_expr = periods.get(period if period else "month", periods["month"])
 
     where_clause, params = _get_filter_clauses(
         current_user,
@@ -502,7 +536,7 @@ async def get_proposals_by_time(
             where_clause = "WHERE p.status != 'deleted'"
 
     budget_sql = """
-        CASE 
+        CASE
             WHEN p.form_data->>'Budget Range' ~* 'k' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000)
             WHEN p.form_data->>'Budget Range' ~* 'M' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000000)
             ELSE NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric
@@ -510,7 +544,7 @@ async def get_proposals_by_time(
     """
 
     q = f"""
-    SELECT 
+    SELECT
         {period_expr} as period,
         p.status,
         SUM({budget_sql}) as value
@@ -542,16 +576,14 @@ async def get_average_funding(
 ):
     q = """
     SELECT AVG(
-        CASE 
+        CASE
             WHEN p.form_data->>'Budget Range' ~* 'k' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000)
             WHEN p.form_data->>'Budget Range' ~* 'M' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000000)
             ELSE NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric
         END
     ) as avg_funding FROM proposals p {where_clause}
     """
-    where_clause, params = _get_filter_clauses(
-        current_user, filter_by, status_filter=status
-    )
+    where_clause, params = _get_filter_clauses(current_user, filter_by, status=status)
     query = q.format(where_clause=where_clause)
     return robust_singleval(query, params, "amount")
 
@@ -576,9 +608,7 @@ async def get_proposal_volume(
         {"categories": [], "counts": []},
         lambda rows: {
             "categories": [row["category"] for row in rows if row.get("category")],
-            "counts": [
-                row["proposal_count"] for row in rows if "proposal_count" in row
-            ],
+            "counts": [row["proposal_count"] for row in rows if "proposal_count" in row],
         },
     )
 
@@ -595,13 +625,13 @@ async def get_funding_by_category(
     date_end: Optional[str] = Query(None),
 ):
     q = """
-    SELECT COALESCE(p.form_data->>'Category', p.template_name) as category, 
+    SELECT COALESCE(p.form_data->>'Category', p.template_name) as category,
            SUM(COALESCE(
-               CASE 
+               CASE
                    WHEN p.form_data->>'Budget Range' ~* 'k' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000)
                    WHEN p.form_data->>'Budget Range' ~* 'M' THEN (NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric * 1000000)
                    ELSE NULLIF(regexp_replace(p.form_data->>'Budget Range', '[^0-9.]', '', 'g'), '')::numeric
-               END, 0)) as total_amount 
+               END, 0)) as total_amount
     FROM proposals p {where_clause} GROUP BY category
     """
     where_clause, params = _get_filter_clauses(current_user, filter_by)
@@ -612,9 +642,7 @@ async def get_funding_by_category(
         {"categories": [], "amounts": []},
         lambda rows: {
             "categories": [row["category"] for row in rows if row.get("category")],
-            "amounts": [
-                float(row["total_amount"]) for row in rows if "total_amount" in row
-            ],
+            "amounts": [float(row["total_amount"]) for row in rows if "total_amount" in row],
         },
     )
 
@@ -679,7 +707,7 @@ async def get_proposal_trends(
         "quarter": "TO_CHAR(p.created_at, 'YYYY') || '-Q' || EXTRACT(QUARTER FROM p.created_at)",
         "year": "TO_CHAR(p.created_at, 'YYYY')",
     }
-    period_expr = periods.get(period, periods["month"])
+    period_expr = periods.get(period if period else "month", periods["month"])
     where_clause, params = _get_filter_clauses(current_user, filter_by)
     q = f"SELECT {period_expr} as period, p.status, COUNT(p.id) as proposal_count FROM proposals p {where_clause} GROUP BY period, p.status ORDER BY period DESC"
     return robust_query(
@@ -689,9 +717,7 @@ async def get_proposal_trends(
         lambda rows: {
             "timeline": [row["period"] for row in rows if "period" in row],
             "statuses": [row["status"] for row in rows if "status" in row],
-            "counts": [
-                row["proposal_count"] for row in rows if "proposal_count" in row
-            ],
+            "counts": [row["proposal_count"] for row in rows if "proposal_count" in row],
         },
     )
 
@@ -741,9 +767,7 @@ async def get_abandonment_rate(
     try:
         where_clause, params = _get_filter_clauses(current_user, filter_by)
         total_query = f"SELECT COUNT(id) FROM proposals p {where_clause}"
-        abandoned_query = (
-            f"SELECT COUNT(id) FROM proposals p {where_clause} AND p.status = 'draft'"
-        )
+        abandoned_query = f"SELECT COUNT(id) FROM proposals p {where_clause} AND p.status = 'draft'"
         with get_engine().connect() as connection:
             total = connection.execute(text(total_query), params).scalar()
             abandoned = connection.execute(text(abandoned_query), params).scalar()
@@ -773,11 +797,11 @@ async def get_edit_activity(
     q = """
     SELECT edit_count, COUNT(proposal_id) as proposal_count
     FROM (
-        SELECT psh.proposal_id, COUNT(psh.id) as edit_count 
-        FROM proposal_status_history psh 
-        JOIN proposals p ON psh.proposal_id = p.id 
-        {where_clause} 
-        GROUP BY psh.proposal_id 
+        SELECT psh.proposal_id, COUNT(psh.id) as edit_count
+        FROM proposal_status_history psh
+        JOIN proposals p ON psh.proposal_id = p.id
+        {where_clause}
+        GROUP BY psh.proposal_id
     ) t
     GROUP BY edit_count
     ORDER BY edit_count
@@ -789,9 +813,7 @@ async def get_edit_activity(
         params,
         {"labels": [], "data": []},
         lambda rows: {
-            "labels": [
-                f"{row['edit_count']} Edits" for row in rows if "edit_count" in row
-            ],
+            "labels": [f"{row['edit_count']} Edits" for row in rows if "edit_count" in row],
             "data": [row["proposal_count"] for row in rows if "proposal_count" in row],
         },
     )
@@ -815,11 +837,11 @@ async def get_reviewer_activity(
     q = """
     SELECT review_count, COUNT(proposal_id) as proposal_count
     FROM (
-        SELECT psh.proposal_id, COUNT(psh.id) as review_count 
-        FROM proposal_status_history psh 
-        JOIN proposals p ON psh.proposal_id = p.id 
-        {where_clause} 
-        GROUP BY psh.proposal_id 
+        SELECT psh.proposal_id, COUNT(psh.id) as review_count
+        FROM proposal_status_history psh
+        JOIN proposals p ON psh.proposal_id = p.id
+        {where_clause}
+        GROUP BY psh.proposal_id
     ) t
     GROUP BY review_count
     ORDER BY review_count
@@ -836,11 +858,7 @@ async def get_reviewer_activity(
         params,
         {"labels": [], "data": []},
         lambda rows: {
-            "labels": [
-                f"{row['review_count']} Reviews"
-                for row in rows
-                if "review_count" in row
-            ],
+            "labels": [f"{row['review_count']} Reviews" for row in rows if "review_count" in row],
             "data": [row["proposal_count"] for row in rows if "proposal_count" in row],
         },
     )
@@ -863,15 +881,15 @@ async def get_knowledge_cards(
     date_end: Optional[str] = Query(None),
 ):
     q = """
-    SELECT 
-        CASE 
+    SELECT
+        CASE
             WHEN donor_id IS NOT NULL THEN 'Donor'
             WHEN outcome_id IS NOT NULL THEN 'Outcome'
             WHEN field_context_id IS NOT NULL THEN 'Context'
             ELSE 'General'
-        END as type, 
-        COUNT(id) as count 
-    FROM knowledge_cards 
+        END as type,
+        COUNT(id) as count
+    FROM knowledge_cards
     GROUP BY type
     """
     return robust_query(
@@ -920,17 +938,17 @@ async def get_reference_metrics(
     date_end: Optional[str] = Query(None),
 ):
     q = """
-    SELECT 
-        CASE 
+    SELECT
+        CASE
             WHEN kc.donor_id IS NOT NULL THEN 'Donor'
             WHEN kc.outcome_id IS NOT NULL THEN 'Outcome'
             WHEN kc.field_context_id IS NOT NULL THEN 'Context'
             ELSE 'General'
-        END as type, 
-        COUNT(kcr.id) as references 
-    FROM knowledge_card_references kcr 
-    JOIN knowledge_card_to_references kctr ON kcr.id = kctr.reference_id 
-    JOIN knowledge_cards kc ON kctr.knowledge_card_id = kc.id 
+        END as type,
+        COUNT(kcr.id) as references
+    FROM knowledge_card_references kcr
+    JOIN knowledge_card_to_references kctr ON kcr.id = kctr.reference_id
+    JOIN knowledge_cards kc ON kctr.knowledge_card_id = kc.id
     GROUP BY type
     """
     return robust_query(
@@ -962,9 +980,7 @@ async def get_reference_usage_metrics(
         {"urls": [], "usage_counts": []},
         lambda rows: {
             "urls": [row["url"] for row in rows if "url" in row],
-            "usage_counts": [
-                row["usage_count"] for row in rows if "usage_count" in row
-            ],
+            "usage_counts": [row["usage_count"] for row in rows if "usage_count" in row],
         },
     )
 
@@ -996,10 +1012,10 @@ async def get_card_edit_frequency(
     date_end: Optional[str] = Query(None),
 ):
     q = """
-    SELECT kc.id as card_id, 
-           COUNT(kr.id)/GREATEST(1, EXTRACT(MONTH FROM AGE(NOW(), kc.created_at))) as edit_frequency 
-    FROM knowledge_card_history kr 
-    JOIN knowledge_cards kc ON kr.knowledge_card_id = kc.id 
+    SELECT kc.id as card_id,
+           COUNT(kr.id)/GREATEST(1, EXTRACT(MONTH FROM AGE(NOW(), kc.created_at))) as edit_frequency
+    FROM knowledge_card_history kr
+    JOIN knowledge_cards kc ON kr.knowledge_card_id = kc.id
     GROUP BY kc.id, kc.created_at
     """
     return robust_query(
@@ -1008,9 +1024,7 @@ async def get_card_edit_frequency(
         {"card_ids": [], "edit_frequency": []},
         lambda rows: {
             "card_ids": [str(row["card_id"]) for row in rows if "card_id" in row],
-            "edit_frequency": [
-                row["edit_frequency"] for row in rows if "edit_frequency" in row
-            ],
+            "edit_frequency": [row["edit_frequency"] for row in rows if "edit_frequency" in row],
         },
     )
 
@@ -1042,14 +1056,14 @@ async def get_knowledge_silos(
     date_end: Optional[str] = Query(None),
 ):
     q = """
-    SELECT kc.id as isolated_card_id, t.name as silo_team 
-    FROM knowledge_cards kc 
-    JOIN users u ON kc.created_by = u.id 
-    JOIN teams t ON u.team_id = t.id 
+    SELECT kc.id as isolated_card_id, t.name as silo_team
+    FROM knowledge_cards kc
+    JOIN users u ON kc.created_by = u.id
+    JOIN teams t ON u.team_id = t.id
     WHERE kc.id IN (
-        SELECT kctr.knowledge_card_id 
-        FROM knowledge_card_to_references kctr 
-        GROUP BY kctr.knowledge_card_id 
+        SELECT kctr.knowledge_card_id
+        FROM knowledge_card_to_references kctr
+        GROUP BY kctr.knowledge_card_id
         HAVING COUNT(DISTINCT kctr.reference_id) = 1
     )
     """
@@ -1058,11 +1072,7 @@ async def get_knowledge_silos(
         {},
         {"isolated_card_ids": [], "silo_teams": []},
         lambda rows: {
-            "isolated_card_ids": [
-                str(row["isolated_card_id"])
-                for row in rows
-                if "isolated_card_id" in row
-            ],
+            "isolated_card_ids": [str(row["isolated_card_id"]) for row in rows if "isolated_card_id" in row],
             "silo_teams": [row["silo_team"] for row in rows if "silo_team" in row],
         },
     )
@@ -1082,9 +1092,9 @@ async def get_quality_incidents(
     current_user: dict = Depends(get_current_user),
 ):
     q = """
-    (SELECT 
+    (SELECT
         pr.id::text as incident_id,
-        p.id::text as source_id, 
+        p.id::text as source_id,
         'Proposal' as source_type,
         substring(p.project_description from 1 for 100) as source_name,
         pr.section_name,
@@ -1101,10 +1111,10 @@ async def get_quality_incidents(
     JOIN users u ON pr.reviewer_id = u.id
     JOIN users creator ON p.created_by = creator.id
     WHERE pr.severity IS NOT NULL AND pr.severity != '' AND pr.status IS DISTINCT FROM 'removed')
-    
+
     UNION ALL
-    
-    (SELECT 
+
+    (SELECT
         kcr.id::text as incident_id,
         kc.id::text as source_id,
         kc.template_name as source_type,
@@ -1130,10 +1140,10 @@ async def get_quality_incidents(
     JOIN users u ON kcr.reviewer_id = u.id
     JOIN users creator ON kc.created_by = creator.id
     WHERE kcr.severity IS NOT NULL AND kcr.severity != '' AND kcr.status IS DISTINCT FROM 'removed')
-    
+
     UNION ALL
-    
-    (SELECT 
+
+    (SELECT
         tc.id::text as incident_id,
         COALESCE(tr.id::text, tc.template_name) as source_id,
         'Donor Template' as source_type,
@@ -1152,7 +1162,7 @@ async def get_quality_incidents(
     JOIN users u ON tc.user_id = u.id
     JOIN users creator ON tr.created_by = creator.id
     WHERE tc.severity IS NOT NULL AND tc.severity != '' AND tc.status IS DISTINCT FROM 'removed')
-    
+
     ORDER BY created_at DESC
     """
 
@@ -1214,7 +1224,7 @@ async def get_quality_kpis(
         UNION ALL
         (SELECT type_of_comment, severity FROM donor_template_comments WHERE severity IS NOT NULL AND severity != '')
     )
-    SELECT 
+    SELECT
         COALESCE(type_of_comment, 'General') as type,
         severity,
         COUNT(*) as count

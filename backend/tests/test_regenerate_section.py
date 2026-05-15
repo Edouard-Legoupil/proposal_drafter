@@ -1,7 +1,7 @@
 import pytest
 import uuid
 from unittest.mock import MagicMock
-from backend.main import app
+
 
 @pytest.mark.asyncio
 async def test_regenerate_section(authenticated_client, mocker):
@@ -9,19 +9,19 @@ async def test_regenerate_section(authenticated_client, mocker):
 
     # We patch the `regenerate_section_logic` function directly to isolate the test
     mocker.patch(
-        'backend.api.proposals.regenerate_section_logic',
-        return_value="Regenerated Content"
+        "backend.api.proposals.regenerate_section_logic",
+        return_value="Regenerated Content",
     )
 
     # Mock Redis `setex` as a new session is created
-    mocker.patch('backend.api.proposals.redis_client.setex')
+    mocker.patch("backend.api.proposals.redis_client.setex")
 
     # Mock the database check for is_accepted
     mock_engine = MagicMock()
     mock_connection = MagicMock()
-    mock_connection.execute.return_value.scalar.return_value = False # Not accepted
+    mock_connection.execute.return_value.scalar.return_value = False  # Not accepted
     mock_engine.connect.return_value.__enter__.return_value = mock_connection
-    mocker.patch('backend.api.proposals.get_engine', return_value=mock_engine)
+    mocker.patch("backend.api.proposals.get_engine", return_value=mock_engine)
 
     # Prepare payload
     proposal_id = str(uuid.uuid4())
@@ -29,7 +29,7 @@ async def test_regenerate_section(authenticated_client, mocker):
         "section": "Introduction",
         "concise_input": "Make it better.",
         "form_data": {"Project title": "Child Protection"},
-        "project_description": "A project for regenerate section test."
+        "project_description": "A project for regenerate section test.",
     }
 
     # Make the API call using the proposal_id in the URL

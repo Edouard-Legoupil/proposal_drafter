@@ -1,5 +1,4 @@
 from __future__ import annotations
-from sqlalchemy import text
 import logging
 
 logger = logging.getLogger(__name__)

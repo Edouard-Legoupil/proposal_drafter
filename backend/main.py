@@ -1,52 +1,62 @@
-#  Third-Party Libraries
+#  Standard Library
 import logging
+import os
+import sys
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-from fastapi.responses import FileResponse
+
+#  Third-Party Libraries
 import uvicorn
 from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
+#  Internal Modules
+from backend.api import (
+    admin,
+    auth,
+    documents,
+    health,
+    incident,
+    knowledge,
+    metrics,
+    proposals,
+    qualification,
+    session,
+    sharepoint,
+    template_management,
+    templates,
+    users,
+)
+from backend.core.error_handlers import register_error_handlers
+from backend.core.middleware import (
+    setup_cors_middleware,
+    setup_security_middleware,
+    custom_http_exception_handler,
+)
+from backend.utils.sharepoint_sync import (
+    initialize_database,
+    setup_sharepoint_sync_scheduler,
+)
 
 load_dotenv()
 
-# --- Logging Configuration ---
-import sys
-# Configure logging to stream to stdout
-# logging.basicConfig(
-#     level=logging.INFO,
-#     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-#     stream=sys.stdout
-# )
-
-# --- Logging Configuration ---
+# Configure logging
 log_dir = Path(__file__).parent / "log"
 log_dir.mkdir(exist_ok=True)
 log_file = log_dir / "app.log"
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 handler = logging.FileHandler(log_file)
-handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
 logging.getLogger().addHandler(handler)
 
-
-
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-#  Internal Modules
-from backend.api import auth, proposals, session, documents, health, users, knowledge, metrics, admin, templates, incident, qualification, template_management, sharepoint
-from backend.core.middleware import (
-    setup_cors_middleware,
-    custom_http_exception_handler,
-    setup_scheduler
-)
-from backend.utils.sharepoint_sync import setup_sharepoint_sync_scheduler, initialize_database
-
-from backend.core.db import test_connection
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
 # This is the main application file. It brings together all the different
 # parts of the application: API routers, middleware, and event handlers.
+
 
 # --- Lifespan Management ---
 @asynccontextmanager
@@ -55,32 +65,33 @@ async def lifespan(app: FastAPI):
     Manages application startup and shutdown events.
     """
     logging.info("Application is starting up...")
-    
+
     # Initialize SharePoint sync database tables
     try:
         initialize_database()
         logging.info("SharePoint sync database initialized")
     except Exception as e:
         logging.error(f"Failed to initialize SharePoint sync database: {e}")
-    
+
     # Start SharePoint sync scheduler (runs twice daily)
     try:
         setup_sharepoint_sync_scheduler()
     except Exception as e:
         logging.error(f"Failed to start SharePoint sync scheduler: {e}")
-    
-   # setup_scheduler()
-   # logging.info("Background scheduler has been started.")
+
+    # setup_scheduler()
+    # logging.info("Background scheduler has been started.")
     yield
     # Cleanup tasks can be added here if needed
     logging.info("Application is shutting down...")
 
+
 # --- FastAPI Application Initialization ---
 app = FastAPI(
     title="Proposal Drafting API",
-    description="An API for generating, managing, and exporting project proposals.", 
-    version="0.0.1", 
-   # root_path="/api",
+    description="An API for generating, managing, and exporting project proposals.",
+    version="0.0.1",
+    # root_path="/api",
     terms_of_service="http://www.unhcr.org",
     contact={
         "name": "Edouard Legoupil",
@@ -91,15 +102,22 @@ app = FastAPI(
         "name": "MIT",
         "url": "https://opensource.org/licenses/MIT",
     },
-    lifespan=lifespan
+    lifespan=lifespan,
 )
-
 
 
 # --- Middleware Configuration ---
 # Middleware functions run for every request, before it's processed by a specific endpoint.
-# They are used here for handling CORS and custom exceptions.
+# They are used here for handling CORS, security headers, and custom exceptions.
+setup_security_middleware(app)  # TASK-SEC-007: Add Security HTTP Headers
 setup_cors_middleware(app)
+
+# --- Error Handling Configuration ---
+# Register standardized error handlers for security and consistency
+register_error_handlers(app)
+
+# Note: The custom_http_exception_handler is kept for backward compatibility
+# but the new error_handlers.py provides comprehensive security-focused error handling
 app.add_exception_handler(HTTPException, custom_http_exception_handler)
 
 
@@ -122,6 +140,7 @@ app.include_router(qualification.router, prefix="/api", tags=["Qualification"])
 app.include_router(health.router, tags=["Health & Debugging"])
 app.include_router(sharepoint.router, prefix="/api", tags=["SharePoint"])
 
+
 # --- Root Endpoint: Health Check + SPA ---
 # This MUST be defined before the SPA fallback to take priority
 @app.get("/")
@@ -133,7 +152,7 @@ async def root_endpoint(request: Request):
     """
     # Check Accept header to determine if this is a health probe or browser request
     accept_header = request.headers.get("accept", "")
-    
+
     # Health probes typically accept application/json or */*
     # Browsers typically accept text/html as the primary type
     if "text/html" in accept_header:
@@ -147,17 +166,18 @@ async def root_endpoint(request: Request):
         # Health probe or API request - return health status
         return {"status": "ok", "service": "proposal-drafter"}
 
+
 # --- Serve React Frontend ---
 frontend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))
-#frontend_path = os.path.join(os.path.dirname(__file__), "..", "/frontend/dist")
+# frontend_path = os.path.join(os.path.dirname(__file__), "..", "/frontend/dist")
 if os.path.isdir(frontend_path):
     # Serve static assets first
     assets_path = os.path.join(frontend_path, "assets")
     if os.path.isdir(assets_path):
         app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
-    
+
     # Serve other static files that might exist in the build
-    static_dirs = ['static', 'public']  # common React build directories
+    static_dirs = ["static", "public"]  # common React build directories
     for static_dir in static_dirs:
         static_path = os.path.join(frontend_path, static_dir)
         if os.path.isdir(static_path):
@@ -174,23 +194,36 @@ if os.path.isdir(frontend_path):
         # Skip API routes explicitly
         if full_path.startswith("api/"):
             return {"detail": "API route not found"}
-        
+
         # Check if the request is for a static file that exists
         possible_file = os.path.join(frontend_path, full_path)
         if os.path.isfile(possible_file):
             return FileResponse(possible_file)
-        
+
         # Check for common static file extensions
-        if '.' in full_path:
-            file_ext = full_path.split('.')[-1]
-            if file_ext in ['js', 'css', 'png', 'jpg', 'jpeg', 'gif', 'ico', 'svg', 'woff', 'woff2', 'ttf', 'eot']:
+        if "." in full_path:
+            file_ext = full_path.split(".")[-1]
+            if file_ext in [
+                "js",
+                "css",
+                "png",
+                "jpg",
+                "jpeg",
+                "gif",
+                "ico",
+                "svg",
+                "woff",
+                "woff2",
+                "ttf",
+                "eot",
+            ]:
                 return {"detail": "Static file not found"}
-        
+
         # Otherwise serve index.html for SPA routing
         index_file = os.path.join(frontend_path, "index.html")
         if os.path.isfile(index_file):
             return FileResponse(index_file)
-        
+
         return {"detail": "Frontend not built"}
 
 

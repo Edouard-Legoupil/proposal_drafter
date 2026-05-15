@@ -1,17 +1,26 @@
-from fastapi import APIRouter, Depends, HTTPException, Body, BackgroundTasks
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Body,
+    BackgroundTasks,
+    status,
+)
 from sqlalchemy import text
-from typing import List, Optional, Dict, Any
+from typing import Dict, Any
 import uuid
 import json
-import datetime
 import time
 import logging
 import os
 
-from backend.core.db import get_engine
+from backend.core.db import engine, get_engine
 from backend.core.security import get_current_user
+from backend.core.authorization import (
+    check_template_access,
+    require_ownership,
+)
 from backend.core.config import (
-    get_available_templates,
     load_proposal_template,
     TEMPLATES_DIR,
 )
@@ -34,9 +43,7 @@ def _run_auto_analysis(artifact_type: ArtifactType, review_id: str):
             service = IncidentService(connection)
             # 1. Immediate acknowledgment
             initial_msg = "Your feedback has been received and is currently being analyzed by our AI agents. A detailed response will follow shortly."
-            service.repo.update_template_comment(
-                review_id, initial_msg, "acknowledged", response_author="system"
-            )
+            service.repo.update_template_comment(review_id, initial_msg, "acknowledged", response_author="system")
 
         # 2. Wait for 30 seconds
         time.sleep(30)
@@ -66,18 +73,16 @@ async def get_published_template(
 
         # Also fetch comments for this published template
         with engine.connect() as connection:
-            comments_query = text("""
+            comments_query = text(
+                """
                 SELECT tc.*, u.name as user_name
                 FROM donor_template_comments tc
                 JOIN users u ON tc.user_id = u.id
                 WHERE tc.template_name = :name
                 ORDER BY tc.created_at ASC
-            """)
-            comments_result = (
-                connection.execute(comments_query, {"name": template_name})
-                .mappings()
-                .fetchall()
+            """
             )
+            comments_result = connection.execute(comments_query, {"name": template_name}).mappings().fetchall()
             comments = [
                 {
                     "id": str(c["id"]),
@@ -101,9 +106,7 @@ async def get_published_template(
                 "type": "file",
                 "template_type": template_data.get("template_type", "Proposal"),
                 "configuration": {
-                    "instructions": template_data.get("special_requirements", {}).get(
-                        "instructions", []
-                    ),
+                    "instructions": template_data.get("special_requirements", {}).get("instructions", []),
                     "sections": template_data.get("sections", []),
                 },
                 "comments": comments,
@@ -111,9 +114,7 @@ async def get_published_template(
     except HTTPException as http_exc:
         raise http_exc
     except Exception as e:
-        logger.error(
-            f"Error loading published template {template_name}: {e}", exc_info=True
-        )
+        logger.error(f"Error loading published template {template_name}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to load template content.")
 
 
@@ -145,14 +146,12 @@ def _parse_json(data):
         return data
     try:
         return json.loads(data)
-    except:
+    except Exception:
         return data
 
 
 @router.get("/")
-async def list_templates(
-    current_user: dict = Depends(get_current_user), engine=Depends(get_engine)
-):
+async def list_templates(current_user: dict = Depends(get_current_user), engine=Depends(get_engine)):
     """
     Returns all published templates from files and current requests from DB.
     """
@@ -180,11 +179,7 @@ async def list_templates(
                         t_type_norm = t_type.lower().replace(" ", "_")
 
                         # Try to get a nice display name from the template itself
-                        donor_display = (
-                            " / ".join(t_data.get("donors", []))
-                            if t_data.get("donors")
-                            else filename
-                        )
+                        donor_display = " / ".join(t_data.get("donors", [])) if t_data.get("donors") else filename
 
                         published.append(
                             {
@@ -200,13 +195,15 @@ async def list_templates(
 
         # DB-based requests (update query to include donor_ids and template_type)
         with engine.connect() as connection:
-            query = text("""
+            query = text(
+                """
                 SELECT tr.id, tr.name, tr.status, tr.created_at, tr.template_type, tr.donor_ids, u.name as creator_name, d.name as donor_name
                 FROM donor_template_requests tr
                 JOIN users u ON tr.created_by = u.id
                 LEFT JOIN donors d ON tr.donor_id = d.id
                 ORDER BY tr.created_at DESC
-            """)
+            """
+            )
             result = connection.execute(query).mappings().fetchall()
 
             db_templates = []
@@ -218,11 +215,8 @@ async def list_templates(
                         "status": row["status"],
                         "template_type": row["template_type"],
                         "creator": row["creator_name"],
-                        "donor": row["donor_name"]
-                        or ("Multiple" if row["donor_ids"] else None),
-                        "donor_ids": [str(d) for d in row["donor_ids"]]
-                        if row["donor_ids"]
-                        else [],
+                        "donor": row["donor_name"] or ("Multiple" if row["donor_ids"] else None),
+                        "donor_ids": [str(d) for d in row["donor_ids"]] if row["donor_ids"] else [],
                         "created_at": _to_iso(row["created_at"]),
                         "type": "db",
                     }
@@ -252,18 +246,14 @@ async def create_template_request(
         # Build a draft initial file content that mirrors the real JSON template format
         initial_file_content = {
             "template_name": request.name,
-            "template_type": "Proposal"
-            if template_type == "proposal"
-            else "Concept Note",
+            "template_type": "Proposal" if template_type == "proposal" else "Concept Note",
             "donors": [request.name],
             "special_requirements": {"instructions": high_level_instructions},
             "section_sequence": [
                 s.get("section_name", s) if isinstance(s, dict) else s
                 for s in sorted(
                     sections,
-                    key=lambda s: s.get("generation_sequence", 999)
-                    if isinstance(s, dict)
-                    else 999,
+                    key=lambda s: s.get("generation_sequence", 999) if isinstance(s, dict) else 999,
                 )
             ],
             "sections": sections,
@@ -271,10 +261,12 @@ async def create_template_request(
 
         with engine.begin() as connection:
             connection.execute(
-                text("""
+                text(
+                    """
                     INSERT INTO donor_template_requests (id, name, donor_id, donor_ids, template_type, configuration, initial_file_content, created_by)
                     VALUES (:id, :name, :did, :dids, :ttype, :conf, :file, :uid)
-                """),
+                """
+                ),
                 {
                     "id": str(uuid.uuid4()),
                     "name": request.name,
@@ -292,9 +284,7 @@ async def create_template_request(
             f"[CREATE TEMPLATE REQUEST ERROR] Failed to submit template request: {e}",
             exc_info=True,
         )
-        raise HTTPException(
-            status_code=500, detail="Failed to submit template request."
-        )
+        raise HTTPException(status_code=500, detail="Failed to submit template request.")
 
 
 @router.get("/request/{request_id}")
@@ -308,13 +298,15 @@ async def get_template_request(
     """
     try:
         with engine.connect() as connection:
-            query = text("""
+            query = text(
+                """
                 SELECT tr.*, u.name as creator_name, d.name as donor_name
                 FROM donor_template_requests tr
                 JOIN users u ON tr.created_by = u.id
                 LEFT JOIN donors d ON tr.donor_id = d.id
                 WHERE tr.id = :id
-            """)
+            """
+            )
             row = connection.execute(query, {"id": request_id}).mappings().fetchone()
 
             if not row:
@@ -323,26 +315,22 @@ async def get_template_request(
             donor_names = []
             if row["donor_ids"]:
                 donor_names_query = text("SELECT name FROM donors WHERE id = ANY(:ids)")
-                donor_names_result = connection.execute(
-                    donor_names_query, {"ids": row["donor_ids"]}
-                ).fetchall()
+                donor_names_result = connection.execute(donor_names_query, {"ids": row["donor_ids"]}).fetchall()
                 donor_names = [r[0] for r in donor_names_result]
             elif row["donor_name"]:
                 donor_names = [row["donor_name"]]
 
             # Fetch comments
-            comments_query = text("""
+            comments_query = text(
+                """
                 SELECT tc.*, u.name as user_name
                 FROM donor_template_comments tc
                 JOIN users u ON tc.user_id = u.id
                 WHERE tc.template_request_id = :id
                 ORDER BY tc.created_at ASC
-            """)
-            comments_result = (
-                connection.execute(comments_query, {"id": request_id})
-                .mappings()
-                .fetchall()
+            """
             )
+            comments_result = connection.execute(comments_query, {"id": request_id}).mappings().fetchall()
             comments = []
             for c in comments_result:
                 comments.append(
@@ -368,9 +356,7 @@ async def get_template_request(
                 else ("Multiple" if len(donor_names) > 1 else None),
                 "donor_names": donor_names,
                 "donor_id": str(row["donor_id"]) if row["donor_id"] else None,
-                "donor_ids": [str(did) for did in row["donor_ids"]]
-                if row["donor_ids"]
-                else [],
+                "donor_ids": [str(did) for did in row["donor_ids"]] if row["donor_ids"] else [],
                 "template_type": row.get("template_type", "proposal"),
                 "configuration": _parse_json(row["configuration"]),
                 "initial_file_content": _parse_json(row["initial_file_content"]),
@@ -442,11 +428,13 @@ async def add_comment(
         with engine.begin() as connection:
             if is_uuid:
                 result = connection.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO donor_template_comments (id, template_request_id, user_id, comment_text, section_name, rating, severity, type_of_comment)
                         VALUES (:id, :tid, :uid, :text, :section, :rating, :severity, :type)
                         RETURNING id::text
-                    """),
+                    """
+                    ),
                     {
                         "id": str(uuid.uuid4()),
                         "tid": request_id,
@@ -462,11 +450,13 @@ async def add_comment(
             else:
                 # Store as a file-based comment using template_name
                 result = connection.execute(
-                    text("""
+                    text(
+                        """
                         INSERT INTO donor_template_comments (id, template_name, user_id, comment_text, section_name, rating, severity, type_of_comment)
                         VALUES (:id, :tname, :uid, :text, :section, :rating, :severity, :type)
                         RETURNING id::text
-                    """),
+                    """
+                    ),
                     {
                         "id": str(uuid.uuid4()),
                         "tname": request_id,
@@ -482,9 +472,7 @@ async def add_comment(
 
         # Trigger analysis in background
         if review_id:
-            background_tasks.add_task(
-                _run_auto_analysis, ArtifactType.template, review_id
-            )
+            background_tasks.add_task(_run_auto_analysis, ArtifactType.template, review_id)
 
         return {"message": "Comment added successfully.", "comment_id": review_id}
     except Exception as e:
@@ -503,6 +491,8 @@ async def reply_to_template_feedback(
     """
     user_id = current_user["user_id"]
     try:
+        if engine is None:
+            raise HTTPException(status_code=500, detail="Database engine not initialized")
         with engine.begin() as connection:
             # Verify permissions (user should be the one who created the request, or admin)
             is_uuid = True
@@ -513,9 +503,7 @@ async def reply_to_template_feedback(
 
             if is_uuid:
                 owner_id = connection.execute(
-                    text(
-                        "SELECT created_by FROM donor_template_requests WHERE id = :rid"
-                    ),
+                    text("SELECT created_by FROM donor_template_requests WHERE id = :rid"),
                     {"rid": request_id},
                 ).scalar()
             else:
@@ -524,15 +512,10 @@ async def reply_to_template_feedback(
                 owner_id = user_id  # Fallback
 
             # Simple check for now
-            if str(owner_id) != str(user_id) and not current_user.get(
-                "is_admin", False
-            ):
+            if str(owner_id) != str(user_id) and not current_user.get("is_admin", False):
                 # Check if user is an admin via roles
                 roles = current_user.get("roles", [])
-                is_admin = any(
-                    r == "admin" or (isinstance(r, dict) and r.get("name") == "admin")
-                    for r in roles
-                )
+                is_admin = any(r == "admin" or (isinstance(r, dict) and r.get("name") == "admin") for r in roles)
                 if not is_admin:
                     raise HTTPException(status_code=403, detail="Permission denied.")
 
@@ -555,3 +538,391 @@ async def reply_to_template_feedback(
     except Exception as e:
         logger.error(f"Error saving template reply: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to save reply.")
+
+
+# =============================================================================
+# Object-Level Authorization Endpoints for Database Templates
+# User Story 3: Template Authorization (T046-T058)
+# =============================================================================
+
+
+@router.get("/{template_id}")
+async def get_template(
+    template_id: str,
+    current_user: dict = Depends(get_current_user),
+    engine=Depends(get_engine),
+):
+    """
+    Get a template by ID with authorization checks.
+
+    T055 [US3]: Apply @require_permission('read') to GET /api/templates/{id}
+    T056 [US3]: Add organization membership check for public templates
+    T057 [US3]: Add error handling for template not found (404)
+    T058 [US3]: Add logging for template access attempts
+    """
+    try:
+        # Log the access attempt (T058)
+        logger.info(
+            "Template access attempt",
+            extra={
+                "user_id": current_user.get("user_id"),
+                "template_id": template_id,
+                "action": "template_get",
+            },
+        )
+
+        # T057: Try to get template from database
+        with engine.connect() as connection:
+            result = connection.execute(text("SELECT * FROM templates WHERE id = :id"), {"id": template_id})
+            template = result.fetchone()
+
+            # T057: Template not found - return 404
+            if template is None:
+                logger.warning(
+                    "Template not found access attempt",
+                    extra={
+                        "user_id": current_user.get("user_id"),
+                        "template_id": template_id,
+                        "action": "template_get",
+                        "result": "not_found",
+                    },
+                )
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+
+            # Convert to dict
+            template_dict = dict(template)
+            template_dict["id"] = str(template_dict["id"])
+
+            # T055 & T056: Check authorization using check_template_access
+            # This handles ownership, organization membership, and public access
+            try:
+                await check_template_access(int(template_id), current_user, required_permission="read")
+            except HTTPException as auth_exc:
+                # Re-raise authorization exceptions
+                raise auth_exc
+
+            # Log successful access (T058)
+            logger.info(
+                "Template access granted",
+                extra={
+                    "user_id": current_user.get("user_id"),
+                    "template_id": template_id,
+                    "action": "template_get",
+                    "result": "granted",
+                },
+            )
+
+            return template_dict
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching template: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch template",
+        )
+
+
+@router.put("/{template_id}")
+@require_ownership("template")
+async def update_template(
+    template_id: str,
+    template_data: Dict[str, Any] = Body(...),
+    current_user: dict = Depends(get_current_user),
+    engine=Depends(get_engine),
+):
+    """
+    Update a template by ID with ownership verification.
+
+    T052 [US3]: Apply @require_ownership('template') to PUT /api/templates/{id}
+    T057 [US3]: Add error handling for template not found (404)
+    T058 [US3]: Add logging for template access attempts
+    """
+    try:
+        # Log the access attempt (T058)
+        logger.info(
+            "Template update attempt",
+            extra={
+                "user_id": current_user.get("user_id"),
+                "template_id": template_id,
+                "action": "template_put",
+            },
+        )
+
+        # T057: Check if template exists
+        with engine.connect() as connection:
+            result = connection.execute(
+                text("SELECT id, created_by FROM templates WHERE id = :id"),
+                {"id": template_id},
+            )
+            template = result.fetchone()
+
+            if template is None:
+                logger.warning(
+                    "Template not found update attempt",
+                    extra={
+                        "user_id": current_user.get("user_id"),
+                        "template_id": template_id,
+                        "action": "template_put",
+                        "result": "not_found",
+                    },
+                )
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+
+            # T052: Verify ownership
+            owner_id = str(template[1])
+            user_id = current_user.get("user_id")
+
+            if owner_id != user_id:
+                # Log the authorization denial (T058)
+                logger.warning(
+                    "Unauthorized template update attempt",
+                    extra={
+                        "user_id": user_id,
+                        "template_id": template_id,
+                        "template_owner": owner_id,
+                        "action": "template_put",
+                        "result": "denied",
+                    },
+                )
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+            # Update the template
+            with engine.begin() as conn:
+                conn.execute(
+                    text(
+                        """
+                        UPDATE templates
+                        SET name = :name, description = :description, status = :status,
+                        updated_at = CURRENT_TIMESTAMP
+                        WHERE id = :id
+                    """
+                    ),
+                    {
+                        "id": template_id,
+                        "name": template_data.get("name"),
+                        "description": template_data.get("description"),
+                        "status": template_data.get("status", "draft"),
+                    },
+                )
+
+            # Log successful update (T058)
+            logger.info(
+                "Template update granted",
+                extra={
+                    "user_id": user_id,
+                    "template_id": template_id,
+                    "action": "template_put",
+                    "result": "granted",
+                },
+            )
+
+            return {"message": "Template updated successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating template: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update template",
+        )
+
+
+@router.delete("/{template_id}")
+@require_ownership("template")
+async def delete_template(
+    template_id: str,
+    current_user: dict = Depends(get_current_user),
+    engine=Depends(get_engine),
+):
+    """
+    Delete a template by ID with ownership verification.
+
+    T053 [US3]: Apply @require_ownership('template') to DELETE /api/templates/{id}
+    T057 [US3]: Add error handling for template not found (404)
+    T058 [US3]: Add logging for template access attempts
+    """
+    try:
+        # Log the access attempt (T058)
+        logger.info(
+            "Template delete attempt",
+            extra={
+                "user_id": current_user.get("user_id"),
+                "template_id": template_id,
+                "action": "template_delete",
+            },
+        )
+
+        # T057: Check if template exists
+        with engine.connect() as connection:
+            result = connection.execute(
+                text("SELECT id, created_by FROM templates WHERE id = :id"),
+                {"id": template_id},
+            )
+            template = result.fetchone()
+
+            if template is None:
+                logger.warning(
+                    "Template not found delete attempt",
+                    extra={
+                        "user_id": current_user.get("user_id"),
+                        "template_id": template_id,
+                        "action": "template_delete",
+                        "result": "not_found",
+                    },
+                )
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+
+            # T053: Verify ownership
+            owner_id = str(template[1])
+            user_id = current_user.get("user_id")
+
+            if owner_id != user_id:
+                # Log the authorization denial (T058)
+                logger.warning(
+                    "Unauthorized template delete attempt",
+                    extra={
+                        "user_id": user_id,
+                        "template_id": template_id,
+                        "template_owner": owner_id,
+                        "action": "template_delete",
+                        "result": "denied",
+                    },
+                )
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+            # Delete the template
+            with engine.begin() as conn:
+                conn.execute(text("DELETE FROM templates WHERE id = :id"), {"id": template_id})
+
+            # Log successful deletion (T058)
+            logger.info(
+                "Template delete granted",
+                extra={
+                    "user_id": user_id,
+                    "template_id": template_id,
+                    "action": "template_delete",
+                    "result": "granted",
+                },
+            )
+
+            return {"message": "Template deleted successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting template: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete template",
+        )
+
+
+@router.patch("/{template_id}")
+@require_ownership("template")
+async def patch_template(
+    template_id: str,
+    template_data: Dict[str, Any] = Body(...),
+    current_user: dict = Depends(get_current_user),
+    engine=Depends(get_engine),
+):
+    """
+    Patch a template by ID with ownership verification.
+
+    T054 [US3]: Apply @require_ownership('template') to PATCH /api/templates/{id}
+    T057 [US3]: Add error handling for template not found (404)
+    T058 [US3]: Add logging for template access attempts
+    """
+    try:
+        # Log the access attempt (T058)
+        logger.info(
+            "Template patch attempt",
+            extra={
+                "user_id": current_user.get("user_id"),
+                "template_id": template_id,
+                "action": "template_patch",
+            },
+        )
+
+        # T057: Check if template exists
+        with engine.connect() as connection:
+            result = connection.execute(
+                text("SELECT id, created_by FROM templates WHERE id = :id"),
+                {"id": template_id},
+            )
+            template = result.fetchone()
+
+            if template is None:
+                logger.warning(
+                    "Template not found patch attempt",
+                    extra={
+                        "user_id": current_user.get("user_id"),
+                        "template_id": template_id,
+                        "action": "template_patch",
+                        "result": "not_found",
+                    },
+                )
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+
+            # T054: Verify ownership
+            owner_id = str(template[1])
+            user_id = current_user.get("user_id")
+
+            if owner_id != user_id:
+                # Log the authorization denial (T058)
+                logger.warning(
+                    "Unauthorized template patch attempt",
+                    extra={
+                        "user_id": user_id,
+                        "template_id": template_id,
+                        "template_owner": owner_id,
+                        "action": "template_patch",
+                        "result": "denied",
+                    },
+                )
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+            # Update the template with partial data
+            with engine.begin() as conn:
+                update_fields = []
+                params = {"id": template_id}
+
+                if "name" in template_data:
+                    update_fields.append("name = :name")
+                    params["name"] = template_data["name"]
+                if "description" in template_data:
+                    update_fields.append("description = :description")
+                    params["description"] = template_data["description"]
+                if "status" in template_data:
+                    update_fields.append("status = :status")
+                    params["status"] = template_data["status"]
+
+                if update_fields:
+                    conn.execute(
+                        text(f"UPDATE templates SET {', '.join(update_fields)} WHERE id = :id"),
+                        params,
+                    )
+
+            # Log successful patch (T058)
+            logger.info(
+                "Template patch granted",
+                extra={
+                    "user_id": user_id,
+                    "template_id": template_id,
+                    "action": "template_patch",
+                    "result": "granted",
+                },
+            )
+
+            return {"message": "Template patched successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error patching template: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to patch template",
+        )

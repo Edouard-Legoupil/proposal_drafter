@@ -181,7 +181,7 @@ INSERT INTO qualification_rules (
     remediation_guidance,
     is_active
 )
-SELECT 
+SELECT
   rule_set_id,
   rule_code,
   rule_name,
@@ -571,7 +571,7 @@ INSERT INTO qualification_rules (
     remediation_guidance,
     is_active
 )
-SELECT 
+SELECT
   rule_set_id,
   rule_code,
   rule_name,

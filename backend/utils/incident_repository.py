@@ -13,7 +13,8 @@ class IncidentRepository:
 
     def fetch_proposal_review(self, review_id: str) -> dict[str, Any] | None:
         try:
-            query = text("""
+            query = text(
+                """
                 SELECT
                     ppr.id::text AS review_id,
                     ppr.proposal_id::text AS proposal_id,
@@ -44,7 +45,8 @@ class IncidentRepository:
                 JOIN proposals p ON p.id = ppr.proposal_id
                 WHERE ppr.id = :review_id
                 LIMIT 1
-            """)
+            """
+            )
             result = self.connection.execute(query, {"review_id": review_id})
             row = result.mappings().first()
             return dict(row) if row else None
@@ -53,7 +55,8 @@ class IncidentRepository:
             raise
 
     def fetch_knowledge_card_review(self, review_id: str) -> dict[str, Any] | None:
-        query = text("""
+        query = text(
+            """
             SELECT
                 kcr.id::text AS review_id,
                 kcr.knowledge_card_id::text AS knowledge_card_id,
@@ -83,13 +86,15 @@ class IncidentRepository:
             JOIN knowledge_cards kc ON kc.id = kcr.knowledge_card_id
             WHERE kcr.id = :review_id
             LIMIT 1
-        """)
+        """
+        )
         result = self.connection.execute(query, {"review_id": review_id})
         row = result.mappings().first()
         return dict(row) if row else None
 
     def fetch_template_comment(self, review_id: str) -> dict[str, Any] | None:
-        query = text("""
+        query = text(
+            """
             SELECT
                 dtc.id::text AS review_id,
                 dtc.template_request_id::text AS template_request_id,
@@ -115,7 +120,8 @@ class IncidentRepository:
                 ON dtr.id = dtc.template_request_id
             WHERE dtc.id = :review_id
             LIMIT 1
-        """)
+        """
+        )
         result = self.connection.execute(query, {"review_id": review_id})
         row = result.mappings().first()
         return dict(row) if row else None
@@ -127,11 +133,13 @@ class IncidentRepository:
         status: str,
         response_author: str = "system",
     ):
-        query = text("""
+        query = text(
+            """
             UPDATE proposal_peer_reviews
             SET author_response = :response, status = :status, author_response_by = :response_author, updated_at = CURRENT_TIMESTAMP
             WHERE id = :id
-        """)
+        """
+        )
         self.connection.execute(
             query,
             {
@@ -149,11 +157,13 @@ class IncidentRepository:
         status: str,
         response_author: str = "system",
     ):
-        query = text("""
+        query = text(
+            """
             UPDATE knowledge_card_reviews
             SET author_response = :response, status = :status, author_response_by = :response_author, updated_at = CURRENT_TIMESTAMP
             WHERE id = :id
-        """)
+        """
+        )
         self.connection.execute(
             query,
             {
@@ -171,11 +181,13 @@ class IncidentRepository:
         status: str,
         response_author: str = "system",
     ):
-        query = text("""
+        query = text(
+            """
             UPDATE donor_template_comments
             SET author_response = :response, status = :status, author_response_by = :response_author
             WHERE id = :id
-        """)
+        """
+        )
         self.connection.execute(
             query,
             {
@@ -187,7 +199,8 @@ class IncidentRepository:
         )
 
     def fetch_latest_proposal_history(self, proposal_id: str) -> dict[str, Any] | None:
-        query = text("""
+        query = text(
+            """
             SELECT
                 id::text AS history_id,
                 proposal_id::text AS proposal_id,
@@ -198,46 +211,41 @@ class IncidentRepository:
             WHERE proposal_id = :proposal_id
             ORDER BY created_at DESC
             LIMIT 1
-        """)
+        """
+        )
         result = self.connection.execute(query, {"proposal_id": proposal_id})
         row = result.mappings().first()
         return dict(row) if row else None
 
     def fetch_proposal_dimensions(self, proposal_id: str) -> dict[str, Any]:
-        donors_q = text("""
+        donors_q = text(
+            """
             SELECT d.id::text AS id, d.name
             FROM proposal_donors pd
             JOIN donors d ON d.id = pd.donor_id
             WHERE pd.proposal_id = :proposal_id
-        """)
-        outcomes_q = text("""
+        """
+        )
+        outcomes_q = text(
+            """
             SELECT o.id::text AS id, o.name
             FROM proposal_outcomes po
             JOIN outcomes o ON o.id = po.outcome_id
             WHERE po.proposal_id = :proposal_id
-        """)
-        fields_q = text("""
+        """
+        )
+        fields_q = text(
+            """
             SELECT fc.id::text AS id, fc.name, fc.category, fc.geographic_coverage, fc.unhcr_region
             FROM proposal_field_contexts pfc
             JOIN field_contexts fc ON fc.id = pfc.field_context_id
             WHERE pfc.proposal_id = :proposal_id
-        """)
+        """
+        )
 
-        donors = (
-            self.connection.execute(donors_q, {"proposal_id": proposal_id})
-            .mappings()
-            .all()
-        )
-        outcomes = (
-            self.connection.execute(outcomes_q, {"proposal_id": proposal_id})
-            .mappings()
-            .all()
-        )
-        fields = (
-            self.connection.execute(fields_q, {"proposal_id": proposal_id})
-            .mappings()
-            .all()
-        )
+        donors = self.connection.execute(donors_q, {"proposal_id": proposal_id}).mappings().all()
+        outcomes = self.connection.execute(outcomes_q, {"proposal_id": proposal_id}).mappings().all()
+        fields = self.connection.execute(fields_q, {"proposal_id": proposal_id}).mappings().all()
 
         return {
             "donors": [dict(x) for x in donors],
@@ -245,10 +253,9 @@ class IncidentRepository:
             "field_contexts": [dict(x) for x in fields],
         }
 
-    def fetch_knowledge_card_history(
-        self, knowledge_card_id: str
-    ) -> list[dict[str, Any]]:
-        query = text("""
+    def fetch_knowledge_card_history(self, knowledge_card_id: str) -> list[dict[str, Any]]:
+        query = text(
+            """
             SELECT
                 id::text AS history_id,
                 knowledge_card_id::text AS knowledge_card_id,
@@ -259,16 +266,14 @@ class IncidentRepository:
             WHERE knowledge_card_id = :knowledge_card_id
             ORDER BY created_at DESC
             LIMIT 5
-        """)
-        result = self.connection.execute(
-            query, {"knowledge_card_id": knowledge_card_id}
+        """
         )
+        result = self.connection.execute(query, {"knowledge_card_id": knowledge_card_id})
         return [dict(r) for r in result.mappings().all()]
 
-    def fetch_knowledge_card_references(
-        self, knowledge_card_id: str
-    ) -> list[dict[str, Any]]:
-        query = text("""
+    def fetch_knowledge_card_references(self, knowledge_card_id: str) -> list[dict[str, Any]]:
+        query = text(
+            """
             SELECT
                 r.id::text AS reference_id,
                 r.url,
@@ -279,16 +284,14 @@ class IncidentRepository:
             FROM knowledge_card_to_references kctr
             JOIN knowledge_card_references r ON r.id = kctr.reference_id
             WHERE kctr.knowledge_card_id = :knowledge_card_id
-        """)
-        result = self.connection.execute(
-            query, {"knowledge_card_id": knowledge_card_id}
+        """
         )
+        result = self.connection.execute(query, {"knowledge_card_id": knowledge_card_id})
         return [dict(r) for r in result.mappings().all()]
 
-    def fetch_reference_chunks(
-        self, knowledge_card_id: str, limit: int = 10
-    ) -> list[dict[str, Any]]:
-        query = text("""
+    def fetch_reference_chunks(self, knowledge_card_id: str, limit: int = 10) -> list[dict[str, Any]]:
+        query = text(
+            """
             SELECT
                 r.id::text AS reference_id,
                 rv.id::text AS vector_id,
@@ -298,16 +301,14 @@ class IncidentRepository:
             JOIN knowledge_card_reference_vectors rv ON rv.reference_id = r.id
             WHERE kctr.knowledge_card_id = :knowledge_card_id
             LIMIT :limit
-        """)
-        result = self.connection.execute(
-            query, {"knowledge_card_id": knowledge_card_id, "limit": limit}
+        """
         )
+        result = self.connection.execute(query, {"knowledge_card_id": knowledge_card_id, "limit": limit})
         return [dict(r) for r in result.mappings().all()]
 
-    def fetch_rag_logs(
-        self, knowledge_card_id: str, limit: int = 10
-    ) -> list[dict[str, Any]]:
-        query = text("""
+    def fetch_rag_logs(self, knowledge_card_id: str, limit: int = 10) -> list[dict[str, Any]]:
+        query = text(
+            """
             SELECT
                 id::text AS log_id,
                 knowledge_card_id::text AS knowledge_card_id,
@@ -319,8 +320,7 @@ class IncidentRepository:
             WHERE knowledge_card_id = :knowledge_card_id
             ORDER BY created_at DESC
             LIMIT :limit
-        """)
-        result = self.connection.execute(
-            query, {"knowledge_card_id": knowledge_card_id, "limit": limit}
+        """
         )
+        result = self.connection.execute(query, {"knowledge_card_id": knowledge_card_id, "limit": limit})
         return [dict(r) for r in result.mappings().all()]

@@ -12,6 +12,7 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+
 def scrape_url(url: str) -> str:
     """
     Scrapes the main text content from a given URL.
@@ -23,11 +24,10 @@ def scrape_url(url: str) -> str:
     try:
         headers = {}
         parsed_url = urlparse(url)
-        
+
         # Check if this is a UNHCR PDF.js viewer URL
-        is_unhcr_pdfjs = (parsed_url.netloc == "www.unhcr.org" and 
-                          "/media/" in parsed_url.path)
-        
+        is_unhcr_pdfjs = parsed_url.netloc == "www.unhcr.org" and "/media/" in parsed_url.path
+
         if parsed_url.netloc == "www.unhcr.org" or is_unhcr_pdfjs:
             logger.info("UNHCR URL detected, adding authentication headers and delay.")
             time.sleep(10)  # Add a 10-second delay
@@ -45,18 +45,18 @@ def scrape_url(url: str) -> str:
             logger.info("UNHCR PDF.js viewer detected, extracting actual PDF URL.")
             # Extract the file parameter from query string
             query_params = parse_qs(parsed_url.query)
-            file_param = query_params.get('file', [None])[0]
-            
+            file_param = query_params.get("file", [None])[0]
+
             if file_param:
                 # Construct the actual PDF URL
-                if file_param.startswith('/'):
+                if file_param.startswith("/"):
                     # Absolute path
                     pdf_url = f"https://www.unhcr.org{file_param}"
                 else:
                     # Relative path - construct based on current path
-                    base_path = parsed_url.path.rsplit('/pdf.js/web/viewer.html', 1)[0]
+                    base_path = parsed_url.path.rsplit("/pdf.js/web/viewer.html", 1)[0]
                     pdf_url = f"https://www.unhcr.org{base_path}/{file_param}"
-                
+
                 logger.info(f"Extracted PDF URL: {pdf_url}")
                 url = pdf_url  # Replace URL with the actual PDF URL
 
@@ -91,7 +91,7 @@ def scrape_url(url: str) -> str:
 
         else:
             logger.info("Processing HTML content with BeautifulSoup...")
-            soup = BeautifulSoup(response.content, 'html.parser')
+            soup = BeautifulSoup(response.content, "html.parser")
             logger.info("Successfully parsed HTML.")
 
             # Additional check for PDF.js viewer in HTML content
@@ -99,23 +99,23 @@ def scrape_url(url: str) -> str:
                 logger.info("PDF.js viewer detected in HTML, looking for PDF links...")
                 # Look for PDF links in the page
                 pdf_links = []
-                for link in soup.find_all('a', href=True):
-                    href = link['href']
-                    if href.lower().endswith('.pdf'):
+                for link in soup.find_all("a", href=True):
+                    href = link["href"]
+                    if href.lower().endswith(".pdf"):
                         pdf_links.append(href)
-                
+
                 if pdf_links:
                     # Use the first PDF link found
                     pdf_url = pdf_links[0]
-                    if not pdf_url.startswith('http'):
+                    if not pdf_url.startswith("http"):
                         # Convert relative URL to absolute
                         base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
                         pdf_url = base_url + pdf_url
-                    
+
                     logger.info(f"Found PDF link, scraping: {pdf_url}")
                     return scrape_url(pdf_url)  # Recursively scrape the PDF
 
-            paragraphs = soup.find_all('p')
+            paragraphs = soup.find_all("p")
             logger.info(f"Found {len(paragraphs)} <p> tags.")
 
             main_content = "\n".join([p.get_text(strip=True) for p in paragraphs])
@@ -124,7 +124,7 @@ def scrape_url(url: str) -> str:
                 logger.info("Extracted text content from paragraph tags.")
             else:
                 logger.warning("No paragraph content found. Falling back to extracting all text.")
-                main_content = soup.get_text(separator='\n', strip=True)
+                main_content = soup.get_text(separator="\n", strip=True)
 
             logger.info(f"HTML scraping completed. Extracted {len(main_content)} characters.")
             return main_content

@@ -1,4 +1,4 @@
-# Infrastructure as Code for ☁️ Azure Deployment 
+# Infrastructure as Code for ☁️ Azure Deployment
 
 This project contains the Bicep templates for deploying the Project Proposal Generator application to Azure. The templates are designed to be modular and reusable, making it easy to manage the infrastructure as code.
 
@@ -37,7 +37,7 @@ note that Only newer regions support Microsoft.OpenAI (eastus, swedencentral, au
 
 ## Manual Deployment
 
-While the recommended way to deploy the infrastructure is through the CI/CD pipeline (see below), you can also deploy it manually using the Azure CLI. 
+While the recommended way to deploy the infrastructure is through the CI/CD pipeline (see below), you can also deploy it manually using the Azure CLI.
 
 This option is for deploying the infrastructure without SSO capabilities (which requires the capacity to create a service principal account and an application ID).
 
@@ -50,9 +50,9 @@ Building a bicep infrastructure deployment script from scratch is not recommende
  - Azure Container Registry to push the docker image
  - Azure Web App to run the docker image with the required environment variables and expose it to the internet
 
-In Azure Web App, set all environment variables as per backend/.env plus 
- * Portal → Configuration → WEBSITES_PORT=8080 (and restart). 
- Portal → Configuration → WEBSITES_CONTAINER_START_TIME_LIMIT=1800. -- this to allow more time for the container to start. 
+In Azure Web App, set all environment variables as per backend/.env plus
+ * Portal → Configuration → WEBSITES_PORT=8080 (and restart).
+ Portal → Configuration → WEBSITES_CONTAINER_START_TIME_LIMIT=1800. -- this to allow more time for the container to start.
 
 ```bash
 az webapp config appsettings set \
@@ -231,7 +231,7 @@ az vm create \
 az network public-ip create \
   --resource-group <RESOURCE_GROUP> \
   --name BastionPublicIP \
-  --sku Standard 
+  --sku Standard
 
 
 # Deploy Azure Bastion into the VNet.
@@ -341,7 +341,7 @@ az network vnet subnet create \
   --resource-group <RESOURCE_GROUP> \
   --vnet <VNET_NAME> \
   --name webSubnet \
-  --address-prefixes 10.0.4.0/26 
+  --address-prefixes 10.0.4.0/26
 
 
 az webapp vnet-integration add \
@@ -371,7 +371,7 @@ az postgres flexible-server firewall-rule delete \
 --name <DB_NAME> \
 --rule-name <RULE_NAME>
 
-``` 
+```
 
 To check app deployment run
 
@@ -392,9 +392,9 @@ az webapp log download \
   --name <WEBAPP_NAME> \
   --resource-group <RESOURCE_GROUP> \
   --log-file logs/propalgen_logs_$(date +%Y%m%d_%H%M%S).zip
-```   
+```
 
-or visit the debug console: https://<WEBAPP_NAME>.scm.azurewebsites.net/DebugConsole 
+or visit the debug console: https://<WEBAPP_NAME>.scm.azurewebsites.net/DebugConsole
 
  **Application is Ready**:
 
@@ -504,6 +504,3 @@ The workflow is defined in `.github/workflows/deploy.yml` and will be **automati
 - **`infra/modules/`**: This directory contains the individual Bicep modules for each Azure resource.
 
 After either workflow has successfully run, you can find the outputs in the workflow run logs. The outputs will include the `acrName`, `postgresServerName`, and `containerAppUrl`.
-
-
- 

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException
+from fastapi import APIRouter, Depends, BackgroundTasks
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 import logging
@@ -33,14 +33,17 @@ async def get_qualification_status(
     Retrieve qualification summary for active templates and rules.
     Returns rule metadata and pass/fail for each template.
     """
-    query_rules = text("""
+    query_rules = text(
+        """
         SELECT qr.rule_code, qr.rule_name, qr.description
         FROM qualification_rules qr
         JOIN qualification_rule_sets qs ON qr.rule_set_id = qs.id
         WHERE qs.template_type = :tpl AND qr.is_active
         ORDER BY qr.rule_code
-    """)
-    query_data = text("""
+    """
+    )
+    query_data = text(
+        """
         SELECT
             tr.id::text as artifact_id,
             qr.rule_code,
@@ -52,22 +55,19 @@ async def get_qualification_status(
         JOIN qualification_rules qr ON qre.rule_id = qr.id
         WHERE tr.template_type = :tpl
         ORDER BY tr.id, qr.rule_code, tqr.created_at DESC
-    """)
-    query_templates = text("""
+    """
+    )
+    query_templates = text(
+        """
         SELECT id::text as id, template_name
         FROM template_registry
         WHERE template_type = :tpl
-    """)
+    """
+    )
 
     with get_engine().connect() as conn:
-        rules = [
-            dict(row)
-            for row in conn.execute(query_rules, {"tpl": template_type}).mappings()
-        ]
-        templates = [
-            dict(row)
-            for row in conn.execute(query_templates, {"tpl": template_type}).mappings()
-        ]
+        rules = [dict(row) for row in conn.execute(query_rules, {"tpl": template_type}).mappings()]
+        templates = [dict(row) for row in conn.execute(query_templates, {"tpl": template_type}).mappings()]
         rows = conn.execute(query_data, {"tpl": template_type}).mappings().all()
 
     # Build map of artifact_id -> result per rule_code (latest pass/fail)
@@ -75,17 +75,14 @@ async def get_qualification_status(
     for template in templates:
         summaries[template["id"]] = {
             "template_name": template["template_name"],
-            "results": {}
+            "results": {},
         }
-        
+
     for row in rows:
         art = row["artifact_id"]
         if art not in summaries:
-            summaries[art] = {
-                "template_name": art,
-                "results": {}
-            }
-        
+            summaries[art] = {"template_name": art, "results": {}}
+
         if row["rule_code"] not in summaries[art]["results"]:
             summaries[art]["results"][row["rule_code"]] = row["passed"]
 
@@ -96,7 +93,7 @@ async def get_qualification_status(
         overall = False
         if rules:
             overall = all(results.get(r["rule_code"], False) for r in rules)
-            
+
         data.append(
             {
                 "artifact_id": art_id,
@@ -112,9 +109,7 @@ async def get_qualification_status(
 def _run_qualification_task(artifact_type: str, artifact_id: str) -> None:
     try:
         with get_engine().begin() as connection:
-            QualificationService(connection).run_for_artifact(
-                artifact_type, artifact_id
-            )
+            QualificationService(connection).run_for_artifact(artifact_type, artifact_id)
     except SQLAlchemyError as e:
         # Log and swallow to avoid background crash
         logger = logging.getLogger(__name__)

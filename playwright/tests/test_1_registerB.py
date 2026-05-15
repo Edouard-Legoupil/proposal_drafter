@@ -1,7 +1,5 @@
-import re
-import uuid
 import os
-from playwright.sync_api import Playwright, sync_playwright, Page, expect
+from playwright.sync_api import sync_playwright
 
 
 def test_user_registration():  # page: Page argument is removed when using sync_playwright() block
@@ -11,34 +9,32 @@ def test_user_registration():  # page: Page argument is removed when using sync_
     # Base URL for the application
     base_url = "http://localhost:8502"
 
-
     # Define where the video will be saved.
     VIDEO_DIR = "playwright/test-results/videos"
 
     # Ensure the directory exists
     os.makedirs(VIDEO_DIR, exist_ok=True)
 
-
     # Use the sync_playwright context manager to launch and control the browser lifecycle
     with sync_playwright() as playwright:
         # Launch browser (use chromium, firefox, or webkit)
         browser = playwright.chromium.launch(headless=False, slow_mo=500)
-        
+
         # 2. Create a new context and set the video recording directory
         # Video recording starts now.
         context = browser.new_context(
             record_video_dir=VIDEO_DIR,
             # Set viewport to a high resolution (e.g., Full HD) for maximum screen space
-            viewport={"width": 1920, "height": 1080}, 
+            viewport={"width": 1920, "height": 1080},
             # Set the video output size to match the viewport for best quality
-            record_video_size={"width": 1920, "height": 1080}
+            record_video_size={"width": 1920, "height": 1080},
         )
-        
+
         # 3. Get a new page from the context
         page = context.new_page()
 
         # Generate a unique email for the new user
-        email = "test_user_bis@unhcr.org"   
+        email = "test_user_bis@unhcr.org"
         name = "Test User bis"
         password = "password123"
 
@@ -59,12 +55,11 @@ def test_user_registration():  # page: Page argument is removed when using sync_
         page.get_by_test_id("security-question-select").select_option("Favourite animal?")
         page.get_by_test_id("security-answer-input").click()
         page.get_by_test_id("security-answer-input").fill("Dog")
-        
+
         page.get_by_test_id("submit-button").click()
         page.get_by_test_id("user-menu-button").click()
         page.get_by_test_id("logout-button").click()
 
- 
         # -------------------
         # End of Test Logic
         # -------------------
@@ -74,9 +69,8 @@ def test_user_registration():  # page: Page argument is removed when using sync_
         video_path = page.video.path()
         context.close()
         browser.close()
-        
+
         # Optional: Rename the file to something more descriptive
         new_video_path = os.path.join(VIDEO_DIR, "user_registration.webm")
         os.rename(video_path, new_video_path)
         print(f"Video saved successfully to: {new_video_path}")
-

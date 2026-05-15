@@ -4,7 +4,6 @@ import re
 
 #  Third-Party Libraries
 from fastapi import HTTPException
-from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 #  Internal Modules
@@ -12,7 +11,9 @@ from backend.utils.crew_proposal import ProposalCrew
 from backend.core.redis import redis_client
 from backend.core.db import get_engine
 
-FALLBACK_GENERATION_MESSAGE = "Generation issue: No content was generated for this section. You can try regenerating it or edit it manually."
+FALLBACK_GENERATION_MESSAGE = (
+    "Generation issue: No content was generated for this section. You can try regenerating it or edit it manually."
+)
 
 # This module contains the core logic for generating and regenerating proposal sections
 # using the 'crew' of AI agents.
@@ -36,10 +37,7 @@ def resolve_form_data_labels(form_data: dict, connection) -> dict:
             for did in donor_input:
                 if did and isinstance(did, str) and len(did) == 36:
                     try:
-                        name = connection.execute(
-                            text("SELECT name FROM donors WHERE id = :id"),
-                            {"id": did}
-                        ).scalar()
+                        name = connection.execute(text("SELECT name FROM donors WHERE id = :id"), {"id": did}).scalar()
                         resolved_donors.append(name if name else did)
                     except Exception:
                         resolved_donors.append(did)
@@ -48,10 +46,7 @@ def resolve_form_data_labels(form_data: dict, connection) -> dict:
             resolved_data["Targeted Donor"] = resolved_donors
         elif isinstance(donor_input, str) and len(donor_input) == 36:
             try:
-                name = connection.execute(
-                    text("SELECT name FROM donors WHERE id = :id"),
-                    {"id": donor_input}
-                ).scalar()
+                name = connection.execute(text("SELECT name FROM donors WHERE id = :id"), {"id": donor_input}).scalar()
                 if name:
                     resolved_data["Targeted Donor"] = name
             except Exception:
@@ -64,10 +59,7 @@ def resolve_form_data_labels(form_data: dict, connection) -> dict:
         for oid in outcome_ids:
             if oid and isinstance(oid, str) and len(oid) == 36:
                 try:
-                    name = connection.execute(
-                        text("SELECT name FROM outcomes WHERE id = :id"),
-                        {"id": oid}
-                    ).scalar()
+                    name = connection.execute(text("SELECT name FROM outcomes WHERE id = :id"), {"id": oid}).scalar()
                     resolved_outcomes.append(name if name else oid)
                 except Exception:
                     resolved_outcomes.append(oid)
@@ -85,7 +77,7 @@ def resolve_form_data_labels(form_data: dict, connection) -> dict:
                     try:
                         name = connection.execute(
                             text("SELECT name FROM field_contexts WHERE id = :id"),
-                            {"id": cid}
+                            {"id": cid},
                         ).scalar()
                         resolved_countries.append(name if name else cid)
                     except Exception:
@@ -97,7 +89,7 @@ def resolve_form_data_labels(form_data: dict, connection) -> dict:
             try:
                 name = connection.execute(
                     text("SELECT name FROM field_contexts WHERE id = :id"),
-                    {"id": country_input}
+                    {"id": country_input},
                 ).scalar()
                 if name:
                     resolved_data["Country / Location(s)"] = name
@@ -108,7 +100,11 @@ def resolve_form_data_labels(form_data: dict, connection) -> dict:
 
 
 def regenerate_section_logic(
-    session_id: str, section: str, concise_input: str, proposal_id: str, previous_content: str = None
+    session_id: str,
+    section: str,
+    concise_input: str,
+    proposal_id: str,
+    previous_content: str | None = None,
 ) -> str:
     """
     Shared logic for regenerating a proposal section using custom input.
@@ -148,17 +144,11 @@ def regenerate_section_logic(
     # Get proposal template from session data
     proposal_template = session_data.get("proposal_template")
     if not proposal_template:
-        raise HTTPException(
-            status_code=400, detail="Proposal template not found in session."
-        )
+        raise HTTPException(status_code=400, detail="Proposal template not found in session.")
 
     # Find the specific instructions and word limit for the section.
     section_config = next(
-        (
-            s
-            for s in proposal_template.get("sections", [])
-            if s.get("section_name") == section
-        ),
+        (s for s in proposal_template.get("sections", []) if s.get("section_name") == section),
         None,
     )
     if not section_config:
@@ -186,9 +176,7 @@ def regenerate_section_logic(
     special_requirements_obj = proposal_template.get("special_requirements", {})
     special_requirements_list = special_requirements_obj.get("instructions", [])
     special_requirements_str = (
-        "\n".join([f"- {req}" for req in special_requirements_list])
-        if special_requirements_list
-        else "None"
+        "\n".join([f"- {req}" for req in special_requirements_list]) if special_requirements_list else "None"
     )
 
     section_input = {
@@ -223,17 +211,13 @@ def regenerate_section_logic(
         if json_match:
             raw_output = json_match.group(0)
         else:
-            raise HTTPException(
-                status_code=500, detail="No JSON object found in crew output."
-            )
+            raise HTTPException(status_code=500, detail="No JSON object found in crew output.")
 
     try:
         parsed = json.loads(raw_output)
         generated_text = parsed.get("generated_content", "").strip()
     except json.JSONDecodeError:
-        raise HTTPException(
-            status_code=500, detail="Invalid JSON response from regeneration crew."
-        )
+        raise HTTPException(status_code=500, detail="Invalid JSON response from regeneration crew.")
 
     if not generated_text:
         generated_text = FALLBACK_GENERATION_MESSAGE

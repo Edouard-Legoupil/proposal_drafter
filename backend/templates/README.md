@@ -153,6 +153,3 @@ Generates content in a Markdown table format based on a defined structure.
   ]
 }
 ```
-
-
-

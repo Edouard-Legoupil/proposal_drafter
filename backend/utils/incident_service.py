@@ -33,9 +33,7 @@ class IncidentService:
         self.persistence = PersistenceRepository(connection)
         self.crew = IncidentAnalysisCrew()
 
-    def analyze_incident(
-        self, request: IncidentAnalyzeRequest
-    ) -> IncidentAnalysisResponse:
+    def analyze_incident(self, request: IncidentAnalyzeRequest) -> IncidentAnalysisResponse:
         validate_taxonomy(
             artifact_type=request.artifact_type.value,
             severity=request.severity.value,
@@ -54,12 +52,10 @@ class IncidentService:
         consistency_output = crew_result["consistency_output"]
         # Ensure consistency issues and flags are strings to satisfy Pydantic
         consistency_output["issues"] = [
-            issue if isinstance(issue, str) else json.dumps(issue)
-            for issue in consistency_output.get("issues", [])
+            issue if isinstance(issue, str) else json.dumps(issue) for issue in consistency_output.get("issues", [])
         ]
         consistency_output["policy_flags"] = [
-            flag if isinstance(flag, str) else json.dumps(flag)
-            for flag in consistency_output.get("policy_flags", [])
+            flag if isinstance(flag, str) else json.dumps(flag) for flag in consistency_output.get("policy_flags", [])
         ]
 
         # Coerce any string entries in evidence_refs into minimal dicts for Pydantic
@@ -122,7 +118,12 @@ class IncidentService:
 
         # Normalize RootCauseAnalysis fields
         if isinstance(rca_output, dict):
-            rca_string_fields = ["primary_cause", "explanation", "immediate_cause", "systemic_cause"]
+            rca_string_fields = [
+                "primary_cause",
+                "explanation",
+                "immediate_cause",
+                "systemic_cause",
+            ]
             normalize_string_fields(rca_output, rca_string_fields)
             # Normalize hypotheses
             if "hypotheses" in rca_output:
@@ -171,12 +172,8 @@ class IncidentService:
             status="analyzed",
             source_review_id=request.source_review_id,
             proposal_id=evidence_pack.get("incident", {}).get("proposal_id"),
-            knowledge_card_id=evidence_pack.get("incident", {}).get(
-                "knowledge_card_id"
-            ),
-            template_request_id=evidence_pack.get("incident", {}).get(
-                "template_request_id"
-            ),
+            knowledge_card_id=evidence_pack.get("incident", {}).get("knowledge_card_id"),
+            template_request_id=evidence_pack.get("incident", {}).get("template_request_id"),
             section_name=evidence_pack.get("incident", {}).get("section_name"),
             user_comment=evidence_pack.get("incident", {}).get("user_comment"),
             normalized_summary=triage_output.get("normalized_summary"),
@@ -185,8 +182,7 @@ class IncidentService:
             root_cause_analysis=root_cause_analysis,
             suggested_system_fix=suggested_system_fix,
             consistency_check=consistency_check,
-            needs_human_review=needs_review
-            or triage_output.get("requires_human_review", False),
+            needs_human_review=needs_review or triage_output.get("requires_human_review", False),
             human_review_reason=review_reason,
             routing={
                 "priority_score": triage_output.get("priority_score"),
@@ -225,9 +221,7 @@ class IncidentService:
         reason_triggers = any(keyword in human_reason for keyword in keywords)
         return analysis.needs_human_review and (confidence < 0.65 or reason_triggers)
 
-    def _build_system_reply(
-        self, analysis: IncidentAnalysisResponse
-    ) -> tuple[str, str]:
+    def _build_system_reply(self, analysis: IncidentAnalysisResponse) -> tuple[str, str]:
         summary = (analysis.user_suggestion.summary or "").strip()
         action = (analysis.user_suggestion.proposed_action or "").strip()
         parts = []
@@ -235,17 +229,10 @@ class IncidentService:
             parts.append(summary)
         if action and action not in summary:
             parts.append(action)
-        base_message = (
-            "\n\n".join(parts)
-            if parts
-            else "The automated analysis generated a response."
-        )
+        base_message = "\n\n".join(parts) if parts else "The automated analysis generated a response."
 
         if self._needs_additional_info(analysis):
-            reason = (
-                analysis.human_review_reason
-                or "Additional context is required to proceed."
-            )
+            reason = analysis.human_review_reason or "Additional context is required to proceed."
             follow_up = (
                 "The automated analysis requires more information before providing a confident recommendation. "
                 f"{reason.strip()} Please reply with any relevant documents or clarifications you can share."
@@ -283,21 +270,13 @@ class IncidentService:
             auto_reply, reply_status = self._build_system_reply(analysis)
 
             if artifact_type == ArtifactType.proposal:
-                self.repo.update_proposal_review(
-                    review_id, auto_reply, reply_status, response_author="system"
-                )
+                self.repo.update_proposal_review(review_id, auto_reply, reply_status, response_author="system")
             elif artifact_type == ArtifactType.knowledge_card:
-                self.repo.update_knowledge_card_review(
-                    review_id, auto_reply, reply_status, response_author="system"
-                )
+                self.repo.update_knowledge_card_review(review_id, auto_reply, reply_status, response_author="system")
             elif artifact_type == ArtifactType.template:
-                self.repo.update_template_comment(
-                    review_id, auto_reply, reply_status, response_author="system"
-                )
+                self.repo.update_template_comment(review_id, auto_reply, reply_status, response_author="system")
 
-            logger.info(
-                f"Auto-analysis completed for {artifact_type} review {review_id}"
-            )
+            logger.info(f"Auto-analysis completed for {artifact_type} review {review_id}")
 
         except Exception as e:
             logger.error(

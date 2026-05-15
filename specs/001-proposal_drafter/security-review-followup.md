@@ -37,11 +37,11 @@ field_summaries:
 
 ## Executive Summary
 
-**Assessment Date:** 2025-05-13  
-**Codebase:** Proposal Drafter  
-**Source Review:** [security-review-plan.md](security-review-plan.md)  
-**Total Findings:** 12  
-**Overall Risk:** MODERATE  
+**Assessment Date:** 2025-05-13
+**Codebase:** Proposal Drafter
+**Source Review:** [security-review-plan.md](security-review-plan.md)
+**Total Findings:** 12
+**Overall Risk:** MODERATE
 
 **Status:** All 12 findings require action. 0 already covered, 0 deferred as technical debt, 12 require implementation.
 
@@ -80,17 +80,17 @@ All findings require implementation. None are already covered by existing tasks,
 ## 🚨 Immediate Remediation Tasks (HIGH Priority)
 
 ### Task ID: TASK-SEC-001
-**Title:** Implement Object-Level Authorization for All Resources  
-**Severity:** HIGH  
-**Type:** Implement  
-**OWASP Category:** A01:2025-Broken Access Control  
-**CWE:** CWE-284: Improper Access Control  
-**CVSS Score:** 7.5  
-**Source Finding:** SEC-001  
-**Depends On:** None  
-**Location:** All API endpoints accessing user-specific resources  
+**Title:** Implement Object-Level Authorization for All Resources
+**Severity:** HIGH
+**Type:** Implement
+**OWASP Category:** A01:2025-Broken Access Control
+**CWE:** CWE-284: Improper Access Control
+**CVSS Score:** 7.5
+**Source Finding:** SEC-001
+**Depends On:** None
+**Location:** All API endpoints accessing user-specific resources
 
-**Description:** 
+**Description:**
 Implement object-level authorization checks in all API endpoints to prevent users from accessing resources they don't own. Currently, the system lacks explicit checks for proposal, knowledge card, and template ownership.
 
 **Acceptance Criteria:**
@@ -106,23 +106,23 @@ Implement object-level authorization checks in all API endpoints to prevent user
 - Apply to all endpoints in `backend/api/*.py`
 - Test with: user A tries to access user B's proposal via direct ID manipulation
 
-**Effort:** 3-5 days  
+**Effort:** 3-5 days
 **Priority:** CRITICAL - Blocking for production
 
 ---
 
 ### Task ID: TASK-SEC-002
-**Title:** Implement Production-Grade Secrets Management  
-**Severity:** HIGH  
-**Type:** Implement  
-**OWASP Category:** A02:2025-Security Misconfiguration  
-**CWE:** CWE-287: Improper Authentication  
-**CVSS Score:** 7.3  
-**Source Finding:** SEC-002  
-**Depends On:** None  
-**Location:** Backend configuration and deployment  
+**Title:** Implement Production-Grade Secrets Management
+**Severity:** HIGH
+**Type:** Implement
+**OWASP Category:** A02:2025-Security Misconfiguration
+**CWE:** CWE-287: Improper Authentication
+**CVSS Score:** 7.3
+**Source Finding:** SEC-002
+**Depends On:** None
+**Location:** Backend configuration and deployment
 
-**Description:** 
+**Description:**
 Implement a secrets management service (Azure Key Vault, Google Secret Manager, or HashiCorp Vault) for production deployment. Current use of environment variables lacks rotation, encryption at rest, and audit logging.
 
 **Acceptance Criteria:**
@@ -141,23 +141,23 @@ Implement a secrets management service (Azure Key Vault, Google Secret Manager, 
 - Create `secrets-rotation.sh` script for automated rotation
 - Add `.env` to `.gitignore` and implement `.env.example` pattern
 
-**Effort:** 2-3 days  
+**Effort:** 2-3 days
 **Priority:** CRITICAL - Blocking for production
 
 ---
 
 ### Task ID: TASK-SEC-003
-**Title:** Standardize Secure Error Handling  
-**Severity:** HIGH  
-**Type:** Implement  
-**OWASP Category:** A10:2025-Mishandling of Exceptional Conditions  
-**CWE:** CWE-798: Hard-coded Credentials  
-**CVSS Score:** 7.0  
-**Source Finding:** SEC-003  
-**Depends On:** None  
-**Location:** All API endpoints and error handlers  
+**Title:** Standardize Secure Error Handling
+**Severity:** HIGH
+**Type:** Implement
+**OWASP Category:** A10:2025-Mishandling of Exceptional Conditions
+**CWE:** CWE-798: Hard-coded Credentials
+**CVSS Score:** 7.0
+**Source Finding:** SEC-003
+**Depends On:** None
+**Location:** All API endpoints and error handlers
 
-**Description:** 
+**Description:**
 Implement standardized error handling that prevents information disclosure. Current error responses may expose internal system details, database schema, or file paths that could aid attackers.
 
 **Acceptance Criteria:**
@@ -177,7 +177,7 @@ Implement standardized error handling that prevents information disclosure. Curr
 - Add error logging middleware that logs full details server-side
 - Test: verify stack traces never appear in production responses
 
-**Effort:** 2-3 days  
+**Effort:** 2-3 days
 **Priority:** CRITICAL - Blocking for production
 
 ---
@@ -185,17 +185,17 @@ Implement standardized error handling that prevents information disclosure. Curr
 ## ⚠️ Medium Priority Remediation Tasks
 
 ### Task ID: TASK-SEC-004
-**Title:** Implement LLM Prompt Injection Prevention  
-**Severity:** MEDIUM  
-**Type:** Implement  
-**OWASP Category:** A05:2025-Injection  
-**CWE:** CWE-942: Overly Permissive Cross-domain Whitelist  
-**CVSS Score:** 6.5  
-**Source Finding:** SEC-004  
-**Depends On:** TASK-SEC-003 (Error Handling)  
-**Location:** All LLM prompt construction in backend  
+**Title:** Implement LLM Prompt Injection Prevention
+**Severity:** MEDIUM
+**Type:** Implement
+**OWASP Category:** A05:2025-Injection
+**CWE:** CWE-942: Overly Permissive Cross-domain Whitelist
+**CVSS Score:** 6.5
+**Source Finding:** SEC-004
+**Depends On:** TASK-SEC-003 (Error Handling)
+**Location:** All LLM prompt construction in backend
 
-**Description:** 
+**Description:**
 Implement prompt sanitization to prevent prompt injection attacks. User input must be sanitized before being passed to LLM prompts to prevent manipulation of system instructions.
 
 **Acceptance Criteria:**
@@ -215,23 +215,23 @@ Implement prompt sanitization to prevent prompt injection attacks. User input mu
 - Add output validation to detect prompt injection patterns
 - Test with known prompt injection attacks
 
-**Effort:** 2-3 days  
+**Effort:** 2-3 days
 **Priority:** HIGH
 
 ---
 
 ### Task ID: TASK-SEC-005
-**Title:** Harden Session Management  
-**Severity:** MEDIUM  
-**Type:** Implement  
-**OWASP Category:** A06:2025-Insecure Design  
-**CWE:** CWE-327: Use of Broken or Risky Cryptographic Algorithm  
-**CVSS Score:** 6.0  
-**Source Finding:** SEC-005  
-**Depends On:** TASK-SEC-002 (Secrets Management)  
-**Location:** Backend session management (Redis)  
+**Title:** Harden Session Management
+**Severity:** MEDIUM
+**Type:** Implement
+**OWASP Category:** A06:2025-Insecure Design
+**CWE:** CWE-327: Use of Broken or Risky Cryptographic Algorithm
+**CVSS Score:** 6.0
+**Source Finding:** SEC-005
+**Depends On:** TASK-SEC-002 (Secrets Management)
+**Location:** Backend session management (Redis)
 
-**Description:** 
+**Description:**
 Reduce session timeout, implement session regeneration, and improve session security to prevent hijacking and fixation attacks.
 
 **Acceptance Criteria:**
@@ -250,23 +250,23 @@ Reduce session timeout, implement session regeneration, and improve session secu
 - Implement session store cleanup for expired sessions
 - Add rate limiting on session creation
 
-**Effort:** 2 days  
+**Effort:** 2 days
 **Priority:** HIGH
 
 ---
 
 ### Task ID: TASK-SEC-006
-**Title:** Implement LLM Rate Limiting for Cost Control  
-**Severity:** MEDIUM  
-**Type:** Implement  
-**OWASP Category:** A06:2025-Insecure Design  
-**CWE:** CWE-770: Allocation of Resources Without Limits  
-**CVSS Score:** 5.5  
-**Source Finding:** SEC-006  
-**Depends On:** None  
-**Location:** Backend API endpoints for LLM operations  
+**Title:** Implement LLM Rate Limiting for Cost Control
+**Severity:** MEDIUM
+**Type:** Implement
+**OWASP Category:** A06:2025-Insecure Design
+**CWE:** CWE-770: Allocation of Resources Without Limits
+**CVSS Score:** 5.5
+**Source Finding:** SEC-006
+**Depends On:** None
+**Location:** Backend API endpoints for LLM operations
 
-**Description:** 
+**Description:**
 Implement strict rate limiting for LLM endpoints to prevent cost exhaustion, resource exhaustion, and denial of service attacks.
 
 **Acceptance Criteria:**
@@ -286,23 +286,23 @@ Implement strict rate limiting for LLM endpoints to prevent cost exhaustion, res
 - Create admin endpoint to view and adjust rate limits
 - Test: verify rate limits are enforced and appropriate errors returned
 
-**Effort:** 2 days  
+**Effort:** 2 days
 **Priority:** HIGH
 
 ---
 
 ### Task ID: TASK-SEC-007
-**Title:** Add Security HTTP Headers  
-**Severity:** MEDIUM  
-**Type:** Implement  
-**OWASP Category:** A02:2025-Security Misconfiguration  
-**CWE:** CWE-693: Protection Mechanism Failure  
-**CVSS Score:** 5.3  
-**Source Finding:** SEC-007  
-**Depends On:** None  
-**Location:** Backend middleware  
+**Title:** Add Security HTTP Headers
+**Severity:** MEDIUM
+**Type:** Implement
+**OWASP Category:** A02:2025-Security Misconfiguration
+**CWE:** CWE-693: Protection Mechanism Failure
+**CVSS Score:** 5.3
+**Source Finding:** SEC-007
+**Depends On:** None
+**Location:** Backend middleware
 
-**Description:** 
+**Description:**
 Implement security HTTP headers to protect against common web vulnerabilities including XSS, clickjacking, MIME sniffing, and referrer information leakage.
 
 **Acceptance Criteria:**
@@ -322,23 +322,23 @@ Implement security HTTP headers to protect against common web vulnerabilities in
 - Set HSTS with max-age=31536000 (1 year)
 - Test headers using browser developer tools and securityheaders.com
 
-**Effort:** 1 day  
+**Effort:** 1 day
 **Priority:** MEDIUM
 
 ---
 
 ### Task ID: TASK-SEC-008
-**Title:** Implement Comprehensive Audit Logging  
-**Severity:** MEDIUM  
-**Type:** Implement  
-**OWASP Category:** A09:2025-Security Logging & Alerting Failures  
-**CWE:** CWE-778: Insufficient Logging  
-**CVSS Score:** 5.0  
-**Source Finding:** SEC-008  
-**Depends On:** TASK-SEC-001 (Object-Level Authorization)  
-**Location:** Backend logging infrastructure  
+**Title:** Implement Comprehensive Audit Logging
+**Severity:** MEDIUM
+**Type:** Implement
+**OWASP Category:** A09:2025-Security Logging & Alerting Failures
+**CWE:** CWE-778: Insufficient Logging
+**CVSS Score:** 5.0
+**Source Finding:** SEC-008
+**Depends On:** TASK-SEC-001 (Object-Level Authorization)
+**Location:** Backend logging infrastructure
 
-**Description:** 
+**Description:**
 Implement comprehensive audit logging for all security-relevant events to enable detection, investigation, and forensics.
 
 **Acceptance Criteria:**
@@ -359,7 +359,7 @@ Implement comprehensive audit logging for all security-relevant events to enable
 - Create log rotation and retention policy
 - Integrate with monitoring system (Prometheus/Grafana)
 
-**Effort:** 3-4 days  
+**Effort:** 3-4 days
 **Priority:** HIGH
 
 ---
@@ -367,17 +367,17 @@ Implement comprehensive audit logging for all security-relevant events to enable
 ## 📋 Low Priority Remediation Tasks
 
 ### Task ID: TASK-SEC-009
-**Title:** Implement Multi-Factor Authentication  
-**Severity:** LOW  
-**Type:** Implement  
-**OWASP Category:** A07:2025-Authentication Failures  
-**CWE:** CWE-532: Insertion of Sensitive Information into Log File  
-**CVSS Score:** 3.7  
-**Source Finding:** SEC-009  
-**Depends On:** TASK-SEC-003 (Error Handling)  
-**Location:** Backend authentication system  
+**Title:** Implement Multi-Factor Authentication
+**Severity:** LOW
+**Type:** Implement
+**OWASP Category:** A07:2025-Authentication Failures
+**CWE:** CWE-532: Insertion of Sensitive Information into Log File
+**CVSS Score:** 3.7
+**Source Finding:** SEC-009
+**Depends On:** TASK-SEC-003 (Error Handling)
+**Location:** Backend authentication system
 
-**Description:** 
+**Description:**
 Implement multi-factor authentication (TOTP, WebAuthn) to provide additional protection beyond passwords.
 
 **Acceptance Criteria:**
@@ -396,23 +396,23 @@ Implement multi-factor authentication (TOTP, WebAuthn) to provide additional pro
 - Add MFA verification to login flow
 - Store MFA secrets securely (encrypted in database)
 
-**Effort:** 3-5 days  
+**Effort:** 3-5 days
 **Priority:** LOW - Nice to have, other auth mechanisms provide protection
 
 ---
 
 ### Task ID: TASK-SEC-010
-**Title:** Implement Dependency Scanning and SBOM Generation  
-**Severity:** LOW  
-**Type:** Implement  
-**OWASP Category:** A03:2025-Software Supply Chain Failures  
-**CWE:** CWE-1104: Use of Unmaintained Third Party Components  
-**CVSS Score:** 3.5  
-**Source Finding:** SEC-010  
-**Depends On:** None  
-**Location:** CI/CD pipeline and development workflow  
+**Title:** Implement Dependency Scanning and SBOM Generation
+**Severity:** LOW
+**Type:** Implement
+**OWASP Category:** A03:2025-Software Supply Chain Failures
+**CWE:** CWE-1104: Use of Unmaintained Third Party Components
+**CVSS Score:** 3.5
+**Source Finding:** SEC-010
+**Depends On:** None
+**Location:** CI/CD pipeline and development workflow
 
-**Description:** 
+**Description:**
 Implement dependency scanning to detect vulnerable or outdated dependencies, and generate Software Bill of Materials (SBOM) for compliance and auditing.
 
 **Acceptance Criteria:**
@@ -432,23 +432,23 @@ Implement dependency scanning to detect vulnerable or outdated dependencies, and
 - Add to GitHub Actions workflow
 - Configure alerts for new vulnerabilities
 
-**Effort:** 2-3 days  
+**Effort:** 2-3 days
 **Priority:** LOW - Can be implemented iteratively
 
 ---
 
 ### Task ID: TASK-SEC-011
-**Title:** Add Security-Specific Telemetry  
-**Severity:** LOW  
-**Type:** Implement  
-**OWASP Category:** A09:2025-Security Logging & Alerting Failures  
-**CWE:** CWE-778: Insufficient Logging  
-**CVSS Score:** 2.0  
-**Source Finding:** SEC-011  
-**Depends On:** TASK-SEC-008 (Audit Logging)  
-**Location:** Backend monitoring infrastructure  
+**Title:** Add Security-Specific Telemetry
+**Severity:** LOW
+**Type:** Implement
+**OWASP Category:** A09:2025-Security Logging & Alerting Failures
+**CWE:** CWE-778: Insufficient Logging
+**CVSS Score:** 2.0
+**Source Finding:** SEC-011
+**Depends On:** TASK-SEC-008 (Audit Logging)
+**Location:** Backend monitoring infrastructure
 
-**Description:** 
+**Description:**
 Implement security-specific metrics and alerting to detect unusual patterns and respond to security incidents.
 
 **Acceptance Criteria:**
@@ -468,7 +468,7 @@ Implement security-specific metrics and alerting to detect unusual patterns and 
 - Set up alerting via Slack/Email/PagerDuty
 - Integrate with SIEM if available (Splunk, ELK, etc.)
 
-**Effort:** 2 days  
+**Effort:** 2 days
 **Priority:** LOW - Can be implemented as part of monitoring infrastructure
 
 ---
@@ -514,8 +514,8 @@ The following security aspects are already well-implemented and do not require r
 2. **TASK-SEC-002** - Secrets Management (2-3 days)
 3. **TASK-SEC-003** - Error Handling (2-3 days)
 
-**Phase 1 Duration:** 1-2 weeks  
-**Blocked By:** None  
+**Phase 1 Duration:** 1-2 weeks
+**Blocked By:** None
 
 ### Phase 2: High Security
 4. **TASK-SEC-004** - LLM Prompt Injection Prevention (2-3 days)
@@ -524,7 +524,7 @@ The following security aspects are already well-implemented and do not require r
 7. **TASK-SEC-007** - Security HTTP Headers (1 day)
 8. **TASK-SEC-008** - Audit Logging (3-4 days)
 
-**Phase 2 Duration:** 1-2 weeks  
+**Phase 2 Duration:** 1-2 weeks
 **Blocked By:** TASK-SEC-001, TASK-SEC-002 (for some tasks)
 
 ### Phase 3: Nice-to-Have Security
@@ -532,7 +532,7 @@ The following security aspects are already well-implemented and do not require r
 10. **TASK-SEC-010** - Dependency Scanning (2-3 days)
 11. **TASK-SEC-011** - Security Telemetry (2 days)
 
-**Phase 3 Duration:** 1-2 weeks  
+**Phase 3 Duration:** 1-2 weeks
 **Blocked By:** TASK-SEC-003, TASK-SEC-008
 
 ---

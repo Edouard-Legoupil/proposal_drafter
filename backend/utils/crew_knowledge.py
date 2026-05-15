@@ -1,7 +1,4 @@
-import os
-from typing import Type
 import re
-from pydantic import BaseModel, Field
 from crewai import Agent, Task, Crew, Process
 from crewai.project import CrewBase, agent, crew, task
 from crewai.tools import BaseTool
@@ -10,11 +7,13 @@ from backend.core.db import get_engine
 from sqlalchemy import text
 import litellm
 
+
 def log_rag_output(output):
     """Callback function to log the final answer of a RAG task."""
     import logging
+
     logger = logging.getLogger(__name__)
-    
+
     # The raw_output from the tool is passed to the agent, which then forms its answer.
     # The final output of the task will be the agent's answer, not the tool's direct output.
     # We need to parse the log_id from the task's output if it's included,
@@ -31,7 +30,7 @@ def log_rag_output(output):
     # The actual tool output is in output.raw_output
     raw_tool_output = output.raw_output
     final_answer = output.exported_output
-    
+
     logger.info(f"RAG callback triggered. Raw output length: {len(raw_tool_output) if raw_tool_output else 0}")
 
     match = re.search(r"\[RAG_LOG_ID=([^\]]+)\]", raw_tool_output)
@@ -42,22 +41,24 @@ def log_rag_output(output):
 
         try:
             with get_engine().connect() as connection:
-                query = text("""
+                query = text(
+                    """
                     UPDATE rag_evaluation_logs
                     SET generated_answer = :generated_answer,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE id = :log_id;
-                """)
-                connection.execute(query, {
-                    "generated_answer": final_answer,
-                    "log_id": log_id
-                })
+                """
+                )
+                connection.execute(query, {"generated_answer": final_answer, "log_id": log_id})
                 connection.commit()
                 logger.info(f"Successfully updated RAG log {log_id} with answer")
         except Exception as e:
             logger.error(f"Failed to update RAG log with answer: {e}")
     else:
-        logger.warning(f"No RAG_LOG_ID found in tool output. Output: {raw_tool_output[:200] if raw_tool_output else 'None'}")
+        logger.warning(
+            f"No RAG_LOG_ID found in tool output. Output: {raw_tool_output[:200] if raw_tool_output else 'None'}"
+        )
+
 
 class VectorSearchTool(BaseTool):
     name: str = "Vector Search"
@@ -71,20 +72,17 @@ class VectorSearchTool(BaseTool):
     def _run(self, search_query: str) -> str:
         embedder_config = get_embedder_config()["config"]
         model = f"azure/{embedder_config.pop('deployment_id')}"
-        embedder_config.pop('model', None)
+        embedder_config.pop("model", None)
 
-        response = litellm.embedding(
-            model=model,
-            input=[search_query],
-            **embedder_config
-        )
-        query_embedding = response.data[0]['embedding']
+        response = litellm.embedding(model=model, input=[search_query], **embedder_config)
+        query_embedding = response.data[0]["embedding"]
         with get_engine().connect() as connection:
             # The 1 - (embedding <=> :query_embedding) is for cosine similarity
             # pgvector returns the cosine distance, so we subtract from 1 to get similarity
-            words = re.findall(r'\b\w+\b', search_query)
-            fts_query = " & ".join(words) 
-            query = text("""
+            words = re.findall(r"\b\w+\b", search_query)
+            fts_query = " & ".join(words)
+            query = text(
+                """
                 SELECT
                     kcrv.text_chunk,
                     kcr.url,
@@ -101,43 +99,55 @@ class VectorSearchTool(BaseTool):
                 ORDER BY
                     hybrid_score DESC
                 LIMIT 10;
-            """)
-            results = connection.execute(query, {
-                "kc_id": self.knowledge_card_id,
-                "query_embedding": str(query_embedding),
-                "fts_query": fts_query
-            }).fetchall()
+            """
+            )
+            results = connection.execute(
+                query,
+                {
+                    "kc_id": self.knowledge_card_id,
+                    "query_embedding": str(query_embedding),
+                    "fts_query": fts_query,
+                },
+            ).fetchall()
 
             retrieved_context = "\n\n".join([f"Source: {row[1]}\nChunk: {row[0]}" for row in results])
 
             try:
-                log_query = text("""
+                log_query = text(
+                    """
                     INSERT INTO rag_evaluation_logs (knowledge_card_id, query, retrieved_context)
                     VALUES (:kc_id, :query, :retrieved_context)
                     RETURNING id;
-                """)
-                log_result = connection.execute(log_query, {
-                    "kc_id": self.knowledge_card_id,
-                    "query": search_query,
-                    "retrieved_context": retrieved_context
-                }).fetchone()
+                """
+                )
+                log_result = connection.execute(
+                    log_query,
+                    {
+                        "kc_id": self.knowledge_card_id,
+                        "query": search_query,
+                        "retrieved_context": retrieved_context,
+                    },
+                ).fetchone()
                 log_id = log_result[0]
                 connection.commit()
             except Exception as e:
                 connection.rollback()
                 # Log error but don't fail the tool - return context without log ID
                 import logging
+
                 logger = logging.getLogger(__name__)
                 logger.error(f"Failed to log RAG evaluation: {e}")
                 log_id = "NONE"
 
             return f"[RAG_LOG_ID={log_id}]\n\n{retrieved_context}"
 
+
 @CrewBase
 class ContentGenerationCrew:
     """ContentGenerationCrew for generating knowledge card content"""
-    agents_config = 'config/agents_knowledge.yaml'
-    tasks_config = 'config/tasks_knowledge.yaml'
+
+    agents_config = "config/agents_knowledge.yaml"
+    tasks_config = "config/tasks_knowledge.yaml"
     knowledge_card_id: str = None
     pre_prompt: str = ""
 
@@ -148,17 +158,17 @@ class ContentGenerationCrew:
     @agent
     def researcher(self) -> Agent:
         return Agent(
-            config=self.agents_config['researcher'],
+            config=self.agents_config["researcher"],
             llm=llm,
             verbose=True,
             allow_delegation=False,
-            tools=[VectorSearchTool(knowledge_card_id=self.knowledge_card_id)]
+            tools=[VectorSearchTool(knowledge_card_id=self.knowledge_card_id)],
         )
 
     @agent
     def writer(self) -> Agent:
         return Agent(
-            config=self.agents_config['writer'],
+            config=self.agents_config["writer"],
             llm=llm,
             verbose=True,
             allow_delegation=False,
@@ -166,23 +176,19 @@ class ContentGenerationCrew:
 
     @task
     def research_task(self) -> Task:
-        research_task_config = self.tasks_config['research_task'].copy()
-        research_task_config['description'] = self.pre_prompt + research_task_config['description']
-        return Task(
-            config=research_task_config,
-            agent=self.researcher()
-        )
+        research_task_config = self.tasks_config["research_task"].copy()
+        research_task_config["description"] = self.pre_prompt + research_task_config["description"]
+        return Task(config=research_task_config, agent=self.researcher())
 
     @task
     def write_task(self) -> Task:
-        write_task_config = self.tasks_config['write_task'].copy()
-        write_task_config['description'] = self.pre_prompt + write_task_config['description']
+        write_task_config = self.tasks_config["write_task"].copy()
+        write_task_config["description"] = self.pre_prompt + write_task_config["description"]
         return Task(
             config=write_task_config,
             agent=self.writer(),
-            output_callback=log_rag_output
+            output_callback=log_rag_output,
         )
-
 
     @crew
     def create_crew(self) -> Crew:
@@ -197,6 +203,6 @@ class ContentGenerationCrew:
             agents=[self.researcher(), self.writer()],
             tasks=[self.research_task(), self.write_task()],
             verbose=True,
-            process=Process.sequential #,
+            process=Process.sequential  # ,
             # output_log_file=log_file
         )

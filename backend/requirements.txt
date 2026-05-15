@@ -86,6 +86,10 @@ cloud-sql-python-connector[pg8000]
 # Google Cloud service for managing secret material (API keys, passwords, etc.)
 google-cloud-secret-manager
 
+# Azure Key Vault support (optional, only needed for Azure deployments)
+azure-identity
+azure-keyvault-secrets
+
 # Testing framework for writing and running unit tests
 pytest
 
@@ -123,7 +127,7 @@ python-slugify
 
 # WebSocket library
 websockets>=12.0
- 
+
 ## # WSGI HTTP Server for UNIX concurrent connection
 gunicorn
 

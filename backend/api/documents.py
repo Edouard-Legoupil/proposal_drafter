@@ -1,6 +1,5 @@
 #  Standard Library
 import io
-import json
 import logging
 from uuid import UUID
 from sqlalchemy.exc import SQLAlchemyError
@@ -8,25 +7,29 @@ from sqlalchemy.exc import SQLAlchemyError
 #  Third-Party Libraries
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from docx import Document
 from sqlalchemy import text
-from slugify import slugify
+from slugify import slugify  # type: ignore[import-untyped]
 
 #  Internal Modules
 from backend.core.db import get_engine
 from backend.core.security import get_current_user
 from backend.core.config import load_proposal_template
-from backend.utils.doc_export import create_word_from_sections, create_pdf_from_sections, create_excel_from_sections
+from backend.utils.doc_export import (
+    create_word_from_sections,
+    create_pdf_from_sections,
+    create_excel_from_sections,
+)
 
 # This router handles endpoints for generating and downloading final proposal documents.
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+
 @router.get("/generate-document/{proposal_id}")
 async def generate_and_download_document(
     proposal_id: str,
     format: str = "docx",  # Query parameter to specify 'docx' or 'pdf'
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Generates a final proposal document in either .docx or .pdf format.
@@ -40,19 +43,20 @@ async def generate_and_download_document(
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid proposal_id: {proposal_id}")
 
-
     user_id = current_user["user_id"]
 
     try:
         # Fetch the proposal data from the database.
         with get_engine().connect() as connection:
             result = connection.execute(
-                text("""
+                text(
+                    """
                     SELECT form_data, project_description, generated_sections, template_name
                     FROM proposals
                     WHERE id = :proposal_id AND user_id = :user_id
-                """),
-                {"proposal_id": proposal_id, "user_id": user_id}
+                """
+                ),
+                {"proposal_id": proposal_id, "user_id": user_id},
             )
             draft = result.fetchone()
 
@@ -67,19 +71,31 @@ async def generate_and_download_document(
         with get_engine().connect() as connection:
             if form_data.get("Targeted Donor"):
                 donor_id = form_data["Targeted Donor"]
-                donor_name = connection.execute(text("SELECT name FROM donors WHERE id = :id"), {"id": donor_id}).scalar()
+                donor_name = connection.execute(
+                    text("SELECT name FROM donors WHERE id = :id"), {"id": donor_id}
+                ).scalar()
                 form_data["Targeted Donor"] = donor_name or form_data["Targeted Donor"]
 
             if form_data.get("Main Outcome"):
                 outcome_ids = form_data["Main Outcome"]
                 if outcome_ids:
                     outcome_uuids = [UUID(oid) for oid in outcome_ids]
-                    outcome_names = connection.execute(text("SELECT name FROM outcomes WHERE id = ANY(:ids)"), {"ids": outcome_uuids}).scalars().all()
+                    outcome_names = (
+                        connection.execute(
+                            text("SELECT name FROM outcomes WHERE id = ANY(:ids)"),
+                            {"ids": outcome_uuids},
+                        )
+                        .scalars()
+                        .all()
+                    )
                     form_data["Main Outcome"] = ", ".join(outcome_names) if outcome_names else form_data["Main Outcome"]
 
             if form_data.get("Country / Location(s)"):
                 fc_id = form_data["Country / Location(s)"]
-                fc_name = connection.execute(text("SELECT name FROM field_contexts WHERE id = :id"), {"id": fc_id}).scalar()
+                fc_name = connection.execute(
+                    text("SELECT name FROM field_contexts WHERE id = :id"),
+                    {"id": fc_id},
+                ).scalar()
                 form_data["Country / Location(s)"] = fc_name or form_data["Country / Location(s)"]
 
         # Load the template to get the correct section order and list.
@@ -90,7 +106,6 @@ async def generate_and_download_document(
 
         proposal_template = load_proposal_template(template_name)
         template_sections = [s.get("section_name") for s in proposal_template.get("sections", [])]
-
 
         # # Ensure all required sections are present before generating.
         # if len(generated_sections) < len(template_sections):
@@ -108,8 +123,8 @@ async def generate_and_download_document(
                 pdf_buffer = create_pdf_from_sections(form_data, ordered_sections)
                 return StreamingResponse(
                     io.BytesIO(pdf_buffer),
-                    media_type='application/pdf',
-                    headers={"Content-Disposition": f"attachment; filename={sanitized_filename}.pdf"}
+                    media_type="application/pdf",
+                    headers={"Content-Disposition": f"attachment; filename={sanitized_filename}.pdf"},
                 )
             except Exception as e:
                 logger.error(f"[PDF Generation Error] {e}", exc_info=True)
@@ -123,28 +138,26 @@ async def generate_and_download_document(
                 docx_buffer.seek(0)
                 return StreamingResponse(
                     docx_buffer,
-                    media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                    headers={"Content-Disposition": f"attachment; filename={sanitized_filename}.docx"}
+                    media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    headers={"Content-Disposition": f"attachment; filename={sanitized_filename}.docx"},
                 )
             except Exception as e:
                 logger.error(f"[DOCX Generation Error] {e}", exc_info=True)
                 raise HTTPException(status_code=500, detail="Failed to generate DOCX document.")
 
-
-
     except SQLAlchemyError as e:
         logger.error(f"Database error during document generation: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="A database error occurred.")
     except Exception as e:
-        logger.error(f"An unexpected error occurred during document generation: {e}", exc_info=True)
+        logger.error(
+            f"An unexpected error occurred during document generation: {e}",
+            exc_info=True,
+        )
         raise HTTPException(status_code=500, detail="An unexpected error occurred.")
 
 
 @router.get("/generate-tables/{proposal_id}")
-async def generate_and_download_tables(
-    proposal_id: str,
-    current_user: dict = Depends(get_current_user)
-):
+async def generate_and_download_tables(proposal_id: str, current_user: dict = Depends(get_current_user)):
     """
     Generates an Excel file with each table from the proposal in a separate sheet.
     """
@@ -158,12 +171,14 @@ async def generate_and_download_tables(
     try:
         with get_engine().connect() as connection:
             result = connection.execute(
-                text("""
+                text(
+                    """
                     SELECT form_data, generated_sections, template_name
                     FROM proposals
                     WHERE id = :proposal_id AND user_id = :user_id
-                """),
-                {"proposal_id": proposal_id, "user_id": user_id}
+                """
+                ),
+                {"proposal_id": proposal_id, "user_id": user_id},
             )
             draft = result.fetchone()
 
@@ -190,8 +205,8 @@ async def generate_and_download_tables(
             excel_buffer = create_excel_from_sections(ordered_sections)
             return StreamingResponse(
                 io.BytesIO(excel_buffer),
-                media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                headers={"Content-Disposition": f"attachment; filename={sanitized_filename}.xlsx"}
+                media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                headers={"Content-Disposition": f"attachment; filename={sanitized_filename}.xlsx"},
             )
         except Exception as e:
             logger.error(f"[Excel Generation Error] {e}", exc_info=True)

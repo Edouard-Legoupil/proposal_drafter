@@ -1,8 +1,8 @@
 # Research Report: Proposal Drafter Implementation
 
-**Version:** 1.0  
-**Date:** 2025-05-13  
-**Input:** Feature specification from `/specs/001-proposal_drafter/spec.md`  
+**Version:** 1.0
+**Date:** 2025-05-13
+**Input:** Feature specification from `/specs/001-proposal_drafter/spec.md`
 **Purpose:** Resolve unknowns identified during Technical Context analysis
 
 ---
@@ -17,9 +17,9 @@ This research document addresses the NEEDS CLARIFICATION items identified during
 
 ### 1. Performance Goals
 
-**Unknown:** Target response times and throughput not specified in current spec  
-**Research Task:** Determine target performance metrics for Proposal Drafter  
-**Status:** ✅ RESOLVED  
+**Unknown:** Target response times and throughput not specified in current spec
+**Research Task:** Determine target performance metrics for Proposal Drafter
+**Status:** ✅ RESOLVED
 
 #### Decision
 
@@ -58,9 +58,9 @@ Based on the system's use case (proposal generation for UN agencies/NGOs) and th
 
 ### 2. Operational Constraints
 
-**Unknown:** Resource limits and operational constraints not specified in current spec  
-**Research Task:** Identify resource limits and operational constraints (memory, CPU, storage, network)  
-**Status:** ✅ RESOLVED  
+**Unknown:** Resource limits and operational constraints not specified in current spec
+**Research Task:** Identify resource limits and operational constraints (memory, CPU, storage, network)
+**Status:** ✅ RESOLVED
 
 #### Decision
 
@@ -112,9 +112,9 @@ The following operational constraints are recommended based on production deploy
 
 ### 3. Scale/Scope
 
-**Unknown:** Expected user base and concurrent session limits not specified in current spec  
-**Research Task:** Determine expected user base and concurrent session limits  
-**Status:** ✅ RESOLVED  
+**Unknown:** Expected user base and concurrent session limits not specified in current spec
+**Research Task:** Determine expected user base and concurrent session limits
+**Status:** ✅ RESOLVED
 
 #### Decision
 
@@ -166,8 +166,8 @@ Based on typical UN agency and NGO deployment scenarios:
 
 ### FastAPI Production Deployment
 
-**Decision:** Gunicorn with Uvicorn workers  
-**Rationale:** Gunicorn provides production-ready process management while Uvicorn workers handle ASGI (WebSocket/SSE) support.  
+**Decision:** Gunicorn with Uvicorn workers
+**Rationale:** Gunicorn provides production-ready process management while Uvicorn workers handle ASGI (WebSocket/SSE) support.
 **Configuration:**
 ```bash
 # Recommended production setup
@@ -182,7 +182,7 @@ gunicorn -w 5 -k uvicorn.workers.UvicornWorker main:app
 
 ### React + Vite Optimization
 
-**Decision:** Vite for fast builds and HMR  
+**Decision:** Vite for fast builds and HMR
 **Rationale:** Vite provides:
 - Instant server start (no bundling in development)
 - Lightning-fast HMR (Hot Module Replacement)
@@ -219,7 +219,7 @@ export default defineConfig({
 
 ### PostgreSQL with pgvector
 
-**Decision:** pgvector extension for vector embeddings  
+**Decision:** pgvector extension for vector embeddings
 **Rationale:**
 - Native PostgreSQL extension, no external dependencies
 - Efficient approximate nearest neighbor search using HNSW
@@ -233,14 +233,14 @@ export default defineConfig({
 CREATE EXTENSION vector;
 
 -- Create index for knowledge cards
-CREATE INDEX idx_knowledge_card_embedding 
-ON knowledge_cards 
-USING hnsw (embedding vector_l2_ops) 
+CREATE INDEX idx_knowledge_card_embedding
+ON knowledge_cards
+USING hnsw (embedding vector_l2_ops)
 WITH (m = 16, ef_construction = 64);
 
 -- Query example
-SELECT * FROM knowledge_cards 
-ORDER BY embedding <=> '[0.1, 0.2, ...]' 
+SELECT * FROM knowledge_cards
+ORDER BY embedding <=> '[0.1, 0.2, ...]'
 LIMIT 10;
 ```
 **Alternatives Considered:**
@@ -252,7 +252,7 @@ LIMIT 10;
 
 ### Redis for Session Management
 
-**Decision:** Redis 7+ with HTTP-only cookies  
+**Decision:** Redis 7+ with HTTP-only cookies
 **Rationale:**
 - In-memory data store for low-latency session access
 - Persistence options (RDB/AOF) for durability

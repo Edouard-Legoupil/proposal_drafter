@@ -174,11 +174,11 @@ DECLARE
     app_user TEXT;
 BEGIN
     -- Try to get the user from environment or common defaults
-    SELECT usename INTO app_user 
-    FROM pg_user 
-    WHERE usename IN ('proposalgen', 'postgres', current_user) 
+    SELECT usename INTO app_user
+    FROM pg_user
+    WHERE usename IN ('proposalgen', 'postgres', current_user)
     LIMIT 1;
-    
+
     IF app_user IS NOT NULL THEN
         EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO %I', app_user);
         EXECUTE format('GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO %I', app_user);

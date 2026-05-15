@@ -3,10 +3,14 @@ import os
 
 # Load environment variables from a .env file.
 from dotenv import load_dotenv
+
+# Third-Party Libraries
+from crewai import LLM
+
 load_dotenv()
 
 
-#--- Azure OpenAI Configuration ---
+# --- Azure OpenAI Configuration ---
 # Third-Party Libraries
 
 # Note: We now use CrewAI's native Azure LLM support instead of LangChain
@@ -16,7 +20,7 @@ required_vars = [
     "AZURE_OPENAI_ENDPOINT",
     "AZURE_OPENAI_API_KEY",
     "OPENAI_API_VERSION",
-    "AZURE_DEPLOYMENT_NAME"
+    "AZURE_DEPLOYMENT_NAME",
 ]
 missing_vars = [var for var in required_vars if not os.getenv(var)]
 if missing_vars:
@@ -26,15 +30,15 @@ if missing_vars:
 
 # Initialize the CrewAI LLM for Azure OpenAI
 # This object will be used by the CrewAI agents to interact with the Azure OpenAI service.
-from crewai import LLM
 
 llm = LLM(
     model=f"azure/{os.getenv('AZURE_DEPLOYMENT_NAME')}",
     api_base=os.getenv("AZURE_OPENAI_ENDPOINT"),
     api_key=os.getenv("AZURE_OPENAI_API_KEY"),
     api_version=os.getenv("OPENAI_API_VERSION"),
-    timeout=30
+    timeout=30,
 )
+
 
 def get_embedder_config():
     """
@@ -47,8 +51,8 @@ def get_embedder_config():
             "deployment_id": os.getenv("AZURE_EMBEDDING_DEPLOYMENT_NAME", "text-embedding-ada-002"),
             "api_key": os.getenv("AZURE_OPENAI_API_KEY_EMBED"),
             "api_base": os.getenv("AZURE_OPENAI_ENDPOINT_EMBED"),
-            "api_version": os.getenv("AZURE_OPENAI_API_VERSION_EMBED", "2023-05-15")
-        }
+            "api_version": os.getenv("AZURE_OPENAI_API_VERSION_EMBED", "2023-05-15"),
+        },
     }
 
 
@@ -75,7 +79,7 @@ def get_embedder_config():
 # llm = LLM(
 #      model='gemini/gemini-2.5-pro', # Or "gemini/#gemini-2.5-flash"
 #      temperature=0.0,
-#      api_key=os.getenv("GEMINI_API_KEY") # 
+#      api_key=os.getenv("GEMINI_API_KEY") #
 # )
 
 # def get_embedder_config():
@@ -83,13 +87,13 @@ def get_embedder_config():
 #     Returns the configuration for the Azure OpenAI embedder.
 #     """
 #     return {
-#         "provider": "google",  
+#         "provider": "google",
 #         "config": {
 #             # Use the Gemini #embedding model
-#             "model": "models/embedding-001", 
+#             "model": "models/embedding-001",
 #             # Optional: #Specify task type for optimized embeddings
-#             "task_type": "retrieval_document", 
-#             "api_key": os.getenv("GEMINI_API_KEY") 
+#             "task_type": "retrieval_document",
+#             "api_key": os.getenv("GEMINI_API_KEY")
 #             # Ensure API #key is passed for embedding as well
 #         }
 #     }

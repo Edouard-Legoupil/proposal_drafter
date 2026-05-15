@@ -3,6 +3,7 @@ import re
 
 # This module contains helper functions for handling Markdown conversions.
 
+
 def convert_markdown_bold(text: str) -> str:
     """
     Safely converts Markdown-style bold text (e.g., "**text**")

@@ -11,7 +11,7 @@ worker_class = "uvicorn.workers.UvicornWorker"
 
 # Logging
 accesslog = "-"  # Log to stdout
-errorlog = "-"   # Log to stdout
+errorlog = "-"  # Log to stdout
 loglevel = "info"
 reload = True
 
