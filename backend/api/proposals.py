@@ -37,6 +37,11 @@ from backend.core.config import (
     load_proposal_template,
     _find_template_path,
 )
+from backend.core.custom_errors import (
+    NotFoundError,
+    InternalServerError,
+    BadRequestError,
+)
 from backend.utils.crew_actions import (
     handle_text_format,
     handle_text_format_with_context,
@@ -165,10 +170,9 @@ async def get_review_analysis(review_id: str, current_user: dict = Depends(get_c
         with get_engine().begin() as connection:
             # T109: First, determine the artifact type of this review
             # Check if it's a proposal review
-            proposal_id = connection.execute(
-                text("SELECT proposal_id FROM proposal_peer_reviews " "WHERE id = :review_id"),
-                {"review_id": review_id},
-            ).scalar()
+            from backend.models.review import ProposalPeerReview
+            proposal_review = connection.query(ProposalPeerReview).filter_by(id=review_id).first()
+            proposal_id = proposal_review.proposal_id if proposal_review else None
 
             if proposal_id:
                 # Verify user has access to the proposal
@@ -189,10 +193,9 @@ async def get_review_analysis(review_id: str, current_user: dict = Depends(get_c
                 )
             else:
                 # Check if it's a knowledge card review
-                card_id = connection.execute(
-                    text("SELECT knowledge_card_id FROM knowledge_card_reviews WHERE id = :review_id"),
-                    {"review_id": review_id},
-                ).scalar()
+                from backend.models.review import KnowledgeCardReview
+                card_review = connection.query(KnowledgeCardReview).filter_by(id=review_id).first()
+                card_id = card_review.knowledge_card_id if card_review else None
 
                 if card_id:
                     # Verify user has access to the knowledge card
@@ -297,7 +300,7 @@ async def get_review_analysis(review_id: str, current_user: dict = Depends(get_c
 
 
 @router.get("/templates")
-async def get_templates():
+async def get_templates(current_user: dict = Depends(get_current_user)):
     """
     Returns a dictionary mapping donor names to template filenames.
     This allows the frontend to populate a dropdown with donor names, making the
@@ -311,11 +314,14 @@ async def get_templates():
             f"[GET TEMPLATES ERROR] Failed to get available templates: {e}",
             exc_info=True,
         )
-        raise HTTPException(status_code=500, detail="Could not retrieve proposal templates.")
+        raise InternalServerError(
+            error_code="TEMPLATE_RETRIEVAL_FAILED",
+            detail="Could not retrieve proposal templates"
+        )
 
 
 @router.get("/templates/{template_name}")
-async def get_template(template_name: str):
+async def get_template(template_name: str, current_user: dict = Depends(get_current_user)):
     """
     Loads and returns the content of a specific template file.
     """

@@ -119,7 +119,7 @@ async def get_published_template(
 
 
 @router.get("/{template_name}/sections")
-async def get_template_sections(template_name: str):
+async def get_template_sections(template_name: str, current_user: dict = Depends(get_current_user)):
     """
     Returns the list of sections for a given template.
     """

@@ -62,7 +62,7 @@ async def store_base_data(
 
 
 @router.get("/get_base_data/{session_id}")
-async def get_base_data(session_id: str):
+async def get_base_data(session_id: str, current_user: dict = Depends(get_current_user)):
     """
     Retrieves the base proposal data from the specified Redis session.
 

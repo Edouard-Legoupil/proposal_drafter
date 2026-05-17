@@ -19,15 +19,16 @@ logger = logging.getLogger(__name__)
 
 
 @router.get("/teams")
-async def get_teams():
+async def get_teams(current_user: dict = Depends(get_current_user)):
     """
     Returns a list of all teams in the system.
     """
     try:
+        from backend.models.team import Team
         with get_engine().connect() as connection:
-            result = connection.execute(text("SELECT id, name FROM teams ORDER BY name"))
-            teams = [{"id": str(row[0]), "name": row[1]} for row in result]
-            return {"teams": teams}
+            teams = connection.query(Team).order_by(Team.name).all()
+            teams_list = [{"id": str(team.id), "name": team.name} for team in teams]
+            return {"teams": teams_list}
     except Exception as e:
         logger.error(f"[GET TEAMS ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Could not retrieve teams.")

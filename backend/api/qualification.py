@@ -33,6 +33,10 @@ async def get_qualification_status(
     Retrieve qualification summary for active templates and rules.
     Returns rule metadata and pass/fail for each template.
     """
+    # Input validation to prevent SQL injection
+    valid_template_types = ["proposal", "knowledge_card", "template"]
+    if template_type not in valid_template_types:
+        raise HTTPException(status_code=400, detail=f"Invalid template_type. Must be one of: {valid_template_types}")
     query_rules = text(
         """
         SELECT qr.rule_code, qr.rule_name, qr.description

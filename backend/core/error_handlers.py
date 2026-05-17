@@ -17,6 +17,15 @@ from starlette.status import (
 )
 
 # Local Imports
+from backend.core.custom_errors import (
+    APIError,
+    BadRequestError,
+    UnauthorizedError,
+    ForbiddenError,
+    NotFoundError,
+    InternalServerError,
+    standardize_error_response,
+)
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -197,34 +206,19 @@ class ErrorHandler:
 
     def _handle_http_exception(self, request: Request, exception: HTTPException, request_id: str) -> JSONResponse:
         """Handle HTTPException with standardized format."""
+        # Use our standardized error response format
+        error_response = standardize_error_response(exception)
         status_code = exception.status_code
-
-        # Map common HTTP errors to our error codes
-        error_code_map = {
-            400: "GEN_003",  # Bad Request
-            401: "AUTH_001",  # Unauthorized
-            403: "AUTHZ_001",  # Forbidden
-            404: "AUTHZ_002",  # Not Found
-            429: "RATE_001",  # Too Many Requests
-            500: "GEN_001",  # Internal Server Error
-        }
-
-        error_code = error_code_map.get(status_code, "GEN_001")
 
         # Log the original error details
         logger.warning(
-            f"HTTP {status_code} error: {exception.detail}. " f"Path: {request.url.path}. " f"Request ID: {request_id}"
-        )
-
-        error_response = ErrorResponse(
-            error_code=error_code,
-            message=self.ERROR_CODES.get(error_code, "Request failed"),
-            status_code=status_code,
-            request_id=request_id,
+            f"HTTP {status_code} error: {exception.detail}. " 
+            f"Path: {request.url.path}. " 
+            f"Request ID: {request_id}"
         )
 
         return JSONResponse(
-            content=error_response.to_dict(),
+            content=error_response,
             status_code=status_code,
             headers={"X-Request-ID": request_id},
         )

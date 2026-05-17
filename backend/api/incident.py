@@ -70,11 +70,10 @@ async def analyze_incident(
         with get_engine().connect() as connection:
             # Determine which table to query based on artifact_type
             if artifact_type == "proposal":
-                # Fetch the proposal ID from the review
-                proposal_id = connection.execute(
-                    text("SELECT proposal_id FROM proposal_peer_reviews WHERE id = :review_id"),
-                    {"review_id": source_review_id},
-                ).scalar()
+                # Fetch the proposal ID from the review using ORM
+                from backend.models.review import ProposalPeerReview
+                proposal_review = connection.query(ProposalPeerReview).filter_by(id=source_review_id).first()
+                proposal_id = proposal_review.proposal_id if proposal_review else None
 
                 if proposal_id:
                     await check_proposal_access(int(proposal_id), current_user)
@@ -101,11 +100,10 @@ async def analyze_incident(
                     raise HTTPException(status_code=404, detail="Proposal review not found")
 
             elif artifact_type == "knowledge_card":
-                # Fetch the knowledge card ID from the review
-                card_id = connection.execute(
-                    text("SELECT knowledge_card_id FROM knowledge_card_reviews WHERE id = :review_id"),
-                    {"review_id": source_review_id},
-                ).scalar()
+                # Fetch the knowledge card ID from the review using ORM
+                from backend.models.review import KnowledgeCardReview
+                card_review = connection.query(KnowledgeCardReview).filter_by(id=source_review_id).first()
+                card_id = card_review.knowledge_card_id if card_review else None
 
                 if card_id:
                     await check_knowledge_card_access(int(card_id), current_user)
@@ -132,12 +130,11 @@ async def analyze_incident(
                     raise HTTPException(status_code=404, detail="Knowledge card review not found")
 
             elif artifact_type == "template":
-                # For templates, we need to check the template comment
+                # For templates, we need to check the template comment using ORM
                 # The source_review_id might be a comment ID in donor_template_comments
-                template_id = connection.execute(
-                    text("SELECT template_request_id FROM donor_template_comments WHERE id = :comment_id"),
-                    {"comment_id": source_review_id},
-                ).scalar()
+                from backend.models.review import TemplateComment
+                template_comment = connection.query(TemplateComment).filter_by(id=source_review_id).first()
+                template_id = template_comment.template_request_id if template_comment else None
 
                 if template_id:
                     await check_template_access(int(template_id), current_user, required_permission="read")
@@ -481,30 +478,30 @@ async def get_incident_result(
             if artifact_type and source_review_id:
                 # Verify access based on artifact type
                 if artifact_type == "proposal":
-                    proposal_id = connection.execute(
-                        text("SELECT proposal_id FROM proposal_peer_reviews WHERE id = :review_id"),
-                        {"review_id": source_review_id},
-                    ).scalar()
+                    # Use ORM to fetch proposal review
+                    from backend.models.review import ProposalPeerReview
+                    proposal_review = connection.query(ProposalPeerReview).filter_by(id=source_review_id).first()
+                    proposal_id = proposal_review.proposal_id if proposal_review else None
                     if proposal_id:
                         await check_proposal_access(int(proposal_id), current_user)
                     else:
                         raise HTTPException(status_code=404, detail="Proposal review not found")
 
                 elif artifact_type == "knowledge_card":
-                    card_id = connection.execute(
-                        text("SELECT knowledge_card_id FROM knowledge_card_reviews WHERE id = :review_id"),
-                        {"review_id": source_review_id},
-                    ).scalar()
+                    # Use ORM to fetch knowledge card review
+                    from backend.models.review import KnowledgeCardReview
+                    card_review = connection.query(KnowledgeCardReview).filter_by(id=source_review_id).first()
+                    card_id = card_review.knowledge_card_id if card_review else None
                     if card_id:
                         await check_knowledge_card_access(int(card_id), current_user)
                     else:
                         raise HTTPException(status_code=404, detail="Knowledge card review not found")
 
                 elif artifact_type == "template":
-                    template_id = connection.execute(
-                        text("SELECT template_request_id FROM donor_template_comments WHERE id = :comment_id"),
-                        {"comment_id": source_review_id},
-                    ).scalar()
+                    # Use ORM to fetch template comment
+                    from backend.models.review import TemplateComment
+                    template_comment = connection.query(TemplateComment).filter_by(id=source_review_id).first()
+                    template_id = template_comment.template_request_id if template_comment else None
                     if template_id:
                         await check_template_access(int(template_id), current_user, required_permission="read")
                     else:
