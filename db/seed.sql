@@ -8,7 +8,8 @@ TRUNCATE TABLE teams, users, donors, outcomes, field_contexts, proposals, propos
 INSERT INTO teams (id, name) VALUES
 (gen_random_uuid(), 'DRRM'),
 (gen_random_uuid(), 'HQ Protection'),
-(gen_random_uuid(), 'Test');
+(gen_random_uuid(), 'Test'),
+(gen_random_uuid(), 'test_playwright');
 
 INSERT INTO donor_groups (id, name) VALUES
 (gen_random_uuid(), 'Brussels Donor Group'),

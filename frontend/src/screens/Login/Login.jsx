@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faWandMagicSparkles, faDatabase, faUsers } from '@fortawesome/free-solid-svg-icons'
 import { useNavigate } from 'react-router-dom'
-import Select from 'react-select'
 
 import ForgotPassword from '../ForgotPassword/ForgotPassword'
 import CommonButton from '../../components/CommonButton/CommonButton'
@@ -40,49 +39,16 @@ export default function Login(props) {
         const [password, setPassword] = useState("")
         const [showPassword, setShowPassword] = useState(false)
 
-        const [teamId, setTeamId] = useState("")
-        const [teams, setTeams] = useState([])
         const [securityQuestion, setSecurityQuestion] = useState("")
         const [securityAnswer, setSecurityAnswer] = useState("")
         const [acknowledged, setAcknowledged] = useState(false)
-
-        const [roles, setRoles] = useState([])
-        const [selectedRoles, setSelectedRoles] = useState([])
-        const [donorGroups, setDonorGroups] = useState([])
-        const [selectedDonorGroups, setSelectedDonorGroups] = useState([])
-        const [outcomes, setOutcomes] = useState([])
-        const [selectedOutcomes, setSelectedOutcomes] = useState([])
-        const [geographicCoverageType, setGeographicCoverageType] = useState("global")
-        const [geographicCoverageRegion, setGeographicCoverageRegion] = useState("")
-        const [geographicCoverageCountry, setGeographicCoverageCountry] = useState("")
 
 
         useEffect(() => {
                 async function fetchFormData() {
                         try {
-                                const [teamsRes, rolesRes, donorGroupsRes, outcomesRes] = await Promise.all([
-                                        fetch(`${API_BASE_URL}/teams`),
-                                        fetch(`${API_BASE_URL}/roles`),
-                                        fetch(`${API_BASE_URL}/donors/groups`),
-                                        fetch(`${API_BASE_URL}/outcomes`)
-                                ]);
-
-                                if (teamsRes.ok) {
-                                        const data = await teamsRes.json();
-                                        setTeams(data.teams);
-                                }
-                                if (rolesRes.ok) {
-                                        const data = await rolesRes.json();
-                                        setRoles(data.map(r => ({ value: r.id, label: r.name })));
-                                }
-                                if (donorGroupsRes.ok) {
-                                        const data = await donorGroupsRes.json();
-                                        setDonorGroups(data.donor_groups.map(dg => ({ value: dg, label: dg })));
-                                }
-                                if (outcomesRes.ok) {
-                                        const data = await outcomesRes.json();
-                                        setOutcomes(data.outcomes.map(o => ({ value: o.id, label: o.name })));
-                                }
+                                // No need to fetch form data anymore
+                                // All values are assigned defaults in the backend
                         } catch (error) {
                                 console.error("Failed to fetch form data:", error);
                         }
@@ -156,13 +122,14 @@ export default function Login(props) {
 
                 e.preventDefault()
 
+                // Assign default values for all settings
                 const settings = {
-                        geographic_coverage_type: geographicCoverageType,
-                        geographic_coverage_region: geographicCoverageRegion,
-                        geographic_coverage_country: geographicCoverageCountry,
-                        roles: selectedRoles.map(r => r.value),
-                        donor_groups: selectedDonorGroups.map(dg => dg.value),
-                        outcomes: selectedOutcomes.map(o => o.value)
+                        geographic_coverage_type: "global",
+                        geographic_coverage_region: "",
+                        geographic_coverage_country: "",
+                        roles: [1], // Default to "proposal writer" role (ID 1)
+                        donor_groups: [],
+                        outcomes: []
                 }
 
                 const response = await fetch(`${API_BASE_URL}/signup`, {
@@ -172,7 +139,6 @@ export default function Login(props) {
                                 username,
                                 email,
                                 password,
-                                team_id: teamId,
                                 security_question: securityQuestion,
                                 security_answer: securityAnswer.trim().toLowerCase(),
                                 settings
@@ -228,19 +194,6 @@ export default function Login(props) {
                                                                         onChange={e => /^[A-Za-z\s]{0,16}$/.test(e.target.value) && setUsername(e.target.value)}
                                                                         data-testid="name-input"
                                                                 />
-                                                                <label className='Login-label' htmlFor='Login_teamInput'>Team</label>
-                                                                <select
-                                                                        id="Login_teamInput"
-                                                                        value={teamId}
-                                                                        onChange={e => setTeamId(e.target.value)}
-                                                                        required
-                                                                        data-testid="team-select"
-                                                                >
-                                                                        <option value="" disabled>Select your team</option>
-                                                                        {teams.map(team => (
-                                                                                <option key={team.id} value={team.id}>{team.name}</option>
-                                                                        ))}
-                                                                </select>
                                                         </>
                                                         :
                                                         ""
@@ -292,51 +245,6 @@ export default function Login(props) {
                                                                 </div> : ""}
                                                                 {props?.register ?
                                                                         <>
-                                                                                <label className='Login-label'>Roles</label>
-                                                                                <Select
-                                                                                        isMulti
-                                                                                        options={roles}
-                                                                                        value={selectedRoles}
-                                                                                        onChange={setSelectedRoles}
-                                                                                />
-
-                                                                                {selectedRoles.some(r => r.label === 'knowledge manager donors') && (
-                                                                                        <>
-                                                                                                <label className='Login-label'>Donor Groups</label>
-                                                                                                <Select
-                                                                                                        isMulti
-                                                                                                        options={donorGroups}
-                                                                                                        value={selectedDonorGroups}
-                                                                                                        onChange={setSelectedDonorGroups}
-                                                                                                />
-                                                                                        </>
-                                                                                )}
-
-                                                                                {selectedRoles.some(r => r.label === 'knowledge manager outcome') && (
-                                                                                        <>
-                                                                                                <label className='Login-label'>Outcomes</label>
-                                                                                                <Select
-                                                                                                        isMulti
-                                                                                                        options={outcomes}
-                                                                                                        value={selectedOutcomes}
-                                                                                                        onChange={setSelectedOutcomes}
-                                                                                                />
-                                                                                        </>
-                                                                                )}
-
-                                                                                <label className='Login-label'>Geographic Coverage</label>
-                                                                                <select value={geographicCoverageType} onChange={e => setGeographicCoverageType(e.target.value)}>
-                                                                                        <option value="global">Global</option>
-                                                                                        <option value="regional">Regional</option>
-                                                                                        <option value="country">Country</option>
-                                                                                </select>
-
-                                                                                {geographicCoverageType === 'regional' && (
-                                                                                        <input type="text" placeholder="Region" value={geographicCoverageRegion} onChange={e => setGeographicCoverageRegion(e.target.value)} />
-                                                                                )}
-                                                                                {geographicCoverageType === 'country' && (
-                                                                                        <input type="text" placeholder="Country" value={geographicCoverageCountry} onChange={e => setGeographicCoverageCountry(e.target.value)} />
-                                                                                )}
                                                                                 <label className='Login-label' htmlFor='Login_securityQuestionInput'>Security Question</label>
                                                                                 <select
                                                                                         id="Login_securityQuestionInput"

@@ -226,7 +226,6 @@ async def signup(request: Request):
             password,
             security_question,
             security_answer,
-            team_id,
             settings_data,
         ]
     ):
@@ -237,6 +236,21 @@ async def signup(request: Request):
     hashed_password = generate_password_hash(password)
     hashed_questions = {security_question: generate_password_hash(security_answer.strip().lower())}
     user_id = str(uuid.uuid4())
+
+    # If no team_id is provided, assign to test_playwright team
+    if not team_id:
+        with get_engine().connect() as connection:
+            result = connection.execute(text("SELECT id FROM teams WHERE name = 'test_playwright'"))
+            team_result = result.fetchone()
+            if team_result:
+                team_id = team_result[0]
+            else:
+                # Create test_playwright team if it doesn't exist
+                team_id = str(uuid.uuid4())
+                connection.execute(
+                    text("INSERT INTO teams (id, name) VALUES (:id, :name)"), {"id": team_id, "name": "test_playwright"}
+                )
+
     try:
         with get_engine().begin() as connection:
             # Check if a user with the same email already exists.
@@ -275,6 +289,15 @@ async def signup(request: Request):
                     role_insert_query,
                     [{"user_id": user_id, "role_id": role_id} for role_id in settings.roles],
                 )
+            else:
+                # Assign default "proposal writer" role if no roles specified
+                role_result = connection.execute(text("SELECT id FROM roles WHERE name = 'proposal writer'"))
+                default_role = role_result.fetchone()
+                if default_role:
+                    connection.execute(
+                        text("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, :role_id)"),
+                        {"user_id": user_id, "role_id": default_role[0]},
+                    )
 
             # Insert new donor groups
             if settings.donor_groups:
