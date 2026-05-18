@@ -90,7 +90,8 @@ class VectorSearchTool(BaseTool):
                     kcrv.text_chunk,
                     kcr.url,
                     (1 - (kcrv.embedding <=> :query_embedding)) * 0.5 +
-                    COALESCE(ts_rank(to_tsvector('english', kcrv.text_chunk), to_tsquery('english', :fts_query)), 0) * 0.5 AS hybrid_score
+                    COALESCE(ts_rank(to_tsvector('english', kcrv.text_chunk),
+                     to_tsquery('english', :fts_query)), 0) * 0.5 AS hybrid_score
                 FROM
                     knowledge_card_reference_vectors kcrv
                 JOIN
@@ -165,7 +166,7 @@ class ContentGenerationCrew:
             llm=llm,
             verbose=True,
             allow_delegation=False,
-            tools=[VectorSearchTool(knowledge_card_id=self.knowledge_card_id)],
+            tools=[VectorSearchTool(knowledge_card_id=self.knowledge_card_id or "")],
         )
 
     @agent
