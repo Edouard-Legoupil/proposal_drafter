@@ -17,6 +17,8 @@ Available models:
 - DonorGroupMember: Donor group membership model
 - Role: Role model
 - UserRole: User-Role many-to-many relationship
+- Donor: Donor model
+- Outcome: Outcome model
 - ProposalPeerReview: Proposal peer review model
 - KnowledgeCardReview: Knowledge card review model
 - TemplateComment: Template comment model
@@ -29,6 +31,8 @@ from backend.models.template import Template
 from backend.models.team import Team, TeamMember
 from backend.models.donor_group import DonorGroupMember
 from backend.models.role import Role, UserRole
+from backend.models.donor import Donor, Outcome
+from backend.models.user_associations import UserOutcome, UserFieldContext
 from backend.models.review import ProposalPeerReview, KnowledgeCardReview, TemplateComment
 
 __all__ = [
@@ -41,6 +45,10 @@ __all__ = [
     "DonorGroupMember",
     "Role",
     "UserRole",
+    "Donor",
+    "Outcome",
+    "UserOutcome",
+    "UserFieldContext",
     "ProposalPeerReview",
     "KnowledgeCardReview",
     "TemplateComment",

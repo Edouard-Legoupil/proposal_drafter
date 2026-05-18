@@ -25,6 +25,7 @@ async def get_teams(current_user: dict = Depends(get_current_user)):
     """
     try:
         from backend.models.team import Team
+
         with get_engine().connect() as connection:
             teams = connection.query(Team).order_by(Team.name).all()
             teams_list = [{"id": str(team.id), "name": team.name} for team in teams]
@@ -113,9 +114,10 @@ async def get_roles():
     Returns a list of all roles in the system.
     """
     try:
+        from backend.models.role import Role
+
         with get_engine().connect() as connection:
-            result = connection.execute(text("SELECT id, name FROM roles ORDER BY name"))
-            roles = [Role(**row) for row in result.mappings()]
+            roles = connection.query(Role).order_by(Role.name).all()
             return roles
     except Exception as e:
         logger.error(f"[GET ROLES ERROR] {e}", exc_info=True)
@@ -128,9 +130,10 @@ async def get_donor_groups():
     Returns a list of all distinct donor groups.
     """
     try:
+        from backend.models.donor import Donor
+
         with get_engine().connect() as connection:
-            result = connection.execute(text("SELECT DISTINCT donor_group FROM donors ORDER BY donor_group"))
-            donor_groups = [row[0] for row in result]
+            donor_groups = Donor.get_distinct_groups(connection)
             return {"donor_groups": donor_groups}
     except Exception as e:
         logger.error(f"[GET DONOR GROUPS ERROR] {e}", exc_info=True)
@@ -143,10 +146,11 @@ async def get_outcomes():
     Returns a list of all outcomes.
     """
     try:
+        from backend.models.outcome import Outcome
+
         with get_engine().connect() as connection:
-            result = connection.execute(text("SELECT id, name FROM outcomes ORDER BY name"))
-            outcomes = [{"id": str(row[0]), "name": row[1]} for row in result]
-            return {"outcomes": outcomes}
+            outcomes = connection.query(Outcome).order_by(Outcome.name).all()
+            return [{"id": str(outcome.id), "name": outcome.name} for outcome in outcomes]
     except Exception as e:
         logger.error(f"[GET OUTCOMES ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Could not retrieve outcomes.")

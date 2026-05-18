@@ -48,24 +48,27 @@ async def get_admin_users(admin: dict = Depends(is_system_admin)):
                 )
                 roles_result = connection.execute(roles_query, {"user_id": user_id}).mappings().all()
 
-                # Fetch donor groups
-                dg_query = text("SELECT donor_group FROM user_donor_groups WHERE user_id = :user_id")
-                dg_result = connection.execute(dg_query, {"user_id": user_id}).fetchall()
+                # Fetch donor groups using ORM
+                from backend.models.donor_group import DonorGroupMember
 
-                # Fetch outcomes
-                o_query = text("SELECT outcome_id FROM user_outcomes WHERE user_id = :user_id")
-                o_result = connection.execute(o_query, {"user_id": user_id}).fetchall()
+                donor_groups = DonorGroupMember.get_user_groups(connection, user_id)
 
-                # Fetch field contexts
-                fc_query = text("SELECT field_context_id FROM user_field_contexts WHERE user_id = :user_id")
-                fc_result = connection.execute(fc_query, {"user_id": user_id}).fetchall()
+                # Fetch outcomes using ORM
+                from backend.models.user_associations import UserOutcome
+
+                outcome_ids = UserOutcome.get_user_outcomes(connection, user_id)
+
+                # Fetch field contexts using ORM
+                from backend.models.user_associations import UserFieldContext
+
+                field_context_ids = UserFieldContext.get_user_field_contexts(connection, user_id)
 
                 user_dict = dict(user)
                 user_dict["id"] = user_id
                 user_dict["roles"] = [dict(role) for role in roles_result]
-                user_dict["donor_groups"] = [row[0] for row in dg_result]
-                user_dict["outcomes"] = [str(row[0]) for row in o_result]
-                user_dict["field_contexts"] = [str(row[0]) for row in fc_result]
+                user_dict["donor_groups"] = donor_groups
+                user_dict["outcomes"] = outcome_ids
+                user_dict["field_contexts"] = field_context_ids
                 users_list.append(user_dict)
 
             return users_list

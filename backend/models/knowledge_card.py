@@ -9,10 +9,11 @@ from sqlalchemy import Column, String, Text, Boolean, DateTime, JSON, func
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.dialects.postgresql import UUID
 
-Base = declarative_base()  # type: ignore[misc]
+# Type alias for mypy - this is the proper way to handle SQLAlchemy declarative base
+Base = declarative_base()  # type: ignore[valid-type]
 
 
-class KnowledgeCard(Base):  # type: ignore[misc]
+class KnowledgeCard(Base):  # type: ignore[valid-type, misc]
     """
     KnowledgeCard model representing a knowledge card in the Proposal Drafter system.
 

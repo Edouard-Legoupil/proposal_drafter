@@ -18,12 +18,6 @@ from starlette.status import (
 
 # Local Imports
 from backend.core.custom_errors import (
-    APIError,
-    BadRequestError,
-    UnauthorizedError,
-    ForbiddenError,
-    NotFoundError,
-    InternalServerError,
     standardize_error_response,
 )
 
@@ -212,9 +206,7 @@ class ErrorHandler:
 
         # Log the original error details
         logger.warning(
-            f"HTTP {status_code} error: {exception.detail}. " 
-            f"Path: {request.url.path}. " 
-            f"Request ID: {request_id}"
+            f"HTTP {status_code} error: {exception.detail}. " f"Path: {request.url.path}. " f"Request ID: {request_id}"
         )
 
         return JSONResponse(

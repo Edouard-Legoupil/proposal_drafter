@@ -66,7 +66,10 @@ class VectorSearchTool(BaseTool):
     knowledge_card_id: str | None = None
 
     def __init__(self, knowledge_card_id: str):
-        super().__init__()
+        super().__init__(
+            name="Vector Search",
+            description="Searches for relevant information in the knowledge base using vector similarity.",
+        )
         self.knowledge_card_id = knowledge_card_id
 
     def _run(self, search_query: str) -> str:
@@ -146,8 +149,8 @@ class VectorSearchTool(BaseTool):
 class ContentGenerationCrew:
     """ContentGenerationCrew for generating knowledge card content"""
 
-    agents_config = "config/agents_knowledge.yaml"
-    tasks_config = "config/tasks_knowledge.yaml"
+    agents_config: dict = "config/agents_knowledge.yaml"  # type: ignore[assignment]
+    tasks_config: dict = "config/tasks_knowledge.yaml"  # type: ignore[assignment]
     knowledge_card_id: str | None = None
     pre_prompt: str = ""
 
@@ -176,18 +179,22 @@ class ContentGenerationCrew:
 
     @task
     def research_task(self) -> Task:
-        research_task_config = self.tasks_config["research_task"].copy()  # type: ignore[misc]
-        research_task_config["description"] = self.pre_prompt + research_task_config["description"]  # type: ignore[misc]
-        return Task(config=research_task_config, agent=self.researcher())
+        research_task_config = self.tasks_config["research_task"]  # type: ignore[misc]
+        return Task(
+            description=self.pre_prompt + research_task_config.get("description", ""),  # type: ignore[misc]
+            expected_output=research_task_config.get("expected_output", ""),  # type: ignore[misc]
+            agent=self.researcher(),
+            **research_task_config,
+        )
 
     @task
     def write_task(self) -> Task:
-        write_task_config = self.tasks_config["write_task"].copy()  # type: ignore[misc]
-        write_task_config["description"] = self.pre_prompt + write_task_config["description"]  # type: ignore[misc]
+        write_task_config = self.tasks_config["write_task"]  # type: ignore[misc]
         return Task(
-            config=write_task_config,
+            description=self.pre_prompt + write_task_config.get("description", ""),  # type: ignore[misc]
+            expected_output=write_task_config.get("expected_output", ""),  # type: ignore[misc]
             agent=self.writer(),
-            output_callback=log_rag_output,
+            **write_task_config,
         )
 
     @crew

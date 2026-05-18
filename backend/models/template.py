@@ -10,7 +10,8 @@ from sqlalchemy import Column, String, Text, Boolean, DateTime, func
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.dialects.postgresql import UUID
 
-Base = declarative_base()  # type: ignore[misc]
+# Type alias for mypy - this is the proper way to handle SQLAlchemy declarative base
+Base = declarative_base()  # type: ignore[valid-type]
 
 
 # Enums for template types and statuses
@@ -27,7 +28,7 @@ class TemplateStatus(str, PyEnum):
     archived = "archived"
 
 
-class Template(Base):  # type: ignore[misc]
+class Template(Base):  # type: ignore[valid-type, misc]
     """
     Template model representing a template in the Proposal Drafter system.
 

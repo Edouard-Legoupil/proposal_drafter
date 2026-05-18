@@ -38,9 +38,7 @@ from backend.core.config import (
     _find_template_path,
 )
 from backend.core.custom_errors import (
-    NotFoundError,
     InternalServerError,
-    BadRequestError,
 )
 from backend.utils.crew_actions import (
     handle_text_format,
@@ -171,6 +169,7 @@ async def get_review_analysis(review_id: str, current_user: dict = Depends(get_c
             # T109: First, determine the artifact type of this review
             # Check if it's a proposal review
             from backend.models.review import ProposalPeerReview
+
             proposal_review = connection.query(ProposalPeerReview).filter_by(id=review_id).first()
             proposal_id = proposal_review.proposal_id if proposal_review else None
 
@@ -194,6 +193,7 @@ async def get_review_analysis(review_id: str, current_user: dict = Depends(get_c
             else:
                 # Check if it's a knowledge card review
                 from backend.models.review import KnowledgeCardReview
+
                 card_review = connection.query(KnowledgeCardReview).filter_by(id=review_id).first()
                 card_id = card_review.knowledge_card_id if card_review else None
 
@@ -315,8 +315,7 @@ async def get_templates(current_user: dict = Depends(get_current_user)):
             exc_info=True,
         )
         raise InternalServerError(
-            error_code="TEMPLATE_RETRIEVAL_FAILED",
-            detail="Could not retrieve proposal templates"
+            error_code="TEMPLATE_RETRIEVAL_FAILED", detail="Could not retrieve proposal templates"
         )
 
 
@@ -563,7 +562,7 @@ def generate_all_sections_background(session_id: str, proposal_id: str, user_id:
         if associated_knowledge_cards:
             with get_engine().connect() as connection:
                 for _card in associated_knowledge_cards:
-                    card_id = card.get("id")
+                    card_id = _card.get("id")
                     if not card_id:
                         logger.warning("Associated knowledge card missing 'id', skipping.")
                         continue
@@ -2144,7 +2143,7 @@ async def upload_submitted_pdf(
     """
     user_id = current_user["user_id"]
 
-    if not file.filename.endswith(".pdf"):
+    if not file.filename or not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Invalid file type. Only PDFs are allowed.")
 
     try:

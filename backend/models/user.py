@@ -17,13 +17,14 @@ if TYPE_CHECKING:
     pass
 
 # Use the same base - will be properly configured at runtime
-Base = declarative_base()  # type: ignore[misc]
+# Type alias for mypy - this is the proper way to handle SQLAlchemy declarative base
+Base = declarative_base()  # type: ignore[valid-type]
 
 # Configure logger for authorization
 logger = logging.getLogger("security.authorization")
 
 
-class User(Base):  # type: ignore[misc]
+class User(Base):  # type: ignore[valid-type, misc]
     """
     User model representing a user in the Proposal Drafter system.
 

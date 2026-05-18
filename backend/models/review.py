@@ -5,14 +5,15 @@ Defines the review models for the Proposal Drafter system.
 """
 
 from typing import Any, Optional
-from sqlalchemy import Column, String, Text, Boolean, DateTime, JSON, func, ForeignKey, Integer
+from sqlalchemy import Column, String, Text, DateTime, func, ForeignKey, Integer
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.dialects.postgresql import UUID
 
-Base = declarative_base()  # type: ignore[misc]
+# Type alias for mypy - this is the proper way to handle SQLAlchemy declarative base
+Base = declarative_base()  # type: ignore[valid-type]
 
 
-class ProposalPeerReview(Base):  # type: ignore[misc]
+class ProposalPeerReview(Base):  # type: ignore[valid-type, misc]
     """
     ProposalPeerReview model representing peer reviews of proposals.
 
@@ -55,7 +56,7 @@ class ProposalPeerReview(Base):  # type: ignore[misc]
         return session.query(cls).filter_by(proposal_id=proposal_id).all()
 
 
-class KnowledgeCardReview(Base):  # type: ignore[misc]
+class KnowledgeCardReview(Base):  # type: ignore[valid-type, misc]
     """
     KnowledgeCardReview model representing reviews of knowledge cards.
 
@@ -85,7 +86,9 @@ class KnowledgeCardReview(Base):  # type: ignore[misc]
     knowledge_card = relationship("KnowledgeCard", backref="reviews")
 
     def __repr__(self):
-        return f"<KnowledgeCardReview(id={self.id}, knowledge_card_id={self.knowledge_card_id}, status='{self.status}')>"
+        return (
+            f"<KnowledgeCardReview(id={self.id}, knowledge_card_id={self.knowledge_card_id}, status='{self.status}')>"
+        )
 
     @classmethod
     def get_by_id(cls, session, review_id: Any) -> Optional["KnowledgeCardReview"]:
@@ -98,7 +101,7 @@ class KnowledgeCardReview(Base):  # type: ignore[misc]
         return session.query(cls).filter_by(knowledge_card_id=knowledge_card_id).all()
 
 
-class TemplateComment(Base):  # type: ignore[misc]
+class TemplateComment(Base):  # type: ignore[valid-type, misc]
     """
     TemplateComment model representing comments on donor template requests.
 
@@ -123,7 +126,9 @@ class TemplateComment(Base):  # type: ignore[misc]
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     def __repr__(self):
-        return f"<TemplateComment(id={self.id}, template_request_id={self.template_request_id}, status='{self.status}')>"
+        return (
+            f"<TemplateComment(id={self.id}, template_request_id={self.template_request_id}, status='{self.status}')>"
+        )
 
     @classmethod
     def get_by_id(cls, session, comment_id: Any) -> Optional["TemplateComment"]:

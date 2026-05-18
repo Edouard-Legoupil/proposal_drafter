@@ -2,7 +2,6 @@
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import text
 
 from backend.core.db import get_engine
 from backend.core.security import get_current_user
@@ -72,6 +71,7 @@ async def analyze_incident(
             if artifact_type == "proposal":
                 # Fetch the proposal ID from the review using ORM
                 from backend.models.review import ProposalPeerReview
+
                 proposal_review = connection.query(ProposalPeerReview).filter_by(id=source_review_id).first()
                 proposal_id = proposal_review.proposal_id if proposal_review else None
 
@@ -102,6 +102,7 @@ async def analyze_incident(
             elif artifact_type == "knowledge_card":
                 # Fetch the knowledge card ID from the review using ORM
                 from backend.models.review import KnowledgeCardReview
+
                 card_review = connection.query(KnowledgeCardReview).filter_by(id=source_review_id).first()
                 card_id = card_review.knowledge_card_id if card_review else None
 
@@ -133,6 +134,7 @@ async def analyze_incident(
                 # For templates, we need to check the template comment using ORM
                 # The source_review_id might be a comment ID in donor_template_comments
                 from backend.models.review import TemplateComment
+
                 template_comment = connection.query(TemplateComment).filter_by(id=source_review_id).first()
                 template_id = template_comment.template_request_id if template_comment else None
 
@@ -480,6 +482,7 @@ async def get_incident_result(
                 if artifact_type == "proposal":
                     # Use ORM to fetch proposal review
                     from backend.models.review import ProposalPeerReview
+
                     proposal_review = connection.query(ProposalPeerReview).filter_by(id=source_review_id).first()
                     proposal_id = proposal_review.proposal_id if proposal_review else None
                     if proposal_id:
@@ -490,6 +493,7 @@ async def get_incident_result(
                 elif artifact_type == "knowledge_card":
                     # Use ORM to fetch knowledge card review
                     from backend.models.review import KnowledgeCardReview
+
                     card_review = connection.query(KnowledgeCardReview).filter_by(id=source_review_id).first()
                     card_id = card_review.knowledge_card_id if card_review else None
                     if card_id:
@@ -500,6 +504,7 @@ async def get_incident_result(
                 elif artifact_type == "template":
                     # Use ORM to fetch template comment
                     from backend.models.review import TemplateComment
+
                     template_comment = connection.query(TemplateComment).filter_by(id=source_review_id).first()
                     template_id = template_comment.template_request_id if template_comment else None
                     if template_id:

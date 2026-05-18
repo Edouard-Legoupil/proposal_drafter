@@ -7,10 +7,11 @@ Defines the Team and TeamMember models for team-based access control.
 from sqlalchemy import Column, String
 from sqlalchemy.orm import declarative_base, relationship
 
-Base = declarative_base()  # type: ignore[misc]
+# Type alias for mypy - this is the proper way to handle SQLAlchemy declarative base
+Base = declarative_base()  # type: ignore[valid-type]
 
 
-class Team(Base):  # type: ignore[misc]
+class Team(Base):  # type: ignore[valid-type, misc]
     """
     Team model representing a team in the Proposal Drafter system.
 
@@ -38,7 +39,7 @@ class Team(Base):  # type: ignore[misc]
         return session.query(cls).filter_by(name=name).first()
 
 
-class TeamMember(Base):  # type: ignore[misc]
+class TeamMember(Base):  # type: ignore[valid-type, misc]
     """
     Association table for the many-to-many relationship between Users and Teams.
 
