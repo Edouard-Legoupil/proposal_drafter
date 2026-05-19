@@ -72,10 +72,12 @@ async def get_admin_users(admin: dict = Depends(is_system_admin)):
                 user_dict["field_contexts"] = field_context_ids
                 users_list.append(user_dict)
 
+            # Debug: log the number of users returned
+            logger.info(f"Admin users query returned {len(users_list)} users")
             return users_list
     except Exception as e:
         logger.error(f"[GET ADMIN USERS ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Could not retrieve users for admin.")
+        raise HTTPException(status_code=500, detail=f"Could not retrieve users for admin: {str(e)}")
 
 
 @router.put("/admin/users/{user_id}/settings")
@@ -424,6 +426,10 @@ async def list_admin_knowledge_cards(admin: dict = Depends(is_system_admin)):
             """
             )
             rows = connection.execute(query).mappings().all()
+            
+            # Debug: log the number of rows returned
+            logger.info(f"Knowledge cards query returned {len(rows)} rows")
+            
             return [
                 {
                     "id": str(r["id"]),
@@ -443,7 +449,7 @@ async def list_admin_knowledge_cards(admin: dict = Depends(is_system_admin)):
             ]
     except Exception as e:
         logger.error(f"[LIST ADMIN KNOWLEDGE CARDS ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Could not list knowledge cards.")
+        raise HTTPException(status_code=500, detail=f"Could not list knowledge cards: {str(e)}")
 
 
 @router.get("/admin/templates/list")
