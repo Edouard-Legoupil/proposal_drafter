@@ -30,14 +30,10 @@ CARD_SUMMARY = "test"
 # ============================================================================
 
 
-@pytest.fixture(autouse=True)
-def ensure_screenshot_dir():
     """Ensure screenshot directory exists."""
     os.makedirs("playwright/test-results", exist_ok=True)
 
 
-@pytest.fixture
-def logged_in_page(page, config):
     """Log in as the primary test user."""
     user = TEST_USERS["primary"]
     page.goto(f"{config['base_url']}/login")
@@ -54,12 +50,6 @@ def logged_in_page(page, config):
 
 
 @pytest.mark.knowledge_card
-def test_view_knowledge_cards_dashboard(logged_in_page, config):
-    """
-    Test that users can navigate to and view the knowledge cards dashboard.
-    """
-    page = logged_in_page
-
     # Navigate to knowledge tab
     page.get_by_test_id("knowledge-tab").click()
     expect(page).to_have_url(re.compile(".*knowledge"))
@@ -73,12 +63,6 @@ def test_view_knowledge_cards_dashboard(logged_in_page, config):
 
 
 @pytest.mark.knowledge_card
-def test_filter_knowledge_cards_by_type(logged_in_page, config):
-    """
-    Test filtering knowledge cards by type (donor, outcome, field_context).
-    """
-    page = logged_in_page
-
     # Navigate to knowledge tab
     page.get_by_test_id("knowledge-tab").click()
 
@@ -99,10 +83,6 @@ def test_filter_knowledge_cards_by_type(logged_in_page, config):
 
 
 @pytest.mark.knowledge_card
-def test_view_existing_knowledge_card(logged_in_page, config):
-    """
-    Test viewing an existing knowledge card.
-
     Precondition: At least one knowledge card must exist.
     """
     page = logged_in_page
@@ -148,10 +128,6 @@ def test_view_existing_knowledge_card(logged_in_page, config):
 
 
 @pytest.mark.knowledge_card
-def test_view_knowledge_card_history(logged_in_page, config):
-    """
-    Test viewing the history of a knowledge card.
-
     Precondition: A knowledge card with history must exist.
     """
     page = logged_in_page
@@ -180,12 +156,6 @@ def test_view_knowledge_card_history(logged_in_page, config):
 
 @pytest.mark.knowledge_card
 @pytest.mark.e2e
-def test_create_knowledge_card_for_donor(logged_in_page, config):
-    """
-    Test creating a new knowledge card linked to a donor.
-    """
-    page = logged_in_page
-
     # Navigate to knowledge tab
     page.get_by_test_id("knowledge-tab").click()
 
@@ -254,10 +224,6 @@ def test_create_knowledge_card_for_donor(logged_in_page, config):
 
 @pytest.mark.knowledge_card
 @pytest.mark.slow
-def test_create_knowledge_card_from_proposal(logged_in_page, config):
-    """
-    Test creating a knowledge card from an existing proposal.
-
     Precondition: A proposal must already exist.
     """
     page = logged_in_page
@@ -293,10 +259,6 @@ def test_create_knowledge_card_from_proposal(logged_in_page, config):
 @pytest.mark.knowledge_card
 @pytest.mark.e2e
 @pytest.mark.regression
-def test_full_knowledge_card_workflow(context, config):
-    """
-    Full knowledge card workflow maintaining backward compatibility.
-
     This test follows the exact workflow from the original test_3_knowledge_card.py
     but uses fixtures for better maintainability.
     """

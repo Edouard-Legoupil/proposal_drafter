@@ -24,25 +24,12 @@ from .conftest import TEST_USERS, take_screenshot
 # ============================================================================
 
 
-@pytest.fixture(autouse=True)
-def ensure_screenshot_dir():
-    """Ensure screenshot directory exists."""
-    os.makedirs("playwright/test-results", exist_ok=True)
-
-
-@pytest.fixture
-def logged_in_page(page, config):
-    """Log in as the primary test user."""
-    user = TEST_USERS["primary"]
-    page.goto(f"{config['base_url']}/login")
-    page.get_by_test_id("email-input").fill(user.email)
-    page.get_by_test_id("password-input").fill(user.password)
-    page.get_by_test_id("submit-button").click()
-    expect(page).to_have_url(re.compile(".*dashboard"))
-    return page
-
-
+# Test: Navigate to Profile Page
 # ============================================================================
+=======
+# ============================================================================
+# Test: Navigate to Profile Page
+# ========================================================================================================================================================
 # Test: Navigate to Profile Page
 # ============================================================================
 

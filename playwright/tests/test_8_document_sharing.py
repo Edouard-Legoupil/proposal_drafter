@@ -24,14 +24,10 @@ from .conftest import TEST_USERS, take_screenshot
 # ============================================================================
 
 
-@pytest.fixture(autouse=True)
-def ensure_screenshot_dir():
     """Ensure screenshot directory exists."""
     os.makedirs("playwright/test-results", exist_ok=True)
 
 
-@pytest.fixture
-def logged_in_page(page, config):
     """Log in as the primary test user."""
     user = TEST_USERS["primary"]
     page.goto(f"{config['base_url']}/login")
@@ -42,8 +38,6 @@ def logged_in_page(page, config):
     return page
 
 
-@pytest.fixture
-def logged_in_colleague(page, config):
     """Log in as a colleague user."""
     user = TEST_USERS["colleague"]
     page.goto(f"{config['base_url']}/login")
@@ -61,10 +55,6 @@ def logged_in_colleague(page, config):
 
 @pytest.mark.document_sharing
 @pytest.mark.smoke
-def test_navigate_to_share_proposal_dialog(logged_in_page, config):
-    """
-    Test that users can navigate to the share proposal dialog.
-
     User Story: Document Sharing
     """
     page = logged_in_page
@@ -92,10 +82,6 @@ def test_navigate_to_share_proposal_dialog(logged_in_page, config):
 
 
 @pytest.mark.document_sharing
-def test_share_proposal_with_colleague(logged_in_page, config):
-    """
-    Test that users can share proposals with colleagues.
-
     User Story: Document Sharing
     Steps:
     1. Open a proposal
@@ -143,10 +129,6 @@ def test_share_proposal_with_colleague(logged_in_page, config):
 
 
 @pytest.mark.document_sharing
-def test_share_proposal_access_levels(logged_in_page, config):
-    """
-    Test sharing proposals with different access levels.
-
     User Story: Document Sharing
     Steps:
     1. Test sharing with "View" access level
@@ -186,10 +168,6 @@ def test_share_proposal_access_levels(logged_in_page, config):
 
 @pytest.mark.document_sharing
 @pytest.mark.e2e
-def test_verify_shared_proposal_access(page, config):
-    """
-    Test complete sharing workflow and verify access.
-
     User Story: Document Sharing
     Steps:
     1. User shares proposal with colleague
@@ -266,10 +244,6 @@ def test_verify_shared_proposal_access(page, config):
 
 
 @pytest.mark.document_sharing
-def test_manage_shared_access(logged_in_page, config):
-    """
-    Test managing shared access permissions.
-
     User Story: Document Sharing
     Steps:
     1. Share a proposal with a colleague
@@ -334,10 +308,6 @@ def test_manage_shared_access(logged_in_page, config):
 
 
 @pytest.mark.document_sharing
-def test_share_proposal_validation(logged_in_page, config):
-    """
-    Test share proposal form validation.
-
     User Story: Document Sharing
     Steps:
     1. Try to share without email
@@ -381,10 +351,6 @@ def test_share_proposal_validation(logged_in_page, config):
 
 
 @pytest.mark.document_sharing
-def test_share_proposal_multiple_users(logged_in_page, config):
-    """
-    Test sharing a proposal with multiple users at once.
-
     User Story: Document Sharing
     Steps:
     1. Open share dialog
@@ -437,10 +403,6 @@ def test_share_proposal_multiple_users(logged_in_page, config):
 
 @pytest.mark.document_sharing
 @pytest.mark.security
-def test_shared_proposal_access_control(page, config):
-    """
-    Test that shared proposal access control works correctly.
-
     User Story: Document Sharing
     Steps:
     1. Share proposal with view access
@@ -500,10 +462,6 @@ def test_shared_proposal_access_control(page, config):
 @pytest.mark.document_sharing
 @pytest.mark.e2e
 @pytest.mark.regression
-def test_complete_document_sharing_workflow(page, config):
-    """
-    Complete document sharing workflow.
-
     User Story: Document Sharing
     Steps:
     1. User shares proposal with colleague

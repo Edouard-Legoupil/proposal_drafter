@@ -25,14 +25,10 @@ from .conftest import TEST_USERS, take_screenshot
 # ============================================================================
 
 
-@pytest.fixture(autouse=True)
-def ensure_screenshot_dir():
     """Ensure screenshot directory exists."""
     os.makedirs("playwright/test-results", exist_ok=True)
 
 
-@pytest.fixture
-def logged_in_page(page, config):
     """Log in as the primary test user."""
     user = TEST_USERS["primary"]
     page.goto(f"{config['base_url']}/login")
@@ -43,8 +39,6 @@ def logged_in_page(page, config):
     return page
 
 
-@pytest.fixture
-def logged_in_admin(page, config):
     """Log in as an administrator user."""
     user = TEST_USERS["admin"]
     page.goto(f"{config['base_url']}/login")
@@ -62,10 +56,6 @@ def logged_in_admin(page, config):
 
 @pytest.mark.template_management
 @pytest.mark.smoke
-def test_navigate_to_template_request_page(logged_in_page, config):
-    """
-    Test that users can navigate to the template request page.
-
     User Story: Donor Template Request
     """
     page = logged_in_page
@@ -90,10 +80,6 @@ def test_navigate_to_template_request_page(logged_in_page, config):
 
 
 @pytest.mark.template_management
-def test_submit_template_request(logged_in_page, config):
-    """
-    Test that users can submit a new template request.
-
     User Story: Donor Template Request
     Steps:
     1. Navigate to template request page
@@ -144,10 +130,6 @@ def test_submit_template_request(logged_in_page, config):
 
 @pytest.mark.template_management
 @pytest.mark.admin
-def test_view_pending_template_requests(logged_in_admin, config):
-    """
-    Test that administrators can view pending template requests.
-
     User Story: Template Management (Admin)
     Steps:
     1. Navigate to admin templates page
@@ -177,10 +159,6 @@ def test_view_pending_template_requests(logged_in_admin, config):
 
 @pytest.mark.template_management
 @pytest.mark.admin
-def test_approve_template_request(logged_in_admin, config):
-    """
-    Test that administrators can approve template requests.
-
     User Story: Template Management (Admin)
     Steps:
     1. Navigate to pending template requests
@@ -228,10 +206,6 @@ def test_approve_template_request(logged_in_admin, config):
 
 @pytest.mark.template_management
 @pytest.mark.admin
-def test_create_new_template(logged_in_admin, config):
-    """
-    Test that administrators can create new templates.
-
     User Story: Template Management (Admin)
     Steps:
     1. Navigate to template management
@@ -287,10 +261,6 @@ def test_create_new_template(logged_in_admin, config):
 
 @pytest.mark.template_management
 @pytest.mark.e2e
-def test_complete_template_request_workflow(page, config):
-    """
-    Complete template request workflow from user request to admin approval.
-
     User Story: Donor Template Request + Template Management (Admin)
     Steps:
     1. User submits template request
@@ -387,10 +357,6 @@ def test_complete_template_request_workflow(page, config):
 
 
 @pytest.mark.template_management
-def test_template_request_validation(logged_in_page, config):
-    """
-    Test template request form validation.
-
     User Story: Donor Template Request
     Steps:
     1. Try to submit empty form
@@ -429,10 +395,6 @@ def test_template_request_validation(logged_in_page, config):
 
 @pytest.mark.template_management
 @pytest.mark.security
-def test_template_access_control(page, config):
-    """
-    Test that template management requires appropriate permissions.
-
     User Story: Template Management (Admin)
     Steps:
     1. Try to access admin template management as regular user

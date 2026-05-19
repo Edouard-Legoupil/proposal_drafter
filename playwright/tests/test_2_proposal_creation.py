@@ -22,14 +22,10 @@ from .conftest import TEST_USERS, take_screenshot
 # ============================================================================
 
 
-@pytest.fixture(autouse=True)
-def ensure_screenshot_dir():
     """Ensure screenshot directory exists."""
     os.makedirs("playwright/test-results", exist_ok=True)
 
 
-@pytest.fixture
-def logged_in_page(page, config):
     """Log in as the primary test user."""
     user = TEST_USERS["primary"]
     page.goto(f"{config['base_url']}/login")
@@ -47,10 +43,6 @@ def logged_in_page(page, config):
 
 @pytest.mark.proposal_creation
 @pytest.mark.e2e
-def test_create_new_proposal(logged_in_page, config):
-    """
-    Test the complete workflow of creating a new proposal.
-
     Steps:
     1. Click "New Proposal" button
     2. Fill in all proposal details
@@ -129,10 +121,6 @@ def test_create_new_proposal(logged_in_page, config):
 
 
 @pytest.mark.proposal_creation
-def test_export_proposal_as_word(logged_in_page, config):
-    """
-    Test exporting a proposal as a Word document.
-
     User Story: Export proposal to Word
     Precondition: A proposal must already exist.
     """
@@ -161,10 +149,6 @@ def test_export_proposal_as_word(logged_in_page, config):
 
 
 @pytest.mark.proposal_creation
-def test_export_proposal_as_excel(logged_in_page, config):
-    """
-    Test exporting a proposal as an Excel spreadsheet.
-
     User Story: Export proposal to Excel
     Precondition: A proposal must already exist.
     """
@@ -193,10 +177,6 @@ def test_export_proposal_as_excel(logged_in_page, config):
 
 
 @pytest.mark.proposal_creation
-def test_export_proposal_as_pdf(logged_in_page, config):
-    """
-    Test exporting a proposal as a PDF document.
-
     User Story: Export proposal to PDF
     Precondition: A proposal must already exist.
     """
@@ -225,10 +205,6 @@ def test_export_proposal_as_pdf(logged_in_page, config):
 
 
 @pytest.mark.proposal_creation
-def test_navigate_proposal_sections(logged_in_page, config):
-    """
-    Test navigation between different proposal sections.
-
     Precondition: A proposal must already exist.
     """
     page = logged_in_page
@@ -263,10 +239,6 @@ def test_navigate_proposal_sections(logged_in_page, config):
 
 
 @pytest.mark.proposal_creation
-def test_edit_proposal_section(logged_in_page, config):
-    """
-    Test editing a proposal section.
-
     Precondition: A proposal must already exist.
     """
     page = logged_in_page
@@ -295,10 +267,6 @@ def test_edit_proposal_section(logged_in_page, config):
 
 @pytest.mark.proposal_creation
 @pytest.mark.slow
-def test_regenerate_proposal_section(logged_in_page, config):
-    """
-    Test regenerating a proposal section with a custom prompt.
-
     Precondition: A proposal must already exist.
     """
     page = logged_in_page
@@ -335,12 +303,6 @@ def test_regenerate_proposal_section(logged_in_page, config):
 
 
 @pytest.mark.proposal_creation
-def test_filter_proposals_by_status(logged_in_page, config):
-    """
-    Test filtering proposals by status.
-    """
-    page = logged_in_page
-
     # Click filter button
     page.get_by_test_id("filter-button").click()
 
@@ -368,10 +330,6 @@ def test_filter_proposals_by_status(logged_in_page, config):
 @pytest.mark.proposal_creation
 @pytest.mark.e2e
 @pytest.mark.regression
-def test_full_proposal_workflow(context, config):
-    """
-    Full proposal creation workflow maintaining backward compatibility.
-
     This test follows the exact workflow from the original test_2_create_proposal.py
     but uses fixtures for better maintainability.
     """

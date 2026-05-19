@@ -24,14 +24,10 @@ from .conftest import TEST_USERS, take_screenshot
 # ============================================================================
 
 
-@pytest.fixture(autouse=True)
-def ensure_screenshot_dir():
     """Ensure screenshot directory exists."""
     os.makedirs("playwright/test-results", exist_ok=True)
 
 
-@pytest.fixture
-def logged_in_qa_officer(page, config):
     """Log in as a quality assurance officer."""
     user = TEST_USERS["qa_officer"]
     page.goto(f"{config['base_url']}/login")
@@ -42,8 +38,6 @@ def logged_in_qa_officer(page, config):
     return page
 
 
-@pytest.fixture
-def logged_in_page(page, config):
     """Log in as the primary test user."""
     user = TEST_USERS["primary"]
     page.goto(f"{config['base_url']}/login")
@@ -61,10 +55,6 @@ def logged_in_page(page, config):
 
 @pytest.mark.quality_gate
 @pytest.mark.smoke
-def test_navigate_to_quality_review_page(logged_in_qa_officer, config):
-    """
-    Test that QA officers can navigate to the quality review page.
-
     User Story: Quality Gate Review
     """
     page = logged_in_qa_officer
@@ -85,10 +75,6 @@ def test_navigate_to_quality_review_page(logged_in_qa_officer, config):
 
 
 @pytest.mark.quality_gate
-def test_view_proposals_awaiting_quality_review(logged_in_qa_officer, config):
-    """
-    Test that QA officers can view proposals awaiting quality review.
-
     User Story: Quality Gate Review
     Steps:
     1. Navigate to quality reviews page
@@ -121,10 +107,6 @@ def test_view_proposals_awaiting_quality_review(logged_in_qa_officer, config):
 
 
 @pytest.mark.quality_gate
-def test_conduct_quality_gate_review(logged_in_qa_officer, config):
-    """
-    Test that QA officers can conduct quality gate reviews.
-
     User Story: Quality Gate Review
     Steps:
     1. Navigate to quality reviews page
@@ -195,10 +177,6 @@ def test_conduct_quality_gate_review(logged_in_qa_officer, config):
 
 
 @pytest.mark.quality_gate
-def test_quality_review_different_statuses(logged_in_qa_officer, config):
-    """
-    Test quality reviews with different status outcomes.
-
     User Story: Quality Gate Review
     Steps:
     1. Conduct review with "Approved" status
@@ -246,10 +224,6 @@ def test_quality_review_different_statuses(logged_in_qa_officer, config):
 
 @pytest.mark.quality_gate
 @pytest.mark.e2e
-def test_quality_review_notification_flow(page, config):
-    """
-    Test complete quality review notification flow.
-
     User Story: Quality Gate Review
     Steps:
     1. User submits proposal for quality review
@@ -342,10 +316,6 @@ def test_quality_review_notification_flow(page, config):
 
 
 @pytest.mark.quality_gate
-def test_quality_review_criteria_verification(logged_in_qa_officer, config):
-    """
-    Test that quality review criteria are properly verified.
-
     User Story: Quality Gate Review
     Steps:
     1. Open a proposal for quality review
@@ -399,10 +369,6 @@ def test_quality_review_criteria_verification(logged_in_qa_officer, config):
 
 @pytest.mark.quality_gate
 @pytest.mark.security
-def test_quality_review_access_control(page, config):
-    """
-    Test that quality review functionality requires appropriate permissions.
-
     User Story: Quality Gate Review
     Steps:
     1. Try to access quality reviews as regular user
@@ -440,10 +406,6 @@ def test_quality_review_access_control(page, config):
 
 
 @pytest.mark.quality_gate
-def test_quality_review_status_tracking(logged_in_page, config):
-    """
-    Test that quality review status is properly tracked and displayed.
-
     User Story: Quality Gate Review
     Steps:
     1. Submit a proposal for quality review
@@ -486,10 +448,6 @@ def test_quality_review_status_tracking(logged_in_page, config):
 @pytest.mark.quality_gate
 @pytest.mark.e2e
 @pytest.mark.regression
-def test_complete_quality_gate_review_workflow(page, config):
-    """
-    Complete quality gate review workflow from submission to feedback.
-
     User Story: Quality Gate Review
     Steps:
     1. User submits proposal for quality review

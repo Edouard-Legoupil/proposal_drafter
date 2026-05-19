@@ -19,7 +19,97 @@ import os
 import pytest
 from playwright.sync_api import expect
 
-# IMPORTS - Using Central Fixtures
+# FIXTURES (Using Central Fixtures from conftest.py)
+# ============================================================================
+
+@pytest.fixture(scope="function")
+def logged_in_user(page, config):
+    """
+    Fixture for logged in user - uses central logged_in_page fixture
+    """
+    # This now uses the central fixture
+    return logged_in_page(page, config)
+
+
+@pytest.fixture(scope="function")
+def logged_in_page(page, config):
+    """
+    Fixture that provides a page with a logged-in user.
+    
+    This is the central fixture that other tests should use.
+    """
+    user = TEST_USERS["primary"]
+
+    # Navigate to login page
+    page.goto(f"{config['base_url']}")
+
+    # Log in
+    page.get_by_test_id("identifier-input").fill(user.email)
+    page.get_by_test_id("password-input").fill(user.password)
+    page.get_by_test_id("submit-button").click()
+
+    # Verify we're on the dashboard
+    page.wait_for_url(re.compile(".*dashboard"))
+
+    return page
+
+
+@pytest.fixture(scope="function")
+def logged_in_admin(page, config):
+    """Log in as administrator."""
+    user = TEST_USERS["admin"]
+    page.goto(f"{config['base_url']}/login")
+    page.get_by_test_id("email-input").fill(user.email)
+    page.get_by_test_id("password-input").fill(user.password)
+    page.get_by_test_id("submit-button").click()
+    expect(page).to_have_url(re.compile(".*dashboard"))
+    return page
+
+
+@pytest.fixture(scope="function")
+def logged_in_qa_officer(page, config):
+    """Log in as QA officer."""
+    user = TEST_USERS["qa_officer"]
+    page.goto(f"{config['base_url']}/login")
+    page.get_by_test_id("email-input").fill(user.email)
+    page.get_by_test_id("password-input").fill(user.password)
+    page.get_by_test_id("submit-button").click()
+    expect(page).to_have_url(re.compile(".*dashboard"))
+    return page
+
+
+@pytest.fixture(scope="function")
+def logged_in_colleague(page, config):
+    """Log in as colleague user."""
+    user = TEST_USERS["colleague"]
+    page.goto(f"{config['base_url']}/login")
+    page.get_by_test_id("email-input").fill(user.email)
+    page.get_by_test_id("password-input").fill(user.password)
+    page.get_by_test_id("submit-button").click()
+    expect(page).to_have_url(re.compile(".*dashboard"))
+    return page
+
+
+@pytest.fixture(scope="function")
+def logged_in_user_with_proposal(page, config):
+    """Log in and create a test proposal."""
+    page = logged_in_page(page, config)
+    create_test_proposal(page)
+    return page
+
+
+@pytest.fixture(scope="function")
+def test_proposal_exists(page, config):
+    """Ensure a test proposal exists for tests that need it."""
+    # Check if proposal exists, create if not
+    proposal_cards = page.get_by_test_id("proposal-card")
+    if proposal_cards.count() == 0:
+        create_test_proposal(page)
+    return proposal_cards.first
+=======
+# ============================================================================
+# HELPER FUNCTIONS (Consolidated)
+# ============================================================================IMPORTS - Using Central Fixtures
 # ============================================================================
 
 from .conftest import TEST_USERS, take_screenshot

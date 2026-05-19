@@ -21,14 +21,10 @@ from .conftest import TEST_USERS, take_screenshot
 # ============================================================================
 
 
-@pytest.fixture(autouse=True)
-def ensure_screenshot_dir():
     """Ensure screenshot directory exists."""
     os.makedirs("playwright/test-results", exist_ok=True)
 
 
-@pytest.fixture
-def primary_user_logged_in(page, config):
     """Log in as the primary test user."""
     user = TEST_USERS["primary"]
     page.goto(f"{config['base_url']}/login")
@@ -39,8 +35,6 @@ def primary_user_logged_in(page, config):
     return page
 
 
-@pytest.fixture
-def secondary_user_logged_in(page, config):
     """Log in as the secondary test user."""
     user = TEST_USERS["secondary"]
     page.goto(f"{config['base_url']}/login")
@@ -57,10 +51,6 @@ def secondary_user_logged_in(page, config):
 
 
 @pytest.mark.peer_review
-def test_submit_proposal_for_review(primary_user_logged_in, config):
-    """
-    Test submitting a proposal for peer review.
-
     Precondition: A proposal must already exist and be in draft status.
     """
     page = primary_user_logged_in
@@ -96,10 +86,6 @@ def test_submit_proposal_for_review(primary_user_logged_in, config):
 
 
 @pytest.mark.peer_review
-def test_add_peer_review_comments(secondary_user_logged_in, config):
-    """
-    Test adding comments as a peer reviewer.
-
     Precondition: A proposal must be in review status with this user as reviewer.
     """
     page = secondary_user_logged_in
@@ -131,10 +117,6 @@ def test_add_peer_review_comments(secondary_user_logged_in, config):
 
 
 @pytest.mark.peer_review
-def test_mark_review_as_completed(secondary_user_logged_in, config):
-    """
-    Test marking a review as completed.
-
     Precondition: A review must exist with comments.
     """
     page = secondary_user_logged_in
@@ -164,10 +146,6 @@ def test_mark_review_as_completed(secondary_user_logged_in, config):
 
 
 @pytest.mark.peer_review
-def test_respond_to_peer_review_comments(primary_user_logged_in, config):
-    """
-    Test responding to peer review comments as the proposal author.
-
     Precondition: A proposal must have peer review comments.
     """
     page = primary_user_logged_in
@@ -195,10 +173,6 @@ def test_respond_to_peer_review_comments(primary_user_logged_in, config):
 
 
 @pytest.mark.peer_review
-def test_submit_proposal_after_review(primary_user_logged_in, config):
-    """
-    Test submitting a proposal after peer review is complete.
-
     Precondition: A proposal must be in review status with completed reviews.
     """
     page = primary_user_logged_in
@@ -226,10 +200,6 @@ def test_submit_proposal_after_review(primary_user_logged_in, config):
 @pytest.mark.peer_review
 @pytest.mark.e2e
 @pytest.mark.regression
-def test_full_peer_review_workflow(context, config):
-    """
-    Full peer review workflow maintaining backward compatibility.
-
     This test follows the exact workflow from the original test_4_peer_review.py
     but uses fixtures for better maintainability.
     """
