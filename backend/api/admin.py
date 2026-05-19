@@ -28,7 +28,7 @@ async def get_admin_users(admin: dict = Depends(is_system_admin)):
         with get_engine().connect() as connection:
             # Create a session for ORM operations
             session = Session(connection)
-            
+
             # Fetch all users
             users_query = text(
                 """

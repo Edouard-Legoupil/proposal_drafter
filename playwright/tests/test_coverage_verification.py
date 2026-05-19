@@ -8,7 +8,6 @@ Run this test to confirm 100% coverage of all documented requirements.
 """
 
 import pytest
-from playwright.sync_api import expect
 
 
 def test_verify_all_user_stories_covered():
@@ -21,10 +20,7 @@ def test_verify_all_user_stories_covered():
 
     # User stories from docs/user_stories.md organized by category
     user_stories_documentation = {
-        "User Profile Management": [
-            "Update user profile",
-            "Change password"
-        ],
+        "User Profile Management": ["Update user profile", "Change password"],
         "Proposal Creation and Management": [
             "Create a new proposal",
             "Fill and submit proposal form",
@@ -39,20 +35,20 @@ def test_verify_all_user_stories_covered():
             "Archive completed proposal",
             "Export proposal to Word",
             "Export proposal to Excel",
-            "Export proposal to PDF"
+            "Export proposal to PDF",
         ],
         "Knowledge Management": [
             "Create a new knowledge card",
             "Fill and submit knowledge card form",
             "Submit a review for a knowledge card",
-            "Submit review feedback"
+            "Submit review feedback",
         ],
         "Template Management": [
             "Request a new donor template",
             "Submit template request",
             "Approve a template request",
             "Create a new template",
-            "Define the template sections"
+            "Define the template sections",
         ],
         "Review and Collaboration": [
             "Request a peer review",
@@ -62,12 +58,12 @@ def test_verify_all_user_stories_covered():
             "Conduct a quality gate review",
             "Check the proposal against quality criteria",
             "Add quality review comments",
-            "Select the quality status"
+            "Select the quality status",
         ],
         "Document Export and Sharing": [
             "Share proposal with a colleague",
             "Enter the colleague's email",
-            "Select the access level"
+            "Select the access level",
         ],
         "Administrative Functions": [
             "Grant user access to a resource",
@@ -78,7 +74,7 @@ def test_verify_all_user_stories_covered():
             "Revoke user access",
             "Configure system parameters",
             "Update the maximum proposal size",
-            "Update the default template"
+            "Update the default template",
         ],
         "System Monitoring and Health": [
             "Check system health",
@@ -86,42 +82,26 @@ def test_verify_all_user_stories_covered():
             "View system incidents",
             "Filter incidents by type",
             "Resolve an incident",
-            "Enter resolution notes"
-        ]
+            "Enter resolution notes",
+        ],
     }
 
     # Test coverage mapping (test functions that cover each user story)
     test_coverage = {
-        "User Profile Management": [
-            "test_complete_profile_management_workflow"
-        ],
-        "Proposal Creation and Management": [
-            "test_complete_proposal_workflow",
-            "test_proposal_status_management"
-        ],
-        "Knowledge Management": [
-            "test_complete_knowledge_card_workflow"
-        ],
-        "Template Management": [
-            "test_complete_template_workflow"
-        ],
-        "Review and Collaboration": [
-            "test_complete_peer_review_workflow"
-        ],
-        "Document Export and Sharing": [
-            "test_complete_sharing_workflow"
-        ],
-        "Administrative Functions": [
-            "test_complete_admin_workflow"
-        ],
-        "System Monitoring and Health": [
-            "test_complete_monitoring_workflow"
-        ]
+        "User Profile Management": ["test_complete_profile_management_workflow"],
+        "Proposal Creation and Management": ["test_complete_proposal_workflow", "test_proposal_status_management"],
+        "Knowledge Management": ["test_complete_knowledge_card_workflow"],
+        "Template Management": ["test_complete_template_workflow"],
+        "Review and Collaboration": ["test_complete_peer_review_workflow"],
+        "Document Export and Sharing": ["test_complete_sharing_workflow"],
+        "Administrative Functions": ["test_complete_admin_workflow"],
+        "System Monitoring and Health": ["test_complete_monitoring_workflow"],
     }
 
     # Verify all user story categories are covered
-    assert set(user_stories_documentation.keys()) == set(test_coverage.keys()), \
-        "Test coverage categories don't match user story documentation"
+    assert set(user_stories_documentation.keys()) == set(
+        test_coverage.keys()
+    ), "Test coverage categories don't match user story documentation"
 
     # Count total user stories in documentation
     total_documented_stories = sum(len(stories) for stories in user_stories_documentation.values())
@@ -129,7 +109,7 @@ def test_verify_all_user_stories_covered():
     # Count total test functions covering stories
     total_test_functions = sum(len(tests) for tests in test_coverage.values())
 
-    print(f"📋 USER STORY COVERAGE REPORT")
+    print("📋 USER STORY COVERAGE REPORT")
     print(f"📝 Documented user stories: {total_documented_stories}")
     print(f"🧪 Test functions: {total_test_functions}")
     print(f"📊 Coverage ratio: {total_documented_stories}/{total_test_functions}")
@@ -138,7 +118,9 @@ def test_verify_all_user_stories_covered():
     for category in user_stories_documentation.keys():
         assert category in test_coverage, f"No test coverage for {category}"
         assert len(test_coverage[category]) > 0, f"No tests for {category}"
-        print(f"✅ {category}: {len(user_stories_documentation[category])} stories → {len(test_coverage[category])} tests")
+        print(
+            f"✅ {category}: {len(user_stories_documentation[category])} stories → {len(test_coverage[category])} tests"
+        )
 
     # Critical user stories that must be covered
     critical_stories = [
@@ -149,17 +131,14 @@ def test_verify_all_user_stories_covered():
         "Update user profile",
         "Change password",
         "Conduct a quality gate review",
-        "Share proposal with a colleague"
+        "Share proposal with a colleague",
     ]
 
     # Verify critical stories are covered by our comprehensive tests
     critical_covered = True
     for story in critical_stories:
         # Check if story exists in documentation
-        story_covered = any(
-            story in stories
-            for stories in user_stories_documentation.values()
-        )
+        story_covered = any(story in stories for stories in user_stories_documentation.values())
         if not story_covered:
             critical_covered = False
             print(f"❌ Critical story not found: {story}")
@@ -178,7 +157,7 @@ def test_test_suite_structure():
 
     # Expected test categories
     expected_categories = [
-        "smoke",      # Quick validation tests
+        "smoke",  # Quick validation tests
         "user_profile",  # User profile management
         "proposal_creation",  # Proposal creation and management
         "knowledge_management",  # Knowledge card functionality
@@ -189,7 +168,7 @@ def test_test_suite_structure():
         "system_monitoring",  # System health and monitoring
         "regression",  # Regression prevention
         "verification",  # Coverage verification
-        "e2e"  # End-to-end workflows
+        "e2e",  # End-to-end workflows
     ]
 
     print("🗂 TEST SUITE STRUCTURE VERIFICATION")
@@ -221,7 +200,7 @@ def test_end_to_end_workflows():
         "Complete document sharing workflow",
         "Complete administrative workflow",
         "Complete system monitoring workflow",
-        "Critical path proposal creation to submission"
+        "Critical path proposal creation to submission",
     ]
 
     print("🔄 END-TO-END WORKFLOW VERIFICATION")
@@ -243,7 +222,7 @@ def test_cross_user_interactions():
         "User submits for peer review → Colleague reviews",
         "User requests template → Admin approves and creates",
         "User submits for quality review → QA officer reviews",
-        "Admin grants access → User can access resource"
+        "Admin grants access → User can access resource",
     ]
 
     print("👥 MULTI-USER INTERACTION VERIFICATION")
@@ -264,7 +243,7 @@ def test_error_handling_coverage():
         "Password change validation (mismatch, weak passwords)",
         "Template request validation",
         "Share proposal validation (invalid emails)",
-        "Authentication required for protected routes"
+        "Authentication required for protected routes",
     ]
 
     print("⚠️ ERROR HANDLING VERIFICATION")
@@ -284,7 +263,7 @@ def test_performance_and_stability():
         "Regression tests for critical paths",
         "End-to-end workflow tests",
         "Multi-user interaction tests",
-        "Error handling and recovery tests"
+        "Error handling and recovery tests",
     ]
 
     print("🚀 PERFORMANCE & STABILITY VERIFICATION")
@@ -309,7 +288,7 @@ def test_final_coverage_summary():
         "Verification Tests": 6,
         "Multi-User Scenarios": "5+",
         "Error Handling Tests": "6+",
-        "Coverage Percentage": "100%"
+        "Coverage Percentage": "100%",
     }
 
     print("📊 FINAL COVERAGE SUMMARY")
