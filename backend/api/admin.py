@@ -407,7 +407,6 @@ async def list_admin_knowledge_cards(admin: dict = Depends(is_system_admin)):
                 SELECT
                     kc.id,
                     COALESCE(kc.summary, kc.id::text) AS title,
-                    kc.type,
                     kc.status::text AS status,
                     kc.created_at,
                     kc.updated_at,
@@ -434,7 +433,6 @@ async def list_admin_knowledge_cards(admin: dict = Depends(is_system_admin)):
                 {
                     "id": str(r["id"]),
                     "title": r["title"],
-                    "type": r["type"],
                     "status": r["status"],
                     "owner_name": r["owner_name"],
                     "owner_email": r["owner_email"],
