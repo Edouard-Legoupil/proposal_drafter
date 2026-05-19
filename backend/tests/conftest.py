@@ -59,6 +59,18 @@ def test_engine():
             connection.execute(
                 text(
                     """
+                CREATE TABLE IF NOT EXISTS team_members (
+                    team_id TEXT, user_id TEXT,
+                    PRIMARY KEY (team_id, user_id),
+                    FOREIGN KEY (team_id) REFERENCES teams(id),
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )
+            """
+                )
+            )
+            connection.execute(
+                text(
+                    """
                 CREATE TABLE IF NOT EXISTS users (
                     id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, password TEXT NOT NULL,
                     name TEXT, security_questions TEXT, session_active BOOLEAN,

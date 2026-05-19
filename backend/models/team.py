@@ -4,7 +4,7 @@ Team ORM Model for Proposal Drafter
 Defines the Team and TeamMember models for team-based access control.
 """
 
-from sqlalchemy import Column, String
+from sqlalchemy import Column, String, ForeignKey
 from sqlalchemy.orm import declarative_base, relationship
 
 # Type alias for mypy - this is the proper way to handle SQLAlchemy declarative base
@@ -52,8 +52,8 @@ class TeamMember(Base):  # type: ignore[valid-type, misc]
 
     __tablename__ = "team_members"
 
-    team_id = Column(String, primary_key=True, nullable=False)
-    user_id = Column(String, primary_key=True, nullable=False)
+    team_id = Column(String, ForeignKey("teams.id"), primary_key=True, nullable=False)
+    user_id = Column(String, ForeignKey("users.id"), primary_key=True, nullable=False)
 
     # Relationships
     team = relationship("Team", back_populates="members")

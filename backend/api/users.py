@@ -24,10 +24,13 @@ async def get_teams(current_user: dict = Depends(get_current_user)):
     Returns a list of all teams in the system.
     """
     try:
+        from sqlalchemy.orm import Session
         from backend.models.team import Team
 
         with get_engine().connect() as connection:
-            teams = connection.query(Team).order_by(Team.name).all()
+            # Create a session for ORM operations
+            session = Session(connection)
+            teams = session.query(Team).order_by(Team.name).all()
             teams_list = [{"id": str(team.id), "name": team.name} for team in teams]
             return {"teams": teams_list}
     except Exception as e:

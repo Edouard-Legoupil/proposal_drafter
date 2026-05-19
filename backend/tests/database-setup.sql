@@ -14,6 +14,15 @@ CREATE TABLE IF NOT EXISTS teams (
     name TEXT UNIQUE NOT NULL
 );
 
+-- Create Team Members table (many-to-many relationship)
+CREATE TABLE IF NOT EXISTS team_members (
+    team_id UUID NOT NULL,
+    user_id UUID NOT NULL,
+    PRIMARY KEY (team_id, user_id),
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- Create Users table
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY,
