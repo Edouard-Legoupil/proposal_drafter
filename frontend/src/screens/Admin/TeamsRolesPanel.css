@@ -1,0 +1,129 @@
+.teams-roles-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.create-forms {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.create-input {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #d8dfec;
+  margin-right: 8px;
+  font-size: 0.95rem;
+  min-width: 200px;
+}
+
+.bulk-assignment-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.user-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.search-input {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #d8dfec;
+  font-size: 0.95rem;
+  min-width: 250px;
+}
+
+.user-count {
+  color: #5a5f72;
+  font-size: 0.85rem;
+}
+
+.selection-info {
+  padding: 8px 12px;
+  background: #f0f3f8;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.lists-container {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.team-list, .role-list {
+  flex: 1;
+  min-width: 250px;
+}
+
+.item-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.item-card {
+  padding: 12px 16px;
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #eef1f7;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.item-name {
+  font-weight: 600;
+  color: #1f2933;
+}
+
+.item-meta {
+  color: #64748b;
+  font-size: 0.8rem;
+  background: #f1f5f9;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.role-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.role-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #e8f0fe;
+  color: #1f6bed;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.empty-list {
+  color: #94a3b8;
+  font-style: italic;
+  text-align: center;
+  padding: 24px;
+}
+
+.admin-select {
+  min-width: 200px;
+}

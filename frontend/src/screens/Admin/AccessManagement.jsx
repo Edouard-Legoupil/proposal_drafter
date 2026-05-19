@@ -7,6 +7,7 @@ import KnowledgeCardAccessPanel from './resources/KnowledgeCardAccessPanel'
 import TemplateAccessPanel from './resources/TemplateAccessPanel'
 import MetricsAccessPanel from './resources/MetricsAccessPanel'
 import QualityGateAccessPanel from './resources/QualityGateAccessPanel'
+import TeamsRolesPanel from './resources/TeamsRolesPanel'
 import Base from '../../components/Base/Base'
 
 const resourcePanels = {
@@ -15,11 +16,13 @@ const resourcePanels = {
   'knowledge-cards': KnowledgeCardAccessPanel,
   templates: TemplateAccessPanel,
   metrics: MetricsAccessPanel,
-  'quality-gate': QualityGateAccessPanel
+  'quality-gate': QualityGateAccessPanel,
+  'teams-roles': TeamsRolesPanel
 }
 
 const navItems = [
   { key: 'users', label: 'Users' },
+  { key: 'teams-roles', label: 'Teams & Roles' },
   { key: 'proposals', label: 'Proposals' },
   { key: 'knowledge-cards', label: 'Knowledge Cards' },
   { key: 'templates', label: 'Templates' },

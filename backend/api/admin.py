@@ -233,6 +233,36 @@ async def create_team(request: CreateTeamRequest, admin: dict = Depends(is_syste
         logger.error(f"[CREATE TEAM ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to create team.")
 
+@router.post("/admin/roles")
+async def create_role(request: CreateTeamRequest, admin: dict = Depends(is_system_admin)):
+    """
+    Creates a new role.
+    """
+    try:
+        with get_engine().begin() as connection:
+            # Check if role exists
+            existing = connection.execute(
+                text("SELECT id FROM roles WHERE lower(name) = :name"),
+                {"name": request.name.lower()},
+            ).fetchone()
+            if existing:
+                raise HTTPException(status_code=400, detail="Role with this name already exists.")
+
+            role_id = str(uuid.uuid4())
+            connection.execute(
+                text("INSERT INTO roles (id, name) VALUES (:id, :name)"),
+                {"id": role_id, "name": request.name},
+            )
+            return {
+                "message": "Role created successfully.",
+                "role": {"id": role_id, "name": request.name},
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[CREATE ROLE ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to create role.")
+
 
 @router.put("/admin/users/{user_id}/team")
 async def update_user_team(user_id: str, request: UpdateUserTeamRequest, admin: dict = Depends(is_system_admin)):
