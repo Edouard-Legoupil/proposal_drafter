@@ -24,18 +24,17 @@ export default function TeamsRolesPanel() {
       setLoading(true)
       setError(null)
       try {
-        const [teamsRes, rolesRes, usersRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/admin/options`, { credentials: 'include' }),
+        const [optionsRes, usersRes] = await Promise.all([
           fetch(`${API_BASE_URL}/admin/options`, { credentials: 'include' }),
           fetch(`${API_BASE_URL}/admin/users`, { credentials: 'include' })
         ])
 
-        if (teamsRes.ok && rolesRes.ok && usersRes.ok) {
-          const teamsData = await teamsRes.json()
+        if (optionsRes.ok && usersRes.ok) {
+          const optionsData = await optionsRes.json()
           const usersData = await usersRes.json()
           
-          setTeams(teamsData.teams || [])
-          setRoles(teamsData.roles || [])
+          setTeams(optionsData.teams || [])
+          setRoles(optionsData.roles || [])
           setUsers(usersData || [])
         } else {
           setError("Failed to fetch teams and roles data")
