@@ -12,4 +12,14 @@ describe('AccessManagement shell', () => {
     )
     expect(screen.getByRole('heading', { name: /access management/i })).toBeInTheDocument()
   })
+
+  it('renders navigation tabs', () => {
+    render(
+      <MemoryRouter>
+        <AccessManagement />
+      </MemoryRouter>
+    )
+    expect(screen.getByRole('button', { name: /users/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /proposals/i })).toBeInTheDocument()
+  })
 })
