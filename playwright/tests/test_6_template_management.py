@@ -32,7 +32,7 @@ def ensure_screenshot_dir():
 
 
 @pytest.fixture
-def logged_in_user(page, config):
+def logged_in_page(page, config):
     """Log in as the primary test user."""
     user = TEST_USERS["primary"]
     page.goto(f"{config['base_url']}/login")
@@ -62,13 +62,13 @@ def logged_in_admin(page, config):
 
 @pytest.mark.template_management
 @pytest.mark.smoke
-def test_navigate_to_template_request_page(logged_in_user, config):
+def test_navigate_to_template_request_page(logged_in_page, config):
     """
     Test that users can navigate to the template request page.
 
     User Story: Donor Template Request
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Navigate to templates section
     page.get_by_test_id("templates-tab").click()
@@ -90,7 +90,7 @@ def test_navigate_to_template_request_page(logged_in_user, config):
 
 
 @pytest.mark.template_management
-def test_submit_template_request(logged_in_user, config):
+def test_submit_template_request(logged_in_page, config):
     """
     Test that users can submit a new template request.
 
@@ -103,7 +103,7 @@ def test_submit_template_request(logged_in_user, config):
     5. Submit request
     6. Verify success message
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Navigate to template request page
     page.get_by_test_id("templates-tab").click()
@@ -387,7 +387,7 @@ def test_complete_template_request_workflow(page, config):
 
 
 @pytest.mark.template_management
-def test_template_request_validation(logged_in_user, config):
+def test_template_request_validation(logged_in_page, config):
     """
     Test template request form validation.
 
@@ -398,7 +398,7 @@ def test_template_request_validation(logged_in_user, config):
     3. Try to submit with missing required fields
     4. Verify appropriate error messages
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Navigate to template request page
     page.get_by_test_id("templates-tab").click()

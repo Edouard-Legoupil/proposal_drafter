@@ -29,7 +29,7 @@ def ensure_screenshot_dir():
 
 
 @pytest.fixture
-def logged_in_user(page, config):
+def logged_in_page(page, config):
     """Log in as the primary test user."""
     user = TEST_USERS["primary"]
     page.goto(f"{config['base_url']}/login")
@@ -47,11 +47,11 @@ def logged_in_user(page, config):
 
 @pytest.mark.dashboard
 @pytest.mark.smoke
-def test_dashboard_loads_successfully(logged_in_user, config):
+def test_dashboard_loads_successfully(logged_in_page, config):
     """
     Test that the dashboard loads successfully after login.
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Verify dashboard header is visible
     expect(page.get_by_text("Draft Smart Project Proposals")).to_be_visible()
@@ -71,11 +71,11 @@ def test_dashboard_loads_successfully(logged_in_user, config):
 
 
 @pytest.mark.dashboard
-def test_dashboard_tabs_navigation(logged_in_user, config):
+def test_dashboard_tabs_navigation(logged_in_page, config):
     """
     Test navigation between different dashboard tabs.
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Verify we start on proposals tab (default)
     expect(page.get_by_test_id("proposal-tab")).to_have_class(re.compile("active"))
@@ -103,13 +103,13 @@ def test_dashboard_tabs_navigation(logged_in_user, config):
 
 
 @pytest.mark.dashboard
-def test_proposal_cards_display(logged_in_user, config):
+def test_proposal_cards_display(logged_in_page, config):
     """
     Test that proposal cards are displayed on the dashboard.
 
     Note: This test may show no proposals if none exist.
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Count proposal cards
     # The proposal cards are typically in a grid or list
@@ -134,11 +134,11 @@ def test_proposal_cards_display(logged_in_user, config):
 
 
 @pytest.mark.dashboard
-def test_filter_proposals_by_team(logged_in_user, config):
+def test_filter_proposals_by_team(logged_in_page, config):
     """
     Test filtering proposals by team.
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Open filter modal
     page.get_by_test_id("filter-button").click()
@@ -158,11 +158,11 @@ def test_filter_proposals_by_team(logged_in_user, config):
 
 
 @pytest.mark.dashboard
-def test_filter_proposals_by_status(logged_in_user, config):
+def test_filter_proposals_by_status(logged_in_page, config):
     """
     Test filtering proposals by status (draft, in_review, submitted, etc.).
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Open filter modal
     page.get_by_test_id("filter-button").click()
@@ -188,11 +188,11 @@ def test_filter_proposals_by_status(logged_in_user, config):
 
 
 @pytest.mark.dashboard
-def test_knowledge_card_count_display(logged_in_user, config):
+def test_knowledge_card_count_display(logged_in_page, config):
     """
     Test that knowledge card counts are displayed correctly.
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Navigate to knowledge tab
     page.get_by_test_id("knowledge-tab").click()
@@ -217,13 +217,13 @@ def test_knowledge_card_count_display(logged_in_user, config):
 
 @pytest.mark.dashboard
 @pytest.mark.regression
-def test_dashboard_metrics_display(logged_in_user, config):
+def test_dashboard_metrics_display(logged_in_page, config):
     """
     Test that dashboard metrics are displayed correctly.
 
     This is the test_5_dashboard test mentioned in the readme.
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Check for metrics display
     # Metrics might include: total proposals, draft proposals, in review, etc.
@@ -271,11 +271,11 @@ def test_dashboard_metrics_display(logged_in_user, config):
 
 @pytest.mark.dashboard
 @pytest.mark.smoke
-def test_user_menu_and_logout(logged_in_user, config):
+def test_user_menu_and_logout(logged_in_page, config):
     """
     Test user menu functionality and logout.
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Open user menu
     page.get_by_test_id("user-menu-button").click()
@@ -300,11 +300,11 @@ def test_user_menu_and_logout(logged_in_user, config):
 
 
 @pytest.mark.dashboard
-def test_search_functionality(logged_in_user, config):
+def test_search_functionality(logged_in_page, config):
     """
     Test the search functionality on the dashboard.
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Find search input
     search_input = page.get_by_role("search")
@@ -327,11 +327,11 @@ def test_search_functionality(logged_in_user, config):
 
 @pytest.mark.dashboard
 @pytest.mark.smoke
-def test_new_proposal_button(logged_in_user, config):
+def test_new_proposal_button(logged_in_page, config):
     """
     Test that the new proposal button is visible and clickable.
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Verify button is visible
     new_proposal_button = page.get_by_test_id("new-proposal-button")

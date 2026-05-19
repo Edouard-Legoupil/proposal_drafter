@@ -133,7 +133,7 @@ The test suite uses pytest fixtures for better maintainability:
 - `browser`: Session-scoped browser instance
 - `context`: Function-scoped browser context with video recording
 - `page`: Function-scoped page instance
-- `logged_in_user`: Page with pre-authenticated user
+- `logged_in_page`: Page with pre-authenticated user
 - `registered_user`: Creates and returns a new registered user
 - `TestUser`: Class for managing test user credentials
 - `TEST_USERS`: Predefined test users dictionary
@@ -190,7 +190,7 @@ After recording, copy the generated Python script into the appropriate test file
 
 ## Best Practices
 
-1. **Use fixtures**: Prefer using fixtures (`page`, `config`, `logged_in_user`) over manual setup
+1. **Use fixtures**: Prefer using fixtures (`page`, `config`, `logged_in_page`) over manual setup
 2. **Use test IDs**: Always use `data-testid` selectors when available
 3. **Add assertions**: Use `expect()` to verify UI state
 4. **Handle timeouts**: Use appropriate timeouts for long operations (generation can take minutes)

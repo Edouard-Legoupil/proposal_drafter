@@ -31,7 +31,7 @@ def ensure_screenshot_dir():
 
 
 @pytest.fixture
-def logged_in_user(page, config):
+def logged_in_page(page, config):
     """Log in as the primary test user."""
     user = TEST_USERS["primary"]
     page.goto(f"{config['base_url']}/login")
@@ -61,13 +61,13 @@ def logged_in_colleague(page, config):
 
 @pytest.mark.document_sharing
 @pytest.mark.smoke
-def test_navigate_to_share_proposal_dialog(logged_in_user, config):
+def test_navigate_to_share_proposal_dialog(logged_in_page, config):
     """
     Test that users can navigate to the share proposal dialog.
 
     User Story: Document Sharing
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Navigate to a proposal
     proposal_cards = page.get_by_test_id("proposal-card")
@@ -92,7 +92,7 @@ def test_navigate_to_share_proposal_dialog(logged_in_user, config):
 
 
 @pytest.mark.document_sharing
-def test_share_proposal_with_colleague(logged_in_user, config):
+def test_share_proposal_with_colleague(logged_in_page, config):
     """
     Test that users can share proposals with colleagues.
 
@@ -105,7 +105,7 @@ def test_share_proposal_with_colleague(logged_in_user, config):
     5. Click share button
     6. Verify success message
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Navigate to a proposal
     proposal_cards = page.get_by_test_id("proposal-card")
@@ -143,7 +143,7 @@ def test_share_proposal_with_colleague(logged_in_user, config):
 
 
 @pytest.mark.document_sharing
-def test_share_proposal_access_levels(logged_in_user, config):
+def test_share_proposal_access_levels(logged_in_page, config):
     """
     Test sharing proposals with different access levels.
 
@@ -153,7 +153,7 @@ def test_share_proposal_access_levels(logged_in_user, config):
     2. Test sharing with "Edit" access level
     3. Test sharing with "Comment" access level
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Navigate to a proposal
     proposal_cards = page.get_by_test_id("proposal-card")
@@ -266,7 +266,7 @@ def test_verify_shared_proposal_access(page, config):
 
 
 @pytest.mark.document_sharing
-def test_manage_shared_access(logged_in_user, config):
+def test_manage_shared_access(logged_in_page, config):
     """
     Test managing shared access permissions.
 
@@ -277,7 +277,7 @@ def test_manage_shared_access(logged_in_user, config):
     3. Change access level for a shared user
     4. Remove access for a shared user
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Navigate to a proposal
     proposal_cards = page.get_by_test_id("proposal-card")
@@ -334,7 +334,7 @@ def test_manage_shared_access(logged_in_user, config):
 
 
 @pytest.mark.document_sharing
-def test_share_proposal_validation(logged_in_user, config):
+def test_share_proposal_validation(logged_in_page, config):
     """
     Test share proposal form validation.
 
@@ -345,7 +345,7 @@ def test_share_proposal_validation(logged_in_user, config):
     3. Try to share with invalid email
     4. Verify validation error
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Navigate to a proposal
     proposal_cards = page.get_by_test_id("proposal-card")
@@ -381,7 +381,7 @@ def test_share_proposal_validation(logged_in_user, config):
 
 
 @pytest.mark.document_sharing
-def test_share_proposal_multiple_users(logged_in_user, config):
+def test_share_proposal_multiple_users(logged_in_page, config):
     """
     Test sharing a proposal with multiple users at once.
 
@@ -393,7 +393,7 @@ def test_share_proposal_multiple_users(logged_in_user, config):
     4. Share with all users
     5. Verify success message
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Navigate to a proposal
     proposal_cards = page.get_by_test_id("proposal-card")

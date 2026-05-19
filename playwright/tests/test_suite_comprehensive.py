@@ -19,7 +19,186 @@ import os
 import pytest
 from playwright.sync_api import expect
 
-# Import shared fixtures and helpers
+# IMPORTS - Using Central Fixtures
+# ============================================================================
+
+from .conftest import TEST_USERS, take_screenshot
+
+
+# ============================================================================
+# HELPER FUNCTIONS (Consolidated)
+# ============================================================================
+
+def navigate_to_proposal(page):
+    """Navigate to first available proposal or skip if none exist."""
+    proposal_cards = page.get_by_test_id("proposal-card")
+    if proposal_cards.count() == 0:
+        pytest.skip("No proposals available")
+    proposal_cards.first.click()
+    return proposal_cards.first
+
+
+def create_test_proposal(page):
+    """Create a test proposal for use in other tests."""
+    # Navigate to new proposal
+    page.get_by_test_id("new-proposal-button").click()
+    expect(page).to_have_url(re.compile(".*chat"))
+    
+    # Fill basic proposal info
+    page.get_by_test_id("project-draft-short-name").fill("Test Proposal")
+    page.get_by_role("textbox", name="Provide as much details as").fill("Test proposal description")
+    
+    # Select outcomes
+    page.locator(".main-outcome__input-container").click()
+    page.get_by_role("option", name="OA11. Education").click()
+    
+    # Fill other required fields
+    page.get_by_test_id("beneficiaries-profile").fill("Test beneficiaries")
+    page.get_by_test_id("potential-implementing-partner").fill("Test partner")
+    page.get_by_test_id("geographical-scope").select_option("One Country Operation")
+    
+    # Generate proposal
+    page.get_by_role("button", name="Generate").click()
+    expect(page.get_by_test_id("edit-save-button-summary")).to_be_visible(timeout=600000)
+
+
+# ============================================================================
+# FIXTURES (Using Central Fixtures from conftest.py)
+# ============================================================================
+
+@pytest.fixture(scope="function")
+def logged_in_user(page, config):
+    """
+    Fixture for logged in user - uses central logged_in_page fixture
+    """
+    # This now uses the central fixture
+    return logged_in_page(page, config)
+
+
+@pytest.fixture(scope="function")
+def logged_in_page(page, config):
+    """
+    Fixture that provides a page with a logged-in user.
+    
+    This is the central fixture that other tests should use.
+    """
+    user = TEST_USERS["primary"]
+
+    # Navigate to login page
+    page.goto(f"{config['base_url']}")
+
+    # Log in
+    page.get_by_test_id("identifier-input").fill(user.email)
+    page.get_by_test_id("password-input").fill(user.password)
+    page.get_by_test_id("submit-button").click()
+
+    # Verify we're on the dashboard
+    page.wait_for_url(re.compile(".*dashboard"))
+
+    return page
+=======
+# ============================================================================
+# IMPORTS - Using Central Fixtures Only
+# ============================================================================
+
+from .conftest import TEST_USERS, take_screenshot
+
+
+# ============================================================================
+# HELPER FUNCTIONS (Consolidated)
+# ============================================================================
+
+def navigate_to_proposal(page):
+    """Navigate to first available proposal or skip if none exist."""
+    proposal_cards = page.get_by_test_id("proposal-card")
+    if proposal_cards.count() == 0:
+        pytest.skip("No proposals available")
+    proposal_cards.first.click()
+    return proposal_cards.first
+
+
+def create_test_proposal(page):
+    """Create a test proposal for use in other tests."""
+    # Navigate to new proposal
+    page.get_by_test_id("new-proposal-button").click()
+    expect(page).to_have_url(re.compile(".*chat"))
+    
+    # Fill basic proposal info
+    page.get_by_test_id("project-draft-short-name").fill("Test Proposal")
+    page.get_by_role("textbox", name="Provide as much details as").fill("Test proposal description")
+    
+    # Select outcomes
+    page.locator(".main-outcome__input-container").click()
+    page.get_by_role("option", name="OA11. Education").click()
+    
+    # Fill other required fields
+    page.get_by_test_id("beneficiaries-profile").fill("Test beneficiaries")
+    page.get_by_test_id("potential-implementing-partner").fill("Test partner")
+    page.get_by_test_id("geographical-scope").select_option("One Country Operation")
+    
+    # Generate proposal
+    page.get_by_role("button", name="Generate").click()
+    expect(page.get_by_test_id("edit-save-button-summary")).to_be_visible(timeout=600000)SHARED FIXTURES (Consolidated)
+# ============================================================================
+
+@pytest.fixture(autouse=True)
+def ensure_screenshot_dir():
+    """Ensure screenshot directory exists."""
+    os.makedirs("playwright/test-results", exist_ok=True)
+
+
+@pytest.fixture
+def logged_in_user(page, config):
+    """Log in as primary test user."""
+    user = TEST_USERS["primary"]
+    page.goto(f"{config['base_url']}/login")
+    page.get_by_test_id("email-input").fill(user.email)
+    page.get_by_test_id("password-input").fill(user.password)
+    page.get_by_test_id("submit-button").click()
+    expect(page).to_have_url(re.compile(".*dashboard"))
+    return page
+
+
+@pytest.fixture
+def logged_in_admin(page, config):
+    """Log in as administrator."""
+    user = TEST_USERS["admin"]
+    page.goto(f"{config['base_url']}/login")
+    page.get_by_test_id("email-input").fill(user.email)
+    page.get_by_test_id("password-input").fill(user.password)
+    page.get_by_test_id("submit-button").click()
+    expect(page).to_have_url(re.compile(".*dashboard"))
+    return page
+
+
+@pytest.fixture
+def logged_in_qa_officer(page, config):
+    """Log in as QA officer."""
+    user = TEST_USERS["qa_officer"]
+    page.goto(f"{config['base_url']}/login")
+    page.get_by_test_id("email-input").fill(user.email)
+    page.get_by_test_id("password-input").fill(user.password)
+    page.get_by_test_id("submit-button").click()
+    expect(page).to_have_url(re.compile(".*dashboard"))
+    return page
+
+
+@pytest.fixture
+def logged_in_colleague(page, config):
+    """Log in as colleague user."""
+    user = TEST_USERS["colleague"]
+    page.goto(f"{config['base_url']}/login")
+    page.get_by_test_id("email-input").fill(user.email)
+    page.get_by_test_id("password-input").fill(user.password)
+    page.get_by_test_id("submit-button").click()
+    expect(page).to_have_url(re.compile(".*dashboard"))
+    return page
+=======
+# ============================================================================
+# IMPORTS - Using Central Fixtures
+# ============================================================================
+
+from .conftest import TEST_USERS, take_screenshotImport shared fixtures and helpers
 from .conftest import TEST_USERS, take_screenshot
 
 
@@ -35,7 +214,7 @@ def ensure_screenshot_dir():
 
 
 @pytest.fixture
-def logged_in_user(page, config):
+def logged_in_page(page, config):
     """Log in as primary test user."""
     user = TEST_USERS["primary"]
     page.goto(f"{config['base_url']}/login")
@@ -127,9 +306,9 @@ def create_test_proposal(page):
 
 @pytest.mark.smoke
 @pytest.mark.proposal_creation
-def test_proposal_creation_smoke(logged_in_user, config):
+def test_proposal_creation_smoke(logged_in_page, config):
     """Smoke test: Quick proposal creation validation."""
-    page = logged_in_user
+    page = logged_in_page
 
     # Quick navigation check
     page.get_by_test_id("new-proposal-button").click()
@@ -142,9 +321,9 @@ def test_proposal_creation_smoke(logged_in_user, config):
 
 @pytest.mark.smoke
 @pytest.mark.user_profile
-def test_profile_access_smoke(logged_in_user, config):
+def test_profile_access_smoke(logged_in_page, config):
     """Smoke test: Profile page access."""
-    page = logged_in_user
+    page = logged_in_page
 
     page.get_by_test_id("user-menu-button").click()
     page.get_by_test_id("profile-button").click()
@@ -153,9 +332,9 @@ def test_profile_access_smoke(logged_in_user, config):
 
 @pytest.mark.smoke
 @pytest.mark.dashboard
-def test_dashboard_load_smoke(logged_in_user, config):
+def test_dashboard_load_smoke(logged_in_page, config):
     """Smoke test: Dashboard loads successfully."""
-    page = logged_in_user
+    page = logged_in_page
     expect(page.get_by_test_id("new-proposal-button")).to_be_visible()
     expect(page.get_by_test_id("proposal-tab")).to_be_visible()
 
@@ -167,13 +346,13 @@ def test_dashboard_load_smoke(logged_in_user, config):
 
 @pytest.mark.user_profile
 @pytest.mark.e2e
-def test_complete_profile_management_workflow(logged_in_user, config):
+def test_complete_profile_management_workflow(logged_in_page, config):
     """
     Complete profile management workflow.
 
     User Stories: Update user profile, Change password
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Navigate to profile
     page.get_by_test_id("user-menu-button").click()
@@ -203,14 +382,14 @@ def test_complete_profile_management_workflow(logged_in_user, config):
 
 @pytest.mark.proposal_creation
 @pytest.mark.e2e
-def test_complete_proposal_workflow(logged_in_user, config):
+def test_complete_proposal_workflow(logged_in_page, config):
     """
     Complete proposal creation and management workflow.
 
     User Stories: Create new proposal, Edit proposal section,
     Regenerate section, Export proposal (all formats)
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Create new proposal
     create_test_proposal(page)
@@ -244,14 +423,14 @@ def test_complete_proposal_workflow(logged_in_user, config):
 
 @pytest.mark.proposal_creation
 @pytest.mark.regression
-def test_proposal_status_management(logged_in_user, config):
+def test_proposal_status_management(logged_in_page, config):
     """
     Test proposal status transitions.
 
     User Stories: Submit proposal for review, Mark proposal as validated,
     Archive completed proposal
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Submit for review
     navigate_to_proposal(page)
@@ -279,13 +458,13 @@ def test_proposal_status_management(logged_in_user, config):
 
 @pytest.mark.knowledge_management
 @pytest.mark.e2e
-def test_complete_knowledge_card_workflow(logged_in_user, config):
+def test_complete_knowledge_card_workflow(logged_in_page, config):
     """
     Complete knowledge card workflow including review.
 
     User Stories: Create knowledge card, Knowledge card review
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Create knowledge card
     page.get_by_test_id("knowledge-tab").click()

@@ -31,7 +31,7 @@ def ensure_screenshot_dir():
 
 
 @pytest.fixture
-def logged_in_user(page, config):
+def logged_in_page(page, config):
     """Log in as the primary test user."""
     user = TEST_USERS["primary"]
     page.goto(f"{config['base_url']}/login")
@@ -49,13 +49,13 @@ def logged_in_user(page, config):
 
 @pytest.mark.user_profile
 @pytest.mark.smoke
-def test_navigate_to_profile_page(logged_in_user, config):
+def test_navigate_to_profile_page(logged_in_page, config):
     """
     Test that users can navigate to their profile page.
 
     User Story: Update user profile
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Open user menu
     page.get_by_test_id("user-menu-button").click()
@@ -76,7 +76,7 @@ def test_navigate_to_profile_page(logged_in_user, config):
 
 
 @pytest.mark.user_profile
-def test_update_user_profile_information(logged_in_user, config):
+def test_update_user_profile_information(logged_in_page, config):
     """
     Test that users can update their profile information.
 
@@ -89,7 +89,7 @@ def test_update_user_profile_information(logged_in_user, config):
     5. Verify success message
     6. Verify updated information is displayed
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Navigate to profile page
     page.get_by_test_id("user-menu-button").click()
@@ -125,7 +125,7 @@ def test_update_user_profile_information(logged_in_user, config):
 
 
 @pytest.mark.user_profile
-def test_change_password(logged_in_user, config):
+def test_change_password(logged_in_page, config):
     """
     Test that users can change their password.
 
@@ -138,7 +138,7 @@ def test_change_password(logged_in_user, config):
     5. Submit change
     6. Verify success message
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Navigate to profile page
     page.get_by_test_id("user-menu-button").click()
@@ -178,7 +178,7 @@ def test_change_password(logged_in_user, config):
 
 
 @pytest.mark.user_profile
-def test_password_change_validation(logged_in_user, config):
+def test_password_change_validation(logged_in_page, config):
     """
     Test password change validation.
 
@@ -190,7 +190,7 @@ def test_password_change_validation(logged_in_user, config):
     4. Try to change password with weak password
     5. Verify error message
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Navigate to profile page
     page.get_by_test_id("user-menu-button").click()
@@ -234,7 +234,7 @@ def test_password_change_validation(logged_in_user, config):
 
 
 @pytest.mark.user_profile
-def test_profile_information_persistence(logged_in_user, config):
+def test_profile_information_persistence(logged_in_page, config):
     """
     Test that profile information persists after page refresh.
 
@@ -244,7 +244,7 @@ def test_profile_information_persistence(logged_in_user, config):
     2. Refresh the page
     3. Verify information is still present
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Navigate to profile page
     page.get_by_test_id("user-menu-button").click()
@@ -299,7 +299,7 @@ def test_profile_page_access_control(page, config):
 
 @pytest.mark.user_profile
 @pytest.mark.e2e
-def test_full_profile_management_workflow(logged_in_user, config):
+def test_full_profile_management_workflow(logged_in_page, config):
     """
     Complete profile management workflow.
 
@@ -311,7 +311,7 @@ def test_full_profile_management_workflow(logged_in_user, config):
     4. Log out and log back in with new password
     5. Verify profile information persists
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Navigate to profile page
     page.get_by_test_id("user-menu-button").click()

@@ -29,7 +29,7 @@ def ensure_screenshot_dir():
 
 
 @pytest.fixture
-def logged_in_user(page, config):
+def logged_in_page(page, config):
     """Log in as the primary test user."""
     user = TEST_USERS["primary"]
     page.goto(f"{config['base_url']}/login")
@@ -47,7 +47,7 @@ def logged_in_user(page, config):
 
 @pytest.mark.proposal_creation
 @pytest.mark.e2e
-def test_create_new_proposal(logged_in_user, config):
+def test_create_new_proposal(logged_in_page, config):
     """
     Test the complete workflow of creating a new proposal.
 
@@ -57,7 +57,7 @@ def test_create_new_proposal(logged_in_user, config):
     3. Submit and generate
     4. Verify sections are generated
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Step 1: Start new proposal
     page.get_by_test_id("new-proposal-button").click()
@@ -129,14 +129,14 @@ def test_create_new_proposal(logged_in_user, config):
 
 
 @pytest.mark.proposal_creation
-def test_export_proposal_as_word(logged_in_user, config):
+def test_export_proposal_as_word(logged_in_page, config):
     """
     Test exporting a proposal as a Word document.
 
     User Story: Export proposal to Word
     Precondition: A proposal must already exist.
     """
-    page = logged_in_user
+    page = logged_in_page
 
     try:
         page.get_by_text("Project: Refugee Children Education").first.click()
@@ -161,14 +161,14 @@ def test_export_proposal_as_word(logged_in_user, config):
 
 
 @pytest.mark.proposal_creation
-def test_export_proposal_as_excel(logged_in_user, config):
+def test_export_proposal_as_excel(logged_in_page, config):
     """
     Test exporting a proposal as an Excel spreadsheet.
 
     User Story: Export proposal to Excel
     Precondition: A proposal must already exist.
     """
-    page = logged_in_user
+    page = logged_in_page
 
     try:
         page.get_by_text("Project: Refugee Children Education").first.click()
@@ -193,14 +193,14 @@ def test_export_proposal_as_excel(logged_in_user, config):
 
 
 @pytest.mark.proposal_creation
-def test_export_proposal_as_pdf(logged_in_user, config):
+def test_export_proposal_as_pdf(logged_in_page, config):
     """
     Test exporting a proposal as a PDF document.
 
     User Story: Export proposal to PDF
     Precondition: A proposal must already exist.
     """
-    page = logged_in_user
+    page = logged_in_page
 
     try:
         page.get_by_text("Project: Refugee Children Education").first.click()
@@ -225,13 +225,13 @@ def test_export_proposal_as_pdf(logged_in_user, config):
 
 
 @pytest.mark.proposal_creation
-def test_navigate_proposal_sections(logged_in_user, config):
+def test_navigate_proposal_sections(logged_in_page, config):
     """
     Test navigation between different proposal sections.
 
     Precondition: A proposal must already exist.
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Open an existing proposal (assuming one exists)
     # If no proposal exists, this will fail - that's expected
@@ -263,13 +263,13 @@ def test_navigate_proposal_sections(logged_in_user, config):
 
 
 @pytest.mark.proposal_creation
-def test_edit_proposal_section(logged_in_user, config):
+def test_edit_proposal_section(logged_in_page, config):
     """
     Test editing a proposal section.
 
     Precondition: A proposal must already exist.
     """
-    page = logged_in_user
+    page = logged_in_page
 
     try:
         page.get_by_text("Project: Refugee Children Education").first.click()
@@ -295,13 +295,13 @@ def test_edit_proposal_section(logged_in_user, config):
 
 @pytest.mark.proposal_creation
 @pytest.mark.slow
-def test_regenerate_proposal_section(logged_in_user, config):
+def test_regenerate_proposal_section(logged_in_page, config):
     """
     Test regenerating a proposal section with a custom prompt.
 
     Precondition: A proposal must already exist.
     """
-    page = logged_in_user
+    page = logged_in_page
 
     try:
         page.get_by_text("Project: Refugee Children Education").first.click()
@@ -335,11 +335,11 @@ def test_regenerate_proposal_section(logged_in_user, config):
 
 
 @pytest.mark.proposal_creation
-def test_filter_proposals_by_status(logged_in_user, config):
+def test_filter_proposals_by_status(logged_in_page, config):
     """
     Test filtering proposals by status.
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Click filter button
     page.get_by_test_id("filter-button").click()

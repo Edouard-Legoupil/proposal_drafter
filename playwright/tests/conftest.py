@@ -198,10 +198,10 @@ def logged_in_page(page, config, user=None):
         user = TEST_USERS["primary"]
 
     # Navigate to login page
-    page.goto(f"{config['base_url']}/login")
+    page.goto(f"{config['base_url']}")
 
     # Log in
-    page.get_by_test_id("email-input").fill(user.email)
+    page.get_by_test_id("identifier-input").fill(user.email)
     page.get_by_test_id("password-input").fill(user.password)
     page.get_by_test_id("submit-button").click()
 

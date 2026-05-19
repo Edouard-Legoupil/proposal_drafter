@@ -43,7 +43,7 @@ def logged_in_qa_officer(page, config):
 
 
 @pytest.fixture
-def logged_in_user(page, config):
+def logged_in_page(page, config):
     """Log in as the primary test user."""
     user = TEST_USERS["primary"]
     page.goto(f"{config['base_url']}/login")
@@ -440,7 +440,7 @@ def test_quality_review_access_control(page, config):
 
 
 @pytest.mark.quality_gate
-def test_quality_review_status_tracking(logged_in_user, config):
+def test_quality_review_status_tracking(logged_in_page, config):
     """
     Test that quality review status is properly tracked and displayed.
 
@@ -451,7 +451,7 @@ def test_quality_review_status_tracking(logged_in_user, config):
     3. Check that status is visible in proposal list
     4. Verify status updates after review completion
     """
-    page = logged_in_user
+    page = logged_in_page
 
     # Navigate to proposals
     proposal_cards = page.get_by_test_id("proposal-card")
