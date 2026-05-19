@@ -50,6 +50,30 @@ def test_engine():
             connection.execute(
                 text(
                     """
+                CREATE TABLE IF NOT EXISTS roles (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                    name TEXT UNIQUE NOT NULL
+                )
+            """
+                )
+            )
+            # Insert some basic roles for testing
+            connection.execute(
+                text(
+                    """
+                INSERT OR IGNORE INTO roles (name) VALUES 
+                ('proposal writer'),
+                ('knowledge manager donors'),
+                ('knowledge manager outcome'),
+                ('knowledge manager field context'),
+                ('project reviewer'),
+                ('system admin')
+            """
+                )
+            )
+            connection.execute(
+                text(
+                    """
                 CREATE TABLE IF NOT EXISTS teams (
                     id TEXT PRIMARY KEY, name TEXT UNIQUE NOT NULL
                 )
@@ -64,6 +88,18 @@ def test_engine():
                     PRIMARY KEY (team_id, user_id),
                     FOREIGN KEY (team_id) REFERENCES teams(id),
                     FOREIGN KEY (user_id) REFERENCES users(id)
+                )
+            """
+                )
+            )
+            connection.execute(
+                text(
+                    """
+                CREATE TABLE IF NOT EXISTS user_roles (
+                    user_id TEXT, role_id INTEGER,
+                    PRIMARY KEY (user_id, role_id),
+                    FOREIGN KEY (user_id) REFERENCES users(id),
+                    FOREIGN KEY (role_id) REFERENCES roles(id)
                 )
             """
                 )

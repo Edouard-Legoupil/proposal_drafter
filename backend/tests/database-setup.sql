@@ -23,6 +23,15 @@ CREATE TABLE IF NOT EXISTS team_members (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- Create User Roles table (many-to-many relationship)
+CREATE TABLE IF NOT EXISTS user_roles (
+    user_id UUID NOT NULL,
+    role_id INTEGER NOT NULL,
+    PRIMARY KEY (user_id, role_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
+);
+
 -- Create Users table
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY,

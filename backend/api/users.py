@@ -117,10 +117,13 @@ async def get_roles():
     Returns a list of all roles in the system.
     """
     try:
-        from backend.models.role import Role
+        from sqlalchemy.orm import Session
+        from sqlalchemy import text
 
         with get_engine().connect() as connection:
-            roles = connection.query(Role).order_by(Role.name).all()
+            # Use raw SQL instead of ORM to avoid circular import issues
+            result = connection.execute(text("SELECT id, name FROM roles ORDER BY name"))
+            roles = [{"id": row[0], "name": row[1]} for row in result]
             return roles
     except Exception as e:
         logger.error(f"[GET ROLES ERROR] {e}", exc_info=True)

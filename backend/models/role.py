@@ -4,7 +4,7 @@ Role ORM Model for Proposal Drafter
 Defines the Role and UserRole models for role-based access control.
 """
 
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import declarative_base, relationship
 
 # Use the same base as other models
@@ -53,8 +53,8 @@ class UserRole(Base):  # type: ignore[valid-type, misc]
 
     __tablename__ = "user_roles"
 
-    user_id = Column(String, primary_key=True, nullable=False)
-    role_id = Column(Integer, primary_key=True, nullable=False)
+    user_id = Column(String, ForeignKey("users.id"), primary_key=True, nullable=False)
+    role_id = Column(Integer, ForeignKey("roles.id"), primary_key=True, nullable=False)
 
     # Relationships
     user = relationship("User", back_populates="user_roles")
