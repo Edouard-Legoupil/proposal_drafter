@@ -13,40 +13,11 @@ User Stories Covered:
 """
 
 import re
-import os
 import pytest
 from playwright.sync_api import expect
 
-from .conftest import TEST_USERS, take_screenshot
-
-
-# ============================================================================
-# Fixtures
-# ============================================================================
-
-
-    """Ensure screenshot directory exists."""
-    os.makedirs("playwright/test-results", exist_ok=True)
-
-
-    """Log in as the primary test user."""
-    user = TEST_USERS["primary"]
-    page.goto(f"{config['base_url']}/login")
-    page.get_by_test_id("email-input").fill(user.email)
-    page.get_by_test_id("password-input").fill(user.password)
-    page.get_by_test_id("submit-button").click()
-    expect(page).to_have_url(re.compile(".*dashboard"))
-    return page
-
-
-    """Log in as an administrator user."""
-    user = TEST_USERS["admin"]
-    page.goto(f"{config['base_url']}/login")
-    page.get_by_test_id("email-input").fill(user.email)
-    page.get_by_test_id("password-input").fill(user.password)
-    page.get_by_test_id("submit-button").click()
-    expect(page).to_have_url(re.compile(".*dashboard"))
-    return page
+# Import shared fixtures and helpers from central conftest
+from .conftest import take_screenshot
 
 
 # ============================================================================
@@ -56,9 +27,13 @@ from .conftest import TEST_USERS, take_screenshot
 
 @pytest.mark.template_management
 @pytest.mark.smoke
+def test_navigate_to_template_request_page(logged_in_user, config):
+    """
+    Test that users can navigate to the template request page.
+
     User Story: Donor Template Request
     """
-    page = logged_in_page
+    page = logged_in_user
 
     # Navigate to templates section
     page.get_by_test_id("templates-tab").click()
@@ -80,6 +55,10 @@ from .conftest import TEST_USERS, take_screenshot
 
 
 @pytest.mark.template_management
+def test_submit_template_request(logged_in_user, config):
+    """
+    Test that users can submit a new template request.
+
     User Story: Donor Template Request
     Steps:
     1. Navigate to template request page
@@ -89,7 +68,7 @@ from .conftest import TEST_USERS, take_screenshot
     5. Submit request
     6. Verify success message
     """
-    page = logged_in_page
+    page = logged_in_user
 
     # Navigate to template request page
     page.get_by_test_id("templates-tab").click()
@@ -130,6 +109,9 @@ from .conftest import TEST_USERS, take_screenshot
 
 @pytest.mark.template_management
 @pytest.mark.admin
+def test_view_pending_template_requests(logged_in_admin, config):
+    """
+    Test that adminis
     User Story: Template Management (Admin)
     Steps:
     1. Navigate to admin templates page
@@ -159,6 +141,10 @@ from .conftest import TEST_USERS, take_screenshot
 
 @pytest.mark.template_management
 @pytest.mark.admin
+def test_approve_template_request(logged_in_admin, config):
+    """
+    Test that administrators can approve template requests.
+
     User Story: Template Management (Admin)
     Steps:
     1. Navigate to pending template requests
@@ -206,6 +192,10 @@ from .conftest import TEST_USERS, take_screenshot
 
 @pytest.mark.template_management
 @pytest.mark.admin
+def test_create_new_template(logged_in_admin, config):
+    """
+    Test that administrators can create new templates.
+
     User Story: Template Management (Admin)
     Steps:
     1. Navigate to template management
@@ -261,6 +251,10 @@ from .conftest import TEST_USERS, take_screenshot
 
 @pytest.mark.template_management
 @pytest.mark.e2e
+def test_complete_template_request_workflow(page, config, logged_in_page):
+    """
+    Complete template request workflow from user request to admin approval.
+
     User Story: Donor Template Request + Template Management (Admin)
     Steps:
     1. User submits template request
@@ -269,13 +263,7 @@ from .conftest import TEST_USERS, take_screenshot
     4. Admin creates template based on request
     5. User verifies template is available
     """
-    # Step 1: User submits template request
-    user = TEST_USERS["primary"]
-    page.goto(f"{config['base_url']}/login")
-    page.get_by_test_id("email-input").fill(user.email)
-    page.get_by_test_id("password-input").fill(user.password)
-    page.get_by_test_id("submit-button").click()
-    expect(page).to_have_url(re.compile(".*dashboard"))
+    page = logged_in_page
 
     # Navigate to template request
     page.get_by_test_id("templates-tab").click()
@@ -295,11 +283,7 @@ from .conftest import TEST_USERS, take_screenshot
     page.get_by_test_id("logout-button").click()
 
     # Step 2: Admin approves request
-    admin = TEST_USERS["admin"]
-    page.goto(f"{config['base_url']}/login")
-    page.get_by_test_id("email-input").fill(admin.email)
-    page.get_by_test_id("password-input").fill(admin.password)
-    page.get_by_test_id("submit-button").click()
+    page = logged_in_page
 
     # Navigate to admin template management
     page.get_by_test_id("admin-menu-button").click()
@@ -337,10 +321,7 @@ from .conftest import TEST_USERS, take_screenshot
     page.get_by_test_id("logout-button").click()
 
     # Step 4: User verifies template is available
-    page.goto(f"{config['base_url']}/login")
-    page.get_by_test_id("email-input").fill(user.email)
-    page.get_by_test_id("password-input").fill(user.password)
-    page.get_by_test_id("submit-button").click()
+    page = logged_in_page
 
     # Navigate to templates
     page.get_by_test_id("templates-tab").click()
@@ -357,6 +338,10 @@ from .conftest import TEST_USERS, take_screenshot
 
 
 @pytest.mark.template_management
+def test_template_request_validation(logged_in_user, config):
+    """
+    Test template request form validation.
+
     User Story: Donor Template Request
     Steps:
     1. Try to submit empty form
@@ -364,7 +349,7 @@ from .conftest import TEST_USERS, take_screenshot
     3. Try to submit with missing required fields
     4. Verify appropriate error messages
     """
-    page = logged_in_page
+    page = logged_in_user
 
     # Navigate to template request page
     page.get_by_test_id("templates-tab").click()
@@ -395,17 +380,16 @@ from .conftest import TEST_USERS, take_screenshot
 
 @pytest.mark.template_management
 @pytest.mark.security
+def test_template_access_control(page, config):
+    """
+    Test that template management requires appropriate permissions.
+
     User Story: Template Management (Admin)
     Steps:
     1. Try to access admin template management as regular user
     2. Verify access is denied
     """
-    # Log in as regular user
-    user = TEST_USERS["primary"]
-    page.goto(f"{config['base_url']}/login")
-    page.get_by_test_id("email-input").fill(user.email)
-    page.get_by_test_id("password-input").fill(user.password)
-    page.get_by_test_id("submit-button").click()
+    # page = logged_in_page  # This line was causing the error, removing it since 'page' is already available
 
     # Try to access admin template management directly
     page.goto(f"{config['base_url']}/admin/templates")

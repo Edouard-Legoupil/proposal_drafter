@@ -32,7 +32,7 @@ export default function TeamsRolesPanel() {
         if (optionsRes.ok && usersRes.ok) {
           const optionsData = await optionsRes.json()
           const usersData = await usersRes.json()
-          
+
           setTeams(optionsData.teams || [])
           setRoles(optionsData.roles || [])
           setUsers(usersData || [])
@@ -52,7 +52,7 @@ export default function TeamsRolesPanel() {
 
   const handleCreateTeam = async () => {
     if (!newTeamName.trim()) return
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/admin/teams`, {
         method: 'POST',
@@ -60,7 +60,7 @@ export default function TeamsRolesPanel() {
         body: JSON.stringify({ name: newTeamName }),
         credentials: 'include'
       })
-      
+
       if (response.ok) {
         const data = await response.json()
         setTeams(prev => [...prev, data.team])
@@ -76,7 +76,7 @@ export default function TeamsRolesPanel() {
 
   const handleCreateRole = async () => {
     if (!newRoleName.trim()) return
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/admin/roles`, {
         method: 'POST',
@@ -84,7 +84,7 @@ export default function TeamsRolesPanel() {
         body: JSON.stringify({ name: newRoleName }),
         credentials: 'include'
       })
-      
+
       if (response.ok) {
         const data = await response.json()
         setRoles(prev => [...prev, data.role])
@@ -100,7 +100,7 @@ export default function TeamsRolesPanel() {
 
   const handleBulkAssign = async () => {
     if (!bulkOperation || selectedUsers.length === 0) return
-    
+
     try {
       const updates = selectedUsers.map(userId => {
         if (bulkOperation === 'team' && selectedTeam) {
@@ -137,14 +137,14 @@ export default function TeamsRolesPanel() {
   }
 
   const toggleUserSelection = (userId) => {
-    setSelectedUsers(prev => 
-      prev.includes(userId) 
+    setSelectedUsers(prev =>
+      prev.includes(userId)
         ? prev.filter(id => id !== userId)
         : [...prev, userId]
     )
   }
 
-  const filteredUsers = users.filter(user => 
+  const filteredUsers = users.filter(user =>
     (user.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
     (user.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   )
@@ -278,8 +278,8 @@ export default function TeamsRolesPanel() {
                     type="checkbox"
                     checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
                     onChange={() => setSelectedUsers(
-                      selectedUsers.length === filteredUsers.length 
-                        ? [] 
+                      selectedUsers.length === filteredUsers.length
+                        ? []
                         : filteredUsers.map(u => u.id)
                     )}
                   />

@@ -10,30 +10,11 @@ These tests verify that:
 """
 
 import re
-import os
 import pytest
 from playwright.sync_api import expect
 
-from .conftest import TEST_USERS, take_screenshot
-
-
-# ============================================================================
-# Fixtures
-# ============================================================================
-
-
-    """Ensure screenshot directory exists."""
-    os.makedirs("playwright/test-results", exist_ok=True)
-
-
-    """Log in as the primary test user."""
-    user = TEST_USERS["primary"]
-    page.goto(f"{config['base_url']}/login")
-    page.get_by_test_id("email-input").fill(user.email)
-    page.get_by_test_id("password-input").fill(user.password)
-    page.get_by_test_id("submit-button").click()
-    expect(page).to_have_url(re.compile(".*dashboard"))
-    return page
+# Import shared fixtures and helpers from central conftest
+from .conftest import take_screenshot
 
 
 # ============================================================================
@@ -43,6 +24,11 @@ from .conftest import TEST_USERS, take_screenshot
 
 @pytest.mark.dashboard
 @pytest.mark.smoke
+def test_dashboard_loads_successfully(logged_in_page, config):
+    """
+    Test that the dashboard loads successfully after login.
+    """
+    page = logged_in_page
     # Verify dashboard header is visible
     expect(page.get_by_text("Draft Smart Project Proposals")).to_be_visible()
 
@@ -61,6 +47,11 @@ from .conftest import TEST_USERS, take_screenshot
 
 
 @pytest.mark.dashboard
+def test_dashboard_tabs_navigation(logged_in_page, config):
+    """
+    Test navigation between different dashboard tabs.
+    """
+    page = logged_in_page
     # Verify we start on proposals tab (default)
     expect(page.get_by_test_id("proposal-tab")).to_have_class(re.compile("active"))
 
@@ -87,6 +78,10 @@ from .conftest import TEST_USERS, take_screenshot
 
 
 @pytest.mark.dashboard
+def test_proposal_cards_display(logged_in_page, config):
+    """
+    Test that proposal cards are displayed on the dashboard.
+
     Note: This test may show no proposals if none exist.
     """
     page = logged_in_page
@@ -114,6 +109,11 @@ from .conftest import TEST_USERS, take_screenshot
 
 
 @pytest.mark.dashboard
+def test_filter_proposals_by_team(logged_in_page, config):
+    """
+    Test that the filter by team functionality works correctly.
+    """
+    page = logged_in_page
     # Open filter modal
     page.get_by_test_id("filter-button").click()
 
@@ -132,6 +132,11 @@ from .conftest import TEST_USERS, take_screenshot
 
 
 @pytest.mark.dashboard
+def test_filter_proposals_by_status(logged_in_page, config):
+    """
+    Test filtering proposals by status (draft, in_review, submitted, etc.).
+    """
+    page = logged_in_page
     # Open filter modal
     page.get_by_test_id("filter-button").click()
 
@@ -151,34 +156,16 @@ from .conftest import TEST_USERS, take_screenshot
 
 
 # ============================================================================
-# Test: Knowledge Card Count Display
-# ============================================================================
-
-
-@pytest.mark.dashboard
-    # Navigate to knowledge tab
-    page.get_by_test_id("knowledge-tab").click()
-
-    # Check for knowledge card count elements
-    # These might be displayed as badges or counters
-    try:
-        count_elements = page.get_by_test_id("knowledge-card-count")
-        if count_elements.count() > 0:
-            count_text = count_elements.first.text_content()
-            print(f"[DASHBOARD] Knowledge card count: {count_text}")
-    except Exception:
-        pass  # Count element may not exist
-
-    take_screenshot(page, "dashboard_knowledge_counts")
-
-
-# ============================================================================
 # Test: Dashboard Metrics Display
 # ============================================================================
 
 
 @pytest.mark.dashboard
 @pytest.mark.regression
+def test_dashboard_metrics_display(logged_in_page, config):
+    """
+    Test that dashboard metrics are displayed correctly.
+
     This is the test_5_dashboard test mentioned in the readme.
     """
     page = logged_in_page
@@ -229,6 +216,11 @@ from .conftest import TEST_USERS, take_screenshot
 
 @pytest.mark.dashboard
 @pytest.mark.smoke
+def test_user_menu_and_logout(logged_in_page, config):
+    """
+    Test user menu functionality and logout.
+    """
+    page = logged_in_page
     # Open user menu
     page.get_by_test_id("user-menu-button").click()
 
@@ -252,6 +244,11 @@ from .conftest import TEST_USERS, take_screenshot
 
 
 @pytest.mark.dashboard
+def test_search_functionality(logged_in_page, config):
+    """
+    Test the search functionality on the dashboard.
+    """
+    page = logged_in_page
     # Find search input
     search_input = page.get_by_role("search")
     if search_input.count() > 0:
@@ -273,6 +270,11 @@ from .conftest import TEST_USERS, take_screenshot
 
 @pytest.mark.dashboard
 @pytest.mark.smoke
+def test_new_proposal_button(logged_in_page, config):
+    """
+    Test that the new proposal button is visible and clickable.
+    """
+    page = logged_in_page
     # Verify button is visible
     new_proposal_button = page.get_by_test_id("new-proposal-button")
     expect(new_proposal_button).to_be_visible()

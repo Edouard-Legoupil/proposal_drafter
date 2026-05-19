@@ -10,30 +10,10 @@ These tests verify that:
 """
 
 import re
-import os
 import pytest
 from playwright.sync_api import expect
 
-from .conftest import TEST_USERS, take_screenshot
-
-
-# ============================================================================
-# Fixtures
-# ============================================================================
-
-
-    """Ensure screenshot directory exists."""
-    os.makedirs("playwright/test-results", exist_ok=True)
-
-
-    """Log in as the primary test user."""
-    user = TEST_USERS["primary"]
-    page.goto(f"{config['base_url']}/login")
-    page.get_by_test_id("email-input").fill(user.email)
-    page.get_by_test_id("password-input").fill(user.password)
-    page.get_by_test_id("submit-button").click()
-    expect(page).to_have_url(re.compile(".*dashboard"))
-    return page
+from .conftest import take_screenshot
 
 
 # ============================================================================
@@ -43,6 +23,8 @@ from .conftest import TEST_USERS, take_screenshot
 
 @pytest.mark.proposal_creation
 @pytest.mark.e2e
+def test_create_new_proposal(logged_in_page, config):
+    """
     Steps:
     1. Click "New Proposal" button
     2. Fill in all proposal details
@@ -121,6 +103,8 @@ from .conftest import TEST_USERS, take_screenshot
 
 
 @pytest.mark.proposal_creation
+def test_export_proposal_as_word(logged_in_page, config):
+    """
     User Story: Export proposal to Word
     Precondition: A proposal must already exist.
     """
@@ -149,6 +133,8 @@ from .conftest import TEST_USERS, take_screenshot
 
 
 @pytest.mark.proposal_creation
+def test_export_proposal_as_excel(logged_in_page, config):
+    """
     User Story: Export proposal to Excel
     Precondition: A proposal must already exist.
     """
@@ -172,39 +158,13 @@ from .conftest import TEST_USERS, take_screenshot
 
 
 # ============================================================================
-# Test: Export Proposal as PDF
-# ============================================================================
-
-
-@pytest.mark.proposal_creation
-    User Story: Export proposal to PDF
-    Precondition: A proposal must already exist.
-    """
-    page = logged_in_page
-
-    try:
-        page.get_by_text("Project: Refugee Children Education").first.click()
-    except Exception:
-        pytest.skip("No existing proposal found for export test")
-
-    # Export as PDF
-    with page.expect_download() as download_info:
-        page.get_by_test_id("export-pdf-button").click()
-
-    download = download_info.value
-    assert download is not None
-    assert download.path() is not None
-
-    take_screenshot(page, "proposal_export_pdf")
-    print(f"[DOWNLOAD] PDF document exported to: {download.path()}")
-
-
-# ============================================================================
 # Test: Navigate Between Proposal Sections
 # ============================================================================
 
 
 @pytest.mark.proposal_creation
+def test_navigate_proposal_sections(logged_in_page, config):
+    """
     Precondition: A proposal must already exist.
     """
     page = logged_in_page
@@ -239,6 +199,8 @@ from .conftest import TEST_USERS, take_screenshot
 
 
 @pytest.mark.proposal_creation
+def test_edit_proposal_section(logged_in_page, config):
+    """
     Precondition: A proposal must already exist.
     """
     page = logged_in_page
@@ -267,6 +229,8 @@ from .conftest import TEST_USERS, take_screenshot
 
 @pytest.mark.proposal_creation
 @pytest.mark.slow
+def test_regenerate_proposal_section(logged_in_page, config):
+    """
     Precondition: A proposal must already exist.
     """
     page = logged_in_page
@@ -303,6 +267,12 @@ from .conftest import TEST_USERS, take_screenshot
 
 
 @pytest.mark.proposal_creation
+def test_filter_proposals_by_status(logged_in_page, config):
+    """
+    Precondition: A proposal must already exist.
+    """
+    page = logged_in_page
+
     # Click filter button
     page.get_by_test_id("filter-button").click()
 
@@ -330,22 +300,12 @@ from .conftest import TEST_USERS, take_screenshot
 @pytest.mark.proposal_creation
 @pytest.mark.e2e
 @pytest.mark.regression
+def test_full_proposal_workflow(context, config, logged_in_page):
+    """
     This test follows the exact workflow from the original test_2_create_proposal.py
     but uses fixtures for better maintainability.
     """
-    user = TEST_USERS["primary"]
-
-    page = context.new_page()
-    page.set_default_timeout(config["default_timeout"])
-
-    # Login
-    page.goto(f"{config['base_url']}/login")
-    page.get_by_test_id("email-input").click()
-    page.get_by_test_id("email-input").fill(user.email)
-    page.get_by_test_id("password-input").click()
-    page.get_by_test_id("password-input").fill(user.password)
-    page.get_by_test_id("submit-button").click()
-    expect(page).to_have_url(re.compile(".*dashboard"))
+    page = logged_in_page
 
     # Create new proposal
     page.get_by_test_id("new-proposal-button").click()

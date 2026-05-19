@@ -233,6 +233,7 @@ async def create_team(request: CreateTeamRequest, admin: dict = Depends(is_syste
         logger.error(f"[CREATE TEAM ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to create team.")
 
+
 @router.post("/admin/roles")
 async def create_role(request: CreateTeamRequest, admin: dict = Depends(is_system_admin)):
     """
@@ -455,10 +456,10 @@ async def list_admin_knowledge_cards(admin: dict = Depends(is_system_admin)):
             """
             )
             rows = connection.execute(query).mappings().all()
-            
+
             # Debug: log the number of rows returned
             logger.info(f"Knowledge cards query returned {len(rows)} rows")
-            
+
             return [
                 {
                     "id": str(r["id"]),

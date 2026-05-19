@@ -12,6 +12,7 @@ import uuid
 from typing import Optional, Dict, Any
 from playwright.sync_api import (
     sync_playwright,
+    expect,
 )
 
 
@@ -97,6 +98,12 @@ TEST_USERS = {
         email="test_user_ter@unhcr.org",
         password="password123",
         name="Test User Ter",
+        team_index=1,
+    ),
+    "qa_officer": TestUser(
+        email="qa_officer@unhcr.org",
+        password="password123",
+        name="QA Officer",
         team_index=1,
     ),
 }
@@ -208,6 +215,42 @@ def logged_in_page(page, config, user=None):
     # Verify we're on the dashboard
     page.wait_for_url(re.compile(".*dashboard"))
 
+    return page
+
+
+@pytest.fixture
+def primary_user_logged_in(page, config):
+    """Log in as the primary test user."""
+    user = TEST_USERS["primary"]
+    page.goto(f"{config['base_url']}")
+    page.get_by_test_id("identifier-input").fill(user.email)
+    page.get_by_test_id("password-input").fill(user.password)
+    page.get_by_test_id("submit-button").click()
+    expect(page).to_have_url(re.compile(".*dashboard"))
+    return page
+
+
+@pytest.fixture
+def secondary_user_logged_in(page, config):
+    """Log in as the secondary test user."""
+    user = TEST_USERS["secondary"]
+    page.goto(f"{config['base_url']}")
+    page.get_by_test_id("identifier-input").fill(user.email)
+    page.get_by_test_id("password-input").fill(user.password)
+    page.get_by_test_id("submit-button").click()
+    expect(page).to_have_url(re.compile(".*dashboard"))
+    return page
+
+
+@pytest.fixture
+def logged_in_qa_officer(page, config):
+    """Log in as the QA officer test user."""
+    user = TEST_USERS["qa_officer"]
+    page.goto(f"{config['base_url']}")
+    page.get_by_test_id("identifier-input").fill(user.email)
+    page.get_by_test_id("password-input").fill(user.password)
+    page.get_by_test_id("submit-button").click()
+    expect(page).to_have_url(re.compile(".*dashboard"))
     return page
 
 

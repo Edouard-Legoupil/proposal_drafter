@@ -12,40 +12,11 @@ User Stories Covered:
 """
 
 import re
-import os
 import pytest
 from playwright.sync_api import expect
 
+# Import shared fixtures and helpers from central conftest
 from .conftest import TEST_USERS, take_screenshot
-
-
-# ============================================================================
-# Fixtures
-# ============================================================================
-
-
-    """Ensure screenshot directory exists."""
-    os.makedirs("playwright/test-results", exist_ok=True)
-
-
-    """Log in as a quality assurance officer."""
-    user = TEST_USERS["qa_officer"]
-    page.goto(f"{config['base_url']}/login")
-    page.get_by_test_id("email-input").fill(user.email)
-    page.get_by_test_id("password-input").fill(user.password)
-    page.get_by_test_id("submit-button").click()
-    expect(page).to_have_url(re.compile(".*dashboard"))
-    return page
-
-
-    """Log in as the primary test user."""
-    user = TEST_USERS["primary"]
-    page.goto(f"{config['base_url']}/login")
-    page.get_by_test_id("email-input").fill(user.email)
-    page.get_by_test_id("password-input").fill(user.password)
-    page.get_by_test_id("submit-button").click()
-    expect(page).to_have_url(re.compile(".*dashboard"))
-    return page
 
 
 # ============================================================================
@@ -55,8 +26,8 @@ from .conftest import TEST_USERS, take_screenshot
 
 @pytest.mark.quality_gate
 @pytest.mark.smoke
-    User Story: Quality Gate Review
-    """
+def test_navigate_to_quality_review_page(logged_in_qa_officer):
+    """User Story: Quality Gate Review"""
     page = logged_in_qa_officer
 
     # Navigate to quality reviews section
@@ -75,7 +46,8 @@ from .conftest import TEST_USERS, take_screenshot
 
 
 @pytest.mark.quality_gate
-    User Story: Quality Gate Review
+def test_view_proposals_awaiting_quality_review(logged_in_qa_officer):
+    """User Story: Quality Gate Review
     Steps:
     1. Navigate to quality reviews page
     2. View list of proposals awaiting review
@@ -107,7 +79,8 @@ from .conftest import TEST_USERS, take_screenshot
 
 
 @pytest.mark.quality_gate
-    User Story: Quality Gate Review
+def test_conduct_quality_gate_review(logged_in_qa_officer):
+    """User Story: Quality Gate Review
     Steps:
     1. Navigate to quality reviews page
     2. Select a proposal for review
@@ -177,7 +150,8 @@ from .conftest import TEST_USERS, take_screenshot
 
 
 @pytest.mark.quality_gate
-    User Story: Quality Gate Review
+def test_quality_review_with_different_statuses(logged_in_qa_officer):
+    """User Story: Quality Gate Review
     Steps:
     1. Conduct review with "Approved" status
     2. Conduct review with "Approved with Major Revisions" status
@@ -224,7 +198,8 @@ from .conftest import TEST_USERS, take_screenshot
 
 @pytest.mark.quality_gate
 @pytest.mark.e2e
-    User Story: Quality Gate Review
+def test_quality_review_notification_flow(page, config):
+    """User Story: Quality Gate Review
     Steps:
     1. User submits proposal for quality review
     2. QA officer conducts review
@@ -316,7 +291,8 @@ from .conftest import TEST_USERS, take_screenshot
 
 
 @pytest.mark.quality_gate
-    User Story: Quality Gate Review
+def test_quality_review_criteria_verification(logged_in_qa_officer):
+    """User Story: Quality Gate Review
     Steps:
     1. Open a proposal for quality review
     2. Verify all quality criteria are present
@@ -369,7 +345,8 @@ from .conftest import TEST_USERS, take_screenshot
 
 @pytest.mark.quality_gate
 @pytest.mark.security
-    User Story: Quality Gate Review
+def test_quality_review_access_control(page, config):
+    """User Story: Quality Gate Review
     Steps:
     1. Try to access quality reviews as regular user
     2. Verify access is denied or functionality is limited
@@ -406,7 +383,8 @@ from .conftest import TEST_USERS, take_screenshot
 
 
 @pytest.mark.quality_gate
-    User Story: Quality Gate Review
+def test_quality_review_status_tracking(logged_in_page):
+    """User Story: Quality Gate Review
     Steps:
     1. Submit a proposal for quality review
     2. Verify status changes to "In Quality Review"
@@ -448,7 +426,8 @@ from .conftest import TEST_USERS, take_screenshot
 @pytest.mark.quality_gate
 @pytest.mark.e2e
 @pytest.mark.regression
-    User Story: Quality Gate Review
+def test_complete_quality_gate_review_workflow(page, config):
+    """User Story: Quality Gate Review
     Steps:
     1. User submits proposal for quality review
     2. QA officer reviews against all criteria

@@ -48,9 +48,7 @@ class IncidentAnalysisCrew:
         raw = getattr(result, "raw", None) or str(result)
         return safe_load_json(raw)
 
-    def analyze(
-        self, incident: dict[str, Any], evidence_pack: dict[str, Any]
-    ) -> dict[str, Any]:
+    def analyze(self, incident: dict[str, Any], evidence_pack: dict[str, Any]) -> dict[str, Any]:
         triage_agent = self._build_agent(
             role="Incident Intake & Triage Agent",
             goal="Normalize incidents, route them correctly, and determine urgency.",

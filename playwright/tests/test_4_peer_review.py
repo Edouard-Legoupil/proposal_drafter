@@ -9,40 +9,10 @@ These tests verify that:
 """
 
 import re
-import os
 import pytest
 from playwright.sync_api import expect
 
 from .conftest import TEST_USERS, take_screenshot
-
-
-# ============================================================================
-# Fixtures
-# ============================================================================
-
-
-    """Ensure screenshot directory exists."""
-    os.makedirs("playwright/test-results", exist_ok=True)
-
-
-    """Log in as the primary test user."""
-    user = TEST_USERS["primary"]
-    page.goto(f"{config['base_url']}/login")
-    page.get_by_test_id("email-input").fill(user.email)
-    page.get_by_test_id("password-input").fill(user.password)
-    page.get_by_test_id("submit-button").click()
-    expect(page).to_have_url(re.compile(".*dashboard"))
-    return page
-
-
-    """Log in as the secondary test user."""
-    user = TEST_USERS["secondary"]
-    page.goto(f"{config['base_url']}/login")
-    page.get_by_test_id("email-input").fill(user.email)
-    page.get_by_test_id("password-input").fill(user.password)
-    page.get_by_test_id("submit-button").click()
-    expect(page).to_have_url(re.compile(".*dashboard"))
-    return page
 
 
 # ============================================================================
@@ -51,6 +21,9 @@ from .conftest import TEST_USERS, take_screenshot
 
 
 @pytest.mark.peer_review
+def test_submit_proposal_for_review(primary_user_logged_in, config):
+    """
+    Test submitting a proposal for peer review.
     Precondition: A proposal must already exist and be in draft status.
     """
     page = primary_user_logged_in
@@ -86,6 +59,9 @@ from .conftest import TEST_USERS, take_screenshot
 
 
 @pytest.mark.peer_review
+def test_add_peer_review_comments(secondary_user_logged_in, config):
+    """
+    Test adding comments as a peer reviewer.
     Precondition: A proposal must be in review status with this user as reviewer.
     """
     page = secondary_user_logged_in
@@ -117,6 +93,9 @@ from .conftest import TEST_USERS, take_screenshot
 
 
 @pytest.mark.peer_review
+def test_mark_review_as_completed(secondary_user_logged_in, config):
+    """
+    Test marking a review as completed.
     Precondition: A review must exist with comments.
     """
     page = secondary_user_logged_in
@@ -146,6 +125,10 @@ from .conftest import TEST_USERS, take_screenshot
 
 
 @pytest.mark.peer_review
+def test_respond_to_peer_review_comments(primary_user_logged_in, config):
+    """
+    Test responding to peer review comments as the proposal author.
+
     Precondition: A proposal must have peer review comments.
     """
     page = primary_user_logged_in
@@ -173,6 +156,9 @@ from .conftest import TEST_USERS, take_screenshot
 
 
 @pytest.mark.peer_review
+def test_submit_proposal_after_review(primary_user_logged_in, config):
+    """
+    Test submitting a proposal after peer review is complete.
     Precondition: A proposal must be in review status with completed reviews.
     """
     page = primary_user_logged_in
@@ -200,6 +186,9 @@ from .conftest import TEST_USERS, take_screenshot
 @pytest.mark.peer_review
 @pytest.mark.e2e
 @pytest.mark.regression
+def test_full_peer_review_workflow(context, config):
+    """
+    Full peer review workflow maintaining backward compatibility.
     This test follows the exact workflow from the original test_4_peer_review.py
     but uses fixtures for better maintainability.
     """

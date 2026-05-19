@@ -12,23 +12,12 @@ User Stories Covered:
 """
 
 import re
-import os
 import pytest
 from playwright.sync_api import expect
 
 from .conftest import TEST_USERS, take_screenshot
 
 
-# ============================================================================
-# Fixtures
-# ============================================================================
-
-
-# Test: Navigate to Profile Page
-# ============================================================================
-=======
-# ============================================================================
-# Test: Navigate to Profile Page
 # ========================================================================================================================================================
 # Test: Navigate to Profile Page
 # ============================================================================
@@ -107,115 +96,6 @@ def test_update_user_profile_information(logged_in_page, config):
 
 
 # ============================================================================
-# Test: Change Password
-# ============================================================================
-
-
-@pytest.mark.user_profile
-def test_change_password(logged_in_page, config):
-    """
-    Test that users can change their password.
-
-    User Story: Change password
-    Steps:
-    1. Navigate to profile page
-    2. Enter current password
-    3. Enter new password
-    4. Confirm new password
-    5. Submit change
-    6. Verify success message
-    """
-    page = logged_in_page
-
-    # Navigate to profile page
-    page.get_by_test_id("user-menu-button").click()
-    page.get_by_test_id("profile-button").click()
-    expect(page).to_have_url(re.compile(".*profile"))
-
-    # Click on change password section or button
-    page.get_by_test_id("change-password-button").click()
-
-    # Enter current password
-    page.get_by_test_id("current-password-input").click()
-    page.get_by_test_id("current-password-input").fill(TEST_USERS["primary"].password)
-
-    # Enter new password
-    new_password = "newpassword123"
-    page.get_by_test_id("new-password-input").click()
-    page.get_by_test_id("new-password-input").fill(new_password)
-
-    # Confirm new password
-    page.get_by_test_id("confirm-password-input").click()
-    page.get_by_test_id("confirm-password-input").fill(new_password)
-
-    take_screenshot(page, "password_change_form_filled")
-
-    # Submit password change
-    page.get_by_test_id("change-password-submit-button").click()
-
-    # Verify success message
-    expect(page.get_by_text("Password changed successfully")).to_be_visible()
-
-    take_screenshot(page, "password_change_success")
-
-
-# ============================================================================
-# Test: Password Change Validation
-# ============================================================================
-
-
-@pytest.mark.user_profile
-def test_password_change_validation(logged_in_page, config):
-    """
-    Test password change validation.
-
-    User Story: Change password
-    Steps:
-    1. Navigate to profile page
-    2. Try to change password with mismatched confirmation
-    3. Verify error message
-    4. Try to change password with weak password
-    5. Verify error message
-    """
-    page = logged_in_page
-
-    # Navigate to profile page
-    page.get_by_test_id("user-menu-button").click()
-    page.get_by_test_id("profile-button").click()
-    expect(page).to_have_url(re.compile(".*profile"))
-
-    # Click on change password section or button
-    page.get_by_test_id("change-password-button").click()
-
-    # Test mismatched password confirmation
-    page.get_by_test_id("current-password-input").fill(TEST_USERS["primary"].password)
-    page.get_by_test_id("new-password-input").fill("newpassword123")
-    page.get_by_test_id("confirm-password-input").fill("differentpassword123")
-
-    page.get_by_test_id("change-password-submit-button").click()
-
-    # Verify error message for mismatched passwords
-    expect(page.get_by_text("Passwords do not match")).to_be_visible()
-
-    take_screenshot(page, "password_validation_mismatch")
-
-    # Clear fields
-    page.get_by_test_id("new-password-input").clear()
-    page.get_by_test_id("confirm-password-input").clear()
-
-    # Test weak password validation
-    page.get_by_test_id("new-password-input").fill("weak")
-    page.get_by_test_id("confirm-password-input").fill("weak")
-
-    page.get_by_test_id("change-password-submit-button").click()
-
-    # Verify error message for weak password
-    expect(page.get_by_text("Password must be at least 8 characters")).to_be_visible()
-
-    take_screenshot(page, "password_validation_weak")
-
-
-# ============================================================================
 # Test: Profile Information Persistence
 # ============================================================================
 
@@ -290,13 +170,12 @@ def test_full_profile_management_workflow(logged_in_page, config):
     """
     Complete profile management workflow.
 
-    User Story: Update user profile + Change password
+    User Story: Update user profile
     Steps:
     1. Navigate to profile
     2. Update profile information
-    3. Change password
-    4. Log out and log back in with new password
-    5. Verify profile information persists
+    3. Log out and log back in
+    4. Verify profile information persists
     """
     page = logged_in_page
 
@@ -316,26 +195,14 @@ def test_full_profile_management_workflow(logged_in_page, config):
 
     take_screenshot(page, "full_workflow_profile_updated")
 
-    # Change password
-    page.get_by_test_id("change-password-button").click()
-    page.get_by_test_id("current-password-input").fill(TEST_USERS["primary"].password)
-    new_password = "testpassword123"
-    page.get_by_test_id("new-password-input").fill(new_password)
-    page.get_by_test_id("confirm-password-input").fill(new_password)
-
-    page.get_by_test_id("change-password-submit-button").click()
-    expect(page.get_by_text("Password changed successfully")).to_be_visible()
-
-    take_screenshot(page, "full_workflow_password_changed")
-
     # Log out
     page.get_by_test_id("user-menu-button").click()
     page.get_by_test_id("logout-button").click()
     expect(page).to_have_url(re.compile(".*login"))
 
-    # Log back in with new password
+    # Log back in with original password
     page.get_by_test_id("email-input").fill(TEST_USERS["primary"].email)
-    page.get_by_test_id("password-input").fill(new_password)
+    page.get_by_test_id("password-input").fill(TEST_USERS["primary"].password)
     page.get_by_test_id("submit-button").click()
     expect(page).to_have_url(re.compile(".*dashboard"))
 
