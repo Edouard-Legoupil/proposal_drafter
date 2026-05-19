@@ -1,6 +1,8 @@
 # Playwright End-to-End Testing
 
-This directory contains the comprehensive end-to-end test suite for the Proposal Drafter application using Playwright.
+
+This directory contains the end-to-end test suite for the Proposal Drafter application using [Playwright](https://playwright.dev/).
+
 
 ## 📁 Test Suite Overview
 
@@ -28,29 +30,43 @@ The test suite covers the complete user journey from registration to advanced fe
 - Backend server running (`cd backend && uvicorn main:app --host 0.0.0.0 --port 8502`)
 - Frontend server running (`cd frontend && npm run dev`)
 
-#### Running Tests
+After installing the Python packages, install the browser binaries:
 
 ```bash
+playwright install
 # Install dependencies
 npm install
 
 # Install Playwright browsers
 npx playwright install
+```
 
+For headless Linux environments (CI/CD servers):
+
+```bash
+playwright install-deps
+
+```
+
+#### Running Tests
+
+```bash
+
+source backend/venv/bin/activate
 # Run all tests
-npx playwright test
+pytest playwright/tests/ -v
 
 # Run specific test file
-npx playwright test test_1_user_profile.py
+pytest playwright/tests/test_1_user_profile.py
 
 # Run in headed mode (show browser)
-npx playwright test --headed
+pytest playwright/tests/ --headed -v
 
 # Run with trace viewing
-npx playwright test --trace on
+pytest playwright/tests/ --trace on -v
 
 # Show test report
-npx playwright show-report
+pytest playwright/tests/ --report
 ```
 
 ### Test Data Management
@@ -59,14 +75,11 @@ The test suite includes a preparation script to set up test data:
 
 ```bash
 # Prepare test data (creates test users, roles, etc.)
-npx playwright run prep_1_registration.py
+pytest playwright/tests/prep_1_registration.py
 ```
 
 ### Test Environment
 
-Tests are configured to run against:
-- **Backend**: `http://localhost:8502`
-- **Frontend**: `http://localhost:5173`
 
 ### Best Practices
 
@@ -87,7 +100,6 @@ When adding new features:
 ### Troubleshooting
 
 **Common Issues:**
-- **Port conflicts**: Ensure backend (8502) and frontend (5173) are running
 - **Database state**: Run preparation scripts to reset test data
 - **Browser issues**: Reinstall Playwright browsers with `npx playwright install`
 - **Test flakiness**: Use `npx playwright test --retries=2` for flaky tests
@@ -111,6 +123,22 @@ The tests use a Page Object Model pattern for maintainability. Key page objects 
 - `KnowledgeCardPage`
 - `AdminPanel`
 
+
+### Fixtures
+
+The test suite uses pytest fixtures for better maintainability:
+
+- `config`: Session-scoped configuration with environment variable support
+- `playwright`: Session-scoped Playwright instance
+- `browser`: Session-scoped browser instance
+- `context`: Function-scoped browser context with video recording
+- `page`: Function-scoped page instance
+- `logged_in_user`: Page with pre-authenticated user
+- `registered_user`: Creates and returns a new registered user
+- `TestUser`: Class for managing test user credentials
+- `TEST_USERS`: Predefined test users dictionary
+
+
 ### Test Data
 
 Test data is managed through:
@@ -123,6 +151,55 @@ Test data is managed through:
 - Tests are optimized to run in parallel
 - Large tests are split into logical sub-tests
 - API calls are mocked where possible to reduce test time
+
+### Test Marks
+
+Tests are categorized using pytest marks:
+
+- `@pytest.mark.smoke` - Quick sanity checks
+- `@pytest.mark.e2e` - End-to-end user journeys
+- `@pytest.mark.regression` - Regression tests
+- `@pytest.mark.slow` - Tests that take longer to run
+- `@pytest.mark.user_registration` - User registration tests
+- `@pytest.mark.proposal_creation` - Proposal creation tests
+- `@pytest.mark.knowledge_card` - Knowledge card tests
+- `@pytest.mark.peer_review` - Peer review tests
+- `@pytest.mark.dashboard` - Dashboard tests
+
+### Screenshots and Videos
+
+Screenshots are automatically saved to `playwright/test-results/screenshots/` with descriptive names.
+
+Video recordings are saved to `playwright/test-results/videos/` when enabled. Each test that uses the `context` fixture with video recording enabled will generate a video file.
+
+## Recording User Journeys with Codegen Tool
+
+You can use Playwright's codegen tool to record new test interactions:
+
+```bash
+python3 -m playwright codegen http://localhost:8502 --test-id-attribute data-testid
+```
+
+The frontend uses `data-testid` attributes for robust element selection. The codegen tool will:
+
+- Record page navigation as `page.goto('url')`
+- Record clicks as `page.click('selector')`
+- Record text input as `page.fill('selector', 'text')`
+
+After recording, copy the generated Python script into the appropriate test file and refactor as needed to use the fixtures and follow the test patterns.
+
+## Best Practices
+
+1. **Use fixtures**: Prefer using fixtures (`page`, `config`, `logged_in_user`) over manual setup
+2. **Use test IDs**: Always use `data-testid` selectors when available
+3. **Add assertions**: Use `expect()` to verify UI state
+4. **Handle timeouts**: Use appropriate timeouts for long operations (generation can take minutes)
+5. **Clean up**: Tests should clean up after themselves when possible
+6. **Mark tests**: Use appropriate pytest marks for categorization
+7. **Skip when needed**: Use `pytest.skip()` when preconditions aren't met
+8. **Document**: Add docstrings explaining test purpose and preconditions
+
+
 
 ## 📊 Test Coverage
 
@@ -145,4 +222,3 @@ Planned test improvements:
 - Add accessibility testing
 - Implement visual regression testing
 - Add more comprehensive error scenario testing
-
