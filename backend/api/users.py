@@ -117,7 +117,6 @@ async def get_roles():
     Returns a list of all roles in the system.
     """
     try:
-        from sqlalchemy.orm import Session
         from sqlalchemy import text
 
         with get_engine().connect() as connection:

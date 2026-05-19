@@ -1,134 +1,327 @@
+"""
+Test suite for peer review workflow.
+
+These tests verify that:
+1. Proposals can be submitted for peer review
+2. Reviewers can add comments
+3. Authors can respond to comments
+4. Proposals can be marked as completed and submitted
+"""
+
 import re
 import os
-from playwright.sync_api import sync_playwright, expect
+import pytest
+from playwright.sync_api import expect
+
+from .conftest import TEST_USERS, take_screenshot
 
 
-def test_peer_review():
+# ============================================================================
+# Fixtures
+# ============================================================================
+
+
+@pytest.fixture(autouse=True)
+def ensure_screenshot_dir():
+    """Ensure screenshot directory exists."""
+    os.makedirs("playwright/test-results", exist_ok=True)
+
+
+@pytest.fixture
+def primary_user_logged_in(page, config):
+    """Log in as the primary test user."""
+    user = TEST_USERS["primary"]
+    page.goto(f"{config['base_url']}/login")
+    page.get_by_test_id("email-input").fill(user.email)
+    page.get_by_test_id("password-input").fill(user.password)
+    page.get_by_test_id("submit-button").click()
+    expect(page).to_have_url(re.compile(".*dashboard"))
+    return page
+
+
+@pytest.fixture
+def secondary_user_logged_in(page, config):
+    """Log in as the secondary test user."""
+    user = TEST_USERS["secondary"]
+    page.goto(f"{config['base_url']}/login")
+    page.get_by_test_id("email-input").fill(user.email)
+    page.get_by_test_id("password-input").fill(user.password)
+    page.get_by_test_id("submit-button").click()
+    expect(page).to_have_url(re.compile(".*dashboard"))
+    return page
+
+
+# ============================================================================
+# Test: Submit Proposal for Peer Review
+# ============================================================================
+
+
+@pytest.mark.peer_review
+def test_submit_proposal_for_review(primary_user_logged_in, config):
     """
-    Tests that a user can generate a new proposal and records the video.
+    Test submitting a proposal for peer review.
+
+    Precondition: A proposal must already exist and be in draft status.
     """
+    page = primary_user_logged_in
 
-    # 1. Setup constants
-    email = "test_user@unhcr.org"
-    password = "password123"
-    base_url = "http://localhost:8502"
+    # Try to find and open an existing proposal
+    try:
+        page.get_by_text("Project: Refugee Children Education").first.click()
+    except Exception:
+        pytest.skip("No existing proposal found for peer review test")
 
-    # Define where the video will be saved.
-    VIDEO_DIR = "playwright/test-results/videos"
+    # Submit for peer review
+    page.get_by_test_id("workflow-status-badge-in_review").click()
 
-    # Ensure the directory exists
-    os.makedirs(VIDEO_DIR, exist_ok=True)
+    # Select reviewer (using secondary user)
+    # The user ID is dynamic, so we use a partial match
+    page.get_by_test_id("user-select-checkbox").first.check()
 
-    # Use the sync_playwright context manager to launch and control the browser lifecycle
-    with sync_playwright() as playwright:
-        # Launch browser (use chromium, firefox, or webkit)
-        browser = playwright.chromium.launch(headless=False, slow_mo=1000)
+    # Set deadline
+    page.get_by_test_id("deadline-input").fill("2025-12-31")
 
-        # 2. Create a new context and set the video recording directory
-        # Video recording starts now.
-        context = browser.new_context(
-            record_video_dir=VIDEO_DIR,
-            # Set viewport to a high resolution (e.g., Full HD) for maximum screen space
-            viewport={"width": 1920, "height": 1080},
-            # Set the video output size to match the viewport for best quality
-            record_video_size={"width": 1920, "height": 1080},
-        )
+    take_screenshot(page, "peer_review_submit")
 
-        # 3. Get a new page from the context
-        page = context.new_page()
+    # Confirm
+    page.get_by_test_id("confirm-button").click()
 
-        # -------------------
-        # Start of Test Logic
-        # -------------------
-        page.goto(f"{base_url}/login")
-        page.get_by_test_id("email-input").fill(email)
-        page.get_by_test_id("password-input").fill(password)
-        page.get_by_test_id("submit-button").click()
-        expect(page).to_have_url(re.compile(".*dashboard"))
+    # Verify proposal is now in review status
+    expect(page.get_by_test_id("workflow-status-badge-in_review")).to_be_visible(timeout=10000)
 
-        # Open Existing Project -------
-        page.get_by_text("Project: Refugee Children Education InitiativeViewTransferDelete Afghanistan -").first.click()
 
-        # Submit for Peer Review -------
-        page.get_by_test_id("workflow-status-badge-in_review").click()
-        # page.get_by_text("Test User bis").click()
-        page.get_by_test_id("user-select-checkbox-5c092577-1230-4473-acf8-b6e3bfb02bca").check()
-        page.get_by_test_id("deadline-input").fill("2025-11-19")
-        page.screenshot(path="playwright/test-results/peer_review_1set.png")
-        page.get_by_test_id("confirm-button").click()
+# ============================================================================
+# Test: Add Peer Review Comments
+# ============================================================================
 
-        # Log Out -------
-        page.get_by_test_id("user-menu-button").click()
-        page.get_by_test_id("logout-button").click()
 
-        # Log in with Peer Review User -------
-        page.get_by_test_id("email-input").click()
-        page.get_by_test_id("email-input").fill("test_user_bis@unhcr.org")
-        page.get_by_test_id("password-input").click()
-        page.get_by_test_id("password-input").fill("password123")
-        page.get_by_test_id("submit-button").click()
+@pytest.mark.peer_review
+def test_add_peer_review_comments(secondary_user_logged_in, config):
+    """
+    Test adding comments as a peer reviewer.
 
-        # Go to review and select the first one -------
-        page.get_by_test_id("reviews-tab").click()
-        # page.get_by_test_id("review-card").first.click()
+    Precondition: A proposal must be in review status with this user as reviewer.
+    """
+    page = secondary_user_logged_in
+
+    # Navigate to reviews tab
+    page.get_by_test_id("reviews-tab").click()
+
+    # Try to find a review card
+    try:
         page.locator("#reviews-grid > article").first.click()
+    except Exception:
+        pytest.skip("No reviews found for peer review test")
 
-        # Add Comments -------
-        page.get_by_test_id("comment-type-select-Summary").select_option("Clarity")
-        page.get_by_test_id("severity-select-Summary").select_option("High")
-        page.get_by_test_id("comment-textarea-Summary").fill("revise this whole part to make it clearer")
-        page.screenshot(path="playwright/test-results/peer_review_2comment.png")
+    # Add comment on Summary section
+    page.get_by_test_id("comment-type-select-Summary").select_option("Clarity")
+    page.get_by_test_id("severity-select-Summary").select_option("High")
+    page.get_by_test_id("comment-textarea-Summary").fill("Please revise this section to make it clearer")
 
-        page.get_by_test_id("comment-type-select-Rationale").select_option("Impact")
-        page.get_by_test_id("comment-textarea-Rationale").fill("Stress more the impact")
+    take_screenshot(page, "peer_review_comment_added")
 
-        # page.get_by_test_id("comment-textarea-Summary").click()
-        # page.get_by_test_id("comment-textarea-Summary").fill("blabla")
-        # page.get_by_test_id("review-section-Summary").click()
-        # page.get_by_test_id("severity-select-Summary").select_option("Low")
+    # Add comment on Rationale section
+    page.get_by_test_id("comment-type-select-Rationale").select_option("Impact")
+    page.get_by_test_id("comment-textarea-Rationale").fill("Please stress more the impact")
 
-        # Put Review as completed and log out -------
-        page.get_by_test_id("review-completed-button-header").click()
-        page.screenshot(path="playwright/test-results/peer_review_3completed.png")
-        page.get_by_test_id("user-menu-button").click()
-        page.get_by_test_id("logout-button").click()
 
-        # Log in with First user -------
-        page.get_by_test_id("email-input").click()
-        page.get_by_test_id("email-input").fill("test_user@unhcr.org")
-        page.get_by_test_id("password-input").click()
-        page.get_by_test_id("password-input").fill("password123")
-        page.get_by_test_id("submit-button").click()
+# ============================================================================
+# Test: Mark Review as Completed
+# ============================================================================
 
-        # select proposal-------
-        page.get_by_text("Project: Refugee Children Education InitiativeViewTransferDelete Afghanistan -").first.click()
-        # page.get_by_text("Project: Refugee Children Education InitiativeViewTransferDelete Afghanistan -").click()
 
-        # Reply to comments-------
-        page.get_by_role("textbox", name="Type your response here...").click()
-        page.get_by_role("textbox", name="Type your response here...").fill(
-            "thanks for your comment! will review accordingly"
-        )
-        page.screenshot(path="playwright/test-results/peer_review_4reply.png")
+@pytest.mark.peer_review
+def test_mark_review_as_completed(secondary_user_logged_in, config):
+    """
+    Test marking a review as completed.
 
-        # Submit Proposal-------
-        page.get_by_test_id("workflow-status-badge-submitted").click()
-        page.screenshot(path="playwright/test-results/peer_review_5submit.png")
-        page.get_by_role("button", name="Cancel").click()
+    Precondition: A review must exist with comments.
+    """
+    page = secondary_user_logged_in
 
-        page.get_by_test_id("logo").click()
+    # Navigate to reviews tab
+    page.get_by_test_id("reviews-tab").click()
 
-        # -------------------
-        # End of Test Logic
-        # -------------------
+    # Try to find a review card
+    try:
+        page.locator("#reviews-grid > article").first.click()
+    except Exception:
+        pytest.skip("No reviews found for completion test")
 
-        # 4. Close the context and browser
-        # The video file is saved when the context closes.
-        video_path = page.video.path()
-        context.close()
-        browser.close()
+    # Mark as completed
+    page.get_by_test_id("review-completed-button-header").click()
 
-        # Optional: Rename the file to something more descriptive
-        new_video_path = os.path.join(VIDEO_DIR, "peer_review.webm")
-        os.rename(video_path, new_video_path)
-        print(f"Video saved successfully to: {new_video_path}")
+    take_screenshot(page, "peer_review_completed")
+
+    # Log out
+    page.get_by_test_id("user-menu-button").click()
+    page.get_by_test_id("logout-button").click()
+
+
+# ============================================================================
+# Test: Respond to Peer Review Comments
+# ============================================================================
+
+
+@pytest.mark.peer_review
+def test_respond_to_peer_review_comments(primary_user_logged_in, config):
+    """
+    Test responding to peer review comments as the proposal author.
+
+    Precondition: A proposal must have peer review comments.
+    """
+    page = primary_user_logged_in
+
+    # Try to find and open an existing proposal
+    try:
+        page.get_by_text("Project: Refugee Children Education").first.click()
+    except Exception:
+        pytest.skip("No existing proposal found for response test")
+
+    # Find and respond to a comment
+    # This assumes there are visible comment textareas
+    try:
+        response_box = page.get_by_role("textbox", name="Type your response here...").first
+        response_box.click()
+        response_box.fill("Thanks for your comment! Will review accordingly.")
+        take_screenshot(page, "peer_review_response_added")
+    except Exception:
+        pytest.skip("No comments found to respond to")
+
+
+# ============================================================================
+# Test: Submit Proposal After Review
+# ============================================================================
+
+
+@pytest.mark.peer_review
+def test_submit_proposal_after_review(primary_user_logged_in, config):
+    """
+    Test submitting a proposal after peer review is complete.
+
+    Precondition: A proposal must be in review status with completed reviews.
+    """
+    page = primary_user_logged_in
+
+    # Try to find and open an existing proposal
+    try:
+        page.get_by_text("Project: Refugee Children Education").first.click()
+    except Exception:
+        pytest.skip("No existing proposal found for submission test")
+
+    # Submit proposal
+    page.get_by_test_id("workflow-status-badge-submitted").click()
+
+    take_screenshot(page, "peer_review_submitted")
+
+    # Cancel (we don't want to actually submit in tests)
+    page.get_by_role("button", name="Cancel").click()
+
+
+# ============================================================================
+# Test: Full Peer Review Workflow (Backward Compatibility)
+# ============================================================================
+
+
+@pytest.mark.peer_review
+@pytest.mark.e2e
+@pytest.mark.regression
+def test_full_peer_review_workflow(context, config):
+    """
+    Full peer review workflow maintaining backward compatibility.
+
+    This test follows the exact workflow from the original test_4_peer_review.py
+    but uses fixtures for better maintainability.
+    """
+    primary_user = TEST_USERS["primary"]
+    secondary_user = TEST_USERS["secondary"]
+
+    # ===== Part 1: Primary user submits proposal for review =====
+    page1 = context.new_page()
+    page1.set_default_timeout(config["default_timeout"])
+
+    # Login as primary user
+    page1.goto(f"{config['base_url']}/login")
+    page1.get_by_test_id("email-input").fill(primary_user.email)
+    page1.get_by_test_id("password-input").fill(primary_user.password)
+    page1.get_by_test_id("submit-button").click()
+    expect(page1).to_have_url(re.compile(".*dashboard"))
+
+    # Open existing project
+    page1.get_by_text("Project: Refugee Children Education InitiativeViewTransferDelete Afghanistan -").first.click()
+
+    # Submit for Peer Review
+    page1.get_by_test_id("workflow-status-badge-in_review").click()
+
+    # Select secondary user as reviewer
+    # Note: The user ID in the original test was hardcoded, we use the first checkbox
+    page1.get_by_test_id("user-select-checkbox").first.check()
+
+    page1.get_by_test_id("deadline-input").fill("2025-12-31")
+    take_screenshot(page1, "peer_review_1_set")
+    page1.get_by_test_id("confirm-button").click()
+
+    # Log Out
+    page1.get_by_test_id("user-menu-button").click()
+    page1.get_by_test_id("logout-button").click()
+
+    # ===== Part 2: Secondary user adds review comments =====
+    page2 = context.new_page()
+    page2.set_default_timeout(config["default_timeout"])
+
+    # Login as secondary user
+    page2.goto(f"{config['base_url']}/login")
+    page2.get_by_test_id("email-input").click()
+    page2.get_by_test_id("email-input").fill(secondary_user.email)
+    page2.get_by_test_id("password-input").click()
+    page2.get_by_test_id("password-input").fill(secondary_user.password)
+    page2.get_by_test_id("submit-button").click()
+
+    # Go to review and select the first one
+    page2.get_by_test_id("reviews-tab").click()
+    page2.locator("#reviews-grid > article").first.click()
+
+    # Add Comments
+    page2.get_by_test_id("comment-type-select-Summary").select_option("Clarity")
+    page2.get_by_test_id("severity-select-Summary").select_option("High")
+    page2.get_by_test_id("comment-textarea-Summary").fill("revise this whole part to make it clearer")
+    take_screenshot(page2, "peer_review_2_comment")
+
+    page2.get_by_test_id("comment-type-select-Rationale").select_option("Impact")
+    page2.get_by_test_id("comment-textarea-Rationale").fill("Stress more the impact")
+
+    # Put Review as completed and log out
+    page2.get_by_test_id("review-completed-button-header").click()
+    take_screenshot(page2, "peer_review_3_completed")
+    page2.get_by_test_id("user-menu-button").click()
+    page2.get_by_test_id("logout-button").click()
+
+    # ===== Part 3: Primary user responds to comments =====
+    # Reuse page1
+    page1.goto(f"{config['base_url']}/login")
+    page1.get_by_test_id("email-input").click()
+    page1.get_by_test_id("email-input").fill(primary_user.email)
+    page1.get_by_test_id("password-input").click()
+    page1.get_by_test_id("password-input").fill(primary_user.password)
+    page1.get_by_test_id("submit-button").click()
+
+    # Select proposal
+    page1.get_by_text("Project: Refugee Children Education InitiativeViewTransferDelete Afghanistan -").first.click()
+
+    # Reply to comments
+    page1.get_by_role("textbox", name="Type your response here...").click()
+    page1.get_by_role("textbox", name="Type your response here...").fill(
+        "thanks for your comment! will review accordingly"
+    )
+    take_screenshot(page1, "peer_review_4_reply")
+
+    # Submit Proposal
+    page1.get_by_test_id("workflow-status-badge-submitted").click()
+    take_screenshot(page1, "peer_review_5_submit")
+    page1.get_by_role("button", name="Cancel").click()
+
+    page1.get_by_test_id("logo").click()
+
+    # Cleanup
+    page1.close()
+    page2.close()

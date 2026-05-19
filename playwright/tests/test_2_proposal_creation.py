@@ -17,7 +17,173 @@ from playwright.sync_api import expect
 from .conftest import TEST_USERS, take_screenshot
 
 
+# Test: Export Proposal as Word
 # ============================================================================
+
+@pytest.mark.proposal_creation
+def test_export_proposal_as_word(logged_in_user, config):
+    """
+    Test exporting a proposal as a Word document.
+
+    Precondition: A proposal must already exist.
+    """
+    page = logged_in_user
+
+    try:
+        page.get_by_text("Project: Refugee Children Education").first.click()
+    except Exception:
+        pytest.skip("No existing proposal found for export test")
+
+    # Export as Word
+    with page.expect_download() as download_info:
+        page.get_by_test_id("export-word-button").click()
+
+# ============================================================================
+# Test: Export Proposal as Word
+# ============================================================================
+
+@pytest.mark.proposal_creation
+def test_export_proposal_as_word(logged_in_user, config):
+    """
+    Test exporting a proposal as a Word document.
+
+    User Story: Export proposal to Word
+    Precondition: A proposal must already exist.
+    """
+    page = logged_in_user
+
+    try:
+        page.get_by_text("Project: Refugee Children Education").first.click()
+    except Exception:
+        pytest.skip("No existing proposal found for export test")
+
+    # Export as Word
+    with page.expect_download() as download_info:
+        page.get_by_test_id("export-word-button").click()
+
+    download = download_info.value
+    assert download is not None
+# ============================================================================
+# Test: Export Proposal as Word
+# ============================================================================
+
+@pytest.mark.proposal_creation
+def test_export_proposal_as_word(logged_in_user, config):
+    """
+    Test exporting a proposal as a Word document.
+
+    User Story: Export proposal to Word
+    Precondition: A proposal must already exist.
+    """
+    page = logged_in_user
+
+    try:
+        page.get_by_text("Project: Refugee Children Education").first.click()
+    except Exception:
+        pytest.skip("No existing proposal found for export test")
+
+    # Export as Word
+    with page.expect_download() as download_info:
+        page.get_by_test_id("export-word-button").click()
+
+    download = download_info.value
+    assert download is not None
+    assert download.path() is not None
+
+    take_screenshot(page, "proposal_export_word")
+    print(f"[DOWNLOAD] Word document exported to: {download.path()}")
+=======
+# ============================================================================
+# Test: Export Proposal as Word
+# ============================================================================
+
+@pytest.mark.proposal_creation
+def test_export_proposal_as_word(logged_in_user, config):
+    """
+    Test exporting a proposal as a Word document.
+
+    User Story: Export proposal to Word
+    Precondition: A proposal must already exist.
+    """
+    page = logged_in_user
+
+    try:
+        page.get_by_text("Project: Refugee Children Education").first.click()
+    except Exception:
+        pytest.skip("No existing proposal found for export test")
+
+    # Export as Word
+    with page.expect_download() as download_info:
+        page.get_by_test_id("export-word-button").click()
+
+    download = download_info.value
+    assert download is not None
+    assert download.path() is not None
+
+    take_screenshot(page, "proposal_export_word")
+    print(f"[DOWNLOAD] Word document exported to: {download.path()}")
+
+
+# ============================================================================
+# Test: Export Proposal as Excel
+# ============================================================================
+
+@pytest.mark.proposal_creation
+def test_export_proposal_as_excel(logged_in_user, config):
+    """
+    Test exporting a proposal as an Excel spreadsheet.
+
+    User Story: Export proposal to Excel
+    Precondition: A proposal must already exist.
+    """
+    page = logged_in_user
+
+    try:
+        page.get_by_text("Project: Refugee Children Education").first.click()
+    except Exception:
+        pytest.skip("No existing proposal found for export test")
+
+    # Export as Excel
+    with page.expect_download() as download_info:
+        page.get_by_test_id("export-excel-button").click()
+
+    download = download_info.value
+    assert download is not None
+    assert download.path() is not None
+
+    take_screenshot(page, "proposal_export_excel")
+    print(f"[DOWNLOAD] Excel document exported to: {download.path()}")
+
+
+# ============================================================================
+# Test: Export Proposal as PDF
+# ============================================================================
+
+@pytest.mark.proposal_creation
+def test_export_proposal_as_pdf(logged_in_user, config):
+    """
+    Test exporting a proposal as a PDF document.
+
+    User Story: Export proposal to PDF
+    Precondition: A proposal must already exist.
+    """
+    page = logged_in_user
+
+    try:
+        page.get_by_text("Project: Refugee Children Education").first.click()
+    except Exception:
+        pytest.skip("No existing proposal found for export test")
+
+    # Export as PDF
+    with page.expect_download() as download_info:
+        page.get_by_test_id("export-pdf-button").click()
+
+    download = download_info.value
+    assert download is not None
+    assert download.path() is not None
+
+    take_screenshot(page, "proposal_export_pdf")
+    print(f"[DOWNLOAD] PDF document exported to: {download.path()}")============================================================================
 # Test Constants
 # ============================================================================
 

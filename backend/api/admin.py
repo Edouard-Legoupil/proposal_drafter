@@ -21,7 +21,14 @@ async def get_admin_users(admin: dict = Depends(is_system_admin)):
     Returns a list of all users with their roles for admin management.
     """
     try:
+        from sqlalchemy.orm import Session
+        from backend.models.donor_group import DonorGroupMember
+        from backend.models.user_associations import UserOutcome, UserFieldContext
+
         with get_engine().connect() as connection:
+            # Create a session for ORM operations
+            session = Session(connection)
+            
             # Fetch all users
             users_query = text(
                 """
@@ -48,20 +55,14 @@ async def get_admin_users(admin: dict = Depends(is_system_admin)):
                 )
                 roles_result = connection.execute(roles_query, {"user_id": user_id}).mappings().all()
 
-                # Fetch donor groups using ORM
-                from backend.models.donor_group import DonorGroupMember
+                # Fetch donor groups using ORM with session
+                donor_groups = DonorGroupMember.get_user_groups(session, user_id)
 
-                donor_groups = DonorGroupMember.get_user_groups(connection, user_id)
+                # Fetch outcomes using ORM with session
+                outcome_ids = UserOutcome.get_user_outcomes(session, user_id)
 
-                # Fetch outcomes using ORM
-                from backend.models.user_associations import UserOutcome
-
-                outcome_ids = UserOutcome.get_user_outcomes(connection, user_id)
-
-                # Fetch field contexts using ORM
-                from backend.models.user_associations import UserFieldContext
-
-                field_context_ids = UserFieldContext.get_user_field_contexts(connection, user_id)
+                # Fetch field contexts using ORM with session
+                field_context_ids = UserFieldContext.get_user_field_contexts(session, user_id)
 
                 user_dict = dict(user)
                 user_dict["id"] = user_id

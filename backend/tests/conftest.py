@@ -51,7 +51,7 @@ def test_engine():
                 text(
                     """
                 CREATE TABLE IF NOT EXISTS roles (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT UNIQUE NOT NULL
                 )
             """
@@ -61,7 +61,7 @@ def test_engine():
             connection.execute(
                 text(
                     """
-                INSERT OR IGNORE INTO roles (name) VALUES 
+                INSERT OR IGNORE INTO roles (name) VALUES
                 ('proposal writer'),
                 ('knowledge manager donors'),
                 ('knowledge manager outcome'),
