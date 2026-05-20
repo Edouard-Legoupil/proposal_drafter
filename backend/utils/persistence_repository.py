@@ -23,6 +23,7 @@ class PersistenceRepository:
         incident_type: str,
         severity: str,
         analysis_payload: dict[str, Any],
+        created_by: str | None = None,
     ) -> str:
         try:
             query = text(
@@ -36,7 +37,8 @@ class PersistenceRepository:
                     incident_type,
                     severity,
                     status,
-                    analysis_payload
+                    analysis_payload,
+                    created_by
                 )
                 VALUES (
                     :artifact_type,
@@ -47,7 +49,8 @@ class PersistenceRepository:
                     :incident_type,
                     :severity,
                     'analyzed',
-                    CAST(:analysis_payload AS JSONB)
+                    CAST(:analysis_payload AS JSONB),
+                    :created_by
                 )
                 ON CONFLICT (artifact_type, source_review_id)
                 DO UPDATE SET
@@ -55,6 +58,7 @@ class PersistenceRepository:
                     severity = EXCLUDED.severity,
                     status = 'analyzed',
                     analysis_payload = EXCLUDED.analysis_payload,
+                    created_by = COALESCE(EXCLUDED.created_by, incident_analysis_results.created_by),
                     updated_at = CURRENT_TIMESTAMP
                 RETURNING id::text
             """
@@ -70,6 +74,7 @@ class PersistenceRepository:
                     "incident_type": incident_type,
                     "severity": severity,
                     "analysis_payload": json.dumps(analysis_payload),
+                    "created_by": created_by,
                 },
             )
             row = result.first()

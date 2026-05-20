@@ -1325,13 +1325,6 @@ async def get_pipeline_kpis(
   - Section headers
   - Custom styles
 
-#### PDF Export
-- **Component**: `doc_export.py::create_pdf_from_sections`
-- **Features**:
-  - Classic PDF styling
-  - Page formatting (A4, margins)
-  - Content flow with proper spacing
-  - Tables with grid styling
 
 #### Excel Export
 - **Component**: `doc_export.py::create_excel_from_sections`

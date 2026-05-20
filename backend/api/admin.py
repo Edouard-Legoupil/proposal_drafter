@@ -10,6 +10,7 @@ from sqlalchemy import text
 from backend.core.db import get_engine
 from backend.core.security import is_system_admin
 from backend.models.schemas import CreateTeamRequest, UpdateUserTeamRequest
+from backend.utils.notification_service import notification_service
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -340,6 +341,219 @@ async def delete_user(user_id: str, admin: dict = Depends(is_system_admin)):
     except Exception as e:
         logger.error(f"[DELETE USER ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to delete user.")
+
+
+@router.get("/admin/role-requests")
+async def get_admin_role_requests(admin: dict = Depends(is_system_admin)):
+    """
+    Returns a list of all pending role requests for approval.
+    """
+    try:
+        with get_engine().connect() as connection:
+            query = text(
+                """
+                SELECT
+                    u.id::text as user_id,
+                    u.name as user_name,
+                    u.email as user_email,
+                    u.requested_role_id::text as requested_role_id,
+                    r.name as requested_role_name,
+                    r.id::text as role_id,
+                    u.created_at as requested_at,
+                    u.updated_at as last_updated
+                FROM users u
+                JOIN roles r ON u.requested_role_id = r.id
+                WHERE u.requested_role_id IS NOT NULL
+                ORDER BY u.created_at DESC
+            """
+            )
+            result = connection.execute(query).mappings().all()
+
+            requests = []
+            for row in result:
+                req = dict(row)
+                req["requested_at"] = row["requested_at"].isoformat() if row["requested_at"] else None
+                req["last_updated"] = row["last_updated"].isoformat() if row["last_updated"] else None
+                requests.append(req)
+
+            return requests
+    except Exception as e:
+        logger.error(f"[GET ADMIN ROLE REQUESTS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Could not retrieve role requests.")
+
+
+@router.post("/admin/role-requests/{user_id}/approve")
+async def approve_role_request(user_id: str, admin_note: str = None, admin: dict = Depends(is_system_admin)):
+    """
+    Approve a role request and assign the requested role to the user.
+    """
+    try:
+        with get_engine().begin() as connection:
+            # Get the user's requested role
+            user_query = text(
+                """
+                SELECT id, requested_role_id, name, email
+                FROM users
+                WHERE id = :user_id AND requested_role_id IS NOT NULL
+            """
+            )
+            user = connection.execute(user_query, {"user_id": user_id}).fetchone()
+
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found or no pending role request")
+
+            requested_role_id = user[1]
+            user_name = user[2]
+            user_email = user[3]
+
+            # Assign the requested role to the user
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO user_roles (user_id, role_id)
+                    VALUES (:user_id, :role_id)
+                    ON CONFLICT (user_id, role_id) DO NOTHING
+                """
+                ),
+                {"user_id": user_id, "role_id": requested_role_id},
+            )
+
+            # Clear the pending request
+            connection.execute(
+                text("UPDATE users SET requested_role_id = NULL WHERE id = :user_id"), {"user_id": user_id}
+            )
+
+            # Log the approval
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO audit_logs
+                    (event_type, resource_type, resource_id, details, user_id)
+                    VALUES (:event_type, :resource_type, :resource_id, :details, :user_id)
+                """
+                ),
+                {
+                    "event_type": "role_request.approved",
+                    "resource_type": "user",
+                    "resource_id": user_id,
+                    "details": json.dumps(
+                        {
+                            "requested_role_id": str(requested_role_id),
+                            "admin_note": admin_note,
+                            "approved_by": admin.get("user_id"),
+                        }
+                    ),
+                    "user_id": admin.get("user_id"),
+                },
+            )
+
+            # Get the role name for notification
+            role_name_query = text("SELECT name FROM roles WHERE id = :role_id")
+            role_result = connection.execute(role_name_query, {"role_id": requested_role_id}).fetchone()
+            role_name = role_result[0] if role_result else "Unknown Role"
+
+            # Send notification to user
+            notification_service.send_role_request_approval_notification(
+                user_id=user_id,
+                user_name=user_name,
+                user_email=user_email,
+                role_name=role_name,
+                admin_note=admin_note,
+                approved_by=admin.get("user_id"),
+            )
+
+            return {
+                "message": "Role request approved successfully",
+                "user_id": user_id,
+                "user_name": user_name,
+                "user_email": user_email,
+                "role_id": str(requested_role_id),
+                "notification": "User notified of approval",
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[APPROVE ROLE REQUEST ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Could not approve role request.")
+
+
+@router.post("/admin/role-requests/{user_id}/reject")
+async def reject_role_request(user_id: str, admin_note: str = None, admin: dict = Depends(is_system_admin)):
+    """
+    Reject a role request.
+    """
+    try:
+        with get_engine().begin() as connection:
+            # Get the user's requested role for logging
+            user_query = text(
+                """
+                SELECT id, requested_role_id, name, email, r.name as role_name
+                FROM users u
+                JOIN roles r ON u.requested_role_id = r.id
+                WHERE u.id = :user_id AND u.requested_role_id IS NOT NULL
+            """
+            )
+            user = connection.execute(user_query, {"user_id": user_id}).fetchone()
+
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found or no pending role request")
+
+            user_name = user[2]
+            user_email = user[3]
+            role_name = user[4]
+
+            # Clear the pending request
+            connection.execute(
+                text("UPDATE users SET requested_role_id = NULL WHERE id = :user_id"), {"user_id": user_id}
+            )
+
+            # Log the rejection
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO audit_logs
+                    (event_type, resource_type, resource_id, details, user_id)
+                    VALUES (:event_type, :resource_type, :resource_id, :details, :user_id)
+                """
+                ),
+                {
+                    "event_type": "role_request.rejected",
+                    "resource_type": "user",
+                    "resource_id": user_id,
+                    "details": json.dumps(
+                        {
+                            "requested_role_name": role_name,
+                            "admin_note": admin_note,
+                            "rejected_by": admin.get("user_id"),
+                        }
+                    ),
+                    "user_id": admin.get("user_id"),
+                },
+            )
+
+            # Send notification to user
+            notification_service.send_role_request_rejection_notification(
+                user_id=user_id,
+                user_name=user_name,
+                user_email=user_email,
+                role_name=role_name,
+                admin_note=admin_note,
+                rejected_by=admin.get("user_id"),
+            )
+
+            return {
+                "message": "Role request rejected successfully",
+                "user_id": user_id,
+                "user_name": user_name,
+                "user_email": user_email,
+                "rejected_role": role_name,
+                "notification": "User notified of rejection",
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[REJECT ROLE REQUEST ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Could not reject role request.")
 
 
 @router.get("/admin/template-requests")

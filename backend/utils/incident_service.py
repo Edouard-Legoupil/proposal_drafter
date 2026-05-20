@@ -33,7 +33,7 @@ class IncidentService:
         self.persistence = PersistenceRepository(connection)
         self.crew = IncidentAnalysisCrew()
 
-    def analyze_incident(self, request: IncidentAnalyzeRequest) -> IncidentAnalysisResponse:
+    def analyze_incident(self, request: IncidentAnalyzeRequest, user_id: str = None) -> IncidentAnalysisResponse:
         validate_taxonomy(
             artifact_type=request.artifact_type.value,
             severity=request.severity.value,
@@ -204,6 +204,7 @@ class IncidentService:
                     incident_type=request.incident_type,
                     severity=request.severity.value,
                     analysis_payload=response.model_dump(mode="json"),
+                    created_by=user_id,
                 )
             except Exception:
                 # Don’t fail the API response if persistence is not set up yet

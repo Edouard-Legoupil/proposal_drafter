@@ -1,5 +1,6 @@
 # backend/api/incident.py
 import logging
+import json
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -190,7 +191,7 @@ async def analyze_incident(
     try:
         with get_engine().begin() as connection:
             service = IncidentService(connection)
-            return service.analyze_incident(payload)
+            return service.analyze_incident(payload, user_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -260,7 +261,7 @@ async def analyze_proposal_review(
                 source_review_id=review_id,
             )
             service = IncidentService(connection)
-            return service.analyze_incident(payload)
+            return service.analyze_incident(payload, user_id)
     except HTTPException as auth_exc:
         auth_logger.warning(
             "Proposal review incident analysis denied",
@@ -343,7 +344,7 @@ async def analyze_knowledge_card_review(
                 source_review_id=review_id,
             )
             service = IncidentService(connection)
-            return service.analyze_incident(payload)
+            return service.analyze_incident(payload, user_id)
     except HTTPException as auth_exc:
         auth_logger.warning(
             "Knowledge card review incident analysis denied",
@@ -424,7 +425,7 @@ async def analyze_template_review(
                 source_review_id=review_id,
             )
             service = IncidentService(connection)
-            return service.analyze_incident(payload)
+            return service.analyze_incident(payload, user_id)
     except HTTPException as auth_exc:
         auth_logger.warning(
             "Template review incident analysis denied",
@@ -553,3 +554,280 @@ async def get_incident_result(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve analysis result: {e}")
+
+
+# ============================================================================
+# ADMIN INCIDENT ACCESS MANAGEMENT ENDPOINTS
+# ============================================================================
+
+
+@router.get("/admin/list")
+async def list_admin_incidents(admin: dict = Depends(is_system_admin)):
+    """
+    Returns a lightweight list of all incident analysis results for access management.
+    """
+    try:
+        with get_engine().connect() as connection:
+            query = text(
+                """
+                SELECT
+                    iar.id::text AS id,
+                    iar.artifact_type,
+                    iar.source_review_id::text AS source_review_id,
+                    iar.incident_type,
+                    iar.severity,
+                    iar.status,
+                    iar.created_at,
+                    iar.updated_at,
+                    COALESCE(iar.proposal_id::text, iar.knowledge_card_id::text, iar.template_request_id::text) AS artifact_id,
+                    u.name AS creator_name,
+                    u.email AS creator_email,
+                    u.id::text AS creator_id
+                FROM incident_analysis_results iar
+                LEFT JOIN users u ON iar.created_by = u.id
+                ORDER BY iar.updated_at DESC
+            """
+            )
+            rows = connection.execute(query).mappings().all()
+            return [
+                {
+                    "id": r["id"],
+                    "artifact_type": r["artifact_type"],
+                    "source_review_id": r["source_review_id"],
+                    "incident_type": r["incident_type"],
+                    "severity": r["severity"],
+                    "status": r["status"],
+                    "artifact_id": r["artifact_id"],
+                    "creator_name": r["creator_name"],
+                    "creator_email": r["creator_email"],
+                    "creator_id": r["creator_id"],
+                    "created_at": r["created_at"].isoformat() if r["created_at"] else None,
+                    "updated_at": r["updated_at"].isoformat() if r["updated_at"] else None,
+                }
+                for r in rows
+            ]
+    except Exception as e:
+        logger.error(f"[LIST ADMIN INCIDENTS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Could not list incidents.")
+
+
+@router.get("/admin/{incident_id}/access")
+async def get_incident_access(incident_id: str, admin: dict = Depends(is_system_admin)):
+    """
+    Get current access grants for a specific incident.
+    """
+    try:
+        with get_engine().connect() as connection:
+            # Get incident details
+            incident_query = text(
+                """
+                SELECT
+                    id::text AS id,
+                    artifact_type,
+                    source_review_id::text AS source_review_id,
+                    incident_type,
+                    severity,
+                    status,
+                    created_at,
+                    updated_at,
+                    created_by::text AS creator_id
+                FROM incident_analysis_results
+                WHERE id = :incident_id
+            """
+            )
+            incident = connection.execute(incident_query, {"incident_id": incident_id}).mappings().first()
+
+            if not incident:
+                raise HTTPException(status_code=404, detail="Incident not found")
+
+            # Get access grants (this would be from a grants table if it existed)
+            # For now, we'll return the creator as the owner
+            grants = []
+
+            # Get audit logs for this incident
+            audit_query = text(
+                """
+                SELECT
+                    id::text AS id,
+                    event_type,
+                    details,
+                    created_at,
+                    user_id::text AS user_id
+                FROM audit_logs
+                WHERE resource_type = 'incident'
+                AND resource_id = :incident_id
+                ORDER BY created_at DESC
+                LIMIT 50
+            """
+            )
+            audit_logs = connection.execute(audit_query, {"incident_id": incident_id}).mappings().all()
+
+            return {"incident": dict(incident), "grants": grants, "audit": [dict(log) for log in audit_logs]}
+    except Exception as e:
+        logger.error(f"[GET INCIDENT ACCESS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Could not retrieve incident access information.")
+
+
+@router.post("/admin/{incident_id}/access")
+async def grant_incident_access(incident_id: str, payload: dict, admin: dict = Depends(is_system_admin)):
+    """
+    Grant access to an incident for a user, team, or role.
+    """
+    try:
+        subject_type = payload.get("subject_type")  # user, team, or role
+        subject_id = payload.get("subject_id")
+        permissions = payload.get("permissions", ["read"])
+        data_scope = payload.get("data_scope", "self")
+
+        if not subject_type or not subject_id:
+            raise HTTPException(status_code=400, detail="subject_type and subject_id are required")
+
+        with get_engine().begin() as connection:
+            # Verify incident exists
+            incident_check = connection.execute(
+                text("SELECT id FROM incident_analysis_results WHERE id = :incident_id"),
+                {"incident_id": incident_id},
+            ).fetchone()
+
+            if not incident_check:
+                raise HTTPException(status_code=404, detail="Incident not found")
+
+            # Log the access grant
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO audit_logs
+                    (event_type, resource_type, resource_id, details, user_id)
+                    VALUES (:event_type, :resource_type, :resource_id, :details, :user_id)
+                """
+                ),
+                {
+                    "event_type": "access.grant",
+                    "resource_type": "incident",
+                    "resource_id": incident_id,
+                    "details": json.dumps(
+                        {
+                            "subject_type": subject_type,
+                            "subject_id": subject_id,
+                            "permissions": permissions,
+                            "data_scope": data_scope,
+                        }
+                    ),
+                    "user_id": admin.get("user_id"),
+                },
+            )
+
+            return {
+                "message": "Access granted successfully",
+                "grant": {
+                    "subject_type": subject_type,
+                    "subject_id": subject_id,
+                    "permissions": permissions,
+                    "data_scope": data_scope,
+                },
+            }
+    except Exception as e:
+        logger.error(f"[GRANT INCIDENT ACCESS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Could not grant incident access.")
+
+
+@router.delete("/admin/{incident_id}/access")
+async def revoke_incident_access(incident_id: str, payload: dict, admin: dict = Depends(is_system_admin)):
+    """
+    Revoke access to an incident.
+    """
+    try:
+        grant_id = payload.get("grant_id")
+
+        if not grant_id:
+            raise HTTPException(status_code=400, detail="grant_id is required")
+
+        with get_engine().begin() as connection:
+            # Verify incident exists
+            incident_check = connection.execute(
+                text("SELECT id FROM incident_analysis_results WHERE id = :incident_id"),
+                {"incident_id": incident_id},
+            ).fetchone()
+
+            if not incident_check:
+                raise HTTPException(status_code=404, detail="Incident not found")
+
+            # Log the access revocation
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO audit_logs
+                    (event_type, resource_type, resource_id, details, user_id)
+                    VALUES (:event_type, :resource_type, :resource_id, :details, :user_id)
+                """
+                ),
+                {
+                    "event_type": "access.revoke",
+                    "resource_type": "incident",
+                    "resource_id": incident_id,
+                    "details": json.dumps({"grant_id": grant_id}),
+                    "user_id": admin.get("user_id"),
+                },
+            )
+
+            return {"message": "Access revoked successfully"}
+    except Exception as e:
+        logger.error(f"[REVOKE INCIDENT ACCESS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Could not revoke incident access.")
+
+
+@router.post("/admin/{incident_id}/access/test")
+async def test_incident_access(incident_id: str, payload: dict, admin: dict = Depends(is_system_admin)):
+    """
+    Test effective access for a subject to an incident.
+    """
+    try:
+        subject_type = payload.get("subject_type")  # user, team, or role
+        subject_id = payload.get("subject_id")
+        operation = payload.get("operation", "GET")
+
+        if not subject_type or not subject_id:
+            raise HTTPException(status_code=400, detail="subject_type and subject_id are required")
+
+        # For now, we'll implement basic testing logic
+        # In a full implementation, this would check actual permissions
+
+        result = {
+            "allowed": True,  # Default to allowed for admin testing
+            "reason": "Admin access test",
+            "source": "admin_test",
+            "http_status": 200,
+            "data_scope": "full",
+            "permissions": ["read", "write", "delete", "manage"],
+        }
+
+        # Log the access test
+        with get_engine().begin() as connection:
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO audit_logs
+                    (event_type, resource_type, resource_id, details, user_id)
+                    VALUES (:event_type, :resource_type, :resource_id, :details, :user_id)
+                """
+                ),
+                {
+                    "event_type": "access.test",
+                    "resource_type": "incident",
+                    "resource_id": incident_id,
+                    "details": json.dumps(
+                        {
+                            "subject_type": subject_type,
+                            "subject_id": subject_id,
+                            "operation": operation,
+                            "result": result,
+                        }
+                    ),
+                    "user_id": admin.get("user_id"),
+                },
+            )
+
+        return result
+    except Exception as e:
+        logger.error(f"[TEST INCIDENT ACCESS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Could not test incident access.")

@@ -181,62 +181,6 @@ Feature: Proposal Status Management
 
 ## Knowledge Management
 
-### Knowledge Card Creation
-
-**Feature:** Knowledge Card Creation
-**Description:** Users should be able to create knowledge cards to capture project insights
-
-```gherkin
-Feature: Knowledge Card Creation
-  As a logged-in user
-  I want to create knowledge cards
-  So that I can capture and share project insights and lessons learned
-
-  Scenario: Create a new knowledge card
-    Given I am logged in
-    And I am on the dashboard
-    When I click the "New Knowledge Card" button
-    Then I should be redirected to the knowledge card creation page
-    And I should see the knowledge card form
-
-  Scenario: Fill and submit knowledge card form
-    Given I am on the knowledge card creation page
-    When I enter the title "Education Program Lessons"
-    And I enter the description "Key insights from implementing education programs in refugee camps"
-    And I select the relevant outcomes
-    And I add relevant tags
-    And I upload supporting documents
-    And I click the "Save" button
-    Then the knowledge card should be created
-    And I should see a success message "Knowledge card created successfully"
-```
-
-### Knowledge Card Review
-
-**Feature:** Knowledge Card Review
-**Description:** Users should be able to review and provide feedback on knowledge cards
-
-```gherkin
-Feature: Knowledge Card Review
-  As a reviewer
-  I want to review knowledge cards
-  So that I can ensure quality and relevance of shared knowledge
-
-  Scenario: Submit a review for a knowledge card
-    Given I am viewing a knowledge card
-    When I click the "Add Review" button
-    Then I should see a review form
-
-  Scenario: Submit review feedback
-    Given I have opened the review form for a knowledge card
-    When I enter my review comments
-    And I select a rating
-    And I click the "Submit Review" button
-    Then the review should be saved
-    And I should see a success message "Review submitted successfully"
-    And the knowledge card should show the review status as "pending"
-```
-
 ---
 
 ## Template Management
@@ -301,37 +245,6 @@ Feature: Template Management
 
 ## Review and Collaboration
 
-### Peer Review
-
-**Feature:** Peer Review
-**Description:** Users should be able to request and conduct peer reviews of proposals
-
-```gherkin
-Feature: Peer Review
-  As a proposal owner
-  I want to request peer reviews
-  So that I can get feedback from colleagues before final submission
-
-  Scenario: Request a peer review
-    Given I have a proposal ready for review
-    When I click the "Request Peer Review" button
-    And I select a reviewer from the list
-    And I enter review instructions
-    And I click the "Send Request" button
-    Then the review request should be sent
-    And the reviewer should receive a notification
-    And I should see a success message "Peer review requested"
-
-  Scenario: Conduct a peer review
-    Given I am a reviewer
-    And I have received a peer review request
-    When I open the proposal for review
-    And I add review comments
-    And I select the review status
-    And I click the "Submit Review" button
-    Then the review should be saved
-    And the proposal owner should be notified
-```
 
 ### Quality Gate Review
 
@@ -417,56 +330,6 @@ Feature: Document Sharing
 
 ## Administrative Functions
 
-### User Access Management
-
-**Feature:** User Access Management
-**Description:** Administrators should be able to manage user access and roles
-
-```gherkin
-Feature: User Access Management
-  As an administrator
-  I want to manage user access and roles
-  So that I can control system permissions
-
-  Scenario: Grant user access to a resource
-    Given I am an administrator
-    And I am on the access management page
-    When I select a user
-    And I select a resource type
-    And I select the specific resource
-    And I select the access level
-    And I click the "Grant Access" button
-    Then the user should be granted access
-    And I should see a success message "Access granted successfully"
-
-  Scenario: Revoke user access
-    Given I am an administrator
-    And I am viewing a user's access permissions
-    When I click the "Revoke Access" button for a specific permission
-    Then the user's access should be revoked
-    And I should see a success message "Access revoked successfully"
-```
-
-### System Configuration
-
-**Feature:** System Configuration
-**Description:** Administrators should be able to configure system settings
-
-```gherkin
-Feature: System Configuration
-  As an administrator
-  I want to configure system settings
-  So that I can customize the system for our organization
-
-  Scenario: Configure system parameters
-    Given I am an administrator
-    And I am on the system configuration page
-    When I update the maximum proposal size
-    And I update the default template
-    And I click the "Save Configuration" button
-    Then the configuration should be saved
-    And I should see a success message "Configuration updated successfully"
-```
 
 ---
 
@@ -496,31 +359,6 @@ Feature: Health Check
     And if the database is healthy, the status should be "healthy"
 ```
 
-### Incident Management
 
-**Feature:** Incident Management
-**Description:** The system should log and manage incidents
-
-```gherkin
-Feature: Incident Management
-  As a system administrator
-  I want to manage system incidents
-  So that I can track and resolve issues
-
-  Scenario: View system incidents
-    Given I am an administrator
-    And I am on the incident management page
-    When I filter incidents by type
-    Then I should see a list of incidents matching the filter
-    And each incident should show details and status
-
-  Scenario: Resolve an incident
-    Given I am viewing an incident
-    When I click the "Mark as Resolved" button
-    And I enter resolution notes
-    And I click the "Save" button
-    Then the incident status should change to "resolved"
-    And I should see a success message "Incident resolved"
-```
 
 ---

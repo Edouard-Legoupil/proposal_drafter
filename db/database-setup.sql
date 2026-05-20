@@ -1109,6 +1109,7 @@ CREATE TABLE IF NOT EXISTS incident_analysis_results (
     severity TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'analyzed',
     analysis_payload JSONB NOT NULL,
+    created_by UUID NULL REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (artifact_type, source_review_id)

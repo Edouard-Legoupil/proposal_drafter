@@ -17,8 +17,29 @@ export default function UserAccessPanel({ resourceId }) {
   const [bulkAction, setBulkAction] = useState('')
   const [bulkValue, setBulkValue] = useState(null)
   const [bulkLoading, setBulkLoading] = useState(false)
+  const [roleRequests, setRoleRequests] = useState([])
+  const [showRoleRequestModal, setShowRoleRequestModal] = useState(false)
+  const [selectedRequest, setSelectedRequest] = useState(null)
+  const [approvalNote, setApprovalNote] = useState('')
+  const [processingRequest, setProcessingRequest] = useState(false)
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => {
+    fetchData()
+    fetchRoleRequests()
+  }, [])
+
+  const fetchRoleRequests = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/role-requests`, {
+        credentials: 'include'
+      })
+      if (res.ok) {
+        setRoleRequests(await res.json())
+      }
+    } catch (err) {
+      console.error('Failed to fetch role requests:', err)
+    }
+  }
 
   const fetchData = async () => {
     setLoading(true)
@@ -137,6 +158,78 @@ export default function UserAccessPanel({ resourceId }) {
     a.setAttribute("href", dataStr)
     a.setAttribute("download", `${request.name.replace(/\s+/g, '_')}_template.json`)
     document.body.appendChild(a); a.click(); a.remove()
+  }
+
+  const handleApproveRoleRequest = async () => {
+    if (!selectedRequest || processingRequest) return
+
+    setProcessingRequest(true)
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/role-requests/${selectedRequest.user_id}/approve?admin_note=${encodeURIComponent(approvalNote)}`, {
+        method: 'POST',
+        credentials: 'include'
+      })
+
+      if (res.ok) {
+        const result = await res.json()
+        // Update the user in the list to remove the pending request
+        setUsers(users.map(u =>
+          u.id === selectedRequest.user_id
+            ? { ...u, requested_role_id: null, requested_role_name: null }
+            : u
+        ))
+        // Remove from role requests
+        setRoleRequests(roleRequests.filter(r => r.user_id !== selectedRequest.user_id))
+        setShowRoleRequestModal(false)
+        setApprovalNote('')
+        // Show success message
+        alert(`Role request approved for ${result.user_name}`)
+      } else {
+        const errorData = await res.json()
+        alert(`Failed to approve role request: ${errorData.detail || 'Unknown error'}`)
+      }
+    } catch (err) {
+      console.error('Error approving role request:', err)
+      alert('Error approving role request')
+    } finally {
+      setProcessingRequest(false)
+    }
+  }
+
+  const handleRejectRoleRequest = async () => {
+    if (!selectedRequest || processingRequest) return
+
+    setProcessingRequest(true)
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/role-requests/${selectedRequest.user_id}/reject?admin_note=${encodeURIComponent(approvalNote)}`, {
+        method: 'POST',
+        credentials: 'include'
+      })
+
+      if (res.ok) {
+        const result = await res.json()
+        // Update the user in the list to remove the pending request
+        setUsers(users.map(u =>
+          u.id === selectedRequest.user_id
+            ? { ...u, requested_role_id: null, requested_role_name: null }
+            : u
+        ))
+        // Remove from role requests
+        setRoleRequests(roleRequests.filter(r => r.user_id !== selectedRequest.user_id))
+        setShowRoleRequestModal(false)
+        setApprovalNote('')
+        // Show success message
+        alert(`Role request rejected for ${result.user_name}`)
+      } else {
+        const errorData = await res.json()
+        alert(`Failed to reject role request: ${errorData.detail || 'Unknown error'}`)
+      }
+    } catch (err) {
+      console.error('Error rejecting role request:', err)
+      alert('Error rejecting role request')
+    } finally {
+      setProcessingRequest(false)
+    }
   }
 
   // Bulk actions
@@ -375,6 +468,47 @@ export default function UserAccessPanel({ resourceId }) {
           </div>
         )}
 
+        {roleRequests.length > 0 && (
+          <div className="admin-section">
+            <h3><i className="fa-solid fa-user-shield"></i> Pending Role Requests</h3>
+            <div className="users-table-container">
+              <table className="users-table">
+                <thead>
+                  <tr>
+                    <th>User</th><th>Requested Role</th><th>Requested</th><th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {roleRequests.map(req => (
+                    <tr key={req.user_id} className="row-highlight">
+                      <td>
+                        <div className="user-info">
+                          <span className="user-name">{req.user_name}</span>
+                          <span className="user-email">{req.user_email}</span>
+                        </div>
+                      </td>
+                      <td><span className="role-badge">{req.requested_role_name}</span></td>
+                      <td>{req.requested_at ? new Date(req.requested_at).toLocaleDateString() : '—'}</td>
+                      <td>
+                        <button
+                          className="primary-button small"
+                          onClick={() => {
+                            setSelectedRequest(req)
+                            setShowRoleRequestModal(true)
+                          }}
+                          disabled={processingRequest}
+                        >
+                          <i className="fa-solid fa-check"></i> Review
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {options.template_requests.length > 0 && (
           <div className="admin-section">
             <h3><i className="fa-solid fa-file-lines"></i> Donor Template Requests</h3>
@@ -410,6 +544,75 @@ export default function UserAccessPanel({ resourceId }) {
           </div>
         )}
       </div>
+
+      {/* Role Request Approval Modal */}
+      {showRoleRequestModal && selectedRequest && (
+        <div className="modal-overlay">
+          <div className="modal role-request-modal">
+            <button
+              className="modal-close"
+              onClick={() => {
+                setShowRoleRequestModal(false)
+                setApprovalNote('')
+              }}
+            >
+              <i className="fa-solid fa-times"></i>
+            </button>
+
+            <h3><i className="fa-solid fa-user-shield"></i> Role Request Review</h3>
+
+            <div className="modal-body">
+              <div className="request-info">
+                <div className="info-row">
+                  <strong>User:</strong> {selectedRequest.user_name}
+                </div>
+                <div className="info-row">
+                  <strong>Email:</strong> {selectedRequest.user_email}
+                </div>
+                <div className="info-row">
+                  <strong>Requested Role:</strong> <span className="role-badge">{selectedRequest.requested_role_name}</span>
+                </div>
+                <div className="info-row">
+                  <strong>Requested On:</strong> {selectedRequest.requested_at ? new Date(selectedRequest.requested_at).toLocaleString() : '—'}
+                </div>
+              </div>
+
+              <div className="admin-note-section">
+                <label>Admin Note (optional):</label>
+                <textarea
+                  value={approvalNote}
+                  onChange={e => setApprovalNote(e.target.value)}
+                  placeholder="Add a note for audit purposes..."
+                  rows={3}
+                />
+              </div>
+
+              <div className="modal-actions">
+                <button
+                  className="ghost-button"
+                  onClick={handleRejectRoleRequest}
+                  disabled={processingRequest}
+                >
+                  <i className="fa-solid fa-times-circle"></i> Reject Request
+                </button>
+                <button
+                  className="primary-button"
+                  onClick={handleApproveRoleRequest}
+                  disabled={processingRequest}
+                >
+                  <i className="fa-solid fa-check-circle"></i> Approve Request
+                </button>
+              </div>
+
+              {processingRequest && (
+                <div className="processing-indicator">
+                  <i className="fa-solid fa-spinner fa-spin"></i> Processing...
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

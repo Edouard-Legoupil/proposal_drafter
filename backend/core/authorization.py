@@ -944,3 +944,227 @@ async def check_template_access(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",
         )
+
+
+async def check_incident_access(
+    incident_id: str, current_user: CurrentUser, required_permission: str = "read"
+) -> Dict[str, Any]:
+    """
+    Check access to an incident analysis result.
+
+    Args:
+        incident_id: ID of the incident to check
+        current_user: Current user dictionary from get_current_user
+        required_permission: Required permission level ('read', 'write', 'delete', 'manage')
+
+    Returns:
+        The incident data as a dictionary
+
+    Raises:
+        HTTPException(404): If incident doesn't exist
+        HTTPException(403): If user doesn't have access
+    """
+    user_id = get_user_id(current_user)
+    logger = logging.getLogger("security.authorization")
+
+    # Log the access attempt
+    logger.info(
+        "Incident access attempt",
+        extra={
+            "user_id": user_id,
+            "incident_id": incident_id,
+            "required_permission": required_permission,
+            "action": "incident_access_check",
+        },
+    )
+
+    # Admin bypass
+    if is_admin(current_user):
+        try:
+            with get_db_connection() as connection:
+                result = connection.execute(
+                    text("SELECT * FROM incident_analysis_results WHERE id = :id"),
+                    {"id": incident_id},
+                )
+                incident = result.fetchone()
+                if incident is None:
+                    logger.warning(
+                        "Incident not found",
+                        extra={
+                            "user_id": user_id,
+                            "incident_id": incident_id,
+                            "action": "incident_access_check",
+                            "result": "not_found",
+                        },
+                    )
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail="Incident not found",
+                    )
+
+                logger.info(
+                    "Incident access authorized - admin",
+                    extra={
+                        "user_id": user_id,
+                        "incident_id": incident_id,
+                        "action": "incident_access_check",
+                        "result": "allowed",
+                        "reason": "admin_access",
+                    },
+                )
+                return dict(incident)
+        except Exception as e:
+            logger.error(f"Database error in check_incident_access (admin): {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            )
+
+    # Check if user is the creator of the incident
+    try:
+        with get_db_connection() as connection:
+            result = connection.execute(
+                text(
+                    """
+                    SELECT
+                        id, artifact_type, source_review_id, created_by,
+                        proposal_id, knowledge_card_id, template_request_id
+                    FROM incident_analysis_results
+                    WHERE id = :id
+                """
+                ),
+                {"id": incident_id},
+            )
+            incident = result.fetchone()
+
+            if incident is None:
+                logger.warning(
+                    "Incident not found",
+                    extra={
+                        "user_id": user_id,
+                        "incident_id": incident_id,
+                        "action": "incident_access_check",
+                        "result": "not_found",
+                    },
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Incident not found",
+                )
+
+            incident_data = {
+                "id": str(incident[0]),
+                "artifact_type": incident[1],
+                "source_review_id": str(incident[2]),
+                "created_by": str(incident[3]),
+                "proposal_id": str(incident[4]) if incident[4] else None,
+                "knowledge_card_id": str(incident[5]) if incident[5] else None,
+                "template_request_id": str(incident[6]) if incident[6] else None,
+            }
+
+            # Check if current user is the creator
+            if incident_data["created_by"] == user_id:
+                logger.info(
+                    "Incident access authorized - creator",
+                    extra={
+                        "user_id": user_id,
+                        "incident_id": incident_id,
+                        "action": "incident_access_check",
+                        "result": "allowed",
+                        "reason": "creator_access",
+                    },
+                )
+                return incident_data
+
+            # Check access based on the associated artifact
+            # If the incident is related to a proposal, knowledge card, or template,
+            # check if the user has access to that artifact
+            artifact_id = None
+            artifact_type = incident_data["artifact_type"]
+
+            if artifact_type == "proposal" and incident_data["proposal_id"]:
+                artifact_id = int(incident_data["proposal_id"])
+                try:
+                    await check_proposal_access(artifact_id, current_user)
+                    logger.info(
+                        "Incident access authorized - proposal access",
+                        extra={
+                            "user_id": user_id,
+                            "incident_id": incident_id,
+                            "proposal_id": artifact_id,
+                            "action": "incident_access_check",
+                            "result": "allowed",
+                            "reason": "proposal_access",
+                        },
+                    )
+                    return incident_data
+                except HTTPException:
+                    # User doesn't have access to the proposal, continue to next check
+                    pass
+
+            elif artifact_type == "knowledge_card" and incident_data["knowledge_card_id"]:
+                artifact_id = int(incident_data["knowledge_card_id"])
+                try:
+                    await check_knowledge_card_access(artifact_id, current_user)
+                    logger.info(
+                        "Incident access authorized - knowledge card access",
+                        extra={
+                            "user_id": user_id,
+                            "incident_id": incident_id,
+                            "knowledge_card_id": artifact_id,
+                            "action": "incident_access_check",
+                            "result": "allowed",
+                            "reason": "knowledge_card_access",
+                        },
+                    )
+                    return incident_data
+                except HTTPException:
+                    # User doesn't have access to the knowledge card, continue to next check
+                    pass
+
+            elif artifact_type == "template" and incident_data["template_request_id"]:
+                artifact_id = int(incident_data["template_request_id"])
+                try:
+                    await check_template_access(artifact_id, current_user, required_permission)
+                    logger.info(
+                        "Incident access authorized - template access",
+                        extra={
+                            "user_id": user_id,
+                            "incident_id": incident_id,
+                            "template_request_id": artifact_id,
+                            "action": "incident_access_check",
+                            "result": "allowed",
+                            "reason": "template_access",
+                        },
+                    )
+                    return incident_data
+                except HTTPException:
+                    # User doesn't have access to the template, continue to next check
+                    pass
+
+            # No access granted through any path
+            logger.warning(
+                "Unauthorized incident access attempt",
+                extra={
+                    "user_id": user_id,
+                    "incident_id": incident_id,
+                    "required_permission": required_permission,
+                    "artifact_type": artifact_type,
+                    "artifact_id": artifact_id,
+                    "action": "incident_access_check",
+                    "result": "denied",
+                    "reason": "no_access_to_artifact",
+                },
+            )
+
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: you do not have permission to access this incident",
+            )
+
+    except Exception as e:
+        logger.error(f"Database error in check_incident_access: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        )

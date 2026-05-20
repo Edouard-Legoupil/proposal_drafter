@@ -128,7 +128,12 @@ export function useAdminResourceList(resourceType) {
       setLoading(true)
       setError('')
       try {
-        const res = await fetch(`${API_BASE_URL}/admin/${resourceType}/list`, {
+        // Special handling for incidents which use a different endpoint
+        const endpoint = resourceType === 'incidents'
+          ? `${API_BASE_URL}/incidents/admin/list`
+          : `${API_BASE_URL}/admin/${resourceType}/list`
+
+        const res = await fetch(endpoint, {
           credentials: 'include'
         })
         if (!res.ok) throw new Error(`Failed to load ${resourceType} list (${res.status})`)

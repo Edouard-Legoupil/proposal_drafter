@@ -8,6 +8,7 @@ import TemplateAccessPanel from './resources/TemplateAccessPanel'
 import MetricsAccessPanel from './resources/MetricsAccessPanel'
 import QualityGateAccessPanel from './resources/QualityGateAccessPanel'
 import TeamsRolesPanel from './resources/TeamsRolesPanel'
+import IncidentAccessPanel from './resources/IncidentAccessPanel'
 import Base from '../../components/Base/Base'
 
 const resourcePanels = {
@@ -17,7 +18,8 @@ const resourcePanels = {
   templates: TemplateAccessPanel,
   metrics: MetricsAccessPanel,
   'quality-gate': QualityGateAccessPanel,
-  'teams-roles': TeamsRolesPanel
+  'teams-roles': TeamsRolesPanel,
+  incidents: IncidentAccessPanel
 }
 
 const navItems = [
@@ -27,7 +29,8 @@ const navItems = [
   { key: 'knowledge-cards', label: 'Knowledge Cards' },
   { key: 'templates', label: 'Templates' },
   { key: 'metrics', label: 'Metrics Dashboard' },
-  { key: 'quality-gate', label: 'Quality Gate' }
+  { key: 'quality-gate', label: 'Quality Gate' },
+  { key: 'incidents', label: 'Incidents' }
 ]
 
 export default function AccessManagement() {
