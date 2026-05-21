@@ -700,7 +700,7 @@ async def check_proposal_access(proposal_id: int, current_user: CurrentUser, db_
     try:
         with get_db_connection() as connection:
             result = connection.execute(
-                text("SELECT id, owner_id, team_id, donor_group_id FROM proposals WHERE id = :id"),
+                text("SELECT id, user_id FROM proposals WHERE id = :id"),
                 {"id": proposal_id},
             )
             proposal = result.fetchone()
@@ -711,8 +711,8 @@ async def check_proposal_access(proposal_id: int, current_user: CurrentUser, db_
             proposal_data = {
                 "id": proposal[0],
                 "owner_id": str(proposal[1]),
-                "team_id": proposal[2],
-                "donor_group_id": proposal[3],
+                "team_id": None,  # Proposals don't have direct team_id in current schema
+                "donor_group_id": None,  # Proposals don't have direct donor_group_id in current schema
             }
 
             # Check ownership
