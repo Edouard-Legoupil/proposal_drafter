@@ -387,7 +387,7 @@ async def login(request: Request):
                 logging.warning(f"Login attempt failed for non-existent user: {identifier}")
                 return JSONResponse(status_code=404, content={"error": "User does not exist!"})
 
-            user_id, email, _, stored_password = user
+            user_id, email, _, stored_password = user_data
         except SQLAlchemyError as db_error:
             logging.error(f"Database error during login for identifier '{identifier}': {db_error}")
             return JSONResponse(
@@ -405,7 +405,7 @@ async def login(request: Request):
             logging.warning(f"Login attempt failed for non-existent user: {identifier}")
             return JSONResponse(status_code=404, content={"error": "User does not exist!"})
 
-        user_id, email, _, stored_password = user
+        user_id, email, _, stored_password = user_data
         if not check_password_hash(stored_password, password):
             logging.warning(f"Login attempt failed with invalid password for user ID: {user_id}")
             return JSONResponse(status_code=401, content={"error": "Invalid password!"})
