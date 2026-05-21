@@ -174,31 +174,19 @@ class ProposalCrew:
     @task
     def content_generation_task(self) -> Task:
         task_config = self.tasks_config["content_generation_task"]
-        return Task(
-            description=task_config.get("description", "Generate content for proposal section"),
-            expected_output=task_config.get("expected_output", "Generated content for the section"),
-            **task_config,
-        )
+        return Task(**task_config)
 
     # Task: Evaluate generated content
     @task
     def evaluation_task(self) -> Task:
         task_config = self.tasks_config["evaluation_task"]
-        return Task(
-            description=task_config.get("description", "Evaluate generated content"),
-            expected_output=task_config.get("expected_output", "Evaluation of the generated content"),
-            **task_config,
-        )
+        return Task(**task_config)
 
     # Task: Regenerate content with concise input
     @task
     def regeneration_task(self) -> Task:  # ✅ New task for regeneration
         task_config = self.tasks_config["regeneration_task"]
-        return Task(
-            description=task_config.get("description", "Regenerate content with concise input"),
-            expected_output=task_config.get("expected_output", "Regenerated content for the section"),
-            **task_config,
-        )
+        return Task(**task_config)
 
     ## Crew orchestration ####
     @crew

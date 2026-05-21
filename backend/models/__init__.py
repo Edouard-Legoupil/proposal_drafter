@@ -24,6 +24,12 @@ Available models:
 - TemplateComment: Template comment model
 """
 
+# Central declarative base for all models to share the same registry
+# This fixes cross-model relationship resolution issues
+from sqlalchemy.orm import declarative_base
+
+Base = declarative_base()  # type: ignore[valid-type]
+
 from backend.models.user import User
 from backend.models.proposal import Proposal
 from backend.models.knowledge_card import KnowledgeCard

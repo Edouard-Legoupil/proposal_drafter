@@ -7,11 +7,12 @@ Defines the Template model for the Proposal Drafter system.
 from typing import Any, List, Optional
 from enum import Enum as PyEnum
 from sqlalchemy import Column, String, Text, Boolean, DateTime, func
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 
-# Type alias for mypy - this is the proper way to handle SQLAlchemy declarative base
-Base = declarative_base()  # type: ignore[valid-type]
+# Import shared base from models package to ensure all models share the same registry
+# This fixes cross-model relationship resolution issues
+from backend.models import Base  # type: ignore[valid-type]
 
 
 # Enums for template types and statuses

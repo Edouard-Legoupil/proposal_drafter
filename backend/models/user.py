@@ -9,16 +9,16 @@ methods to check permissions, ownership, team membership, and donor group member
 import logging
 from typing import List, Optional, TYPE_CHECKING
 from sqlalchemy import Column, String, Text, Boolean, DateTime, Integer, func
-from sqlalchemy.orm import declarative_base, relationship, Session
+from sqlalchemy.orm import relationship, Session
 from sqlalchemy import text
 
 # Local imports for type hints (avoid circular imports)
 if TYPE_CHECKING:
     pass
 
-# Use the same base - will be properly configured at runtime
-# Type alias for mypy - this is the proper way to handle SQLAlchemy declarative base
-Base = declarative_base()  # type: ignore[valid-type]
+# Import shared base from models package to ensure all models share the same registry
+# This fixes cross-model relationship resolution issues
+from backend.models import Base  # type: ignore[valid-type]
 
 # Configure logger for authorization
 logger = logging.getLogger("security.authorization")

@@ -5,12 +5,11 @@ Defines the Role and UserRole models for role-based access control.
 """
 
 from sqlalchemy import Column, Integer, String, ForeignKey
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.orm import relationship
 
-# Use the same base as other models
-# This will be set in each model file to avoid circular imports
-# Type alias for mypy - this is the proper way to handle SQLAlchemy declarative base
-Base = declarative_base()  # type: ignore[valid-type]
+# Import shared base from models package to ensure all models share the same registry
+# This fixes cross-model relationship resolution issues
+from backend.models import Base  # type: ignore[valid-type]
 
 
 class Role(Base):  # type: ignore[valid-type, misc]

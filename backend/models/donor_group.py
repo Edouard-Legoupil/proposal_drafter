@@ -5,10 +5,11 @@ Defines the DonorGroupMember model for donor group-based access control.
 """
 
 from sqlalchemy import Column, String
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import relationship
 
-# Type alias for mypy - this is the proper way to handle SQLAlchemy declarative base
-Base = declarative_base()  # type: ignore[valid-type]
+# Import shared base from models package to ensure all models share the same registry
+# This fixes cross-model relationship resolution issues
+from backend.models import Base  # type: ignore[valid-type]
 
 
 class DonorGroupMember(Base):  # type: ignore[valid-type, misc]
