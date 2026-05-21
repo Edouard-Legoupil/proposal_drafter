@@ -397,6 +397,341 @@ class AuditLogger:
         log_entry = json.dumps(event.to_dict())
         self._write_log(log_entry)
 
+    def log_comprehensive_security_event(
+        self,
+        event_type: str,
+        user_id: Optional[str],
+        success: bool,
+        ip_address: Optional[str] = None,
+        user_agent: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        request: Optional[Request] = None,
+    ):
+        """
+        Enhanced security event logging with comprehensive context.
+
+        This method provides detailed security logging for ISO 27001 compliance.
+
+        Args:
+            event_type: Type of security event (e.g., 'login', 'authorization', 'data_access')
+            user_id: User ID associated with the event
+            success: Whether the event was successful
+            ip_address: IP address of the requester
+            user_agent: User agent string
+            metadata: Additional event data
+            request: Optional FastAPI request object for additional context
+        """
+        if metadata is None:
+            metadata = {}
+
+        # Add request context if available
+        if request:
+            metadata.update(
+                {
+                    "request_path": str(request.url.path),
+                    "request_method": request.method,
+                    "query_params": dict(request.query_params),
+                    "headers": self._get_safe_headers(request.headers),
+                }
+            )
+
+        # Add ISO 27001 compliance tags
+        compliance_tags = ["ISO27001:A.12.4.1", "ISO27001:A.12.4.2"]
+
+        if "login" in event_type.lower():
+            compliance_tags.extend(["ISO27001:A.9.4.2", "ISO27001:A.9.4.3"])
+        elif "authorization" in event_type.lower():
+            compliance_tags.extend(["ISO27001:A.9.1.2", "ISO27001:A.9.2.3"])
+        elif "data" in event_type.lower():
+            compliance_tags.extend(["ISO27001:A.12.1.2", "ISO27001:A.12.5.1"])
+
+        metadata["compliance_tags"] = compliance_tags
+        metadata["success"] = success
+
+        # Determine severity level
+        severity = "high" if not success else "medium"
+        if "brute_force" in metadata.get("threat_type", ""):
+            severity = "critical"
+
+        event = AuditEvent(
+            event_type=f"security.{event_type}",
+            user_id=user_id,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            metadata=metadata,
+            level="ERROR" if severity == "high" else "INFO",
+        )
+
+        with self.lock:
+            self.log_events.append(event)
+            self.security_events.append(event)
+
+            # Check for brute force patterns
+            if not success and "login" in event_type.lower():
+                self._check_brute_force_pattern(user_id, ip_address)
+
+        log_entry = json.dumps(event.to_dict())
+        self._write_log(log_entry)
+
+    def _check_brute_force_pattern(self, user_id: Optional[str], ip_address: Optional[str]):
+        """Check for brute force attack patterns."""
+        if not user_id and not ip_address:
+            return
+
+        # Simple brute force detection (enhanced version would use time windows)
+        recent_failures = []
+
+        for event in reversed(self.security_events[-10:]):  # Check last 10 events
+            if (
+                event.user_id == user_id
+                or (ip_address and event.metadata.get("ip_address") == ip_address)
+                and event.event_type == "security.login"
+                and not event.metadata.get("success", True)
+            ):
+                recent_failures.append(event)
+
+        if len(recent_failures) >= 3:
+            # Trigger brute force alert
+            self._trigger_security_alert(
+                "brute_force_detected",
+                f"Potential brute force attack detected for user {user_id} from IP {ip_address}",
+                {"failed_attempts": len(recent_failures), "user_id": user_id, "ip_address": ip_address},
+            )
+
+    def _trigger_security_alert(self, alert_type: str, message: str, context: Dict[str, Any]):
+        """Trigger a security alert for immediate attention."""
+        alert_event = AuditEvent(
+            event_type=f"security.alert.{alert_type}",
+            user_id="system",
+            metadata={
+                "message": message,
+                "context": context,
+                "compliance_tags": ["ISO27001:A.16.1.2", "ISO27001:A.16.1.5"],
+                "alert_severity": "critical",
+            },
+            level="CRITICAL",
+        )
+
+        with self.lock:
+            self.log_events.append(alert_event)
+            self.security_events.append(alert_event)
+
+        log_entry = json.dumps(alert_event.to_dict())
+        self._write_log(log_entry)
+
+        # Also log to console for immediate visibility
+        console_message = f"🚨 SECURITY ALERT: {message}"
+        print(console_message)
+        logging.critical(console_message)
+
+    def _get_safe_headers(self, headers) -> Dict[str, str]:
+        """Get safe headers for logging (redact sensitive ones)."""
+        sensitive_headers = [
+            "authorization",
+            "cookie",
+            "set-cookie",
+            "x-api-key",
+            "x-access-token",
+            "proxy-authorization",
+        ]
+
+        safe_headers = {}
+        for key, value in headers.items():
+            if key.lower() not in sensitive_headers:
+                safe_headers[key] = value
+            else:
+                safe_headers[key] = "[REDACTED]"
+
+        return safe_headers
+
+    def log_rate_limit_event(
+        self,
+        user_id: Optional[str],
+        endpoint: str,
+        ip_address: Optional[str] = None,
+        limit: str = "unknown",
+        request: Optional[Request] = None,
+    ):
+        """Log rate limit events for security monitoring."""
+        metadata = {
+            "endpoint": endpoint,
+            "rate_limit": limit,
+            "action": "rate_limit_exceeded",
+            "compliance_tags": ["ISO27001:A.12.1.3", "ISO27001:A.13.1.1"],
+            "security_context": {"threat_type": "denial_of_service", "mitigation": "rate_limiting"},
+        }
+
+        if request:
+            metadata["request_path"] = str(request.url.path)
+            metadata["request_method"] = request.method
+
+        event = AuditEvent(
+            event_type="security.rate_limit_exceeded",
+            user_id=user_id,
+            ip_address=ip_address,
+            metadata=metadata,
+            level="WARNING",
+        )
+
+        with self.lock:
+            self.log_events.append(event)
+            self.security_events.append(event)
+
+        log_entry = json.dumps(event.to_dict())
+        self._write_log(log_entry)
+
+    def log_sensitive_data_access(
+        self,
+        user_id: str,
+        data_type: str,
+        resource_id: str,
+        operation: str,
+        justification: str,
+        ip_address: Optional[str] = None,
+        request: Optional[Request] = None,
+    ):
+        """Log access to sensitive data with justification."""
+        metadata = {
+            "data_type": data_type,
+            "resource_id": resource_id,
+            "operation": operation,
+            "justification": justification,
+            "compliance_tags": ["ISO27001:A.12.5.1", "GDPR:Art5", "GDPR:Art30"],
+            "security_context": {"data_classification": "sensitive", "access_reason": justification},
+        }
+
+        if request:
+            metadata["request_path"] = str(request.url.path)
+            metadata["request_method"] = request.method
+
+        event = AuditEvent(
+            event_type="security.sensitive_data_access",
+            user_id=user_id,
+            ip_address=ip_address,
+            metadata=metadata,
+            level="INFO",
+        )
+
+        with self.lock:
+            self.log_events.append(event)
+            self.security_events.append(event)
+
+        log_entry = json.dumps(event.to_dict())
+        self._write_log(log_entry)
+
+    def generate_security_report(self, time_range: str = "24h") -> Dict[str, Any]:
+        """
+        Generate a comprehensive security report for compliance.
+
+        Args:
+            time_range: Time range for the report ('24h', '7d', '30d', 'all')
+
+        Returns:
+            Security report with metrics and findings
+        """
+        from datetime import timedelta
+
+        # Determine time range
+        now = datetime.now(timezone.utc)
+        if time_range == "24h":
+            cutoff = now - timedelta(hours=24)
+        elif time_range == "7d":
+            cutoff = now - timedelta(days=7)
+        elif time_range == "30d":
+            cutoff = now - timedelta(days=30)
+        else:
+            cutoff = None
+
+        # Filter events by time range
+        if cutoff:
+            recent_events = [e for e in self.log_events if e.timestamp >= cutoff]
+            recent_security = [e for e in self.security_events if e.timestamp >= cutoff]
+        else:
+            recent_events = self.log_events
+            recent_security = self.security_events
+
+        # Calculate metrics
+        total_events = len(recent_events)
+        security_events = len(recent_security)
+
+        # Count by event type
+        event_types = {}
+        for event in recent_events:
+            event_type = event.event_type.split(".")[0]
+            event_types[event_type] = event_types.get(event_type, 0) + 1
+
+        # Count security events by type
+        security_types = {}
+        for event in recent_security:
+            sec_type = event.event_type.split(".")[1] if len(event.event_type.split(".")) > 1 else "other"
+            security_types[sec_type] = security_types.get(sec_type, 0) + 1
+
+        # Count failed vs successful security events
+        failed_security = sum(1 for e in recent_security if not e.metadata.get("success", True))
+        successful_security = security_events - failed_security
+
+        # Get unique users
+        unique_users = set()
+        for event in recent_events:
+            if event.user_id and event.user_id != "system":
+                unique_users.add(event.user_id)
+
+        # Generate compliance assessment
+        compliance_status = "compliant"
+        compliance_issues = []
+
+        if security_events == 0:
+            compliance_issues.append("No security events logged in the period")
+            compliance_status = "pending"
+
+        if failed_security > security_events * 0.1:  # More than 10% failed
+            compliance_issues.append(f"High failure rate ({failed_security}/{security_events}) may indicate issues")
+            compliance_status = "warning"
+
+        return {
+            "report_timestamp": now.isoformat(),
+            "time_range": time_range,
+            "compliance_status": compliance_status,
+            "compliance_issues": compliance_issues,
+            "metrics": {
+                "total_events": total_events,
+                "security_events": security_events,
+                "failed_security_events": failed_security,
+                "successful_security_events": successful_security,
+                "unique_users": len(unique_users),
+                "event_types": event_types,
+                "security_event_types": security_types,
+            },
+            "iso_27001_compliance": {
+                "A.12.4.1": "compliant" if security_events > 0 else "pending",
+                "A.12.4.2": "compliant" if len(unique_users) > 0 else "pending",
+                "A.9.4.2": "compliant" if event_types.get("security", 0) > 0 else "pending",
+                "A.16.1.2": "compliant" if len(compliance_issues) == 0 else "warning",
+            },
+            "recommendations": self._generate_recommendations(compliance_status, compliance_issues),
+        }
+
+    def _generate_recommendations(self, status: str, issues: List[str]) -> List[str]:
+        """Generate security recommendations based on current status."""
+        recommendations = []
+
+        if status == "pending":
+            recommendations.append("Enable comprehensive security logging across all endpoints")
+            recommendations.append("Implement authentication and authorization logging")
+            recommendations.append("Set up regular security audit reviews")
+
+        if status == "warning":
+            recommendations.append("Investigate high failure rates in security events")
+            recommendations.append("Review authentication mechanisms and error handling")
+            recommendations.append("Consider implementing additional security controls")
+
+        if any("brute_force" in issue for issue in issues):
+            recommendations.append("Review rate limiting configuration")
+            recommendations.append("Consider implementing account lockout policies")
+            recommendations.append("Enhance monitoring for brute force attempts")
+
+        return recommendations
+
     def _trigger_alert(self, message: str):
         """Trigger an alert for security events."""
         # In production, this would send to SIEM, email, etc.
@@ -576,7 +911,18 @@ def log_security_event(
     else:
         from backend.main import app
 
+    if logger:
+        logger.log_sensitive_data_access(user_id, data_type, resource_id, operation, justification, ip_address, request)
+
+    if logger:
+        logger.log_sensitive_data_access(user_id, data_type, resource_id, operation, justification, ip_address, request)
         logger = app.state.audit_logger if hasattr(app.state, "audit_logger") else None
+
+    if logger:
+        logger.log_sensitive_data_access(user_id, data_type, resource_id, operation, justification, ip_address, request)
+
+    if logger:
+        logger.log_sensitive_data_access(user_id, data_type, resource_id, operation, justification, ip_address, request)
 
     if logger:
         logger.log_security_event(user_id, event_type, success, ip_address, None, metadata)
@@ -638,3 +984,63 @@ def log_system_event(
 
     if logger:
         logger.log_system_event(event_type, component, status, metadata)
+
+
+def log_comprehensive_security_event(
+    event_type: str,
+    user_id: Optional[str],
+    success: bool,
+    ip_address: Optional[str] = None,
+    metadata: Optional[Dict[str, Any]] = None,
+    request: Optional[Request] = None,
+):
+    """Convenience function for comprehensive security event logging."""
+    if hasattr(log_comprehensive_security_event, "_audit_logger"):
+        logger = getattr(log_comprehensive_security_event, "_audit_logger")
+    else:
+        from backend.main import app
+
+        logger = app.state.audit_logger if hasattr(app.state, "audit_logger") else None
+
+    if logger:
+        logger.log_comprehensive_security_event(event_type, user_id, success, ip_address, None, metadata, request)
+
+
+def log_rate_limit_event(
+    user_id: Optional[str],
+    endpoint: str,
+    ip_address: Optional[str] = None,
+    limit: str = "unknown",
+    request: Optional[Request] = None,
+):
+    """Convenience function for logging rate limit events."""
+    if hasattr(log_rate_limit_event, "_audit_logger"):
+        logger = getattr(log_rate_limit_event, "_audit_logger")
+    else:
+        from backend.main import app
+
+        logger = app.state.audit_logger if hasattr(app.state, "audit_logger") else None
+
+    if logger:
+        logger.log_rate_limit_event(user_id, endpoint, ip_address, limit, request)
+
+
+def log_sensitive_data_access(
+    user_id: str,
+    data_type: str,
+    resource_id: str,
+    operation: str,
+    justification: str,
+    ip_address: Optional[str] = None,
+    request: Optional[Request] = None,
+):
+    """Convenience function for logging sensitive data access."""
+    if hasattr(log_sensitive_data_access, "_audit_logger"):
+        logger = getattr(log_sensitive_data_access, "_audit_logger")
+    else:
+        from backend.main import app
+
+        logger = app.state.audit_logger if hasattr(app.state, "audit_logger") else None
+
+    if logger:
+        logger.log_sensitive_data_access(user_id, data_type, resource_id, operation, justification, ip_address, request)

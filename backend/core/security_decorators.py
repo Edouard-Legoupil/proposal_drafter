@@ -23,7 +23,8 @@ def secure_proposal_access(resource_param: str = "proposal_id") -> Callable:
 
     This decorator:
     1. Validates that the resource ID is a valid UUID
-    2. Checks that the current user has access to the resource using check_proposal_access
+    2. Checks that the current user has access to the resource using
+       check_proposal_access
     3. Provides the resource object to the endpoint function
 
     Usage:
@@ -50,7 +51,10 @@ def secure_proposal_access(resource_param: str = "proposal_id") -> Callable:
                     current_user = request.state.user
                 else:
                     logger.warning("secure_proposal_access: No current_user found")
-                    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Authentication required",
+                    )
 
             # Get resource ID from path parameters
             resource_id = kwargs.get(resource_param)
@@ -73,7 +77,8 @@ def secure_proposal_access(resource_param: str = "proposal_id") -> Callable:
                 uuid.UUID(str(resource_id))
             except (ValueError, TypeError):
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid {resource_param} format: '{resource_id}'"
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid {resource_param} format: '{resource_id}'",
                 )
 
             # Check authorization using ORM (prevents SQL injection)
@@ -92,7 +97,10 @@ def secure_proposal_access(resource_param: str = "proposal_id") -> Callable:
                 raise
             except Exception as e:
                 logger.error(f"secure_proposal_access error for {resource_param} {resource_id}: {e}")
-                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Internal server error",
+                )
 
             # Call the original function
             return await func(*args, **kwargs)
@@ -133,7 +141,10 @@ def secure_resource_access(resource_type: str, resource_param: str = "id") -> Ca
             current_user = kwargs.get("current_user")
             if not current_user:
                 logger.warning("secure_resource_access: No current_user found")
-                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Authentication required",
+                )
 
             # Get resource ID from parameters
             resource_id = kwargs.get(resource_param)
@@ -152,7 +163,8 @@ def secure_resource_access(resource_type: str, resource_param: str = "id") -> Ca
             model_class = MODEL_MAP.get(resource_type)
             if not model_class:
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unsupported resource type: {resource_type}"
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Unsupported resource type: {resource_type}",
                 )
 
             # Check authorization and get resource
@@ -160,7 +172,10 @@ def secure_resource_access(resource_type: str, resource_param: str = "id") -> Ca
                 async for session in get_db_session():
                     resource = await session.get(model_class, resource_id)
                     if not resource:
-                        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"{resource_type} not found")
+                        raise HTTPException(
+                            status_code=status.HTTP_404_NOT_FOUND,
+                            detail=f"{resource_type} not found",
+                        )
 
                     # For proposals, use the existing authorization check
                     if resource_type == "proposal":
@@ -176,7 +191,10 @@ def secure_resource_access(resource_type: str, resource_param: str = "id") -> Ca
                                     "resource_id": resource_id,
                                 },
                             )
-                            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+                            raise HTTPException(
+                                status_code=status.HTTP_403_FORBIDDEN,
+                                detail="Forbidden",
+                            )
                     elif hasattr(resource, "created_by"):
                         if str(resource.created_by) != str(current_user["user_id"]):
                             logger.warning(
@@ -187,7 +205,10 @@ def secure_resource_access(resource_type: str, resource_param: str = "id") -> Ca
                                     "resource_id": resource_id,
                                 },
                             )
-                            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+                            raise HTTPException(
+                                status_code=status.HTTP_403_FORBIDDEN,
+                                detail="Forbidden",
+                            )
 
                     # Add resource to kwargs
                     kwargs[resource_type.replace("_", "")] = resource
@@ -197,16 +218,13 @@ def secure_resource_access(resource_type: str, resource_param: str = "id") -> Ca
                 raise
             except Exception as e:
                 logger.error(f"secure_resource_access error for {resource_type} {resource_id}: {e}")
-                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Internal server error",
+                )
 
             return await func(*args, **kwargs)
 
         return wrapper
 
     return decorator
-
-
-# Alias for common use cases
-secure_proposal_access = secure_resource_access("proposal")
-secure_knowledge_card_access = secure_resource_access("knowledge_card")
-secure_template_access = secure_resource_access("template")

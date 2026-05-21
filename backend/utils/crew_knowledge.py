@@ -211,6 +211,6 @@ class ContentGenerationCrew:
             agents=[self.researcher(), self.writer()],
             tasks=[self.research_task(), self.write_task()],
             verbose=True,
-            process=Process.sequential  # ,
+            process=Process.sequential,  # ,
             # output_log_file=log_file
         )

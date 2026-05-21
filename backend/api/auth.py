@@ -8,11 +8,12 @@ from datetime import datetime, timedelta
 #  Third-Party Libraries
 import httpx
 import msal
+from redis.exceptions import RedisError  # type: ignore[import-untyped]
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
-from redis.exceptions import RedisError  # type: ignore[import-untyped]
+
 
 #  Internal Modules
 from backend.core.db import get_engine
@@ -205,6 +206,7 @@ async def callback(request: Request, code: str):
 
 
 @router.post("/signup")
+@limiter.limit("5/hour")  # SEC-002: Rate limiting to prevent abuse
 async def signup(request: Request):
     """
     Handles new user registration.
@@ -336,6 +338,7 @@ async def signup(request: Request):
 
 
 @router.post("/login")
+@limiter.limit("10/minute")  # SEC-002: Rate limiting to prevent brute force attacks
 async def login(request: Request):
     """
     Handles user login.
@@ -355,20 +358,43 @@ async def login(request: Request):
             )
 
         try:
+            # Use ORM query to prevent SQL injection (SEC-001 fix)
+            from backend.models.user import User
+            from sqlalchemy.orm import Session
+
             with get_engine().connect() as connection:
-                result = connection.execute(
-                    text(
-                        "SELECT id, email, name, password FROM users WHERE lower(email) = :identifier OR lower(name) = :identifier"
-                    ),
-                    {"identifier": identifier.strip().lower()},
+                session = Session(bind=connection)
+                user = (
+                    session.query(User)
+                    .filter(
+                        (User.email.ilike(identifier.strip().lower())) | (User.name.ilike(identifier.strip().lower()))
+                    )
+                    .first()
                 )
-                user = result.fetchone()
+                session.close()
+
+                if user:
+                    user_data = (user.id, user.email, user.name, user.password)
+                else:
+                    user_data = None
+
+            if not user:
+                logging.warning(f"Login attempt failed for non-existent user: {identifier}")
+                return JSONResponse(status_code=404, content={"error": "User does not exist!"})
+
+            user_id, email, _, stored_password = user
         except SQLAlchemyError as db_error:
             logging.error(f"Database error during login for identifier '{identifier}': {db_error}")
             return JSONResponse(
                 status_code=500,
                 content={"error": "Authentication service is temporarily unavailable. Please try again later."},
             )
+
+        if not user_data:
+            logging.warning(f"Login attempt failed for non-existent user: {identifier}")
+            return JSONResponse(status_code=404, content={"error": "User does not exist!"})
+
+        user_id, email, _, stored_password = user_data
 
         if not user:
             logging.warning(f"Login attempt failed for non-existent user: {identifier}")
@@ -505,6 +531,7 @@ async def logout(current_user: dict = Depends(get_current_user)):
 
 
 @router.post("/get-security-question")
+@limiter.limit("3/hour")  # SEC-002: Rate limiting to prevent enumeration
 async def get_security_question(request: Request):
     """
     Retrieves the security question for a user based on their email.
@@ -531,6 +558,7 @@ async def get_security_question(request: Request):
 
 
 @router.post("/verify-security-answer")
+@limiter.limit("3/hour")  # SEC-002: Rate limiting to prevent brute force
 async def verify_security_answer(request: Request):
     """
     Verifies a user's answer to their security question.
@@ -563,6 +591,7 @@ async def verify_security_answer(request: Request):
 
 
 @router.post("/update-password")
+@limiter.limit("5/hour")  # SEC-002: Rate limiting to prevent abuse
 async def update_password(request: Request):
     """
     Updates a user's password after they have successfully answered their security question.

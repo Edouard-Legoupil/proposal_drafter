@@ -130,7 +130,7 @@ class ReferenceIdentificationCrew:
         return Crew(
             agents=[self.researcher()],
             tasks=[self.research_task()],
-            verbose=True  # ,
+            verbose=True,  # ,
             # output_log_file=log_file
         )
 

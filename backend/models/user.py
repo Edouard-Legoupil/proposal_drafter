@@ -137,44 +137,52 @@ class User(Base):  # type: ignore[valid-type, misc]
         if self.is_admin:
             return True
 
-        # Map resource types to table names
-        table_map = {
-            "proposal": "proposals",
-            "knowledge_card": "knowledge_cards",
-            "template": "templates",
+        # Map resource types to models (SEC-001: Use ORM instead of raw SQL)
+        from backend.models.proposal import Proposal
+        from backend.models.knowledge_card import KnowledgeCard
+        from backend.models.template import Template
+
+        model_map = {
+            "proposal": Proposal,
+            "knowledge_card": KnowledgeCard,
+            "template": Template,
         }
 
-        table_name = table_map.get(resource_type)
-        if table_name is None:
+        model = model_map.get(resource_type)
+        if model is None:
             raise ValueError(f"Unknown resource type: {resource_type}")
 
-        # Use the provided session or get a new connection
+        # Use the provided session or get a new connection (SEC-001: SQL Injection fix)
         if session:
             try:
-                result = session.execute(
-                    text(f"SELECT owner_id FROM {table_name} WHERE id = :id"),
-                    {"id": resource_id},
-                )
-                row = result.fetchone()
-                if row and row[0]:
-                    return str(row[0]) == str(self.id)
+                resource = session.get(model, resource_id)
+                if resource:
+                    # Get owner_id using safe attribute access
+                    if hasattr(resource, "user_id"):  # proposals use user_id
+                        return str(resource.user_id) == str(self.id)
+                    elif hasattr(resource, "created_by"):  # knowledge_cards/templates use created_by
+                        return str(resource.created_by) == str(self.id)
                 return False
             except Exception as e:
                 logger.error(f"Error checking ownership for {resource_type} {resource_id}: {e}")
                 return False
         else:
-            # Fallback: use direct database connection
+            # Fallback: use direct database connection with ORM
             from backend.core.db import get_engine
+            from sqlalchemy.orm import Session
 
             try:
                 with get_engine().connect() as connection:
-                    result = connection.execute(
-                        text(f"SELECT owner_id FROM {table_name} WHERE id = :id"),
-                        {"id": resource_id},
-                    )
-                    row = result.fetchone()
-                    if row and row[0]:
-                        return str(row[0]) == str(self.id)
+                    sync_session = Session(bind=connection)
+                    resource = sync_session.get(model, resource_id)
+                    sync_session.close()
+
+                    if resource:
+                        # Get owner_id using safe attribute access
+                        if hasattr(resource, "user_id"):  # proposals use user_id
+                            return str(resource.user_id) == str(self.id)
+                        elif hasattr(resource, "created_by"):  # knowledge_cards/templates use created_by
+                            return str(resource.created_by) == str(self.id)
                     return False
             except Exception as e:
                 logger.error(f"Error checking ownership for {resource_type} {resource_id}: {e}")
@@ -290,36 +298,40 @@ class User(Base):  # type: ignore[valid-type, misc]
         Returns:
             List of resource dictionaries
         """
-        table_map = {
-            "proposal": "proposals",
-            "knowledge_card": "knowledge_cards",
-            "template": "templates",
+        # Map resource types to models (SEC-001: Use ORM instead of raw SQL)
+        from backend.models.proposal import Proposal
+        from backend.models.knowledge_card import KnowledgeCard
+        from backend.models.template import Template
+
+        model_map = {
+            "proposal": Proposal,
+            "knowledge_card": KnowledgeCard,
+            "template": Template,
         }
 
-        table_name = table_map.get(resource_type)
-        if table_name is None:
+        model = model_map.get(resource_type)
+        if model is None:
             raise ValueError(f"Unknown resource type: {resource_type}")
 
         if session:
             try:
-                result = session.execute(
-                    text(f"SELECT * FROM {table_name} WHERE owner_id = :owner_id"),
-                    {"owner_id": str(self.id)},
-                )
-                return [dict(row._mapping) for row in result.fetchall()]
+                # Use ORM query (SEC-001: SQL Injection fix)
+                resources = session.query(model).filter_by(owner_id=str(self.id)).all()
+                return [dict(row.__dict__) for row in resources]
             except Exception as e:
                 logger.error(f"Error fetching owned {resource_type}s: {e}")
                 return []
         else:
             from backend.core.db import get_engine
+            from sqlalchemy.orm import Session
 
             try:
                 with get_engine().connect() as connection:
-                    result = connection.execute(
-                        text(f"SELECT * FROM {table_name} WHERE owner_id = :owner_id"),
-                        {"owner_id": str(self.id)},
-                    )
-                    return [dict(row._mapping) for row in result.fetchall()]
+                    # Use ORM query (SEC-001: SQL Injection fix)
+                    sync_session = Session(bind=connection)
+                    resources = sync_session.query(model).filter_by(owner_id=str(self.id)).all()
+                    sync_session.close()
+                    return [dict(row.__dict__) for row in resources]
             except Exception as e:
                 logger.error(f"Error fetching owned {resource_type}s: {e}")
                 return []

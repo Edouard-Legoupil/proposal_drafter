@@ -13,6 +13,7 @@ from typing import Optional, Dict, Any
 from playwright.sync_api import (
     sync_playwright,
     expect,
+    Page,
 )
 
 
@@ -290,8 +291,16 @@ def setup_test_data(admin_page: Page):
     # Return mock data structure
     return {
         "users": [
-            {"name": "Test User 1", "email": "test1@unhcr.org", "role": "proposal writer"},
-            {"name": "Test User 2", "email": "test2@unhcr.org", "role": "knowledge manager"},
+            {
+                "name": "Test User 1",
+                "email": "test1@unhcr.org",
+                "role": "proposal writer",
+            },
+            {
+                "name": "Test User 2",
+                "email": "test2@unhcr.org",
+                "role": "knowledge manager",
+            },
         ],
         "roles": [
             {"name": "Test Role 1", "description": "Test role for access management"},

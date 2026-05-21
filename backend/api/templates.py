@@ -20,6 +20,7 @@ from backend.core.authorization import (
     check_template_access,
     require_ownership,
 )
+from backend.core.dependencies import get_db_session
 from backend.core.config import (
     load_proposal_template,
     TEMPLATES_DIR,
@@ -351,9 +352,11 @@ async def get_template_request(
             return {
                 "id": str(row["id"]),
                 "name": row["name"],
-                "donor": donor_names[0]
-                if donor_names and len(donor_names) == 1
-                else ("Multiple" if len(donor_names) > 1 else None),
+                "donor": (
+                    donor_names[0]
+                    if donor_names and len(donor_names) == 1
+                    else ("Multiple" if len(donor_names) > 1 else None)
+                ),
                 "donor_names": donor_names,
                 "donor_id": str(row["donor_id"]) if row["donor_id"] else None,
                 "donor_ids": [str(did) for did in row["donor_ids"]] if row["donor_ids"] else [],
@@ -884,26 +887,20 @@ async def patch_template(
                 )
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
-            # Update the template with partial data
-            with engine.begin() as conn:
-                update_fields = []
-                params = {"id": template_id}
+            # Update the template with partial data using ORM (SEC-001: SQL Injection fix)
+            from backend.models.template_models import Template
 
-                if "name" in template_data:
-                    update_fields.append("name = :name")
-                    params["name"] = template_data["name"]
-                if "description" in template_data:
-                    update_fields.append("description = :description")
-                    params["description"] = template_data["description"]
-                if "status" in template_data:
-                    update_fields.append("status = :status")
-                    params["status"] = template_data["status"]
+            async for session in get_db_session():
+                template = await session.get(Template, template_id)
+                if template:
+                    if "name" in template_data:
+                        template.name = template_data["name"]
+                    if "description" in template_data:
+                        template.description = template_data["description"]
+                    if "status" in template_data:
+                        template.status = template_data["status"]
 
-                if update_fields:
-                    conn.execute(
-                        text(f"UPDATE templates SET {', '.join(update_fields)} WHERE id = :id"),
-                        params,
-                    )
+                    await session.commit()
 
             # Log successful patch (T058)
             logger.info(

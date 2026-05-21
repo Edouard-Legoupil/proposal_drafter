@@ -8,6 +8,9 @@ Control and CWE-284: Improper Access Control.
 This module integrates with the existing security system:
 - Uses get_current_user from backend.core.security
 - Works with both sync and async database operations
+
+Standard Library
+import logging
 - Compatible with the existing JWT cookie-based authentication
 
 Usage:
@@ -49,6 +52,13 @@ from sqlalchemy import text
 # Import existing security functions
 from backend.core.security import get_current_user as _get_current_user_from_security
 from backend.core.db import get_engine
+from backend.core.dependencies import get_db_session
+
+# Import models for ORM-based queries
+from backend.models.proposal import Proposal
+from backend.models.knowledge_card import KnowledgeCard
+from backend.models.template import Template
+
 
 # Type for current user - dict from existing system
 CurrentUser = Dict[str, Any]
@@ -114,10 +124,12 @@ async def get_db_connection_async():
 
 async def verify_ownership(resource_type: str, resource_id: int, current_user: CurrentUser) -> Dict[str, Any]:
     """
-    Verify that the current user owns the specified resource.
+    Verify that the current user owns the specified resource using safe ORM queries.
 
     This function prevents Insecure Direct Object Reference (IDOR) vulnerabilities
     by explicitly checking ownership before granting access to a resource.
+
+    Replaced raw SQL queries with SQLAlchemy ORM to prevent SQL injection (SEC-001)
 
     Args:
         resource_type: Type of resource ('proposal', 'knowledge_card', 'template')
@@ -138,28 +150,24 @@ async def verify_ownership(resource_type: str, resource_id: int, current_user: C
     if is_admin(current_user):
         return {}
 
-    # Map resource types to table names
-    table_map = {
-        "proposal": "proposals",
-        "knowledge_card": "knowledge_cards",
-        "template": "templates",
+    # Map resource types to SQLAlchemy models (SEC-001: Use ORM instead of raw SQL)
+    model_map = {
+        "proposal": Proposal,
+        "knowledge_card": KnowledgeCard,
+        "template": Template,
     }
 
-    table_name = table_map.get(resource_type)
-    if table_name is None:
+    model = model_map.get(resource_type)
+    if model is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Unknown resource type: {resource_type}",
         )
 
-    # Query the resource from database
+    # Use SQLAlchemy ORM for safe querying (SEC-001: SQL Injection fix)
     try:
-        with get_db_connection() as connection:
-            result = connection.execute(
-                text(f"SELECT id, owner_id FROM {table_name} WHERE id = :id"),
-                {"id": resource_id},
-            )
-            resource = result.fetchone()
+        async for session in get_db_session():
+            resource = await session.get(model, resource_id)
 
             # Resource not found - return 404 (NOT 403) to avoid information leakage
             if resource is None:
@@ -168,9 +176,8 @@ async def verify_ownership(resource_type: str, resource_id: int, current_user: C
                     detail=f"{resource_type.replace('_', ' ').title()} not found",
                 )
 
-            # Check ownership
-            owner_id = str(resource[1])  # owner_id column
-            if owner_id != user_id:
+            # Check ownership (SEC-001: Safe attribute access)
+            if str(resource.user_id) != user_id:
                 # Log the unauthorized access attempt
                 import logging
 
@@ -188,7 +195,7 @@ async def verify_ownership(resource_type: str, resource_id: int, current_user: C
 
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
-            return {"id": resource[0], "owner_id": owner_id}
+            return {"id": str(resource.id), "owner_id": str(resource.user_id)}
 
     except Exception as e:
         import logging
@@ -527,19 +534,23 @@ def require_team_membership() -> Callable:
                 )
 
             # Query the resource to get its team_id
-            # Try multiple resource types
+            # Try multiple resource types (SEC-001: Use ORM instead of raw SQL)
             team_id = None
             for resource_type in ["proposal", "knowledge_card", "template"]:
-                table_name = resource_type.replace("_", "") + "s"
+                model_map = {
+                    "proposal": Proposal,
+                    "knowledge_card": KnowledgeCard,
+                    "template": Template,
+                }
+                model = model_map.get(resource_type)
+                if model is None:
+                    continue
+
                 try:
-                    with get_db_connection() as connection:
-                        result = connection.execute(
-                            text(f"SELECT team_id FROM {table_name} WHERE id = :id"),
-                            {"id": resource_id},
-                        )
-                        row = result.fetchone()
-                        if row and row[0] is not None:
-                            team_id = row[0]
+                    async for session in get_db_session():
+                        resource = await session.get(model, resource_id)
+                        if resource and hasattr(resource, "team_id") and resource.team_id is not None:
+                            team_id = resource.team_id
                             break
                 except Exception:
                     continue
@@ -603,19 +614,23 @@ def require_donor_group_membership() -> Callable:
                     detail="Resource ID must be an integer",
                 )
 
-            # Query the resource to get its donor_group_id
+            # Query the resource to get its donor_group_id (SEC-001: Use ORM instead of raw SQL)
             donor_group_id = None
             for resource_type in ["proposal", "knowledge_card", "template"]:
-                table_name = resource_type.replace("_", "") + "s"
+                model_map = {
+                    "proposal": Proposal,
+                    "knowledge_card": KnowledgeCard,
+                    "template": Template,
+                }
+                model = model_map.get(resource_type)
+                if model is None:
+                    continue
+
                 try:
-                    with get_db_connection() as connection:
-                        result = connection.execute(
-                            text(f"SELECT donor_group_id FROM {table_name} WHERE id = :id"),
-                            {"id": resource_id},
-                        )
-                        row = result.fetchone()
-                        if row and row[0] is not None:
-                            donor_group_id = row[0]
+                    async for session in get_db_session():
+                        resource = await session.get(model, resource_id)
+                        if resource and hasattr(resource, "donor_group_id") and resource.donor_group_id is not None:
+                            donor_group_id = resource.donor_group_id
                             break
                 except Exception:
                     continue

@@ -357,12 +357,14 @@ Feature: Incident Management
 **Description:** Administrators should be able to manage user access and roles
 
 ```gherkin
-Feature: User Access Management
-  As an administrator
-  I want to manage user access and roles
-  So that I can control system permissions
+Feature: User/Team Access Management
 
-  Scenario: Grant user access to a resource
+  Background:
+    Given I am authenticated as a system admin
+    I want to manage user/team access and roles
+    So that I can control system permissions
+
+  Scenario: Grant user/team access to a resource
     Given I am an administrator
     And I am on the access management page
     When I select a user
@@ -370,32 +372,30 @@ Feature: User Access Management
     And I select the specific resource
     And I select the access level
     And I click the "Grant Access" button
-    Then the user should be granted access
+    Then the user/team should be granted access
     And I should see a success message "Access granted successfully"
 
-  Scenario: Revoke user access
+  Scenario: Revoke user/team access
     Given I am an administrator
-    And I am viewing a user's access permissions
+    And I am viewing a user/team's access permissions
     When I click the "Revoke Access" button for a specific permission
-    Then the user's access should be revoked
+    Then the user/team's access should be revoked
     And I should see a success message "Access revoked successfully"
 ```
 
 
-**Feature:** System Configuration
-**Description:** Administrators should be able to configure system settings
-
 ```gherkin
 Feature: System Configuration
-  As an administrator
-  I want to configure system settings
-  So that I can customize the system for our organization
+
+  Background:
+    Given I am authenticated as a system admin
+    I want to configure system settings
+    So that I can customize the system for our organization
 
   Scenario: Configure system parameters
     Given I am an administrator
     And I am on the system configuration page
-    When I update the maximum proposal size
-    And I update the default template
+    When I update the list of donors, outcomes or field contexts
     And I click the "Save Configuration" button
     Then the configuration should be saved
     And I should see a success message "Configuration updated successfully"
@@ -409,25 +409,22 @@ Feature: Role assignment
     Given I am authenticated as a system admin
 
   Scenario: Assign proposal reviewer role
-    Given I open the Users section
-    When I add a new user with required attributes
-    And I assign role "proposal reviewer" and select the linked relevant outcomes, field context or donors he is allowed to review
-    Then the user gets restricted access
+    Given I open the Users/Teams section
+    When I add/update user/team with required attributes
+    And I assign role "proposal reviewer" and select the linked relevant outcomes, field context or donors user/team is allowed to review
+    Then the user/team gets restricted access
 
   Scenario: Remove a role
-    Given a user has "project reviewer"
+    Given a user/team has "project reviewer"
     When I remove it
     Then access to review features is revoked
 
   Scenario: Assign knowledge manager donor role
-    When I assign "knowledge manager donors" role with donor groups
+    When I assign "knowledge manager donors" role with user / team
     Then access is granted only for those donor-scoped knowledge cards
 ```
 
 
----
-
-## 3. Team Management
 
 ```gherkin
 Feature: Team management
@@ -438,22 +435,17 @@ Feature: Team management
     Then proposal access aligns with team membership
 ```
 
----
-
-## 4. Access Dimensions (Donor, Outcome, Field Context)
 
 ```gherkin
-Feature: Access dimensions
+Feature: Access dimensions(Donor, Outcome, Field Context)
 
-  Scenario: Assign donor groups
+  Scenario: Assign team
     Given a user exists
-    When I assign donor groups
+    When I assign team to the user
     Then access expands according to role compatibility
 ```
 
----
 
-## 5. Proposal Access
 
 ```gherkin
 Feature: Proposal access
@@ -469,9 +461,7 @@ Feature: Proposal access
     Then they can review
 ```
 
----
 
-## 6. Knowledge Card Access
 
 ```gherkin
 Feature: Knowledge card access
@@ -482,9 +472,7 @@ Feature: Knowledge card access
     Then user can edit
 ```
 
----
 
-## 7. Template Access
 
 ```gherkin
 Feature: Template access
@@ -495,9 +483,7 @@ Feature: Template access
     Then template becomes usable
 ```
 
----
 
-## 8. Metrics Access
 
 ```gherkin
 Feature: Metrics access
@@ -508,9 +494,6 @@ Feature: Metrics access
     Then only accessible data is shown
 ```
 
----
-
-## 9. Incident Access
 
 ```gherkin
 Feature: Incident access

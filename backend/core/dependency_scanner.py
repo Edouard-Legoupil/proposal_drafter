@@ -491,9 +491,9 @@ def generate_compliance_report(
         "medium_vulnerabilities": severity_counts["MEDIUM"],
         "low_vulnerabilities": severity_counts["LOW"],
         "total_vulnerabilities": len(vulnerabilities),
-        "compliance_status": "compliant"
-        if severity_counts["CRITICAL"] == 0 and severity_counts["HIGH"] == 0
-        else "needs_review",
+        "compliance_status": (
+            "compliant" if severity_counts["CRITICAL"] == 0 and severity_counts["HIGH"] == 0 else "needs_review"
+        ),
         "vulnerable_packages": [],
     }
 

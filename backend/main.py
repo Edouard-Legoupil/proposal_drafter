@@ -35,6 +35,7 @@ from backend.core.middleware import (
     setup_security_middleware,
     custom_http_exception_handler,
 )
+from backend.core.redis import redis_client
 from backend.utils.sharepoint_sync import (
     initialize_database,
     setup_sharepoint_sync_scheduler,
@@ -78,6 +79,15 @@ async def lifespan(app: FastAPI):
         setup_sharepoint_sync_scheduler()
     except Exception as e:
         logging.error(f"Failed to start SharePoint sync scheduler: {e}")
+
+    # Initialize rate limiter for authentication security (SEC-002)
+    try:
+        from fastapi_limiter import FastAPILimiter
+
+        await FastAPILimiter.init(redis_client)
+        logging.info("Rate limiter initialized for authentication security")
+    except Exception as e:
+        logging.error(f"Failed to initialize rate limiter: {e}")
 
     # setup_scheduler()
     # logging.info("Background scheduler has been started.")

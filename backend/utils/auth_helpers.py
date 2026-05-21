@@ -23,6 +23,12 @@ from typing import Any, Optional, Dict, List
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+# Import models for ORM-based queries (SEC-001: SQL Injection fix)
+from backend.models.proposal import Proposal
+from backend.models.knowledge_card import KnowledgeCard
+from backend.models.template import Template
+
+
 # Configure logger for authorization
 logger = logging.getLogger("security.authorization")
 
@@ -73,7 +79,9 @@ def get_resource_config(resource_type: str) -> Dict[str, str]:
 
 def get_resource_owner(resource_type: str, resource_id: Any, session: Optional[Session] = None) -> Optional[str]:
     """
-    Get the owner_id of a resource by querying the database.
+    Get the owner_id of a resource by querying the database using ORM.
+
+    Replaced raw SQL with ORM to prevent SQL injection (SEC-001)
 
     Args:
         resource_type: Type of resource ('proposal', 'knowledge_card', 'template')
@@ -83,26 +91,38 @@ def get_resource_owner(resource_type: str, resource_id: Any, session: Optional[S
     Returns:
         The owner_id of the resource as a string, or None if resource doesn't exist
     """
-    config = get_resource_config(resource_type)
+    # Map resource types to models (SEC-001: Use ORM instead of raw SQL)
+    model_map = {
+        "proposal": Proposal,
+        "knowledge_card": KnowledgeCard,
+        "template": Template,
+    }
+
+    model = model_map.get(resource_type)
+    if model is None:
+        return None
 
     try:
         if session:
-            result = session.execute(
-                text(f"SELECT {config['owner_column']} FROM {config['table']} WHERE id = :id"),
-                {"id": resource_id},
-            )
+            resource = session.get(model, resource_id)
         else:
             from backend.core.db import get_engine
 
-            with get_engine().connect() as connection:
-                result = connection.execute(
-                    text(f"SELECT {config['owner_column']} FROM {config['table']} WHERE id = :id"),
-                    {"id": resource_id},
-                )
+            with get_engine().begin() as connection:
+                # For sync connections, we need to use the ORM session
+                from sqlalchemy.orm import Session as SyncSession
 
-        row = result.fetchone()
-        if row and row[0]:
-            return str(row[0])
+                sync_session = SyncSession(bind=connection)
+                resource = sync_session.get(model, resource_id)
+                sync_session.close()
+
+        if resource:
+            # Get owner column based on resource type (SEC-001: Safe attribute access)
+            if resource_type == "proposal":
+                return str(resource.user_id) if resource.user_id else None
+            else:  # knowledge_card and template use created_by
+                return str(resource.created_by) if resource.created_by else None
+
         return None
     except Exception as e:
         logger.error(f"Error getting owner for {resource_type} {resource_id}: {e}")
@@ -329,30 +349,36 @@ def has_resource_access(
     if is_resource_owner(resource_type, resource_id, user_id, session):
         return True
 
-    # Get the resource to check team and donor group
-    config = get_resource_config(resource_type)
+    # Get the resource to check team and donor group (SEC-001: Use ORM instead of raw SQL)
+    model_map = {
+        "proposal": Proposal,
+        "knowledge_card": KnowledgeCard,
+        "template": Template,
+    }
+
+    model = model_map.get(resource_type)
+    if model is None:
+        return False
 
     try:
         if session:
-            result = session.execute(
-                text(f"SELECT team_id, donor_id FROM {config['table']} WHERE id = :id"),
-                {"id": resource_id},
-            )
+            resource = session.get(model, resource_id)
         else:
             from backend.core.db import get_engine
 
-            with get_engine().connect() as connection:
-                result = connection.execute(
-                    text(f"SELECT team_id, donor_id FROM {config['table']} WHERE id = :id"),
-                    {"id": resource_id},
-                )
+            with get_engine().begin() as connection:
+                from sqlalchemy.orm import Session as SyncSession
 
-        row = result.fetchone()
-        if row is None:
+                sync_session = SyncSession(bind=connection)
+                resource = sync_session.get(model, resource_id)
+                sync_session.close()
+
+        if resource is None:
             return False
 
-        team_id = row[0] if row and len(row) > 0 else None
-        donor_id = row[1] if row and len(row) > 1 else None
+        # Get team_id and donor_id using safe attribute access (SEC-001: SQL Injection fix)
+        team_id = getattr(resource, "team_id", None)
+        donor_id = getattr(resource, "donor_id", None)
 
         # Check team membership
         if team_id is not None:

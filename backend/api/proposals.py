@@ -1681,9 +1681,9 @@ async def get_proposals_for_review(current_user: dict = Depends(get_current_user
                         "outcomes": row["outcome_names"].split(", ") if row["outcome_names"] else [],
                         "budget": form_data.get("Budget Range", "N/A"),
                         "review_status": review_status,
-                        "review_completed_at": row["review_completed_at"].isoformat()
-                        if row["review_completed_at"]
-                        else None,
+                        "review_completed_at": (
+                            row["review_completed_at"].isoformat() if row["review_completed_at"] else None
+                        ),
                     }
                 )
         return {

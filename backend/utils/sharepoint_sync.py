@@ -383,9 +383,11 @@ def get_file_metadata_from_sharepoint(
             "size": metadata.get("size"),
             "version": metadata.get("version"),
             "lastModifiedDateTime": metadata.get("lastModifiedDateTime"),
-            "lastModifiedBy": metadata.get("lastModifiedBy", {}).get("user", {}).get("displayName")
-            if metadata.get("lastModifiedBy")
-            else None,
+            "lastModifiedBy": (
+                metadata.get("lastModifiedBy", {}).get("user", {}).get("displayName")
+                if metadata.get("lastModifiedBy")
+                else None
+            ),
             "webUrl": metadata.get("webUrl"),
             "eTag": metadata.get("eTag"),
         }
@@ -629,11 +631,11 @@ def sync_sharepoint_files():
                                 filename=filename,
                                 file_size=current_metadata.get("size"),
                                 sharepoint_version=new_version,
-                                last_modified_at=datetime.fromisoformat(
-                                    new_last_modified.replace("T", " ").replace("Z", "")
-                                )
-                                if new_last_modified
-                                else None,
+                                last_modified_at=(
+                                    datetime.fromisoformat(new_last_modified.replace("T", " ").replace("Z", ""))
+                                    if new_last_modified
+                                    else None
+                                ),
                                 last_modified_by=current_metadata.get("lastModifiedBy"),
                                 diff_from_previous=diff_text,
                                 change_type=change_type,
@@ -650,9 +652,11 @@ def sync_sharepoint_files():
                                 artifact_type,
                                 link_id,
                                 new_version,
-                                datetime.fromisoformat(new_last_modified.replace("T", " ").replace("Z", ""))
-                                if new_last_modified
-                                else None,
+                                (
+                                    datetime.fromisoformat(new_last_modified.replace("T", " ").replace("Z", ""))
+                                    if new_last_modified
+                                    else None
+                                ),
                             )
 
                             logger.info(f"Saved new version {new_version_number} for {filename}")
@@ -678,9 +682,11 @@ def sync_sharepoint_files():
                         filename=filename,
                         file_size=current_metadata.get("size"),
                         sharepoint_version=new_version,
-                        last_modified_at=datetime.fromisoformat(new_last_modified.replace("T", " ").replace("Z", ""))
-                        if new_last_modified
-                        else None,
+                        last_modified_at=(
+                            datetime.fromisoformat(new_last_modified.replace("T", " ").replace("Z", ""))
+                            if new_last_modified
+                            else None
+                        ),
                         last_modified_by=current_metadata.get("lastModifiedBy"),
                         change_type="created",
                         metadata={"initial_sync": True},
@@ -693,9 +699,11 @@ def sync_sharepoint_files():
                         artifact_type,
                         link_id,
                         new_version,
-                        datetime.fromisoformat(new_last_modified.replace("T", " ").replace("Z", ""))
-                        if new_last_modified
-                        else None,
+                        (
+                            datetime.fromisoformat(new_last_modified.replace("T", " ").replace("Z", ""))
+                            if new_last_modified
+                            else None
+                        ),
                     )
 
             except Exception as e:

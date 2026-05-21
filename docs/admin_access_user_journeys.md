@@ -1,46 +1,34 @@
-# Admin Access Control User Journeys (Gherkin)
+# Admin Access Control User Journeys
 
 This document contains all user journeys and Gherkin user stories for configuring user-, role-, and object-based access
 across proposals, knowledge cards, templates, metrics, and incidents.
 
 ---
 
-## 1. User Onboarding
+## Role assignment
 
 ```gherkin
-Feature: Admin user onboarding
+Feature: Role assignment
 
   Background:
     Given I am authenticated as a system admin
 
-  Scenario: Create a new user with proposal-writing access
+  Scenario: Assign proposal reviewer role
     Given I open the Users section
     When I add a new user with required attributes
-    And I assign role "proposal writer"
-    Then the user is created with restricted access
+    And I assign role "proposal reviewer" and select the linked relevant outcomes, field context or donors he is allowed to review
+    Then the user gets restricted access
+
+  Scenario: Remove a role
+    Given a user has "project reviewer"
+    When I remove it
+    Then access to review features is revoked
 
   Scenario: Assign knowledge manager donor role
     When I assign "knowledge manager donors" role with donor groups
     Then access is granted only for those donor-scoped knowledge cards
 ```
 
----
-
-## 2. Role Management
-
-```gherkin
-Feature: Role assignment
-
-  Scenario: Add a role
-    Given a user exists
-    When I assign "project reviewer"
-    Then permissions should update accordingly
-
-  Scenario: Remove a role
-    Given a user has "project reviewer"
-    When I remove it
-    Then access to review features is revoked
-```
 
 ---
 
@@ -247,6 +235,4 @@ Feature: Security
     Then API returns 403
 ```
 
----
-
-## End of Document
+-

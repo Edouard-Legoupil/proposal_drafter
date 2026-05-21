@@ -2,8 +2,8 @@
 Test suite for User Profile Management functionality.
 
 These tests verify that:
-1. Users can update their profile information
-2. Users can change their password
+1. Users can update their role
+2. Users can change their settings
 3. Profile updates are persisted correctly
 
 User Stories Covered:

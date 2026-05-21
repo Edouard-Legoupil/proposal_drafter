@@ -28,13 +28,17 @@ def check_dependencies():
     """Check dependencies for known vulnerabilities using Safety."""
 
     try:
-        # Check if safety is installed
+        # Check if safety is installed by trying to run it
         try:
-            import safety.cli
-        except ImportError:
+            subprocess.run(["safety", "--version"], capture_output=True, check=True)
+        except (subprocess.CalledProcessError, FileNotFoundError):
             logger.info("Installing Safety for dependency scanning...")
             try:
-                subprocess.run([sys.executable, "-m", "pip", "install", "safety"], check=True, capture_output=True)
+                subprocess.run(
+                    [sys.executable, "-m", "pip", "install", "safety"],
+                    check=True,
+                    capture_output=True,
+                )
             except subprocess.CalledProcessError as e:
                 logger.error(f"Failed to install Safety: {e}")
                 return 2
@@ -42,7 +46,11 @@ def check_dependencies():
         logger.info("Running dependency security scan...")
 
         # Run safety check
-        result = subprocess.run(["safety", "check", "--full-report", "--json"], capture_output=True, text=True)
+        result = subprocess.run(
+            ["safety", "check", "--full-report", "--json"],
+            capture_output=True,
+            text=True,
+        )
 
         if result.returncode == 0:
             logger.info("✅ No vulnerable dependencies found")
