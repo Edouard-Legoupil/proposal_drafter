@@ -195,7 +195,7 @@ async def verify_ownership(resource_type: str, resource_id: int, current_user: C
 
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
-            return {"id": str(resource.id), "owner_id": str(resource.user_id)}
+            return {"id": str(getattr(resource, "id", "")), "owner_id": str(getattr(resource, "user_id", ""))}
 
     except Exception as e:
         import logging

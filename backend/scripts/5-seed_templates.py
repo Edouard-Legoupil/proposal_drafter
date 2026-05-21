@@ -59,7 +59,7 @@ class TemplateSynchronizer:
         self.templates_updated = 0
         self.templates_removed = 0
         self.templates_unchanged = 0
-        self.errors = []
+        self.errors: list[str] = []
         self._conn = None
 
     def _get_connection(self):
@@ -217,7 +217,7 @@ class TemplateSynchronizer:
 
     def get_all_registries_from_db(self) -> Dict[str, Dict]:
         """Get all template_registry entries"""
-        registries = {}
+        registries: dict[str, dict] = {}
         conn = self._get_connection()
         if not conn:
             return registries

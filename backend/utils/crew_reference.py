@@ -107,7 +107,7 @@ class ReferenceIdentificationCrew:
         return selected_instructions
 
     @agent
-    def researcher(self) -> Agent:
+    def researcher(self) -> Agent:  # type: ignore[misc]
         return Agent(
             config=self.agents_config["researcher"],  # type: ignore[index]
             llm=llm,
@@ -117,11 +117,11 @@ class ReferenceIdentificationCrew:
         )
 
     @task
-    def research_task(self) -> Task:
+    def research_task(self) -> Task:  # type: ignore[misc]
         return Task(config=self.tasks_config["research_task"], agent=self.researcher())  # type: ignore[call-arg,arg-type,index]
 
     @crew
-    def identify_references_crew(self) -> Crew:
+    def identify_references_crew(self) -> Crew:  # type: ignore[misc]
         """Creates the ReferenceIdentificationCrew"""
         # Ensure log directory exists
         # current_dir = os.path.dirname(os.path.abspath(__file__))

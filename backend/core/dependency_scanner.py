@@ -212,7 +212,7 @@ class DependencyScanner:
         for package in packages:
             try:
                 # Query NVD API for vulnerabilities
-                params = {"keywordSearch": package, "resultsPerPage": 20}
+                params: dict[str, str | int] = {"keywordSearch": package, "resultsPerPage": 20}
 
                 response = requests.get(nvd_api_url, params=params, timeout=10)
 
@@ -659,7 +659,7 @@ def check_license_compliance(dependencies: List[Dependency]) -> Dict[str, Any]:
         "GPL-3.0",
     ]
 
-    compliance_report = {
+    compliance_report: dict[str, list] = {
         "compliant_dependencies": [],
         "non_compliant_dependencies": [],
         "unknown_licenses": [],
@@ -676,7 +676,7 @@ def check_license_compliance(dependencies: List[Dependency]) -> Dict[str, Any]:
             )
 
     compliance_report["compliance_status"] = (
-        "compliant" if not compliance_report["non_compliant_dependencies"] else "needs_review"
+        "compliant" if len(compliance_report["non_compliant_dependencies"]) == 0 else "needs_review"
     )
 
     return compliance_report

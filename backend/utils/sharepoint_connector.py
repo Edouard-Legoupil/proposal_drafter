@@ -445,6 +445,8 @@ class SharePointConnector:
         drive_id = self.get_drive_id()
 
         target_path = folder_path if folder_path is not None else self.config.folder_path
+        if target_path is None:
+            target_path = "/"
 
         self.logger.info(f"Listing files in: {target_path}")
 
@@ -923,7 +925,7 @@ class SharePointConnector:
         return changes
 
     @staticmethod
-    def extract_comments(docx_bytes: bytes) -> List[Dict[str, str | None]]:
+    def extract_comments(docx_bytes: bytes) -> List[Dict[str, str]]:
         """
         Extract comments from a DOCX file.
 
@@ -1091,7 +1093,7 @@ class SharePointConnector:
                 lines.append(
                     f"  [{symbol}] {c['type'].upper():10s}  "
                     f"by {c['author']:20s}  "
-                    f"on {c['date'][:10] if c['date'] else '?':10s}  "
+                    f"on {(c['date'][:10] if isinstance(c['date'], str) else '?')[:10]}  "
                     f'"{c["text"]}"'
                 )
         else:
@@ -1104,7 +1106,7 @@ class SharePointConnector:
             for c in comments:
                 lines.append(
                     f"  [#{ c['id']:>3}] {c['author']:20s}  "
-                    f"on {c['date'][:10] if c['date'] else '?':10s}  "
+                    f"on {(c['date'][:10] if isinstance(c['date'], str) else '?')[:10]}  "
                     f'"{c["text"]}"'
                 )
         else:

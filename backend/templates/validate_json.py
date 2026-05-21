@@ -7,12 +7,12 @@ for f in files:
     try:
         with open(f, "r") as fp:
             json.load(fp)
-    except Exception as e:
-        errors.append(f"{f}: {e}")
+    except Exception as validation_error:
+        errors.append(f"{f}: {validation_error}")
 
 if errors:
     print("JSON Errors found:")
-    for e in errors:
-        print(e)
+    for error_msg in errors:
+        print(error_msg)
 else:
     print("All JSON files are valid.")

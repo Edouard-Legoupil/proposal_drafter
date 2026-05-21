@@ -151,7 +151,7 @@ class ProposalCrew:
 
     # List of agents ##########
     @agent
-    def content_generator(self) -> Agent:
+    def content_generator(self) -> Agent:  # type: ignore[misc]  # type: ignore[misc]
         agent_params = {
             "config": self.agents_config["content_generator"],
             "llm": llm,
@@ -162,35 +162,35 @@ class ProposalCrew:
         return Agent(**agent_params)
 
     @agent
-    def evaluator(self) -> Agent:
+    def evaluator(self) -> Agent:  # type: ignore[misc]
         return Agent(config=self.agents_config["evaluator"], llm=llm, verbose=True)
 
     @agent
-    def regenerator(self) -> Agent:  # ✅ New agent for regeneration
+    def regenerator(self) -> Agent:  # ✅ New agent for regeneration  # type: ignore[misc]
         return Agent(config=self.agents_config["regenerator"], llm=llm, verbose=True)
 
     # List of Tasks ##########
     # Task: Generate content for a section
     @task
-    def content_generation_task(self) -> Task:
+    def content_generation_task(self) -> Task:  # type: ignore[misc]
         task_config = self.tasks_config["content_generation_task"]
         return Task(**task_config)
 
     # Task: Evaluate generated content
     @task
-    def evaluation_task(self) -> Task:
+    def evaluation_task(self) -> Task:  # type: ignore[misc]
         task_config = self.tasks_config["evaluation_task"]
         return Task(**task_config)
 
     # Task: Regenerate content with concise input
     @task
-    def regeneration_task(self) -> Task:  # ✅ New task for regeneration
+    def regeneration_task(self) -> Task:  # ✅ New task for regeneration  # type: ignore[misc]
         task_config = self.tasks_config["regeneration_task"]
         return Task(**task_config)
 
     # Crew orchestration ####
     @crew
-    def generate_proposal_crew(self) -> Crew:  # Ensure method name is correct
+    def generate_proposal_crew(self) -> Crew:  # Ensure method name is correct  # type: ignore[misc]
         """Creates the ProposalCrew with sequential processing"""
         return Crew(
             agents=[self.content_generator(), self.evaluator()],
@@ -202,7 +202,7 @@ class ProposalCrew:
         )
 
     @crew
-    def regenerate_proposal_crew(self) -> Crew:  # ✅ New crew for regeneration
+    def regenerate_proposal_crew(self) -> Crew:  # ✅ New crew for regeneration  # type: ignore[misc]
         """Creates the ProposalCrew for regenerating a section"""
         return Crew(
             agents=[self.regenerator(), self.evaluator()],

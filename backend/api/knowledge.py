@@ -27,12 +27,10 @@ from backend.core.db import get_engine
 from backend.core.redis import redis_client
 from backend.core.security import get_current_user, check_user_group_access
 
-try:
-    from backend.core.redis import DictStorage
-except ImportError:
-    # This will fail when redis is connected, but that's fine.
-    class DictStorage:
-        pass
+
+# Local DictStorage definition for fallback
+class DictStorage:
+    pass
 
 
 from backend.core.config import load_proposal_template
@@ -393,7 +391,7 @@ async def get_knowledge_cards(
                 params["outcome_id"] = outcome_id
             if field_context_id:
                 filters.append("kc.field_context_id = :field_context_id")
-                params["field_context_id"] = field_context_id
+                params["field_context_id"] = str(field_context_id)
 
             if filters:
                 base_query += " WHERE " + " OR ".join(filters)
@@ -1045,46 +1043,6 @@ async def delete_knowledge_card_reference_by_id(
         raise HTTPException(status_code=500, detail="Failed to delete reference.")
 
 
-@router.delete(
-    "/knowledge-cards/references/{reference_id}",
-    dependencies=[Depends(authorize_knowledge_manager)],
-)
-async def delete_knowledge_card_reference_by_id(
-    reference_id: uuid.UUID, current_user: dict = Depends(get_current_user)
-):
-    """
-    Deletes a reference and its associations.
-    """
-    try:
-        with get_engine().begin() as connection:
-            # Validate the reference exists
-            ref_check = connection.execute(
-                text("SELECT id FROM knowledge_card_references WHERE id = :id"),
-                {"id": reference_id},
-            ).fetchone()
-
-            if not ref_check:
-                raise HTTPException(status_code=404, detail="Reference not found.")
-
-            # Delete associations
-            connection.execute(
-                text("DELETE FROM knowledge_card_to_references WHERE reference_id = :ref_id"),
-                {"ref_id": reference_id},
-            )
-
-            # Delete the reference
-            connection.execute(
-                text("DELETE FROM knowledge_card_references WHERE id = :id"),
-                {"id": reference_id},
-            )
-        return {"message": "Reference deleted successfully."}
-    except HTTPException as http_exc:
-        raise http_exc
-    except Exception as e:
-        logger.error(f"[DELETE KC REFERENCE ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to delete reference.")
-
-
 async def ingest_reference_content(
     card_id: uuid.UUID,
     reference_id: uuid.UUID,
@@ -1203,8 +1161,8 @@ def _update_progress(
     card_id: uuid.UUID,
     message: str,
     progress: int,
-    section_name: str = None,
-    section_content: str = None,
+    section_name: str | None = None,
+    section_content: str | None = None,
 ):
     """Update progress with error handling"""
     try:
@@ -1401,7 +1359,7 @@ async def ingest_knowledge_card_references(
             params = {"card_id": card_id}
             if ids:
                 query += " AND kcr.id = ANY(:ids)"
-                params["ids"] = [str(id) for id in ids]
+                params["ids"] = [str(id) for id in ids]  # type: ignore[assignment]
 
             references = connection.execute(text(query), params).fetchall()
             for ref in references:
@@ -1925,7 +1883,7 @@ async def generate_and_download_document(
 
                 # Use the base name for the document title, fallback to summary or generic title
                 doc_title = base_name or summary_text or "Knowledge Card"
-                doc = create_word_from_knowledge_card(doc_title, ordered_sections)
+                doc = create_word_from_knowledge_card(doc_title, ordered_sections)  # type: ignore[assignment]
 
                 docx_buffer = io.BytesIO()
                 doc.save(docx_buffer)
@@ -1946,46 +1904,6 @@ async def generate_and_download_document(
             exc_info=True,
         )
         raise HTTPException(status_code=500, detail="An unexpected error occurred.")
-
-
-@router.delete(
-    "/knowledge-cards/references/{reference_id}",
-    dependencies=[Depends(authorize_knowledge_manager)],
-)
-async def delete_knowledge_card_reference_by_id(
-    reference_id: uuid.UUID, current_user: dict = Depends(get_current_user)
-):
-    """
-    Deletes a reference and its associations.
-    """
-    try:
-        with get_engine().begin() as connection:
-            # Validate the reference exists
-            ref_check = connection.execute(
-                text("SELECT id FROM knowledge_card_references WHERE id = :id"),
-                {"id": reference_id},
-            ).fetchone()
-
-            if not ref_check:
-                raise HTTPException(status_code=404, detail="Reference not found.")
-
-            # Delete associations
-            connection.execute(
-                text("DELETE FROM knowledge_card_to_references WHERE reference_id = :ref_id"),
-                {"ref_id": reference_id},
-            )
-
-            # Delete the reference
-            connection.execute(
-                text("DELETE FROM knowledge_card_references WHERE id = :id"),
-                {"id": reference_id},
-            )
-        return {"message": "Reference deleted successfully."}
-    except HTTPException as http_exc:
-        raise http_exc
-    except Exception as e:
-        logger.error(f"[DELETE KC REFERENCE ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to delete reference.")
 
 
 @router.get("/review-knowledge-card/{card_id}")

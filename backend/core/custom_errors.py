@@ -162,13 +162,17 @@ def standardize_error_response(exc: Exception) -> Dict[str, Any]:
     """
     if isinstance(exc, APIError):
         # Already a standardized error
-        return exc.detail
+        return (
+            exc.detail
+            if isinstance(exc.detail, dict)
+            else {"error": {"message": str(exc.detail), "code": "api_error", "status": 400}}
+        )
     elif isinstance(exc, HTTPException):
         # Convert FastAPI HTTPException to standardized format
         return {
             "error": {
                 "code": "generic_error",
-                "message": exc.detail,
+                "message": str(exc.detail) if exc.detail else "HTTP error occurred",
                 "status": exc.status_code,
             }
         }

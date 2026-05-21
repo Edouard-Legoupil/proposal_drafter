@@ -13,7 +13,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 
-def scrape_url(url: str) -> str:
+def scrape_url(url: str) -> str | None:
     """
     Scrapes the main text content from a given URL.
     Supports both HTML pages and PDF files.
@@ -100,8 +100,8 @@ def scrape_url(url: str) -> str:
                 # Look for PDF links in the page
                 pdf_links = []
                 for link in soup.find_all("a", href=True):
-                    href = link["href"]
-                    if href.lower().endswith(".pdf"):
+                    href = link.get("href", "")
+                    if isinstance(href, str) and href.lower().endswith(".pdf"):
                         pdf_links.append(href)
 
                 if pdf_links:

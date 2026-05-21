@@ -4,23 +4,23 @@ from typing import Dict
 
 # Third-Party Libraries
 import openpyxl
-from openpyxl.styles import Font, PatternFill
-from docx import Document
+from openpyxl.styles import Font, PatternFill  # type: ignore[import-untyped,attr-defined]
+from docx import Document  # type: ignore[import-untyped,attr-defined]
 from docx.shared import Pt, RGBColor
 from markdown_it import MarkdownIt
 from mdit_py_plugins.front_matter import front_matter_plugin
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_JUSTIFY
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.units import inch
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.lib.enums import TA_JUSTIFY  # type: ignore[import-untyped,attr-defined]
+from reportlab.lib.pagesizes import A4  # type: ignore[import-untyped,attr-defined]
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet  # type: ignore[import-untyped,attr-defined]
+from reportlab.lib.units import inch  # type: ignore[import-untyped,attr-defined]
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle  # type: ignore[import-untyped,attr-defined]
 
 # Internal Modules
 from backend.utils.markdown import convert_markdown_bold
 
 
-def add_markdown_to_doc(doc: Document, text: str):
+def add_markdown_to_doc(doc: Document, text: str):  # type: ignore[no-untyped-def]
     """
     Adds content to a .docx document, correctly handling Markdown syntax.
 
@@ -126,7 +126,7 @@ def add_markdown_to_doc(doc: Document, text: str):
             i += 1
 
 
-def create_word_from_sections(form_data: Dict, proposal_template: Dict, ordered_sections: Dict) -> Document:
+def create_word_from_sections(form_data: Dict, proposal_template: Dict, ordered_sections: Dict) -> Document:  # type: ignore[no-untyped-def]
     """
     Generates a .docx document from proposal data.
 
@@ -388,7 +388,7 @@ def generate_final_markdown(generated_sections: Dict) -> str:
     return markdown_content
 
 
-def create_word_from_knowledge_card(card_name: str, ordered_sections: Dict) -> Document:
+def create_word_from_knowledge_card(card_name: str, ordered_sections: Dict) -> Document:  # type: ignore[no-untyped-def]
     """
     Generates a .docx document for a knowledge card.
 

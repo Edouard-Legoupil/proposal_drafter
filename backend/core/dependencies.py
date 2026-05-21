@@ -33,7 +33,10 @@ def get_user_model():
 
 
 def get_db_model():
-    from backend.database import Base, async_session_maker
+    from backend.models import Base
+    from sqlalchemy.orm import sessionmaker
+
+    async_session_maker = sessionmaker(bind=engine, expire_on_commit=False)  # type: ignore[name-defined]
 
     return Base, async_session_maker
 
@@ -115,7 +118,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> Optional[obje
         HTTPException(401): If token is missing, expired, or invalid
         HTTPException(401): If user does not exist
     """
-    from backend.core.authorization import get_current_user as _get_current_user
+    from backend.core.security import get_current_user as _get_current_user
 
     return await _get_current_user(token)
 
@@ -147,7 +150,7 @@ async def get_optional_user(
         return None
 
     try:
-        from backend.core.authorization import get_current_user as _get_current_user
+        from backend.core.security import get_current_user as _get_current_user
 
         return await _get_current_user(token)
     except HTTPException:

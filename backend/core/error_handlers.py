@@ -297,9 +297,9 @@ class ErrorHandler:
             config = error_configs["access_denied"]
 
         return SecurityError(
-            status_code=config["status"],
-            error_code=config["code"],
-            message=config["message"],
+            status_code=int(config["status"]) if isinstance(config["status"], (int, str)) else 403,
+            error_code=str(config["code"]) if isinstance(config["code"], (str, int)) else "access_denied",
+            message=str(config["message"]) if isinstance(config["message"], (str, int)) else "Access denied",
             details=details,
             log_level=log_level,
         )

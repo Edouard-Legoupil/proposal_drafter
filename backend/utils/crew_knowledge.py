@@ -160,7 +160,7 @@ class ContentGenerationCrew:
         self.pre_prompt = pre_prompt
 
     @agent
-    def researcher(self) -> Agent:
+    def researcher(self) -> Agent:  # type: ignore[misc]
         return Agent(
             config=self.agents_config["researcher"],
             llm=llm,
@@ -170,7 +170,7 @@ class ContentGenerationCrew:
         )
 
     @agent
-    def writer(self) -> Agent:
+    def writer(self) -> Agent:  # type: ignore[misc]
         return Agent(
             config=self.agents_config["writer"],
             llm=llm,
@@ -179,7 +179,7 @@ class ContentGenerationCrew:
         )
 
     @task
-    def research_task(self) -> Task:
+    def research_task(self) -> Task:  # type: ignore[misc]
         research_task_config = self.tasks_config["research_task"]  # type: ignore[misc]
         return Task(
             description=self.pre_prompt + research_task_config.get("description", ""),  # type: ignore[misc]
@@ -189,7 +189,7 @@ class ContentGenerationCrew:
         )
 
     @task
-    def write_task(self) -> Task:
+    def write_task(self) -> Task:  # type: ignore[misc]
         write_task_config = self.tasks_config["write_task"]  # type: ignore[misc]
         return Task(
             description=self.pre_prompt + write_task_config.get("description", ""),  # type: ignore[misc]
@@ -199,7 +199,7 @@ class ContentGenerationCrew:
         )
 
     @crew
-    def create_crew(self) -> Crew:
+    def create_crew(self) -> Crew:  # type: ignore[misc]
         # Ensure log directory exists
         # current_dir = os.path.dirname(os.path.abspath(__file__))
         # log_dir = os.path.join(current_dir, '..', '..', 'logs')

@@ -8,11 +8,13 @@ import asyncio
 # It includes a fallback mechanism to an in-memory dictionary for local
 # development or when Redis is unavailable.
 
+from typing import Union
+
 try:
     # Attempt to connect to the Redis server.
     # `decode_responses=True` ensures that data read from Redis is automatically
     # decoded from bytes to UTF-8 strings.
-    redis_client = redis.Redis(host="redis", port=6379, db=0, decode_responses=True)
+    redis_client: Union[redis.Redis, "DictStorage"] = redis.Redis(host="redis", port=6379, db=0, decode_responses=True)
 
     # `ping()` checks if the connection to Redis is alive.
     redis_client.ping()

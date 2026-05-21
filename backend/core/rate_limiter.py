@@ -79,7 +79,7 @@ class RateLimiter:
             return f"user:{user['user_id']}"
         else:
             # Fall back to IP address for anonymous users
-            client_ip = request.headers.get("X-Forwarded-For") or request.client.host
+            client_ip = request.headers.get("X-Forwarded-For") or (request.client.host if request.client else "unknown")
             return f"ip:{client_ip}"
 
     def get_user_tier(self, user: Optional[Dict[str, Any]]) -> str:

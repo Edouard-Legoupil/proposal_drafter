@@ -52,7 +52,7 @@ def get_current_user(request: Request) -> dict:
 
     try:
         # Decode the JWT token using the secret key.
-        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        payload = jwt.decode(token, str(SECRET_KEY), algorithms=["HS256"])
         email = payload.get("email")
         if not email:
             raise HTTPException(status_code=401, detail="Invalid token payload.")
