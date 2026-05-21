@@ -7,7 +7,6 @@ Defines the Template model for the Proposal Drafter system.
 from typing import Any, List, Optional
 from enum import Enum as PyEnum
 from sqlalchemy import Column, String, Text, Boolean, DateTime, func
-from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 
 # Import shared base from models package to ensure all models share the same registry

@@ -6,7 +6,6 @@ Defines association models for many-to-many relationships between users and vari
 
 from typing import List
 from sqlalchemy import Column, String
-from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 
 # Import shared base from models package to ensure all models share the same registry
@@ -60,7 +59,3 @@ class UserFieldContext(Base):  # type: ignore[valid-type, misc]
         """Get all field context IDs for a specific user."""
         results = session.query(cls).filter_by(user_id=user_id).all()
         return [str(fc.field_context_id) for fc in results]
-
-
-# Import UUID for type hints
-from uuid import UUID

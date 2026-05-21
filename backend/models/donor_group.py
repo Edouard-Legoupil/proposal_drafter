@@ -5,7 +5,6 @@ Defines the DonorGroupMember model for donor group-based access control.
 """
 
 from sqlalchemy import Column, String
-from sqlalchemy.orm import relationship
 
 # Import shared base from models package to ensure all models share the same registry
 # This fixes cross-model relationship resolution issues
