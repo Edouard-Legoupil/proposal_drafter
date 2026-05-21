@@ -30,6 +30,7 @@ from backend.core.security import (
     ENTRA_CLIENT_SECRET,
     ENTRA_REDIRECT_URI,
 )
+from backend.core.rate_limiter import check_api_rate_limit
 from backend.core.error_handlers import get_error_handler
 from backend.models.schemas import UserSettings
 
@@ -206,12 +207,14 @@ async def callback(request: Request, code: str):
 
 
 @router.post("/signup")
-@limiter.limit("5/hour")  # SEC-002: Rate limiting to prevent abuse
 async def signup(request: Request):
     """
     Handles new user registration.
     It hashes the user's password and security answer before storing them.
     """
+    # SEC-002: Rate limiting to prevent abuse
+    await check_api_rate_limit(request, endpoint_type="signup", max_requests=5, window_seconds=3600)
+
     data = await request.json()
     name = data.get("username")
     email = data.get("email")
@@ -338,13 +341,15 @@ async def signup(request: Request):
 
 
 @router.post("/login")
-@limiter.limit("10/minute")  # SEC-002: Rate limiting to prevent brute force attacks
 async def login(request: Request):
     """
     Handles user login.
     On successful authentication, it creates a JWT and sets it in an HttpOnly cookie.
     """
     try:
+        # SEC-002: Rate limiting to prevent brute force attacks
+        await check_api_rate_limit(request, endpoint_type="login", max_requests=10, window_seconds=60)
+
         # 1. Parse request body and validate input
         data = await request.json()
         identifier = data.get("identifier") or data.get("email")
@@ -531,12 +536,14 @@ async def logout(current_user: dict = Depends(get_current_user)):
 
 
 @router.post("/get-security-question")
-@limiter.limit("3/hour")  # SEC-002: Rate limiting to prevent enumeration
 async def get_security_question(request: Request):
     """
     Retrieves the security question for a user based on their email.
     This is the first step in the password recovery process.
     """
+    # SEC-002: Rate limiting to prevent enumeration
+    await check_api_rate_limit(request, endpoint_type="get_security_question", max_requests=3, window_seconds=3600)
+
     data = await request.json()
     email = data.get("email")
     if not email:
@@ -558,11 +565,13 @@ async def get_security_question(request: Request):
 
 
 @router.post("/verify-security-answer")
-@limiter.limit("3/hour")  # SEC-002: Rate limiting to prevent brute force
 async def verify_security_answer(request: Request):
     """
     Verifies a user's answer to their security question.
     """
+    # SEC-002: Rate limiting to prevent brute force
+    await check_api_rate_limit(request, endpoint_type="verify_security_answer", max_requests=3, window_seconds=3600)
+
     data = await request.json()
     email = data.get("email")
     security_question = data.get("security_question")
@@ -591,11 +600,13 @@ async def verify_security_answer(request: Request):
 
 
 @router.post("/update-password")
-@limiter.limit("5/hour")  # SEC-002: Rate limiting to prevent abuse
 async def update_password(request: Request):
     """
     Updates a user's password after they have successfully answered their security question.
     """
+    # SEC-002: Rate limiting to prevent abuse
+    await check_api_rate_limit(request, endpoint_type="update_password", max_requests=5, window_seconds=3600)
+
     data = await request.json()
     email = data.get("email")
     new_password = data.get("new_password")

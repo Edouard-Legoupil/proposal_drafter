@@ -104,7 +104,14 @@ class RateLimiter:
         else:
             return "free"
 
-    async def check_rate_limit(self, request: Request, endpoint_type: str = "llm", token_count: int = 0) -> bool:
+    async def check_rate_limit(
+        self,
+        request: Request,
+        endpoint_type: str = "llm",
+        token_count: int = 0,
+        max_requests: int = None,
+        window_seconds: int = None,
+    ) -> bool:
         """
         Check if a request should be rate limited.
 
@@ -112,6 +119,8 @@ class RateLimiter:
             request: FastAPI Request object
             endpoint_type: Type of endpoint (llm, api, etc.)
             token_count: Number of tokens in the request (for token-based limiting)
+            max_requests: Custom max requests (overrides tier limits if provided)
+            window_seconds: Custom window in seconds (overrides tier limits if provided)
 
         Returns:
             bool: True if request should be allowed, False if rate limited
@@ -142,10 +151,10 @@ class RateLimiter:
             storage["token_count"] = 0
             storage["token_timestamp"] = now
 
-        # Get rate limits for this tier
+        # Get rate limits for this tier (use custom limits if provided)
         limits = self.rate_limits[tier]
-        request_limit = limits["requests"]["limit"]
-        request_window = limits["requests"]["window"]
+        request_limit = max_requests if max_requests is not None else limits["requests"]["limit"]
+        request_window = window_seconds if window_seconds is not None else limits["requests"]["window"]
         token_limit = limits["tokens"]["limit"]
         token_window = limits["tokens"]["window"]
 
@@ -419,15 +428,20 @@ async def check_llm_rate_limit(request: Request, token_count: int = 0) -> None:
     await limiter.check_rate_limit(request, "llm", token_count)
 
 
-async def check_api_rate_limit(request: Request) -> None:
+async def check_api_rate_limit(
+    request: Request, endpoint_type: str = "api", max_requests: int = None, window_seconds: int = None
+) -> None:
     """
-    Convenience function to check general API rate limits.
+    Convenience function to check API rate limits with optional custom limits.
 
     Args:
         request: FastAPI Request object
+        endpoint_type: Type of endpoint for rate limiting key
+        max_requests: Custom max requests (overrides tier limits if provided)
+        window_seconds: Custom window in seconds (overrides tier limits if provided)
 
     Raises:
         HTTPException: If rate limit is exceeded
     """
     limiter = get_rate_limiter()
-    await limiter.check_rate_limit(request, "api", 0)
+    await limiter.check_rate_limit(request, endpoint_type, 0, max_requests, window_seconds)
