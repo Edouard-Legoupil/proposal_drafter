@@ -149,7 +149,7 @@ class ProposalCrew:
         logger.info("LLM output validation passed")
         return True
 
-    ## List of agents ##########
+    # List of agents ##########
     @agent
     def content_generator(self) -> Agent:
         agent_params = {
@@ -169,7 +169,7 @@ class ProposalCrew:
     def regenerator(self) -> Agent:  # ✅ New agent for regeneration
         return Agent(config=self.agents_config["regenerator"], llm=llm, verbose=True)
 
-    ## List of Tasks ##########
+    # List of Tasks ##########
     # Task: Generate content for a section
     @task
     def content_generation_task(self) -> Task:
@@ -188,7 +188,7 @@ class ProposalCrew:
         task_config = self.tasks_config["regeneration_task"]
         return Task(**task_config)
 
-    ## Crew orchestration ####
+    # Crew orchestration ####
     @crew
     def generate_proposal_crew(self) -> Crew:  # Ensure method name is correct
         """Creates the ProposalCrew with sequential processing"""

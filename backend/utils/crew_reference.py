@@ -6,7 +6,9 @@ from crewai.project import CrewBase, agent, crew, task
 from crewai_tools import SerperDevTool
 from backend.core.llm import llm
 
-os.environ["SERPER_API_KEY"] = os.getenv("SERPER_API_KEY")
+serper_api_key = os.getenv("SERPER_API_KEY")
+if serper_api_key:
+    os.environ["SERPER_API_KEY"] = serper_api_key
 
 
 class SerperSearchSchema(BaseModel):
@@ -107,7 +109,7 @@ class ReferenceIdentificationCrew:
     @agent
     def researcher(self) -> Agent:
         return Agent(
-            config=self.agents_config["researcher"],
+            config=self.agents_config["researcher"],  # type: ignore[index]
             llm=llm,
             verbose=True,
             allow_delegation=False,
@@ -116,7 +118,7 @@ class ReferenceIdentificationCrew:
 
     @task
     def research_task(self) -> Task:
-        return Task(config=self.tasks_config["research_task"], agent=self.researcher())
+        return Task(config=self.tasks_config["research_task"], agent=self.researcher())  # type: ignore[call-arg,arg-type,index]
 
     @crew
     def identify_references_crew(self) -> Crew:

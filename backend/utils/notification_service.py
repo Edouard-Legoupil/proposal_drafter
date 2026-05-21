@@ -18,7 +18,12 @@ class NotificationService:
 
     @staticmethod
     def send_role_request_approval_notification(
-        user_id: str, user_name: str, user_email: str, role_name: str, admin_note: str = None, approved_by: str = None
+        user_id: str,
+        user_name: str,
+        user_email: str,
+        role_name: str,
+        admin_note: str | None = None,
+        approved_by: str | None = None,
     ) -> Dict[str, Any]:
         """
         Send notification when a role request is approved.
@@ -34,7 +39,7 @@ class NotificationService:
         Returns:
             Notification record
         """
-        notification = {
+        notification: Dict[str, Any] = {
             "notification_type": "role_request_approved",
             "user_id": user_id,
             "user_name": user_name,
@@ -81,7 +86,12 @@ class NotificationService:
 
     @staticmethod
     def send_role_request_rejection_notification(
-        user_id: str, user_name: str, user_email: str, role_name: str, admin_note: str = None, rejected_by: str = None
+        user_id: str,
+        user_name: str,
+        user_email: str,
+        role_name: str,
+        admin_note: str | None = None,
+        rejected_by: str | None = None,
     ) -> Dict[str, Any]:
         """
         Send notification when a role request is rejected.
@@ -97,7 +107,7 @@ class NotificationService:
         Returns:
             Notification record
         """
-        notification = {
+        notification: Dict[str, Any] = {
             "notification_type": "role_request_rejected",
             "user_id": user_id,
             "user_name": user_name,
@@ -144,7 +154,7 @@ class NotificationService:
 
     @staticmethod
     def log_notification_delivery(
-        notification_type: str, user_id: str, delivery_method: str, success: bool, details: Dict[str, Any] = None
+        notification_type: str, user_id: str, delivery_method: str, success: bool, details: Dict[str, Any] | None = None
     ) -> None:
         """
         Log the delivery status of a notification.

@@ -33,7 +33,7 @@ class IncidentService:
         self.persistence = PersistenceRepository(connection)
         self.crew = IncidentAnalysisCrew()
 
-    def analyze_incident(self, request: IncidentAnalyzeRequest, user_id: str = None) -> IncidentAnalysisResponse:
+    def analyze_incident(self, request: IncidentAnalyzeRequest, user_id: str | None = None) -> IncidentAnalysisResponse:
         validate_taxonomy(
             artifact_type=request.artifact_type.value,
             severity=request.severity.value,

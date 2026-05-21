@@ -122,7 +122,7 @@ async def get_db_connection_async():
 # =============================================================================
 
 
-async def verify_ownership(resource_type: str, resource_id: int, current_user: CurrentUser) -> Dict[str, Any]:
+async def verify_ownership(resource_type: str, resource_id: int, current_user: CurrentUser) -> Dict[str, Any]:  # type: ignore[return]
     """
     Verify that the current user owns the specified resource using safe ORM queries.
 
@@ -177,7 +177,7 @@ async def verify_ownership(resource_type: str, resource_id: int, current_user: C
                 )
 
             # Check ownership (SEC-001: Safe attribute access)
-            if str(resource.user_id) != user_id:
+            if str(resource.user_id) != user_id:  # type: ignore[attr-defined]
                 # Log the unauthorized access attempt
                 import logging
 
@@ -980,6 +980,8 @@ async def check_incident_access(
         HTTPException(403): If user doesn't have access
     """
     user_id = get_user_id(current_user)
+    import logging
+
     logger = logging.getLogger("security.authorization")
 
     # Log the access attempt

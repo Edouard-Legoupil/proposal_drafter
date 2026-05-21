@@ -1,4 +1,5 @@
 #  Standard Library
+import json
 import logging
 import uuid
 
@@ -383,7 +384,7 @@ async def get_admin_role_requests(admin: dict = Depends(is_system_admin)):
 
 
 @router.post("/admin/role-requests/{user_id}/approve")
-async def approve_role_request(user_id: str, admin_note: str = None, admin: dict = Depends(is_system_admin)):
+async def approve_role_request(user_id: str, admin_note: str | None = None, admin: dict = Depends(is_system_admin)):
     """
     Approve a role request and assign the requested role to the user.
     """
@@ -478,7 +479,7 @@ async def approve_role_request(user_id: str, admin_note: str = None, admin: dict
 
 
 @router.post("/admin/role-requests/{user_id}/reject")
-async def reject_role_request(user_id: str, admin_note: str = None, admin: dict = Depends(is_system_admin)):
+async def reject_role_request(user_id: str, admin_note: str | None = None, admin: dict = Depends(is_system_admin)):
     """
     Reject a role request.
     """

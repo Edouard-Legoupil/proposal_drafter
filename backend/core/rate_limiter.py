@@ -109,8 +109,8 @@ class RateLimiter:
         request: Request,
         endpoint_type: str = "llm",
         token_count: int = 0,
-        max_requests: int = None,
-        window_seconds: int = None,
+        max_requests: Optional[int] = None,
+        window_seconds: Optional[int] = None,
     ) -> bool:
         """
         Check if a request should be rate limited.
@@ -429,7 +429,10 @@ async def check_llm_rate_limit(request: Request, token_count: int = 0) -> None:
 
 
 async def check_api_rate_limit(
-    request: Request, endpoint_type: str = "api", max_requests: int = None, window_seconds: int = None
+    request: Request,
+    endpoint_type: str = "api",
+    max_requests: Optional[int] = None,
+    window_seconds: Optional[int] = None,
 ) -> None:
     """
     Convenience function to check API rate limits with optional custom limits.

@@ -3,9 +3,10 @@ import logging
 import json
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import text
 
 from backend.core.db import get_engine
-from backend.core.security import get_current_user
+from backend.core.security import get_current_user, is_system_admin
 from backend.core.authorization import (
     check_proposal_access,
     check_knowledge_card_access,
@@ -13,13 +14,6 @@ from backend.core.authorization import (
     get_user_id,
     is_admin,
 )
-
-try:
-    from backend.core.redis import DictStorage
-except ImportError:
-    # This will fail when redis is connected, but that's fine.
-    # DictStorage is already imported from backend.core.redis
-    pass
 
 
 from backend.utils.incident_service import IncidentService
@@ -642,7 +636,7 @@ async def get_incident_access(incident_id: str, admin: dict = Depends(is_system_
 
             # Get access grants (this would be from a grants table if it existed)
             # For now, we'll return the creator as the owner
-            grants = []
+            grants: list[dict] = []
 
             # Get audit logs for this incident
             audit_query = text(

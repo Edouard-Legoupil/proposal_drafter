@@ -4,9 +4,10 @@ python-dotenv
 # ASGI web framework for building high-performance APIs with Python
 fastapi>=0.109.0  # SEC-005: Updated for security and bug fixes
 fastapi-sso
-=======
-msal
 fastapi-limiter
+
+## Connection to Sharepoint
+msal
 
 # In-memory data structure store used as database, cache, and message broker
 redis
@@ -49,7 +50,7 @@ langchain-community
 
 # SQL toolkit and Object Relational Mapper (ORM) for Python
 sqlalchemy>=2.0.23  # SEC-005: Updated to fix CVE-2023-3787
-=======
+
 
 # PostgreSQL database adapter for Python (binary version)
 psycopg2-binary
@@ -62,7 +63,7 @@ PyJWT>=2.8.0  # SEC-005: Updated to fix CVE-2022-39227
 
 # WSGI utility library containing request/response handling utilities
 werkzeug>=3.0.0  # SEC-005: Updated to fix CVE-2023-25577
-=======
+
 
 # PDF document generation library
 reportlab
@@ -101,7 +102,7 @@ pytest-asyncio
 
 # Security: Dependency vulnerability scanning
 safety  # SEC-005: Dependency security scanning
-=======
+
 
 # Pytest plugin for mocking objects during tests
 pytest-mock
