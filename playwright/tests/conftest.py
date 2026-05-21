@@ -254,6 +254,70 @@ def logged_in_qa_officer(page, config):
     return page
 
 
+@pytest.fixture
+def admin_page(page, config):
+    """Authenticated admin page fixture for access management tests"""
+    # Navigate to login page
+    page.goto(f"{config['base_url']}")
+
+    # Use admin credentials
+    admin_email = os.environ.get("ADMIN_EMAIL", "admin@unhcr.org")
+    admin_password = os.environ.get("ADMIN_PASSWORD", "admin123")
+
+    # Fill login form
+    page.get_by_test_id("identifier-input").fill(admin_email)
+    page.get_by_test_id("password-input").fill(admin_password)
+    page.get_by_test_id("submit-button").click()
+
+    # Verify admin access by checking for admin navigation
+    expect(page).to_have_url(re.compile(".*dashboard"))
+    expect(page.get_by_test_id("admin-nav")).to_be_visible()
+
+    return page
+
+
+@pytest.fixture
+def setup_test_data(admin_page: Page):
+    """Setup test data for access management tests"""
+    # This fixture would normally create test data via API or UI
+    # For now, it's a placeholder that doesn't create actual data
+    # In a real implementation, this would:
+    # 1. Create test users
+    # 2. Create test roles
+    # 3. Create test incidents
+    # 4. Create test role requests
+
+    # Return mock data structure
+    return {
+        "users": [
+            {"name": "Test User 1", "email": "test1@unhcr.org", "role": "proposal writer"},
+            {"name": "Test User 2", "email": "test2@unhcr.org", "role": "knowledge manager"},
+        ],
+        "roles": [
+            {"name": "Test Role 1", "description": "Test role for access management"},
+            {"name": "Test Role 2", "description": "Another test role"},
+        ],
+        "incidents": [
+            {
+                "artifact_type": "proposal",
+                "incident_type": "quality_issue",
+                "severity": "high",
+                "source_review_id": "123e4567-e89b-12d3-a456-426614174000",
+            },
+            {
+                "artifact_type": "knowledge_card",
+                "incident_type": "accuracy_concern",
+                "severity": "medium",
+                "source_review_id": "123e4567-e89b-12d3-a456-426614174001",
+            },
+        ],
+        "role_requests": [
+            {"user_id": "test-user-1", "role_id": "knowledge-manager"},
+            {"user_id": "test-user-2", "role_id": "proposal-reviewer"},
+        ],
+    }
+
+
 @pytest.fixture(scope="function")
 def registered_user(context, config, user=None):
     """

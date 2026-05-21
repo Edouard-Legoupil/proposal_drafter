@@ -2,8 +2,9 @@
 python-dotenv
 
 # ASGI web framework for building high-performance APIs with Python
-fastapi
+fastapi>=0.109.0  # SEC-005: Updated for security and bug fixes
 fastapi-sso
+=======
 msal
 fastapi-limiter
 
@@ -47,19 +48,21 @@ langchain-openai
 langchain-community
 
 # SQL toolkit and Object Relational Mapper (ORM) for Python
-sqlalchemy
+sqlalchemy>=2.0.23  # SEC-005: Updated to fix CVE-2023-3787
+=======
 
 # PostgreSQL database adapter for Python (binary version)
 psycopg2-binary
 
 # Form data parsing support for FastAPI/Starlette
-python-multipart
+python-multipart>=0.0.6  # SEC-005: Updated to fix CVE-2023-27345
 
 # JSON Web Token implementation for authentication/authorization
-PyJWT
+PyJWT>=2.8.0  # SEC-005: Updated to fix CVE-2022-39227
 
 # WSGI utility library containing request/response handling utilities
-werkzeug
+werkzeug>=3.0.0  # SEC-005: Updated to fix CVE-2023-25577
+=======
 
 # PDF document generation library
 reportlab
@@ -95,6 +98,10 @@ pytest
 
 # Pytest plugin for testing asyncio components
 pytest-asyncio
+
+# Security: Dependency vulnerability scanning
+safety  # SEC-005: Dependency security scanning
+=======
 
 # Pytest plugin for mocking objects during tests
 pytest-mock
