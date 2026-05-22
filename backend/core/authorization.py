@@ -93,11 +93,19 @@ def get_user_roles(current_user: CurrentUser) -> list:
     return current_user.get("roles", [])
 
 
+def get_user_roles_with_inheritance(current_user: CurrentUser) -> list:
+    """Get all roles from current_user dict, including inherited roles."""
+    return current_user.get("all_roles", current_user.get("roles", []))
+
+
 def has_permission(current_user: CurrentUser, permission: str) -> bool:
-    """Check if current_user has a specific permission."""
+    """Check if current_user has a specific permission (including inherited roles)."""
     if is_admin(current_user):
         return True
-    return permission in get_user_roles(current_user)
+    
+    # Check both direct roles and inherited roles
+    all_roles = get_user_roles_with_inheritance(current_user)
+    return permission in all_roles
 
 
 # =============================================================================

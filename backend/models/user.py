@@ -78,8 +78,23 @@ class User(Base):  # type: ignore[valid-type, misc]
 
     @property
     def roles(self) -> List[str]:
-        """Get list of role names for the user."""
+        """Get list of role names for the user (direct roles only)."""
         return [ur.role.name for ur in self.user_roles if ur.role]
+    
+    def get_all_roles_with_inheritance(self, session) -> List[str]:
+        """Get list of all role names for the user, including roles inherited from teams."""
+        direct_roles = self.roles
+        
+        # Get roles inherited from teams
+        inherited_roles = []
+        if self.team_id:
+            from backend.models.team import TeamRole
+            team_roles = session.query(TeamRole).filter_by(team_id=self.team_id).all()
+            inherited_roles = [tr.role.name for tr in team_roles if tr.role]
+        
+        # Combine and deduplicate
+        all_roles = list(set(direct_roles + inherited_roles))
+        return all_roles
 
     # =========================================================================
     # Authorization Methods (T013-T016)
@@ -89,12 +104,12 @@ class User(Base):  # type: ignore[valid-type, misc]
         """
         Check if the user has a specific permission.
 
-        This method checks the user's roles against the required permission.
+        This method checks the user's roles (including inherited from teams) against the required permission.
         Admin users automatically have all permissions.
 
         Args:
             permission: The permission to check (e.g., 'read', 'write', 'delete',
-                       'admin')
+                       'admin', 'access_metrics', 'access_template', 'access_incident')
             session: Optional SQLAlchemy session for database queries
 
         Returns:
@@ -104,16 +119,22 @@ class User(Base):  # type: ignore[valid-type, misc]
             This is a simplified implementation that checks role names directly.
             For more complex RBAC, you would query a permissions table.
             The current implementation checks if the permission string is in the
-            user's role names or if the user has the 'system admin' role.
+            user's role names (including inherited from teams) or if the user has the 'system admin' role.
         """
         # Admin users have all permissions
         if self.is_admin:
             return True
 
+        # Get all roles including inherited from teams
+        if session:
+            all_roles = self.get_all_roles_with_inheritance(session)
+        else:
+            all_roles = self.roles
+
         # Check if the permission matches any of the user's role names
         # This is a simplified approach - in a full RBAC system, you'd have
         # a separate permissions table and role-permission mappings
-        return permission in self.roles
+        return permission in all_roles
 
     def owns_resource(self, resource_type: str, resource_id: str, session: Optional[Session] = None) -> bool:
         """

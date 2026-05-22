@@ -71,17 +71,36 @@ def get_current_user(request: Request) -> dict:
             user_id = str(user[0])
             is_sso = user[3] == "SSO_USER_NO_PASSWORD"
 
-            # Try to fetch roles, donor_groups, and outcomes, but handle empty results gracefully.
+            # Try to fetch roles (including inherited from teams), donor_groups, and outcomes, but handle empty results gracefully.
             # We use nested transactions (savepoints) to ensure that if one query fails,
             # it doesn't poison the entire connection/transaction.
             roles = []
+            all_roles = []
             try:
                 with connection.begin_nested():
+                    # Get direct user roles
                     roles_query = text(
                         "SELECT r.name FROM roles r JOIN user_roles ur ON r.id = ur.role_id WHERE ur.user_id = :user_id"
                     )
                     roles_result = connection.execute(roles_query, {"user_id": user_id}).fetchall()
                     roles = [row[0] for row in roles_result] if roles_result else []
+                    
+                    # Get inherited roles from teams
+                    inherited_roles_query = text(
+                        """
+                        SELECT DISTINCT r.name 
+                        FROM roles r 
+                        JOIN team_roles tr ON r.id = tr.role_id
+                        JOIN team_members tm ON tr.team_id = tm.team_id
+                        WHERE tm.user_id = :user_id
+                        """
+                    )
+                    inherited_roles_result = connection.execute(inherited_roles_query, {"user_id": user_id}).fetchall()
+                    inherited_roles = [row[0] for row in inherited_roles_result] if inherited_roles_result else []
+                    
+                    # Combine and deduplicate
+                    all_roles = list(set(roles + inherited_roles))
+                    
             except Exception as e:
                 logger.warning(f"Failed to fetch roles for user {user_id}: {e}")
 
@@ -89,8 +108,9 @@ def get_current_user(request: Request) -> dict:
                 "user_id": user_id,
                 "name": user[1],
                 "email": user[2],
-                "roles": roles,
-                "is_admin": "system admin" in roles,
+                "roles": roles,  # Direct roles only
+                "all_roles": all_roles,  # All roles including inherited
+                "is_admin": "system admin" in all_roles,  # Check against all roles
                 "is_sso": is_sso,
                 "requested_role_id": user[4],
             }
@@ -132,8 +152,9 @@ def check_user_group_access(
     - Outcome cards: needs 'knowledge manager outcome' role.
     - Field context cards: needs 'knowledge manager field context' role AND must be the owner.
     """
-    user_roles = current_user.get("roles", [])
-    current_user.get("user_id")
+    # Use all_roles to include inherited roles
+    user_roles = current_user.get("all_roles", current_user.get("roles", []))
+    current_user_id = current_user.get("user_id")
 
     # Donor check
     if donor_id:

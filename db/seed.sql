@@ -57,7 +57,11 @@ INSERT INTO roles (name) VALUES
   ('knowledge manager donors'),
   ('knowledge manager outcome'),
   ('knowledge manager field context'),
-  ('project reviewer');
+  ('project reviewer'),
+  ('access_metrics'),
+  ('access_template'),
+  ('access_incident'),
+  ('access_quality_gate');
 --
 -- PostgreSQL database dump complete
 --

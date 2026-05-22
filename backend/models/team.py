@@ -30,6 +30,7 @@ class Team(Base):  # type: ignore[valid-type, misc]
 
     # Relationships
     members = relationship("TeamMember", back_populates="team", cascade="all, delete-orphan")
+    team_roles = relationship("TeamRole", back_populates="team", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Team(id={self.id}, name='{self.name}')>"
@@ -38,6 +39,40 @@ class Team(Base):  # type: ignore[valid-type, misc]
     def get_by_name(cls, session, name: str):
         """Get a team by its name."""
         return session.query(cls).filter_by(name=name).first()
+
+
+class TeamRole(Base):  # type: ignore[valid-type, misc]
+    """
+    Association table for the many-to-many relationship between Teams and Roles.
+
+    Attributes:
+        team_id: Foreign key to teams table
+        role_id: Foreign key to roles table
+        team: Relationship to Team
+        role: Relationship to Role
+    """
+
+    __tablename__ = "team_roles"
+
+    team_id = Column(String, ForeignKey("teams.id"), primary_key=True, nullable=False)
+    role_id = Column(Integer, ForeignKey("roles.id"), primary_key=True, nullable=False)
+
+    # Relationships
+    team = relationship("Team", back_populates="team_roles")
+    role = relationship("Role", back_populates="team_roles")
+
+    def __repr__(self):
+        return f"<TeamRole(team_id={self.team_id}, role_id={self.role_id})>"
+
+    @classmethod
+    def get_team_roles(cls, session, team_id: str) -> list:
+        """Get all roles for a team."""
+        return session.query(cls).filter_by(team_id=team_id).all()
+
+    @classmethod
+    def has_role(cls, session, team_id: str, role_id: int) -> bool:
+        """Check if a team has a specific role."""
+        return session.query(cls).filter_by(team_id=team_id, role_id=role_id).first() is not None
 
 
 class TeamMember(Base):  # type: ignore[valid-type, misc]

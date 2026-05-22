@@ -29,6 +29,9 @@ class Role(Base):  # type: ignore[valid-type, misc]
 
     # Relationship to UserRole (many-to-many)
     user_roles = relationship("UserRole", back_populates="role", cascade="all, delete-orphan")
+    
+    # Relationship to TeamRole (many-to-many)
+    team_roles = relationship("TeamRole", back_populates="role", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Role(id={self.id}, name='{self.name}')>"

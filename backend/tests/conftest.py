@@ -67,7 +67,11 @@ def test_engine():
                 ('knowledge manager outcome'),
                 ('knowledge manager field context'),
                 ('project reviewer'),
-                ('system admin')
+                ('system admin'),
+                ('access_metrics'),
+                ('access_template'),
+                ('access_incident'),
+                ('access_quality_gate')
             """
                 )
             )

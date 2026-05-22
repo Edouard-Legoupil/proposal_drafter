@@ -6,12 +6,11 @@ This directory contains the end-to-end test suite for the Proposal Drafter appli
 
 ## User Stories and Test Suite Overview
 
-The test suite covers the complete user journey
+The test suite covers the complete users journey
 
 ### User Profile Management
 
-**Feature:** User Profile Management
-**Description:** Users should be able to manage their profile information
+ **`test_1_user_profile.py`** - User login, and profile management
 
 ```gherkin
 Feature: User Profile Management
@@ -21,22 +20,17 @@ Feature: User Profile Management
 
   Scenario: Update user profile
     Given I am logged in
-    And I am on my profile page
-    When I update my name to "John Smith"
-    And I update my geographic coverage to "Africa"
+    And I am on my settings page
+    When I update my role to "proposal_drafter"
     And I click the "Save" button
-    Then I should see a success message "Profile updated successfully"
-    And my profile should show the updated information
+    Then I should see a message "Request sent successfully"
+    And I should see a message "Waiting for approval"
 
 ```
 
- **test_1_user_profile.py** - User registration, login, and profile management
-
 ### Proposal
 
-
-**Feature:** Proposal Creation
-**Description:** Users should be able to create new project proposals
+ **`test_2_proposal_creation.py`** - Complete proposal creation workflow
 
 ```gherkin
 Feature: Proposal Creation
@@ -75,9 +69,6 @@ Feature: Proposal Creation
 ```
 
 
-**Feature:** Proposal Editing
-**Description:** Users should be able to edit existing proposals
-
 ```gherkin
 Feature: Proposal Editing
   As a proposal owner
@@ -106,9 +97,6 @@ Feature: Proposal Editing
 ```
 
 
-**Feature:** Section Regeneration
-**Description:** Users should be able to regenerate proposal sections with new instructions
-
 ```gherkin
 Feature: Section Regeneration
   As a proposal owner
@@ -129,9 +117,6 @@ Feature: Section Regeneration
     And I should see a success message "Section regenerated successfully"
 ```
 
-
-**Feature:** Proposal Status Management
-**Description:** Users should be able to manage the status of their proposals
 
 ```gherkin
 Feature: Proposal Status Management
@@ -158,14 +143,12 @@ Feature: Proposal Status Management
     And I should see a confirmation message "Proposal archived"
 ```
 
- **test_2_proposal_creation.py** - Complete proposal creation workflow
 
 
 ### Knowledge Card
 
+ **`test_3_knowledge_card_new.py`** - Knowledge card creation and management
 
-**Feature:** Knowledge Card Creation
-**Description:** Users should be able to create knowledge cards to capture project insights
 
 ```gherkin
 Feature: Knowledge Card Creation
@@ -192,10 +175,6 @@ Feature: Knowledge Card Creation
     And I should see a success message "Knowledge card created successfully"
 ```
 
-
-**Feature:** Knowledge Card Review
-**Description:** Users should be able to review and provide feedback on knowledge cards
-
 ```gherkin
 Feature: Knowledge Card Review
   As a reviewer
@@ -217,14 +196,9 @@ Feature: Knowledge Card Review
     And the knowledge card should show the review status as "pending"
 ```
 
+### Peer Review 
 
-. **test_3_knowledge_card_new.py** - Knowledge card creation and management
-
-
-### Peer Review
-
-**Feature:** Peer Review
-**Description:** Users should be able to request and conduct peer reviews of proposals
+ **`test_4_peer_review_new.py`** - Proposal peer review functionality
 
 ```gherkin
 Feature: Peer Review
@@ -253,12 +227,10 @@ Feature: Peer Review
     And the proposal owner should be notified
 ```
 
- **test_4_peer_review_new.py** - Proposal peer review functionality
 
 ### Dashboard
 
-**Feature:** Dashboard Navigation
-**Description:** Users should be able to navigate the dashboard
+ **`test_5_dashboard.py`** - Dashboard navigation and features
 
 ```gherkin
 Feature: Dashboard Navigation
@@ -289,12 +261,10 @@ Feature: Dashboard Navigation
     And I should see the settings options
 ```
 
- **test_5_dashboard.py** - Dashboard navigation and features
 
 ### Template
 
-**Feature:** Template Management
-**Description:** Administrators should be able to manage donor templates
+ **`test_6_template_management.py`** - Template management functionality
 
 ```gherkin
 Feature: Template Management
@@ -320,12 +290,11 @@ Feature: Template Management
     And I should see a success message "Template created successfully"
 ```
 
- **test_6_template_management.py** - Template management workflows
+
 
 ### Incident Management
 
-**Feature:** Incident Management
-**Description:** The system should log and manage incidents
+**`test_7_quality_gate_review.py`** - Quality gate and review processes
 
 ```gherkin
 Feature: Incident Management
@@ -349,12 +318,10 @@ Feature: Incident Management
     And I should see a success message "Incident resolved"
 ```
 
-**test_7_quality_gate_review.py** - Quality gate and review processes
 
 ### Administration
 
-**Feature:** User Access Management
-**Description:** Administrators should be able to manage user access and roles
+**`test_8_admin.py`** - System configuration and user management 
 
 ```gherkin
 Feature: User/Team Access Management
@@ -383,7 +350,6 @@ Feature: User/Team Access Management
     And I should see a success message "Access revoked successfully"
 ```
 
-
 ```gherkin
 Feature: System Configuration
 
@@ -400,7 +366,6 @@ Feature: System Configuration
     Then the configuration should be saved
     And I should see a success message "Configuration updated successfully"
 ```
-
 
 ```gherkin
 Feature: Role assignment
@@ -424,8 +389,6 @@ Feature: Role assignment
     Then access is granted only for those donor-scoped knowledge cards
 ```
 
-
-
 ```gherkin
 Feature: Team management
 
@@ -435,7 +398,6 @@ Feature: Team management
     Then proposal access aligns with team membership
 ```
 
-
 ```gherkin
 Feature: Access dimensions(Donor, Outcome, Field Context)
 
@@ -444,8 +406,6 @@ Feature: Access dimensions(Donor, Outcome, Field Context)
     When I assign team to the user
     Then access expands according to role compatibility
 ```
-
-
 
 ```gherkin
 Feature: Proposal access
@@ -461,8 +421,6 @@ Feature: Proposal access
     Then they can review
 ```
 
-
-
 ```gherkin
 Feature: Knowledge card access
 
@@ -471,8 +429,6 @@ Feature: Knowledge card access
     When card belongs to donor
     Then user can edit
 ```
-
-
 
 ```gherkin
 Feature: Template access
@@ -483,8 +439,6 @@ Feature: Template access
     Then template becomes usable
 ```
 
-
-
 ```gherkin
 Feature: Metrics access
 
@@ -494,7 +448,6 @@ Feature: Metrics access
     Then only accessible data is shown
 ```
 
-
 ```gherkin
 Feature: Incident access
 
@@ -502,8 +455,6 @@ Feature: Incident access
     Given user has access to source artifact
     Then user can access incident
 ```
-
-
 
 ```gherkin
 Feature: Role request
@@ -513,7 +464,6 @@ Feature: Role request
     Then admin can approve or reject
 ```
 
-
 ```gherkin
 Feature: Object access explorer
 
@@ -521,7 +471,6 @@ Feature: Object access explorer
     Given object selected
     Then show all users and reasons for access
 ```
-
 
 ```gherkin
 Feature: User access explorer
@@ -531,7 +480,6 @@ Feature: User access explorer
     Then show all accessible artifacts
 ```
 
-
 ```gherkin
 Feature: Audit logs
 
@@ -539,7 +487,6 @@ Feature: Audit logs
     Given roles updated
     Then audit log captures change
 ```
-
 
 ```gherkin
 Feature: Bulk updates
@@ -559,7 +506,6 @@ Feature: User deactivation
     Then ownership must be reassigned
 ```
 
-
 ```gherkin
 Feature: Permission Simulation
 
@@ -569,15 +515,12 @@ Feature: Permission Simulation
     Then show resulting permissions
 ```
 
-
-
 ```gherkin
 Feature: Admin Dashboard
 
   Scenario: View summary
     Then show users, incidents, and requests
 ```
-
 
 ```gherkin
 Feature: Security for Admin Dashboard
@@ -586,10 +529,6 @@ Feature: Security for Admin Dashboard
     Given user lacks access
     Then API returns 403
 ```
-
-
-**test_8_admin.py** - System configuration and user management
-
 
 ## Test Execution
 
@@ -617,14 +556,24 @@ For headless Linux environments (CI/CD servers):
 playwright install-deps
 
 ```
+Activate the virtual environment:
+
+```bash
+source backend/venv/bin/activate
+```
+
 
 #### Running Tests
 
-```bash
+The test suite includes a preparation script to set up teh various users profiles with the required roles and access levels, you must run this script before running the other tests.
 
-source backend/venv/bin/activate
-# Run all tests
-pytest playwright/tests/ -v
+```bash
+# Prepare test data (creates test users, roles, etc.)
+pytest playwright/tests/prep_1_registration.py
+```
+
+
+```bash
 
 # Run specific test file
 pytest playwright/tests/test_1_user_profile.py
@@ -636,6 +585,9 @@ pytest playwright/tests/test_6_access_management.py
 pytest playwright/tests/test_7_system_configuration.py
 pytest playwright/tests/test_8_admin.py
 
+# Run all tests
+pytest playwright/tests/ -v
+
 # Run in headed mode (show browser)
 pytest playwright/tests/ --headed -v
 
@@ -646,14 +598,8 @@ pytest playwright/tests/ --trace on -v
 pytest playwright/tests/ --report
 ```
 
-### Test Data Management
 
-The test suite includes a preparation script to set up test data:
-
-```bash
-# Prepare test data (creates test users, roles, etc.)
-pytest playwright/tests/prep_1_registration.py
-```
+## 🔧 Test Development
 
 ### Best Practices
 
@@ -680,9 +626,6 @@ When adding new features:
 - **Test flakiness**: Use `npx playwright test --retries=2` for flaky tests
 
 
-
-## 🔧 Test Development
-
 ### Page Object Model
 
 The tests use a Page Object Model pattern for maintainability. Key page objects include:
@@ -707,8 +650,15 @@ The test suite uses pytest fixtures for better maintainability:
 - `TestUser`: Class for managing test user credentials
 - `TEST_USERS`: Predefined test users dictionary
 
-
-
+When writing tests, keep the following best practices in mind:
+1. **Use fixtures**: Prefer using fixtures (`page`, `config`, `logged_in_page`) over manual setup
+2. **Use test IDs**: Always use `data-testid` selectors when available
+3. **Add assertions**: Use `expect()` to verify UI state
+4. **Handle timeouts**: Use appropriate timeouts for long operations (generation can take minutes)
+5. **Clean up**: Tests should clean up after themselves when possible
+6. **Mark tests**: Use appropriate pytest marks for categorization
+7. **Skip when needed**: Use `pytest.skip()` when preconditions aren't met
+8. **Document**: Add docstrings explaining test purpose and preconditions
 
 ### Test Marks
 
@@ -723,6 +673,7 @@ Tests are categorized using pytest marks:
 - `@pytest.mark.knowledge_card` - Knowledge card tests
 - `@pytest.mark.peer_review` - Peer review tests
 - `@pytest.mark.dashboard` - Dashboard tests
+- `@pytest.mark.admin` - Admin tests
 
 ### Screenshots and Videos
 
@@ -746,13 +697,3 @@ The frontend uses `data-testid` attributes for robust element selection. The cod
 
 After recording, copy the generated Python script into the appropriate test file and refactor as needed to use the fixtures and follow the test patterns.
 
-### Best Practices
-
-1. **Use fixtures**: Prefer using fixtures (`page`, `config`, `logged_in_page`) over manual setup
-2. **Use test IDs**: Always use `data-testid` selectors when available
-3. **Add assertions**: Use `expect()` to verify UI state
-4. **Handle timeouts**: Use appropriate timeouts for long operations (generation can take minutes)
-5. **Clean up**: Tests should clean up after themselves when possible
-6. **Mark tests**: Use appropriate pytest marks for categorization
-7. **Skip when needed**: Use `pytest.skip()` when preconditions aren't met
-8. **Document**: Add docstrings explaining test purpose and preconditions

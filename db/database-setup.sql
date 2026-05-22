@@ -45,6 +45,83 @@ CREATE TABLE IF NOT EXISTS user_roles (
     PRIMARY KEY (user_id, role_id)
 );
 
+CREATE TABLE IF NOT EXISTS team_members (
+    team_id UUID NOT NULL,
+    user_id UUID NOT NULL,
+    PRIMARY KEY (team_id, user_id),
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+-- Create team_roles table for assigning roles to teams
+CREATE TABLE IF NOT EXISTS team_roles (
+    team_id UUID NOT NULL,
+    role_id INTEGER NOT NULL,
+    PRIMARY KEY (team_id, role_id),
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
+);
+
+-- Create a function to get all roles for a user (including inherited from teams)
+CREATE OR REPLACE FUNCTION get_user_roles_with_inheritance(user_id_param VARCHAR(255))
+RETURNS TABLE(role_id INTEGER, role_name VARCHAR(255), source_type VARCHAR(50))
+LANGUAGE SQL
+AS $$
+    -- Direct user roles
+    SELECT 
+        ur.role_id,
+        r.name as role_name,
+        'direct' as source_type
+    FROM user_roles ur
+    JOIN roles r ON ur.role_id = r.id
+    WHERE ur.user_id = user_id_param::UUID
+    
+    UNION ALL
+    
+    -- Inherited roles from teams
+    SELECT 
+        tr.role_id,
+        r.name as role_name,
+        'team_inherited' as source_type
+    FROM team_roles tr
+    JOIN team_members tm ON tr.team_id = tm.team_id
+    JOIN roles r ON tr.role_id = r.id
+    WHERE tm.user_id = user_id_param::UUID
+    
+    UNION ALL
+    
+    -- Requested roles (for admin review)
+    SELECT 
+        ur.requested_role_id as role_id,
+        r.name as role_name,
+        'requested' as source_type
+    FROM users ur
+    JOIN roles r ON ur.requested_role_id = r.id
+    WHERE ur.id = user_id_param::UUID AND ur.requested_role_id IS NOT NULL
+$$;
+
+-- Create a view for easy access to user roles with inheritance
+-- This view shows all users and their complete role sets (direct + inherited)
+CREATE OR REPLACE VIEW user_roles_with_inheritance AS
+WITH all_users_with_roles AS (
+    -- Get all users who have any kind of role assignment
+    SELECT DISTINCT user_id FROM user_roles
+    UNION
+    SELECT DISTINCT user_id FROM team_members
+    UNION
+    SELECT id FROM users WHERE requested_role_id IS NOT NULL
+)
+SELECT 
+    u.user_id,
+    r.role_id,
+    r.role_name,
+    r.source_type,
+    CASE WHEN r.source_type = 'requested' THEN FALSE ELSE TRUE END as is_active
+FROM all_users_with_roles u
+CROSS JOIN LATERAL get_user_roles_with_inheritance(u.user_id::TEXT) r;
+
+ 
+
+
 -- Create User Role Requests table for pending roles
 CREATE TABLE IF NOT EXISTS user_role_requests (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
