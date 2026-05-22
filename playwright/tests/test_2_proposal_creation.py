@@ -37,6 +37,8 @@ def test_create_new_proposal(logged_in_page, config):
     page.get_by_test_id("new-proposal-button").click()
     expect(page).to_have_url(re.compile(".*chat"))
 
+    page.get_by_test_id("doc-type-concept-note-button").click()
+
     # Step 2: Fill in proposal form
     page.get_by_test_id("project-draft-short-name").click()
     page.get_by_test_id("project-draft-short-name").fill("Project: Refugee Children Education Initiative")
@@ -290,108 +292,3 @@ def test_filter_proposals_by_status(logged_in_page, config):
 
     # Close filter modal
     page.get_by_test_id("filter-modal-close-button").click()
-
-
-# ============================================================================
-# Test: Full Proposal Creation Workflow (Backward Compatibility)
-# ============================================================================
-
-
-@pytest.mark.proposal_creation
-@pytest.mark.e2e
-@pytest.mark.regression
-def test_full_proposal_workflow(context, config, logged_in_page):
-    """
-    This test follows the exact workflow from the original test_2_create_proposal.py
-    but uses fixtures for better maintainability.
-    """
-    page = logged_in_page
-
-    # Create new proposal
-    page.get_by_test_id("new-proposal-button").click()
-    expect(page).to_have_url(re.compile(".*chat"))
-
-    # Fill in the proposal form
-    page.get_by_test_id("project-draft-short-name").click()
-    page.get_by_test_id("project-draft-short-name").fill("Project: Refugee Children Education Initiative")
-    page.get_by_role("textbox", name="Provide as much details as").click()
-    page.get_by_placeholder("Provide as much details as possible on your initial project idea!").fill(
-        "Establishing a comprehensive primary education program for 2,500 refugee children aged 6-14"
-    )
-
-    # Main Outcome (multiselect)
-    page.locator(".main-outcome__input-container").click()
-    page.get_by_role("combobox", name="Main Outcome").fill("ed")
-    page.get_by_role("option", name="OA11. Education").click()
-    page.get_by_role("combobox", name="Main Outcome").fill("com")
-    page.get_by_role("option", name="OA7. Community Engagement and").click()
-
-    # Beneficiaries
-    page.get_by_test_id("beneficiaries-profile").click()
-    page.get_by_test_id("beneficiaries-profile").fill("2,500 refugee children aged 6-14")
-
-    # Partner
-    page.get_by_test_id("potential-implementing-partner").click()
-    page.get_by_test_id("potential-implementing-partner").fill("UNHCR, UNICEF, Save the Children")
-
-    # Geographical Scope
-    page.get_by_test_id("geographical-scope").select_option("One Country Operation")
-
-    # Country / Location
-    page.locator(".country-location-s__input-container").click()
-    page.get_by_role("option", name="Afghanistan").click()
-
-    # Budget Range
-    page.locator(".budget-range__input-container").click()
-    page.get_by_role("option", name="1M$").click()
-
-    # Duration
-    page.locator(".duration__input-container").click()
-    page.get_by_role("option", name="12 months").click()
-
-    # Targeted Donor
-    page.locator(".targeted-donor__input-container").click()
-    page.get_by_role("option", name="Sweden - Ministry for Foreign").click()
-
-    take_screenshot(page, "proposal_1_generate")
-
-    # Click Generate
-    page.get_by_role("button", name="Generate").click()
-
-    # Wait for sections to be generated
-    expect(page.get_by_test_id("edit-save-button-summary")).to_be_visible(timeout=600000)
-
-    # Browser Proposal
-    page.get_by_test_id("sidebar-option-evaluation").click()
-    take_screenshot(page, "proposal_2_generated")
-    page.get_by_test_id("sidebar-option-work-plan").click()
-    page.get_by_test_id("sidebar-option-summary").click()
-
-    # Edit Section
-    page.get_by_test_id("sidebar-option-monitoring").click()
-    page.get_by_test_id("edit-save-button-monitoring").click()
-    take_screenshot(page, "proposal_3_edit_section")
-    page.get_by_test_id("cancel-edit-button-monitoring").click()
-
-    # Regenerate section
-    page.get_by_test_id("sidebar-option-summary").click()
-    page.get_by_test_id("regenerate-button-summary").click()
-    page.get_by_test_id("regenerate-dialog-prompt-input").click()
-    page.get_by_test_id("regenerate-dialog-prompt-input").fill("Revise this section to fit in 200 characters")
-    take_screenshot(page, "proposal_4_regenerate_section")
-    page.get_by_test_id("regenerate-dialog-regenerate-button").click()
-    expect(page.get_by_test_id("edit-save-button-summary")).to_be_visible(timeout=600000)
-    take_screenshot(page, "proposal_5_regenerated_section")
-
-    # Return to dashboard
-    page.get_by_test_id("logo").click()
-
-    # Apply Filter on Proposals
-    page.get_by_role("search").click()
-    page.get_by_test_id("filter-button").click()
-    page.get_by_test_id("status-filter").select_option("draft")
-    page.get_by_test_id("filter-modal-close-button").click()
-    page.get_by_test_id("filter-button").click()
-    page.get_by_test_id("status-filter").select_option("review")
-
-    page.close()

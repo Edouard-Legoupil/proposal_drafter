@@ -195,9 +195,7 @@ async def verify_ownership(
                     },
                 )
 
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden"
-                )
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
             return {
                 "id": str(getattr(resource, "id", "")),
@@ -259,9 +257,7 @@ async def verify_permission(permission: str, current_user: CurrentUser) -> bool:
 # =============================================================================
 
 
-async def verify_team_membership(
-    team_id: Optional[int], current_user: CurrentUser
-) -> bool:
+async def verify_team_membership(team_id: Optional[int], current_user: CurrentUser) -> bool:
     """
     Verify that the current user is a member of the specified team.
 
@@ -292,9 +288,7 @@ async def verify_team_membership(
     try:
         with get_db_connection() as connection:
             result = connection.execute(
-                text(
-                    "SELECT 1 FROM team_members WHERE team_id = :team_id AND user_id = :user_id"
-                ),
+                text("SELECT 1 FROM team_members WHERE team_id = :team_id AND user_id = :user_id"),
                 {"team_id": team_id, "user_id": user_id},
             )
             membership = result.fetchone()
@@ -329,9 +323,7 @@ async def verify_team_membership(
 # =============================================================================
 
 
-async def verify_donor_group_membership(
-    donor_group_id: Optional[int], current_user: CurrentUser
-) -> bool:
+async def verify_donor_group_membership(donor_group_id: Optional[int], current_user: CurrentUser) -> bool:
     """
     Verify that the current user is a member of the specified donor group.
 
@@ -362,9 +354,7 @@ async def verify_donor_group_membership(
     try:
         with get_db_connection() as connection:
             result = connection.execute(
-                text(
-                    "SELECT 1 FROM donor_group_members WHERE donor_group_id = :donor_group_id AND user_id = :user_id"
-                ),
+                text("SELECT 1 FROM donor_group_members WHERE donor_group_id = :donor_group_id AND user_id = :user_id"),
                 {"donor_group_id": donor_group_id, "user_id": user_id},
             )
             membership = result.fetchone()
@@ -564,20 +554,14 @@ def require_team_membership() -> Callable:
                 try:
                     async for session in get_db_session():
                         resource = await session.get(model, resource_id)
-                        if (
-                            resource
-                            and hasattr(resource, "team_id")
-                            and resource.team_id is not None
-                        ):
+                        if resource and hasattr(resource, "team_id") and resource.team_id is not None:
                             team_id = resource.team_id
                             break
                 except Exception:
                     continue
 
             if team_id is None:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
-                )
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
 
             # Verify team membership
             await verify_team_membership(team_id, current_user)
@@ -650,20 +634,14 @@ def require_donor_group_membership() -> Callable:
                 try:
                     async for session in get_db_session():
                         resource = await session.get(model, resource_id)
-                        if (
-                            resource
-                            and hasattr(resource, "donor_group_id")
-                            and resource.donor_group_id is not None
-                        ):
+                        if resource and hasattr(resource, "donor_group_id") and resource.donor_group_id is not None:
                             donor_group_id = resource.donor_group_id
                             break
                 except Exception:
                     continue
 
             if donor_group_id is None:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
-                )
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
 
             # Verify donor group membership
             await verify_donor_group_membership(donor_group_id, current_user)
@@ -711,9 +689,7 @@ async def check_proposal_access(
     if is_admin(current_user):
         try:
             with get_db_connection() as connection:
-                result = connection.execute(
-                    text("SELECT * FROM proposals WHERE id = :id"), {"id": proposal_id}
-                )
+                result = connection.execute(text("SELECT * FROM proposals WHERE id = :id"), {"id": proposal_id})
                 proposal = result.fetchone()
                 if proposal is None:
                     raise HTTPException(
@@ -737,9 +713,7 @@ async def check_proposal_access(
             proposal = result.fetchone()
 
             if proposal is None:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND, detail="Proposal not found"
-                )
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Proposal not found")
 
             proposal_data = {
                 "id": proposal[0],
@@ -763,9 +737,7 @@ async def check_proposal_access(
             # Check donor group membership (read-only access)
             if proposal_data["donor_group_id"] is not None:
                 try:
-                    await verify_donor_group_membership(
-                        proposal_data["donor_group_id"], current_user
-                    )
+                    await verify_donor_group_membership(proposal_data["donor_group_id"], current_user)
                     return proposal_data
                 except HTTPException:
                     pass
@@ -784,9 +756,7 @@ async def check_proposal_access(
                 },
             )
 
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
     except Exception as e:
         import logging
@@ -799,9 +769,7 @@ async def check_proposal_access(
         )
 
 
-async def check_knowledge_card_access(
-    knowledge_card_id: int, current_user: CurrentUser
-) -> Dict[str, Any]:
+async def check_knowledge_card_access(knowledge_card_id: int, current_user: CurrentUser) -> Dict[str, Any]:
     """
     Combined check for knowledge card access: ownership or shared access.
 
@@ -874,9 +842,7 @@ async def check_knowledge_card_access(
                 },
             )
 
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
     except HTTPException:
         # Re-raise HTTPExceptions (404, 403, etc.)
@@ -916,9 +882,7 @@ async def check_template_access(
     if is_admin(current_user):
         try:
             with get_db_connection() as connection:
-                result = connection.execute(
-                    text("SELECT * FROM templates WHERE id = :id"), {"id": template_id}
-                )
+                result = connection.execute(text("SELECT * FROM templates WHERE id = :id"), {"id": template_id})
                 template = result.fetchone()
                 if template is None:
                     raise HTTPException(
@@ -936,17 +900,13 @@ async def check_template_access(
     try:
         with get_db_connection() as connection:
             result = connection.execute(
-                text(
-                    "SELECT id, owner_id, organization_id, is_public FROM templates WHERE id = :id"
-                ),
+                text("SELECT id, owner_id, organization_id, is_public FROM templates WHERE id = :id"),
                 {"id": template_id},
             )
             template = result.fetchone()
 
             if template is None:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND, detail="Template not found"
-                )
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
 
             template_data = {
                 "id": template[0],
@@ -997,9 +957,7 @@ async def check_template_access(
                 },
             )
 
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
     except Exception as e:
         import logging
@@ -1170,9 +1128,7 @@ async def check_incident_access(
                     # User doesn't have access to the proposal, continue to next check
                     pass
 
-            elif (
-                artifact_type == "knowledge_card" and incident_data["knowledge_card_id"]
-            ):
+            elif artifact_type == "knowledge_card" and incident_data["knowledge_card_id"]:
                 artifact_id = int(incident_data["knowledge_card_id"])
                 try:
                     await check_knowledge_card_access(artifact_id, current_user)
@@ -1195,9 +1151,7 @@ async def check_incident_access(
             elif artifact_type == "template" and incident_data["template_request_id"]:
                 artifact_id = int(incident_data["template_request_id"])
                 try:
-                    await check_template_access(
-                        artifact_id, current_user, required_permission
-                    )
+                    await check_template_access(artifact_id, current_user, required_permission)
                     logger.info(
                         "Incident access authorized - template access",
                         extra={

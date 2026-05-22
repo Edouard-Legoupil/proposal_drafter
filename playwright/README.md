@@ -628,6 +628,13 @@ pytest playwright/tests/ -v
 
 # Run specific test file
 pytest playwright/tests/test_1_user_profile.py
+pytest playwright/tests/test_2_proposal_creation.py
+pytest playwright/tests/test_3_knowledge_cards.py
+pytest playwright/tests/test_4_dashboard.py
+pytest playwright/tests/test_5_advanced_search.py
+pytest playwright/tests/test_6_access_management.py
+pytest playwright/tests/test_7_system_configuration.py
+pytest playwright/tests/test_8_admin.py
 
 # Run in headed mode (show browser)
 pytest playwright/tests/ --headed -v

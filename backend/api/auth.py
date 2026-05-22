@@ -387,6 +387,10 @@ async def login(request: Request):
                 logging.warning(f"Login attempt failed for non-existent user: {identifier}")
                 return JSONResponse(status_code=404, content={"error": "User does not exist!"})
 
+            # user_data is guaranteed to be a tuple here because user exists
+            if user_data is None:
+                logging.error("Unexpected None user_data despite user existing")
+                return JSONResponse(status_code=500, content={"error": "Internal server error"})
             user_id, email, _, stored_password = user_data
         except SQLAlchemyError as db_error:
             logging.error(f"Database error during login for identifier '{identifier}': {db_error}")
@@ -399,12 +403,20 @@ async def login(request: Request):
             logging.warning(f"Login attempt failed for non-existent user: {identifier}")
             return JSONResponse(status_code=404, content={"error": "User does not exist!"})
 
+        # user_data is guaranteed to be a tuple here because user_data check passed
+        if user_data is None:
+            logging.error("Unexpected None user_data despite user_data check passing")
+            return JSONResponse(status_code=500, content={"error": "Internal server error"})
         user_id, email, _, stored_password = user_data
 
         if not user:
             logging.warning(f"Login attempt failed for non-existent user: {identifier}")
             return JSONResponse(status_code=404, content={"error": "User does not exist!"})
 
+        # user_data is guaranteed to be a tuple here because user exists
+        if user_data is None:
+            logging.error("Unexpected None user_data despite user existing")
+            return JSONResponse(status_code=500, content={"error": "Internal server error"})
         user_id, email, _, stored_password = user_data
         if not check_password_hash(stored_password, password):
             logging.warning(f"Login attempt failed with invalid password for user ID: {user_id}")
