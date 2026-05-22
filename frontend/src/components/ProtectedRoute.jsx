@@ -1,11 +1,16 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { Navigate } from 'react-router-dom';
 import { hasPermission } from '../utils/roleUtils';
-import { useSelector } from 'react-redux';
 import UnauthorizedAccess from './UnauthorizedAccess';
 
+// Create a simple auth context for demonstration
+const AuthContext = React.createContext({
+  user: null,
+  setUser: () => {}
+});
+
 const ProtectedRoute = ({ children, permission }) => {
-  const user = useSelector(state => state.auth.user);
+  const { user } = useContext(AuthContext);
   
   // If not authenticated, redirect to login
   if (!user) {
@@ -13,7 +18,7 @@ const ProtectedRoute = ({ children, permission }) => {
   }
   
   // If authenticated but doesn't have required permission
-  if (permission && !hasPermission(permission)) {
+  if (permission && !hasPermission(user, permission)) {
     return <UnauthorizedAccess component={children.type?.name || 'Protected Resource'} />;
   }
   

@@ -1,12 +1,18 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { List, ListItem, ListItemIcon, ListItemText, Divider, Box, Tooltip } from '@mui/material';
 import { Dashboard, Analytics, Description, Assessment, BugReport, Groups, Lock } from '@mui/icons-material';
-import { useSelector } from 'react-redux';
-import { hasPermission } from '../../utils/roleUtils';
+import { hasPermission, getUIConfiguration } from '../../utils/roleUtils';
+
+// Create a simple auth context for demonstration
+// In a real app, this would come from your actual auth system
+const AuthContext = React.createContext({
+  user: null,
+  setUser: () => {}
+});
 
 const Sidebar = () => {
-  const user = useSelector(state => state.auth.user);
+  const { user } = useContext(AuthContext);
   const navigate = useNavigate();
   
   // Sidebar items configuration with role requirements

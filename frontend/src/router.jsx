@@ -1,8 +1,32 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Provider } from 'react-redux';
-import store from './store';
 import ProtectedRoute from './components/ProtectedRoute';
+
+// Create a simple auth context provider
+const AuthContext = React.createContext({
+  user: null,
+  setUser: () => {}
+});
+
+const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState({
+    // This is mock data - replace with your actual auth system
+    is_admin: false,
+    roles: ['proposal writer'],
+    all_roles: ['proposal writer'] // Add roles as needed for testing
+  });
+  
+  return (
+    <AuthContext.Provider value={{ user, setUser }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+// Export the context for use in other components
+export { AuthContext };
+=======
+=======
 
 // Import your components
 import Login from './screens/Login';
@@ -19,7 +43,7 @@ import SidebarLayout from './components/SidebarLayout';
 
 function App() {
   return (
-    <Provider store={store}>
+    <AuthProvider>
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
