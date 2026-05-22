@@ -83,7 +83,7 @@ def secure_proposal_access(resource_param: str = "proposal_id") -> Callable:
 
             # Check authorization using ORM (prevents SQL injection)
             try:
-                await check_proposal_access(int(resource_id), current_user)
+                await check_proposal_access(str(resource_id), current_user)
 
                 # Get the resource object using ORM (safe from SQL injection)
                 async for session in get_db_session():
@@ -179,7 +179,7 @@ def secure_resource_access(resource_type: str, resource_param: str = "id") -> Ca
 
                     # For proposals, use the existing authorization check
                     if resource_type == "proposal":
-                        await check_proposal_access(int(resource_id), current_user)
+                        await check_proposal_access(str(resource_id), current_user)
                     # For other resources, check ownership
                     elif hasattr(resource, "user_id"):
                         if str(resource.user_id) != str(current_user["user_id"]):

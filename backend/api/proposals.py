@@ -179,7 +179,7 @@ async def get_review_analysis(review_id: str, current_user: dict = Depends(get_c
                     check_proposal_access,
                 )
 
-                await check_proposal_access(int(proposal_id), current_user)
+                await check_proposal_access(str(proposal_id), current_user)
                 auth_logger.info(
                     "Review analysis retrieval authorized - proposal",
                     extra={
@@ -3498,7 +3498,7 @@ async def get_proposal(
 
     # Use the combined access check (T029: team membership, T030: donor group membership)
     try:
-        proposal_data = await check_proposal_access(int(proposal_id), current_user)
+        proposal_data = await check_proposal_access(str(proposal_id), current_user)
 
         # If we get here, access is allowed
         auth_logger.info(

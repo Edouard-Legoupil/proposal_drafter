@@ -513,7 +513,7 @@ async def upload_proposal_to_sharepoint(
 
         # T100: Object-Level Authorization - Verify user has access to this proposal
         try:
-            await check_proposal_access(int(proposal_uuid), current_user)
+            await check_proposal_access(str(proposal_uuid), current_user)
             auth_logger.info(
                 "Proposal SharePoint upload authorized",
                 extra={
@@ -1200,7 +1200,7 @@ async def retry_sharepoint_upload(
     # Verify user has access to the artifact
     if artifact_type == "proposal":
         try:
-            await check_proposal_access(int(artifact_uuid), current_user)
+            await check_proposal_access(str(artifact_uuid), current_user)
             auth_logger.info(
                 "Proposal SharePoint retry authorized",
                 extra={
@@ -1369,7 +1369,7 @@ async def get_sharepoint_link_status(
     # Same authorization pattern as upload and retry endpoints
     if artifact_type == "proposal":
         try:
-            await check_proposal_access(int(artifact_uuid), current_user)
+            await check_proposal_access(str(artifact_uuid), current_user)
             auth_logger.info(
                 "Proposal SharePoint status check authorized",
                 extra={

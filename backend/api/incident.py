@@ -71,7 +71,7 @@ async def analyze_incident(
                 proposal_id = proposal_review.proposal_id if proposal_review else None
 
                 if proposal_id:
-                    await check_proposal_access(int(proposal_id), current_user)
+                    await check_proposal_access(str(proposal_id), current_user)
                     auth_logger.info(
                         "Incident analysis authorized - proposal",
                         extra={
@@ -224,7 +224,7 @@ async def analyze_proposal_review(
             # T104: Object-Level Authorization - Verify user has access to the proposal
             proposal_id = review.get("proposal_id")
             if proposal_id:
-                await check_proposal_access(int(proposal_id), current_user)
+                await check_proposal_access(str(proposal_id), current_user)
                 auth_logger.info(
                     "Proposal review incident analysis authorized",
                     extra={
@@ -481,7 +481,7 @@ async def get_incident_result(
                     proposal_review = connection.query(ProposalPeerReview).filter_by(id=source_review_id).first()
                     proposal_id = proposal_review.proposal_id if proposal_review else None
                     if proposal_id:
-                        await check_proposal_access(int(proposal_id), current_user)
+                        await check_proposal_access(str(proposal_id), current_user)
                     else:
                         raise HTTPException(status_code=404, detail="Proposal review not found")
 
