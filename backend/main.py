@@ -28,6 +28,7 @@ from backend.api import (
     template_management,
     templates,
     users,
+    wizard,
 )
 from backend.core.error_handlers import register_error_handlers
 from backend.core.middleware import (
@@ -143,6 +144,7 @@ app.include_router(incident.router, prefix="/api", tags=["Incidents"])
 app.include_router(qualification.router, prefix="/api", tags=["Qualification"])
 app.include_router(health.router, tags=["Health & Debugging"])
 app.include_router(sharepoint.router, prefix="/api", tags=["SharePoint"])
+app.include_router(wizard.router, prefix="/api", tags=["Wizard Utility"])
 
 
 # --- Root Endpoint: Health Check + SPA ---
