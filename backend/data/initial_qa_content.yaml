@@ -1,0 +1,121 @@
+# Initial Q&A Content for Wizard Utility
+# This file contains comprehensive help content for the Proposal Drafter application
+# organized by categories with questions and answers
+
+categories:
+  - name: "General"
+    description: "General questions about the Proposal Drafter application"
+    questions:
+      - question: "What is the Proposal Drafter?"
+        answer: "The Proposal Drafter is an AI-powered tool designed to help UN agencies and NGOs create high-quality project proposals efficiently. It uses artificial intelligence to generate proposal content based on your organization's knowledge base and best practices."
+      
+      - question: "Who can use the Proposal Drafter?"
+        answer: "The Proposal Drafter is available to authorized staff from UN agencies and partner NGOs. Access is controlled through our role-based access control system."
+      
+      - question: "Is my data secure?"
+        answer: "Yes, the Proposal Drafter follows UN ICT Security Policy standards and implements comprehensive security measures including encryption, access control, and regular security audits."
+      
+      - question: "What browsers are supported?"
+        answer: "The Proposal Drafter supports modern browsers including Chrome, Firefox, Safari, and Edge. For best performance, use the latest version of your preferred browser."
+      
+      - question: "How do I get support?"
+        answer: "You can get support through multiple channels: 1) Use this wizard for immediate help, 2) Contact your organization's administrator, 3) Use the feedback system to report issues."
+
+  - name: "Getting Started"
+    description: "Questions about getting started with the application"
+    questions:
+      - question: "How do I log in?"
+        answer: "Use your organizational email and password. If you're a first-time user, click 'Register' to create an account. For SSO users, click the appropriate SSO provider button."
+      
+      - question: "What should I do first after logging in?"
+        answer: "After logging in, we recommend: 1) Exploring the dashboard to understand the interface, 2) Reviewing any existing proposals, 3) Creating a test proposal to familiarize yourself with the process."
+      
+      - question: "How do I navigate the application?"
+        answer: "Use the sidebar navigation to access different sections: Dashboard (overview), Proposals (your proposals), Knowledge Cards (reference materials), and Settings (account management)."
+      
+      - question: "What are the main sections of the application?"
+        answer: "The main sections are: Dashboard (central hub), Proposals (create and manage proposals), Knowledge Cards (reference library), Chat (collaboration), and Admin (for administrators)."
+
+  - name: "Proposal Creation"
+    description: "Questions about creating and managing proposals"
+    questions:
+      - question: "How do I create a new proposal?"
+        answer: "1. Log in to the Proposal Drafter, 2. Navigate to the Dashboard, 3. Click the 'New Proposal' button, 4. Select the donor organization, outcome, and field context, 5. Provide a brief project description, 6. Click 'Generate Proposal' to let the AI create the initial draft."
+      
+      - question: "Can I edit the AI-generated proposal?"
+        answer: "Yes, you can edit any part of the AI-generated proposal. The system treats AI-generated content as a starting point that you can modify, expand, or replace as needed."
+      
+      - question: "How do I save my progress?"
+        answer: "Your progress is automatically saved as you work. You can also manually save by clicking the 'Save' button. All changes are versioned so you can revert if needed."
+      
+      - question: "What information do I need to create a proposal?"
+        answer: "You'll need: donor requirements, project description, expected outcomes, budget information, timeline, and any relevant reference documents."
+      
+      - question: "How long does it take to generate a proposal?"
+        answer: "Proposal generation typically takes 30-60 seconds depending on the complexity and AI workload. You'll see a progress indicator during generation."
+
+  - name: "Knowledge Cards"
+    description: "Questions about knowledge cards and the knowledge base"
+    questions:
+      - question: "What are knowledge cards?"
+        answer: "Knowledge cards are reusable snippets of validated information that form the foundation of the AI's understanding. They contain organization-specific knowledge about donors, outcomes, field contexts, and best practices."
+      
+      - question: "How do I create a knowledge card?"
+        answer: "1. Navigate to the Knowledge section in the dashboard, 2. Click 'New Knowledge Card', 3. Select the type of knowledge card (Donor, Outcome, Field Context), 4. Provide the relevant information and references, 5. Submit for review and approval."
+      
+      - question: "Who can create knowledge cards?"
+        answer: "Knowledge cards can be created by users with the Knowledge Manager role. Regular users can suggest knowledge cards for review by knowledge managers."
+      
+      - question: "How are knowledge cards used by the AI?"
+        answer: "The AI uses knowledge cards to ground its responses in your organization's specific knowledge. When generating proposals, the AI retrieves relevant knowledge cards and incorporates their content."
+
+  - name: "Review Process"
+    description: "Questions about the proposal review and approval process"
+    questions:
+      - question: "How does the review process work?"
+        answer: "The review process involves: 1) Submitting your proposal for review, 2) Reviewers providing feedback and ratings, 3) Addressing reviewer comments, 4) Resubmitting for final approval, 5) Final submission to donors."
+      
+      - question: "Who can review my proposals?"
+        answer: "Proposals can be reviewed by designated Project Reviewers within your organization. You can also request specific colleagues to review your work."
+      
+      - question: "How do I request a review?"
+        answer: "1. Complete your proposal draft, 2. Click the 'Request Review' button, 3. Select reviewers from the list, 4. Add any specific instructions, 5. Submit the review request."
+      
+      - question: "What happens after I submit for review?"
+        answer: "Reviewers will receive notifications and can access your proposal to provide feedback. You'll be notified of any comments or requested changes, and can make revisions before final submission."
+
+  - name: "Collaboration"
+    description: "Questions about working with team members"
+    questions:
+      - question: "How do I share a proposal with colleagues?"
+        answer: "You can share proposals by: 1) Adding collaborators directly to the proposal, 2) Using the review process to get formal feedback, 3) Exporting and sharing PDF versions."
+      
+      - question: "Can multiple people edit a proposal at once?"
+        answer: "The system supports collaborative editing with version control. Changes are merged automatically, and conflicts are highlighted for manual resolution."
+      
+      - question: "How do I see who made changes to a proposal?"
+        answer: "Use the version history feature to see all changes, who made them, and when. You can compare versions and restore previous versions if needed."
+
+  - name: "Troubleshooting"
+    description: "Common issues and their solutions"
+    questions:
+      - question: "I can't log in, what should I do?"
+        answer: "Try these steps: 1) Check your internet connection, 2) Verify your credentials, 3) Clear browser cache, 4) Try a different browser, 5) Contact your administrator if issues persist."
+      
+      - question: "The AI generated incorrect information, what should I do?"
+        answer: "You can: 1) Manually correct the information, 2) Provide feedback using the feedback system, 3) Check if relevant knowledge cards need updating, 4) Report the issue to administrators."
+      
+      - question: "My proposal isn't generating, what's wrong?"
+        answer: "Common issues: 1) Incomplete required fields, 2) Server connectivity problems, 3) AI service temporarily unavailable. Check the error message and try again."
+
+  - name: "Advanced Features"
+    description: "Questions about advanced functionality"
+    questions:
+      - question: "How do I use templates?"
+        answer: "Templates provide pre-structured formats for different donor requirements. Select a template when creating a proposal to ensure compliance with specific donor formats."
+      
+      - question: "Can I create custom templates?"
+        answer: "Yes, administrators can create and manage custom templates through the Admin section. Custom templates can be tailored to specific donor requirements."
+      
+      - question: "How do I export proposals?"
+        answer: "You can export proposals in multiple formats: 1) PDF for printing and sharing, 2) Word for further editing, 3) JSON for data exchange. Use the Export button in the proposal view."
