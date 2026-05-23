@@ -8,26 +8,32 @@ import DonorTemplateRequest from './screens/DonorTemplateRequest/DonorTemplateRe
 import DonorTemplateDetail from './screens/DonorTemplateDetail/DonorTemplateDetail'
 import QualityGate from './screens/QualityGate/QualityGate'
 import AccessManagement from './screens/Admin/AccessManagement'
+import WizardModal from './components/Wizard/WizardModal'
 
 export default function App()
 {
-        return  <Routes>
-                <Route path="/" element={<Login/>} />
-                <Route path="/login" element={<Login/>} />
-                <Route path="/register" element={<Login register />} />
-                <Route path="/forgotpassword" element={<Login forgotPassword/>} />
-                <Route path="/dashboard" element={<Dashboard/>} />
-                <Route path="/dashboard/:folder" element={<Dashboard/>} />
-                <Route path="/dashboard/:folder/:subfolder" element={<Dashboard/>} />
-                <Route path="/dashboard/:folder/:subfolder/:filter" element={<Dashboard/>} />
-                <Route path="/chat" element={<Chat/>} />
-                <Route path="/chat/:id" element={<Chat/>} />
-                <Route path="/knowledge-card/new" element={<KnowledgeCard />} />
-                <Route path="/knowledge-card/:id" element={<KnowledgeCard />} />
-                <Route path="/review/knowledge-card/:id" element={<KnowledgeCard />} />
-                <Route path="/donor-templates/new" element={<DonorTemplateRequest />} />
-                <Route path="/donor-templates/:id" element={<DonorTemplateDetail />} />
-                <Route path="/quality-gate" element={<QualityGate />} />
-                <Route path="/admin/access/:resourceType/:resourceId" element={<AccessManagement />} />
-        </Routes>
+        return  (
+            <>
+                <Routes>
+                        <Route path="/" element={<Login/>} />
+                        <Route path="/login" element={<Login/>} />
+                        <Route path="/register" element={<Login register />} />
+                        <Route path="/forgotpassword" element={<Login forgotPassword/>} />
+                        <Route path="/dashboard" element={<Dashboard/>} />
+                        <Route path="/dashboard/:folder" element={<Dashboard/>} />
+                        <Route path="/dashboard/:folder/:subfolder" element={<Dashboard/>} />
+                        <Route path="/dashboard/:folder/:subfolder/:filter" element={<Dashboard/>} />
+                        <Route path="/chat" element={<Chat/>} />
+                        <Route path="/chat/:id" element={<Chat/>} />
+                        <Route path="/knowledge-card/new" element={<KnowledgeCard />} />
+                        <Route path="/knowledge-card/:id" element={<KnowledgeCard />} />
+                        <Route path="/review/knowledge-card/:id" element={<KnowledgeCard />} />
+                        <Route path="/donor-templates/new" element={<DonorTemplateRequest />} />
+                        <Route path="/donor-templates/:id" element={<DonorTemplateDetail />} />
+                        <Route path="/quality-gate" element={<QualityGate />} />
+                        <Route path="/admin/access/:resourceType/:resourceId" element={<AccessManagement />} />
+                </Routes>
+                <WizardModal />
+            </>
+        )
 }

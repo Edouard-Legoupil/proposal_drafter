@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import OSSFooter from '../OSSFooter/OSSFooter'
 import UserSettingsModal from '../UserSettingsModal/UserSettingsModal'
 import Sidebar from '../Sidebar/Sidebar'
+import WizardButton from '../../components/Wizard/WizardButton'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
 
@@ -130,6 +131,7 @@ export default function Base(props) {
                                         </button>
                                 )
                         )}
+                        <WizardButton />
                 </header>
 
                 <div className='Base_content'>
