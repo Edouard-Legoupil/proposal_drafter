@@ -6,7 +6,6 @@ import { useNavigate } from 'react-router-dom'
 import OSSFooter from '../OSSFooter/OSSFooter'
 import UserSettingsModal from '../UserSettingsModal/UserSettingsModal'
 import Sidebar from '../Sidebar/Sidebar'
-import RoleRequestModal from '../RoleRequestModal/RoleRequestModal'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
 
@@ -27,7 +26,6 @@ export default function Base(props) {
         const [userRoles, setUserRoles] = useState([])
         const [sidebarOpen, setSidebarOpen] = useState(true)
     const [showSettingsModal, setShowSettingsModal] = useState(false)
-    const [showRoleModal, setShowRoleModal] = useState(false)
 
         function handleLogoClick() {
                 navigate("/dashboard")
@@ -127,7 +125,7 @@ export default function Base(props) {
                                 </div>
                         ) : (
                                 !userDetails.is_admin && userRoles.length <= 1 && userRoles[0] === 'proposal writer' && (
-                                        <button className="Header_requestButton" onClick={() => setShowRoleModal(true)}>
+                                        <button className="Header_requestButton" onClick={() => setShowSettingsModal(true)}>
                                                 Request Elevated Access
                                         </button>
                                 )
@@ -142,14 +140,6 @@ export default function Base(props) {
                 </div>
 
                  <UserSettingsModal show={showSettingsModal} onClose={() => setShowSettingsModal(false)} />
-                <RoleRequestModal
-                        show={showRoleModal}
-                        onClose={() => setShowRoleModal(false)}
-                        onSuccess={() => {
-                                // Refresh profile to show "Waiting for approval"
-                                window.location.reload();
-                        }}
-                />
 
                 <OSSFooter />
         </div>

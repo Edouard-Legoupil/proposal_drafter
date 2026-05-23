@@ -5,6 +5,7 @@ Defines the Team and TeamMember models for team-based access control.
 """
 
 from sqlalchemy import Column, String, ForeignKey
+from sqlalchemy import Integer  # type: ignore[import]
 from sqlalchemy.orm import relationship
 
 # Import shared base from models package to ensure all models share the same registry

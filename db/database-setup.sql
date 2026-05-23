@@ -67,18 +67,18 @@ RETURNS TABLE(role_id INTEGER, role_name VARCHAR(255), source_type VARCHAR(50))
 LANGUAGE SQL
 AS $$
     -- Direct user roles
-    SELECT 
+    SELECT
         ur.role_id,
         r.name as role_name,
         'direct' as source_type
     FROM user_roles ur
     JOIN roles r ON ur.role_id = r.id
     WHERE ur.user_id = user_id_param::UUID
-    
+
     UNION ALL
-    
+
     -- Inherited roles from teams
-    SELECT 
+    SELECT
         tr.role_id,
         r.name as role_name,
         'team_inherited' as source_type
@@ -86,11 +86,11 @@ AS $$
     JOIN team_members tm ON tr.team_id = tm.team_id
     JOIN roles r ON tr.role_id = r.id
     WHERE tm.user_id = user_id_param::UUID
-    
+
     UNION ALL
-    
+
     -- Requested roles (for admin review)
-    SELECT 
+    SELECT
         ur.requested_role_id as role_id,
         r.name as role_name,
         'requested' as source_type
@@ -110,7 +110,7 @@ WITH all_users_with_roles AS (
     UNION
     SELECT id FROM users WHERE requested_role_id IS NOT NULL
 )
-SELECT 
+SELECT
     u.user_id,
     r.role_id,
     r.role_name,
@@ -119,7 +119,175 @@ SELECT
 FROM all_users_with_roles u
 CROSS JOIN LATERAL get_user_roles_with_inheritance(u.user_id::TEXT) r;
 
- 
+-- Create table to track settings requests
+CREATE TABLE IF NOT EXISTS user_settings_requests (
+    id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL,
+    setting_type VARCHAR(50) NOT NULL,  -- 'donor_focal', 'outcome_focal', 'field_context_focal', 'team_membership'
+    setting_value TEXT NOT NULL,        -- The value being requested (donor_id, outcome_id, field_context_id, or team_id)
+    requested_at TIMESTAMPTZ DEFAULT NOW(),
+    status VARCHAR(20) DEFAULT 'pending',  -- pending, approved, rejected
+    approved_by UUID,                     -- Admin who approved/rejected
+    approved_at TIMESTAMPTZ,
+    rejection_reason TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Create indexes for performance
+CREATE INDEX IF NOT EXISTS idx_user_settings_requests_user ON user_settings_requests(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_settings_requests_status ON user_settings_requests(status);
+CREATE INDEX IF NOT EXISTS idx_user_settings_requests_type ON user_settings_requests(setting_type);
+
+
+--   Add team settings table and inheritance functions 
+
+-- Create team_settings table
+CREATE TABLE IF NOT EXISTS team_settings (
+    id SERIAL PRIMARY KEY,
+    team_id UUID NOT NULL,
+    setting_type VARCHAR(50) NOT NULL,
+    setting_value VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    UNIQUE (team_id, setting_type, setting_value)
+);
+
+-- Create indexes for performance
+CREATE INDEX IF NOT EXISTS idx_team_settings_team_id ON team_settings(team_id);
+CREATE INDEX IF NOT EXISTS idx_team_settings_type ON team_settings(setting_type);
+
+-- Create function to get inherited settings for a user
+CREATE OR REPLACE FUNCTION get_inherited_settings_for_user(user_id VARCHAR(36))
+RETURNS TABLE(
+    setting_type VARCHAR(50),
+    setting_value VARCHAR(255),
+    source_type VARCHAR(20),
+    source_id VARCHAR(36)
+) AS $$
+BEGIN
+    RETURN QUERY
+    -- First get the user's teams
+    WITH user_teams AS (
+        SELECT team_id FROM team_members WHERE user_id = get_inherited_settings_for_user.user_id
+    )
+    -- Get team settings for those teams
+    SELECT 
+        ts.setting_type,
+        ts.setting_value,
+        'team' AS source_type,
+        ts.team_id AS source_id
+    FROM team_settings ts
+    JOIN user_teams ut ON ts.team_id = ut.team_id
+    
+    UNION ALL
+    
+    -- Also include user's direct settings for completeness
+    SELECT 
+        setting_type,
+        setting_value,
+        'user' AS source_type,
+        user_id AS source_id
+    FROM user_settings_requests
+    WHERE user_id = get_inherited_settings_for_user.user_id
+    AND status = 'approved';
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create function to apply inherited settings to a user
+CREATE OR REPLACE FUNCTION apply_inherited_settings_to_user(user_id VARCHAR(36))
+RETURNS VOID AS $$
+DECLARE
+    team_setting RECORD;
+BEGIN
+    -- Get all inherited team settings for the user
+    FOR team_setting IN
+        SELECT setting_type, setting_value
+        FROM team_settings ts
+        WHERE ts.team_id IN (
+            SELECT team_id FROM team_members WHERE user_id = apply_inherited_settings_to_user.user_id
+        )
+    LOOP
+        -- Check if user already has this setting
+        PERFORM 1 FROM user_settings_requests 
+        WHERE user_id = apply_inherited_settings_to_user.user_id
+        AND setting_type = team_setting.setting_type
+        AND setting_value = team_setting.setting_value
+        AND status = 'approved'
+        LIMIT 1;
+        
+        IF NOT FOUND THEN
+            -- User doesn't have this setting, so grant it
+            INSERT INTO user_settings_requests (
+                user_id, setting_type, setting_value, status, approved_at, approved_by
+            ) VALUES (
+                apply_inherited_settings_to_user.user_id,
+                team_setting.setting_type,
+                team_setting.setting_value,
+                'approved',
+                CURRENT_TIMESTAMP,
+                'system' -- Mark as system-approved for inherited settings
+            ) ON CONFLICT (user_id, setting_type, setting_value) DO NOTHING;
+        END IF;
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger for automatic inheritance
+CREATE OR REPLACE FUNCTION handle_team_settings_inheritance()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
+        -- When a team setting is added or updated, apply to all team members
+        PERFORM apply_inherited_settings_to_user(user_id)
+        FROM team_members
+        WHERE team_id = NEW.team_id;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create the trigger
+CREATE TRIGGER team_settings_inheritance_trigger
+AFTER INSERT OR UPDATE ON team_settings
+FOR EACH ROW
+EXECUTE FUNCTION handle_team_settings_inheritance();
+
+-- Create view for comprehensive user settings
+CREATE OR REPLACE VIEW user_effective_settings AS
+SELECT 
+    usr.user_id,
+    usr.setting_type,
+    usr.setting_value,
+    usr.status,
+    usr.requested_at,
+    usr.approved_at,
+    'direct' AS source
+FROM user_settings_requests usr
+WHERE usr.status = 'approved'
+
+UNION ALL
+
+SELECT 
+    tm.user_id,
+    ts.setting_type,
+    ts.setting_value,
+    'approved' AS status,
+    NULL AS requested_at,
+    CURRENT_TIMESTAMP AS approved_at,
+    'inherited' AS source
+FROM team_settings ts
+JOIN team_members tm ON ts.team_id = tm.team_id
+WHERE NOT EXISTS (
+    SELECT 1 FROM user_settings_requests usr
+    WHERE usr.user_id = tm.user_id
+    AND usr.setting_type = ts.setting_type
+    AND usr.setting_value = ts.setting_value
+    AND usr.status = 'approved'
+);
+
 
 
 -- Create User Role Requests table for pending roles
@@ -1172,7 +1340,10 @@ WHERE ar.artifact_type = 'knowledge_card';
 
 BEGIN;
 
--- --------------------------------------------------------------------------
+-- ---
+
+-- Wizard utility tables
+\i db/wizard_tables.sql-----------------------------------------------------------------------
 -- 1) INCIDENT ANALYSIS RESULTS
 -- --------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS incident_analysis_results (
@@ -2044,3 +2215,6 @@ WHERE kc.id = src.knowledge_card_id;
 
 
 ---
+
+-- Wizard utility tables
+\i db/wizard_tables.sql

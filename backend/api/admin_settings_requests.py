@@ -216,3 +216,67 @@ async def reject_settings_request(
             status_code=500,
             detail=f"Failed to reject settings request: {str(e)}"
         )
+
+
+@router.get("/admin/settings-requests/teams")
+async def get_team_settings_requests(admin: dict = Depends(is_system_admin)):
+    """
+    Get all team settings requests for admin review
+    """
+    try:
+        with get_engine().connect() as connection:
+            result = connection.execute(
+                text("""
+                SELECT 
+                    ts.id as setting_id,
+                    t.id as team_id,
+                    t.name as team_name,
+                    ts.setting_type,
+                    ts.setting_value,
+                    ts.created_at
+                FROM team_settings ts
+                JOIN teams t ON ts.team_id = t.id
+                ORDER BY ts.created_at DESC
+                """)
+            )
+            
+            requests = []
+            for row in result.fetchall():
+                # Get display names for the setting values
+                display_name = None
+                if row[3] == 'donor_focal':
+                    donor = connection.execute(
+                        text("SELECT name FROM donors WHERE id = :id"),
+                        {'id': row[4]}
+                    ).fetchone()
+                    display_name = donor[0] if donor else row[4]
+                elif row[3] == 'outcome_focal':
+                    outcome = connection.execute(
+                        text("SELECT name FROM outcomes WHERE id = :id"),
+                        {'id': row[4]}
+                    ).fetchone()
+                    display_name = outcome[0] if outcome else row[4]
+                elif row[3] == 'field_context_focal':
+                    field_context = connection.execute(
+                        text("SELECT name FROM field_contexts WHERE id = :id"),
+                        {'id': row[4]}
+                    ).fetchone()
+                    display_name = field_context[0] if field_context else row[4]
+                 
+                requests.append({
+                    'setting_id': row[0],
+                    'team_id': row[1],
+                    'team_name': row[2],
+                    'setting_type': row[3],
+                    'setting_value': row[4],
+                    'display_name': display_name,
+                    'created_at': row[5].isoformat() if row[5] else None
+                })
+             
+            return {"team_settings": requests}
+     
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch team settings: {str(e)}"
+        )

@@ -170,7 +170,10 @@ async def get_user_settings(current_user: dict = Depends(get_current_user)):
     try:
         with get_engine().connect() as connection:
             user_query = text(
-                "SELECT geographic_coverage_type, geographic_coverage_region, geographic_coverage_country FROM users WHERE id = :user_id"
+                """
+                SELECT geographic_coverage_type, geographic_coverage_region, 
+                geographic_coverage_country FROM users WHERE id = :user_id
+                """
             )
             user_result = connection.execute(user_query, {"user_id": user_id}).fetchone()
             if not user_result:
@@ -342,3 +345,41 @@ async def update_user_settings(settings: UserSettings, current_user: dict = Depe
     except Exception as e:
         logger.error(f"[UPDATE USER SETTINGS ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Could not update user settings.")
+
+
+@router.get("/users/me/approved-settings")
+async def get_user_approved_settings(current_user: dict = Depends(get_current_user)):
+    """
+    Returns the current user's approved settings from the settings request system
+    """
+    user_id = current_user["user_id"]
+    try:
+        with get_engine().connect() as connection:
+            # Get approved settings from user_settings_requests
+            approved_settings = connection.execute(
+                text(
+                    """
+                SELECT setting_type, setting_value, approved_at
+                FROM user_settings_requests
+                WHERE user_id = :user_id AND status = 'approved'
+                ORDER BY approved_at DESC
+                """
+                ),
+                {"user_id": user_id},
+            ).fetchall()
+
+            # Format the response
+            settings_list = []
+            for row in approved_settings:
+                settings_list.append(
+                    {
+                        "setting_type": row[0],
+                        "setting_value": row[1],
+                        "approved_at": row[2].isoformat() if row[2] else None,
+                    }
+                )
+
+            return {"approved_settings": settings_list}
+    except Exception as e:
+        logger.error(f"[GET APPROVED SETTINGS ERROR] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to fetch approved settings: {str(e)}")

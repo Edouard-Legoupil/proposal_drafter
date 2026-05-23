@@ -8,6 +8,7 @@ import TemplateAccessPanel from './resources/TemplateAccessPanel'
 import MetricsAccessPanel from './resources/MetricsAccessPanel'
 import QualityGateAccessPanel from './resources/QualityGateAccessPanel'
 import TeamsRolesPanel from './resources/TeamsRolesPanel'
+import TeamSettingsPanel from './resources/TeamSettingsPanel'
 import IncidentAccessPanel from './resources/IncidentAccessPanel'
 import Base from '../../components/Base/Base'
 
@@ -19,12 +20,14 @@ const resourcePanels = {
   metrics: MetricsAccessPanel,
   'quality-gate': QualityGateAccessPanel,
   'teams-roles': TeamsRolesPanel,
+  'team-settings': TeamSettingsPanel,
   incidents: IncidentAccessPanel
 }
 
 const navItems = [
   { key: 'users', label: 'Users' },
   { key: 'teams-roles', label: 'Teams & Roles' },
+  { key: 'team-settings', label: 'Team Settings' },
   { key: 'proposals', label: 'Proposals' },
   { key: 'knowledge-cards', label: 'Knowledge Cards' },
   { key: 'templates', label: 'Templates' },

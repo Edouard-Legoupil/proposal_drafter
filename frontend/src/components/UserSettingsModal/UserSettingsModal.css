@@ -92,10 +92,49 @@
     font-size: 0.9375rem;
 }
 
+.modal-instructions {
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border-left: 4px solid #007bff;
+}
+
+.modal-instructions h3 {
+    color: #007bff;
+    margin-top: 0;
+    font-size: 1.2rem;
+}
+
+.instruction-list {
+    padding-left: 20px;
+    margin: 10px 0;
+}
+
+.instruction-list li {
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.approval-note {
+    font-style: italic;
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-top: 10px;
+}
+
+.inheritance-note {
+    font-style: italic;
+    color: #4caf50;
+    font-size: 0.9rem;
+    margin-top: 8px;
+}
+
 .field-hint {
-    font-size: 0.75rem;
-    color: #94a3b8;
-    margin: 4px 0 0;
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-top: 5px;
+    font-style: italic;
 }
 
 .coverage-controls {

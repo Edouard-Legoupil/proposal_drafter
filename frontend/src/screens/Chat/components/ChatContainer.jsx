@@ -22,7 +22,7 @@ import copy from "../../../assets/images/Chat_copy.svg";
 import tick from "../../../assets/images/Chat_copiedTick.svg";
 import regenerate from "../../../assets/images/Chat_regenerate.svg";
 import regenerateClose from "../../../assets/images/Chat_regenerateClose.svg";
-import excel_icon from "../../../assets/images/excel.svg";
+// import excel_icon from "../../../assets/images/excel.svg";  // Currently unused
 import { FollowUpModal, ValidationModal, ProgressModal, RegenerateModal } from './index';
 import ChatHeader from './ChatHeader';
 import ChatControls from './ChatControls';
@@ -71,7 +71,9 @@ const ChatContainer = (props) => {
 		fetchData,
 		getUsers,
 		getTransferUsers,
-		getProfile
+		getProfile,
+		updateFilteredFieldContexts,
+		updateFilteredDonors
 	} = useChatApi();
 
 	const {
@@ -278,6 +280,33 @@ const ChatContainer = (props) => {
 			}
 		}
 	}, [geographicalScopeValue, locationFieldValue, fieldContexts, handleFormInput, setFilteredFieldContexts]);
+
+        // Fetch and apply approved settings
+        useEffect(() => {
+            const fetchApprovedSettings = async () => {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/users/me/approved-settings`, {
+                        credentials: 'include'
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        const approvedSettings = data.approved_settings || [];
+                        
+                        // Apply filtering based on approved settings
+                        updateFilteredFieldContexts(geographicalScopeValue, approvedSettings);
+                        updateFilteredDonors(approvedSettings);
+                    }
+                } catch (error) {
+                    console.error("Error fetching approved settings:", error);
+                }
+            };
+            
+            // Only fetch if we have the necessary data
+            if (geographicalScopeValue !== undefined) {
+                fetchApprovedSettings();
+            }
+        }, [geographicalScopeValue]);  // eslint-disable-line react-hooks/exhaustive-deps
 
         // Set label to Regenerate if there's an existing proposal
 	useEffect(() => {
