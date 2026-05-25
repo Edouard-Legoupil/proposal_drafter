@@ -1,0 +1,271 @@
+# Expanded Q&A Content for Wizard Utility
+# Comprehensive help content covering all aspects of the Proposal Drafter application
+# with additional categories and questions to anticipate user needs
+
+categories:
+  - name: "General"
+    description: "General questions about the Proposal Drafter application"
+    questions:
+      - question: "What is the Proposal Drafter?"
+        answer: "The Proposal Drafter is an AI-powered tool designed to help UN agencies and NGOs create high-quality project proposals efficiently. It uses artificial intelligence to generate proposal content based on your organization's knowledge base and best practices."
+      
+      - question: "Who can use the Proposal Drafter?"
+        answer: "The Proposal Drafter is available to authorized staff from UN agencies and partner NGOs. Access is controlled through our role-based access control system."
+      
+      - question: "Is my data secure?"
+        answer: "Yes, the Proposal Drafter follows UN ICT Security Policy standards and implements comprehensive security measures including encryption, access control, and regular security audits."
+      
+      - question: "What browsers are supported?"
+        answer: "The Proposal Drafter supports modern browsers including Chrome, Firefox, Safari, and Edge. For best performance, use the latest version of your preferred browser."
+      
+      - question: "How do I get support?"
+        answer: "You can get support through multiple channels: 1) Use this wizard for immediate help, 2) Contact your organization's administrator, 3) Use the feedback system to report issues."
+      
+      - question: "Is there a mobile app available?"
+        answer: "Currently, the Proposal Drafter is a web-based application optimized for both desktop and mobile browsers. A dedicated mobile app is on our roadmap for future development."
+      
+      - question: "What languages are supported?"
+        answer: "The application interface is available in English, French, and Spanish. Proposal content can be generated in multiple languages depending on your organization's requirements."
+
+  - name: "Getting Started"
+    description: "Questions about getting started with the application"
+    questions:
+      - question: "How do I log in?"
+        answer: "Use your organizational email and password. If you're a first-time user, click 'Register' to create an account. For SSO users, click the appropriate SSO provider button."
+      
+      - question: "What should I do first after logging in?"
+        answer: "After logging in, we recommend: 1) Exploring the dashboard to understand the interface, 2) Reviewing any existing proposals, 3) Creating a test proposal to familiarize yourself with the process."
+      
+      - question: "How do I navigate the application?"
+        answer: "Use the sidebar navigation to access different sections: Dashboard (overview), Proposals (your proposals), Knowledge Cards (reference materials), and Settings (account management)."
+      
+      - question: "What are the main sections of the application?"
+        answer: "The main sections are: Dashboard (central hub), Proposals (create and manage proposals), Knowledge Cards (reference library), Chat (collaboration), and Admin (for administrators)."
+      
+      - question: "How do I customize my profile?"
+        answer: "Click on your profile picture or name in the top right corner, then select 'Settings' to customize your profile information, notification preferences, and account settings."
+
+  - name: "Proposal Creation"
+    description: "Questions about creating and managing proposals"
+    questions:
+      - question: "How do I create a new proposal?"
+        answer: "1. Log in to the Proposal Drafter, 2. Navigate to the Dashboard, 3. Click the 'New Proposal' button, 4. Select the donor organization, outcome, and field context, 5. Provide a brief project description, 6. Click 'Generate Proposal' to let the AI create the initial draft."
+      
+      - question: "Can I edit the AI-generated proposal?"
+        answer: "Yes, you can edit any part of the AI-generated proposal. The system treats AI-generated content as a starting point that you can modify, expand, or replace as needed."
+      
+      - question: "How do I save my progress?"
+        answer: "Your progress is automatically saved as you work. You can also manually save by clicking the 'Save' button. All changes are versioned so you can revert if needed."
+      
+      - question: "What information do I need to create a proposal?"
+        answer: "You'll need: donor requirements, project description, expected outcomes, budget information, timeline, and any relevant reference documents."
+      
+      - question: "How long does it take to generate a proposal?"
+        answer: "Proposal generation typically takes 30-60 seconds depending on the complexity and AI workload. You'll see a progress indicator during generation."
+      
+      - question: "Can I create proposals offline?"
+        answer: "No, the Proposal Drafter requires an internet connection as it uses cloud-based AI services. However, you can download generated proposals for offline reference."
+      
+      - question: "What file formats can I export proposals to?"
+        answer: "You can export proposals to PDF (for printing), Word (for editing), and JSON (for data exchange). Export options are available in the proposal view."
+
+  - name: "Knowledge Cards"
+    description: "Questions about knowledge cards and the knowledge base"
+    questions:
+      - question: "What are knowledge cards?"
+        answer: "Knowledge cards are reusable snippets of validated information that form the foundation of the AI's understanding. They contain organization-specific knowledge about donors, outcomes, field contexts, and best practices."
+      
+      - question: "How do I create a knowledge card?"
+        answer: "1. Navigate to the Knowledge section in the dashboard, 2. Click 'New Knowledge Card', 3. Select the type of knowledge card (Donor, Outcome, Field Context), 4. Provide the relevant information and references, 5. Submit for review and approval."
+      
+      - question: "Who can create knowledge cards?"
+        answer: "Knowledge cards can be created by users with the Knowledge Manager role. Regular users can suggest knowledge cards for review by knowledge managers."
+      
+      - question: "How are knowledge cards used by the AI?"
+        answer: "The AI uses knowledge cards to ground its responses in your organization's specific knowledge. When generating proposals, the AI retrieves relevant knowledge cards and incorporates their content."
+      
+      - question: "Can I update existing knowledge cards?"
+        answer: "Yes, if you have the appropriate permissions. Navigate to the knowledge card, click 'Edit', make your changes, and submit for review if required."
+
+  - name: "Review Process"
+    description: "Questions about the proposal review and approval process"
+    questions:
+      - question: "How does the review process work?"
+        answer: "The review process involves: 1) Submitting your proposal for review, 2) Reviewers providing feedback and ratings, 3) Addressing reviewer comments, 4) Resubmitting for final approval, 5) Final submission to donors."
+      
+      - question: "Who can review my proposals?"
+        answer: "Proposals can be reviewed by designated Project Reviewers within your organization. You can also request specific colleagues to review your work."
+      
+      - question: "How do I request a review?"
+        answer: "1. Complete your proposal draft, 2. Click the 'Request Review' button, 3. Select reviewers from the list, 4. Add any specific instructions, 5. Submit the review request."
+      
+      - question: "What happens after I submit for review?"
+        answer: "Reviewers will receive notifications and can access your proposal to provide feedback. You'll be notified of any comments or requested changes, and can make revisions before final submission."
+      
+      - question: "How do I handle conflicting feedback from reviewers?"
+        answer: "You can: 1) Discuss with reviewers to reach consensus, 2) Consult with your supervisor for guidance, 3) Document decisions in the proposal comments for transparency."
+
+  - name: "Collaboration"
+    description: "Questions about working with team members"
+    questions:
+      - question: "How do I share a proposal with colleagues?"
+        answer: "You can share proposals by: 1) Adding collaborators directly to the proposal, 2) Using the review process to get formal feedback, 3) Exporting and sharing PDF versions."
+      
+      - question: "Can multiple people edit a proposal at once?"
+        answer: "The system supports collaborative editing with version control. Changes are merged automatically, and conflicts are highlighted for manual resolution."
+      
+      - question: "How do I see who made changes to a proposal?"
+        answer: "Use the version history feature to see all changes, who made them, and when. You can compare versions and restore previous versions if needed."
+      
+      - question: "How do I communicate with team members about a proposal?"
+        answer: "You can use: 1) Inline comments on specific sections, 2) The chat feature for real-time discussion, 3) Email notifications for important updates."
+
+  - name: "Troubleshooting"
+    description: "Common issues and their solutions"
+    questions:
+      - question: "I can't log in, what should I do?"
+        answer: "Try these steps: 1) Check your internet connection, 2) Verify your credentials, 3) Clear browser cache, 4) Try a different browser, 5) Contact your administrator if issues persist."
+      
+      - question: "The AI generated incorrect information, what should I do?"
+        answer: "You can: 1) Manually correct the information, 2) Provide feedback using the feedback system, 3) Check if relevant knowledge cards need updating, 4) Report the issue to administrators."
+      
+      - question: "My proposal isn't generating, what's wrong?"
+        answer: "Common issues: 1) Incomplete required fields, 2) Server connectivity problems, 3) AI service temporarily unavailable. Check the error message and try again."
+      
+      - question: "I'm getting a timeout error, what should I do?"
+        answer: "Timeout errors can occur during high usage periods. Try: 1) Waiting a few minutes and trying again, 2) Reducing the complexity of your request, 3) Contacting support if the issue persists."
+
+  - name: "Advanced Features"
+    description: "Questions about advanced functionality"
+    questions:
+      - question: "How do I use templates?"
+        answer: "Templates provide pre-structured formats for different donor requirements. Select a template when creating a proposal to ensure compliance with specific donor formats."
+      
+      - question: "Can I create custom templates?"
+        answer: "Yes, administrators can create and manage custom templates through the Admin section. Custom templates can be tailored to specific donor requirements."
+      
+      - question: "How do I export proposals?"
+        answer: "You can export proposals in multiple formats: 1) PDF for printing and sharing, 2) Word for further editing, 3) JSON for data exchange. Use the Export button in the proposal view."
+      
+      - question: "How do I use the API?"
+        answer: "The Proposal Drafter provides a RESTful API for integration with other systems. Refer to the API documentation in the Admin section for detailed endpoint descriptions and authentication requirements."
+
+  - name: "Account Management"
+    description: "Questions about user accounts and permissions"
+    questions:
+      - question: "How do I reset my password?"
+        answer: "Click 'Forgot Password' on the login screen, enter your email address, and follow the instructions sent to your email to reset your password."
+      
+      - question: "How do I change my email address?"
+        answer: "Go to your account settings, click 'Change Email', enter your new email address, and confirm the change through the verification email."
+      
+      - question: "What are the different user roles?"
+        answer: "Common roles include: Proposal Writer (create proposals), Reviewer (review proposals), Knowledge Manager (manage knowledge cards), and Administrator (manage users and settings)."
+      
+      - question: "How do I request additional permissions?"
+        answer: "Contact your organization's administrator or use the 'Request Elevated Access' button in your account settings to request additional permissions."
+
+  - name: "Performance Tips"
+    description: "Tips for optimal performance"
+    questions:
+      - question: "How can I make proposal generation faster?"
+        answer: "For faster generation: 1) Provide clear, concise project descriptions, 2) Use specific knowledge cards, 3) Avoid peak usage times, 4) Break complex proposals into smaller sections."
+      
+      - question: "How do I optimize my workspace?"
+        answer: "Optimize your workspace by: 1) Organizing proposals with clear naming conventions, 2) Using folders and tags for categorization, 3) Archiving completed projects, 4) Customizing your dashboard view."
+      
+      - question: "What are the best practices for knowledge cards?"
+        answer: "Best practices include: 1) Keep information concise and focused, 2) Use consistent formatting, 3) Include relevant references, 4) Update regularly to maintain accuracy."
+
+  - name: "Security & Compliance"
+    description: "Questions about security and compliance"
+    questions:
+      - question: "How is my data protected?"
+        answer: "Your data is protected through: 1) Encryption at rest and in transit, 2) Role-based access control, 3) Regular security audits, 4) Compliance with UN ICT Security Policy standards."
+      
+      - question: "Who can access my proposals?"
+        answer: "Access to your proposals is controlled by your organization's administrators. By default, only you and designated collaborators can access your proposals."
+      
+      - question: "How long is my data retained?"
+        answer: "Data retention policies comply with your organization's requirements. Typically, active proposals are retained for 5 years, and archived proposals for 10 years."
+      
+      - question: "Is the application GDPR compliant?"
+        answer: "Yes, the Proposal Drafter complies with GDPR and other major data protection regulations. Your organization's data protection policies also apply."
+
+  - name: "Integrations"
+    description: "Questions about integrating with other systems"
+    questions:
+      - question: "Can I integrate with Microsoft Office?"
+        answer: "Yes, you can export proposals to Word format for further editing in Microsoft Office. We also support direct integration with Office 365 for enterprise customers."
+      
+      - question: "How do I integrate with our CRM system?"
+        answer: "Integration with CRM systems is available through our API. Contact your administrator or our support team for assistance with setting up CRM integration."
+      
+      - question: "Is there a Slack integration?"
+        answer: "Yes, Slack integration is available for notifications and collaboration. Ask your administrator to set up the Slack app for your organization."
+      
+      - question: "Can I connect to our document management system?"
+        answer: "Integration with document management systems can be set up through our API or using standard export/import functionality."
+
+  - name: "Mobile & Accessibility"
+    description: "Questions about mobile and accessibility features"
+    questions:
+      - question: "Can I use the application on my tablet?"
+        answer: "Yes, the Proposal Drafter is fully responsive and works well on tablets and other mobile devices with modern browsers."
+      
+      - question: "Are there keyboard shortcuts available?"
+        answer: "Yes, common keyboard shortcuts include: Ctrl+S (Save), Ctrl+F (Search), Ctrl+P (Print), and standard navigation shortcuts."
+      
+      - question: "Is the application accessible for users with disabilities?"
+        answer: "Yes, the Proposal Drafter follows WCAG 2.1 AA accessibility standards, including screen reader support, keyboard navigation, and proper contrast ratios."
+      
+      - question: "Can I adjust the font size?"
+        answer: "Yes, you can adjust font size using your browser's zoom functionality or through the accessibility settings in your account preferences."
+
+  - name: "Training & Resources"
+    description: "Questions about training and learning resources"
+    questions:
+      - question: "Where can I find training materials?"
+        answer: "Training materials are available in the Help section, including video tutorials, user guides, and best practice documents."
+      
+      - question: "Are there live training sessions?"
+        answer: "Yes, live training sessions are offered regularly. Check the training calendar in the Help section for upcoming sessions and registration."
+      
+      - question: "How do I get certified as a power user?"
+        answer: "Complete the advanced training course and pass the certification exam. Certified power users get access to additional features and support resources."
+      
+      - question: "Where can I find release notes?"
+        answer: "Release notes are available in the Help section under 'What's New'. You'll also receive email notifications about major updates."
+
+  - name: "Feedback & Improvements"
+    description: "Questions about providing feedback and suggesting improvements"
+    questions:
+      - question: "How do I suggest new features?"
+        answer: "Use the feedback system in this wizard or contact your administrator with feature suggestions. All suggestions are reviewed by our product team."
+      
+      - question: "How often are new features released?"
+        answer: "We follow a continuous improvement model with minor updates every 2 weeks and major releases every 3 months."
+      
+      - question: "How can I report a bug?"
+        answer: "Use the feedback system to report bugs. Include as much detail as possible about the issue and steps to reproduce it."
+      
+      - question: "How are feature requests prioritized?"
+        answer: "Feature requests are prioritized based on user impact, alignment with our roadmap, and technical feasibility. Popular requests receive higher priority."
+
+  - name: "Administrator Guide"
+    description: "Questions for system administrators"
+    questions:
+      - question: "How do I add new users?"
+        answer: "Go to the Admin section, select 'User Management', and click 'Add User'. You can add users individually or import multiple users from a CSV file."
+      
+      - question: "How do I manage user roles?"
+        answer: "In the User Management section, select a user and click 'Edit Roles' to assign or remove roles based on your organization's requirements."
+      
+      - question: "How do I monitor system usage?"
+        answer: "The Admin Dashboard provides usage analytics including active users, proposal creation rates, and system performance metrics."
+      
+      - question: "How do I configure SSO?"
+        answer: "SSO configuration is available in the Admin section under 'Authentication Settings'. Follow the setup wizard for your identity provider."
+      
+      - question: "How do I manage knowledge card approvals?"
+        answer: "Knowledge card approvals can be managed in the Admin section under 'Knowledge Management'. You can review pending cards and approve or request changes."
