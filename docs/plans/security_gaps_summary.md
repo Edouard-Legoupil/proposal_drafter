@@ -8,7 +8,7 @@ This document provides a concise summary of security requirements that are **not
 **Requirements Affected**: 5.9.2, 5.12.2, 5.19.4, 8.13.4
 **Current Status**: ❌ No CMDB integration
 **Impact**: Cannot track configuration items, service ownership, or recovery plans in UNHCR's official system
-**Evidence**: 
+**Evidence**:
 - No ServiceNow API calls or CI creation code
 - No CMDB record management
 - Service ownership tracked informally through Git history

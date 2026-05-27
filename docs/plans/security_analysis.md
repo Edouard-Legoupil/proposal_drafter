@@ -32,7 +32,7 @@ This document provides a detailed analysis of each ISO27002:2022 security requir
 
 ### 5.2.2 - Security focal point designated
 **Status**: ⚠️ PARTIAL
-**Evidence**: 
+**Evidence**:
 - No explicit security focal point documentation
 - Security responsibilities are distributed across the development team
 - Security features are implemented but no named security officer
