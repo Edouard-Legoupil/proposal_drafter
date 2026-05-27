@@ -23,6 +23,14 @@ By streamlining proposal development, this tool accelerates funding opportunitie
 
 This system leverages the agent-based framework of [CrewAI](https://docs.crewai.com/introduction) to orchestrate multiple collaborative AI agents — each specialized in a core aspect of proposal writing such as context analysis and objectives formulation.
 
+### 💻 Client Requirements
+
+For the best experience, we recommend:
+- **Operating Systems**: Windows 11+ or macOS 12+
+- **Browsers**: Chrome 110+, Firefox 110+, Edge 110+, Safari 15+
+
+The application will work on older systems but some features may not function optimally. A compatibility warning will be shown if your system doesn't meet these requirements.
+
 - 🤖 **Agentic Workflow**: Modular agents simulate a real project development team.
 - 📝 **Proposal Structuring**: Outputs fully-structured, ready-to-submit project proposals.
 - 🌍 **Alignment**: Integrates thematic priorities, templates, and compliance requirements.
