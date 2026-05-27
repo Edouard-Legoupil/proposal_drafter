@@ -8,7 +8,7 @@ including Q&A categories, Q&A items, and user interactions.
 from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, DateTime, CheckConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from backend.core.db import Base
+from backend.models import Base
 
 
 class QACategory(Base):
