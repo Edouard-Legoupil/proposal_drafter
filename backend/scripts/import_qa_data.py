@@ -21,7 +21,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".
 
 # Import required modules
 from backend.models.wizard_models import QACategory, QAItem
-from backend.core.db import SessionLocal
+from backend.core.db import get_engine
 
 
 def import_qa_data(yaml_file):
@@ -34,7 +34,9 @@ def import_qa_data(yaml_file):
     Returns:
         tuple: (success, message, categories_count, qa_items_count)
     """
-    db = SessionLocal()
+    engine = get_engine()
+    with engine.connect() as connection:
+        db = Session(connection)
     
     try:
         # Read YAML file
