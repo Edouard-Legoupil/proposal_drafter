@@ -11,11 +11,12 @@ This router provides endpoints for the wizard utility including:
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func, or_, desc
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import func, or_, desc, select
 from typing import List, Optional
 from datetime import datetime, timedelta
 
-from backend.core.db import get_db
+from backend.core.dependencies import get_db_session
 from backend.models.wizard_models import QACategory, QAItem, UserInteraction
 from backend.core.security import get_current_user
 from backend.schemas.wizard_schemas import (
@@ -30,7 +31,7 @@ router = APIRouter(prefix="/api/wizard", tags=["Wizard Utility"])
 
 
 @router.get("/categories", response_model=List[QACategoryResponse])
-def get_categories(db: Session = Depends(get_db)):
+async def get_categories(db: AsyncSession = Depends(get_db_session)):
     """
     Get all Q&A categories.
     
@@ -55,7 +56,7 @@ def get_qa_items(
     search: Optional[str] = None,
     limit: int = 20,
     offset: int = 0,
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db_session)
 ):
     """
     Get Q&A items with optional filtering and pagination.
@@ -116,7 +117,7 @@ def get_qa_items(
 def submit_feedback(
     feedback: UserFeedback,
     request: Request,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db_session),
     current_user = Depends(get_current_user)
 ):
     """
@@ -155,7 +156,7 @@ def submit_feedback(
 def get_popular_questions(
     limit: int = 10,
     timeframe: Optional[str] = "all",
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db_session)
 ):
     """
     Get most popular questions based on view count.
@@ -215,7 +216,7 @@ def get_popular_questions(
 @router.post("/search", response_model=QASearchResponse)
 def search_qa(
     search_request: QASearchRequest,
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db_session)
 ):
     """
     Search Q&A items by query.
