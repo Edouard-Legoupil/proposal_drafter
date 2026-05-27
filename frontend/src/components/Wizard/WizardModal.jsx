@@ -9,7 +9,7 @@
  * - Popular questions
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useWizard } from '../../context/WizardContext';
 import {
     Dialog, DialogTitle, DialogContent, DialogActions, 
