@@ -44,7 +44,7 @@ export const WizardProvider = ({ children }) => {
             }
             
             const data = await response.json();
-            setCategories(data);
+            setCategories(Array.isArray(data) ? data : []);
             setError(null);
         } catch (err) {
             setError('Failed to fetch categories');
@@ -73,7 +73,7 @@ export const WizardProvider = ({ children }) => {
             }
             
             const data = await response.json();
-            setQaItems(data.items);
+            setQaItems(Array.isArray(data.items) ? data.items : []);
             setError(null);
         } catch (err) {
             setError('Failed to fetch Q&A items');
@@ -94,7 +94,7 @@ export const WizardProvider = ({ children }) => {
             
             if (response.ok) {
                 const data = await response.json();
-                setPopularQuestions(data);
+                setPopularQuestions(Array.isArray(data) ? data : []);
             }
         } catch (err) {
             console.error('Error fetching popular questions:', err);
@@ -117,7 +117,7 @@ export const WizardProvider = ({ children }) => {
             }
             
             const data = await response.json();
-            setQaItems(data.results);
+            setQaItems(Array.isArray(data.results) ? data.results : []);
             setError(null);
         } catch (err) {
             setError('Failed to search Q&A');
