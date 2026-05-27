@@ -38,7 +38,7 @@ def import_qa_data(yaml_file):
     with engine.connect() as connection:
         db = Session(connection)
         try:
-        # Read YAML file
+            # Read YAML file
         with open(yaml_file, 'r') as f:
             data = yaml.safe_load(f)
         
