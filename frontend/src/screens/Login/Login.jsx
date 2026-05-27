@@ -9,6 +9,8 @@ import ForgotPassword from '../ForgotPassword/ForgotPassword'
 import CommonButton from '../../components/CommonButton/CommonButton'
 import ResponsiveIllustration from '../../components/ResponsiveIllustration/ResponsiveIllustration'
 import OSSFooter from '../../components/OSSFooter/OSSFooter'
+import { useClientCompatibilityCheck } from '../../hooks/useClientCompatibilityCheck'
+import { ClientCompatibilityModal } from '../../components/ClientCompatibilityModal'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
 const ENABLE_SSO = import.meta.env.VITE_ENABLE_SSO !== 'false';
@@ -20,6 +22,7 @@ import hide from "../../assets/images/login_hidePassword.svg"
 
 export default function Login(props) {
         const navigate = useNavigate()
+        const { showWarning, dismissWarning, clientInfo } = useClientCompatibilityCheck();
 
         const errorPopover = useRef()
         const [errorText, setErrorText] = useState("")
@@ -344,5 +347,10 @@ export default function Login(props) {
                 </div>
 
                 <OSSFooter />
+                <ClientCompatibilityModal
+                    open={showWarning}
+                    onClose={dismissWarning}
+                    clientInfo={clientInfo}
+                />
         </div>
 }
