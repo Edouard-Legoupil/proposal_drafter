@@ -37,8 +37,7 @@ def import_qa_data(yaml_file):
     engine = get_engine()
     with engine.connect() as connection:
         db = Session(connection)
-    
-    try:
+        try:
         # Read YAML file
         with open(yaml_file, 'r') as f:
             data = yaml.safe_load(f)
@@ -114,8 +113,8 @@ def import_qa_data(yaml_file):
         db.rollback()
         return False, f"Unexpected error: {str(e)}", 0, 0
         
-    finally:
-        db.close()
+	finally:
+	    db.close()
 
 
 def main():
