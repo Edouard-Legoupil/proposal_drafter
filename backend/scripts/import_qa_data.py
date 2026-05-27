@@ -16,15 +16,12 @@ import argparse
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 
-# Try to import from backend package first
-try:
-    from backend.models.wizard_models import QACategory, QAItem
-    from backend.core.db import SessionLocal
-except ImportError:
-    # Fallback: Add the backend directory to Python path
-    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-    from backend.models.wizard_models import QACategory, QAItem
-    from backend.core.db import SessionLocal
+# Add the project root to the Python path (same approach as other scripts)
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+
+# Import required modules
+from backend.models.wizard_models import QACategory, QAItem
+from backend.core.db import SessionLocal
 
 
 def import_qa_data(yaml_file):
