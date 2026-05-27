@@ -3,20 +3,28 @@
 Import Q&A Data Script
 
 This script imports initial Q&A content from YAML file into the database.
-Usage: python backend/scripts/import_qa_data.py
+Usage:
+  python -m backend.scripts.import_qa_data
+  OR
+  cd backend && python scripts/import_qa_data.py
 """
 
 import yaml
 import sys
 import os
+import argparse
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 
-# Add the backend directory to Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-from backend.models.wizard_models import QACategory, QAItem
-from backend.core.db import SessionLocal
+# Try to import from backend package first
+try:
+    from backend.models.wizard_models import QACategory, QAItem
+    from backend.core.db import SessionLocal
+except ImportError:
+    # Fallback: Add the backend directory to Python path
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+    from backend.models.wizard_models import QACategory, QAItem
+    from backend.core.db import SessionLocal
 
 
 def import_qa_data(yaml_file):
@@ -113,7 +121,12 @@ def import_qa_data(yaml_file):
 
 def main():
     """Main function to run the import script."""
-    yaml_file = "backend/data/initial_qa_content.yaml"
+    parser = argparse.ArgumentParser(description='Import Q&A data into the database')
+    parser.add_argument('--file', '-f', default='backend/data/initial_qa_content.yaml',
+                       help='Path to the YAML file containing Q&A data')
+    
+    args = parser.parse_args()
+    yaml_file = args.file
     
     print(f"Starting Q&A data import from {yaml_file}...")
     
