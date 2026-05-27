@@ -15,8 +15,8 @@ from sqlalchemy.exc import SQLAlchemyError
 # Add the backend directory to Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from models.wizard_models import QACategory, QAItem
-from core.db import SessionLocal
+from backend.models.wizard_models import QACategory, QAItem
+from backend.core.db import SessionLocal
 
 
 def import_qa_data(yaml_file):
