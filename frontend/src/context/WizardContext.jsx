@@ -10,9 +10,10 @@
  */
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import axios from 'axios';
 
 const WizardContext = createContext();
+
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api";
 
 export const WizardProvider = ({ children }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -32,8 +33,18 @@ export const WizardProvider = ({ children }) => {
     const fetchCategories = async () => {
         try {
             setLoading(true);
-            const response = await axios.get('/api/wizard/categories');
-            setCategories(response.data);
+            const response = await fetch(`${API_BASE_URL}/wizard/categories`, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include'
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to fetch categories');
+            }
+            
+            const data = await response.json();
+            setCategories(data);
             setError(null);
         } catch (err) {
             setError('Failed to fetch categories');
@@ -47,8 +58,22 @@ export const WizardProvider = ({ children }) => {
     const fetchQaItems = async (params = {}) => {
         try {
             setLoading(true);
-            const response = await axios.get('/api/wizard/qa', { params });
-            setQaItems(response.data.items);
+            // Convert params to query string
+            const queryString = new URLSearchParams(params).toString();
+            const url = `${API_BASE_URL}/wizard/qa${queryString ? '?' + queryString : ''}`;
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include'
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to fetch Q&A items');
+            }
+            
+            const data = await response.json();
+            setQaItems(data.items);
             setError(null);
         } catch (err) {
             setError('Failed to fetch Q&A items');
@@ -61,8 +86,16 @@ export const WizardProvider = ({ children }) => {
     // Fetch popular questions
     const fetchPopularQuestions = async () => {
         try {
-            const response = await axios.get('/api/wizard/popular');
-            setPopularQuestions(response.data);
+            const response = await fetch(`${API_BASE_URL}/wizard/popular`, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include'
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                setPopularQuestions(data);
+            }
         } catch (err) {
             console.error('Error fetching popular questions:', err);
         }
@@ -72,8 +105,19 @@ export const WizardProvider = ({ children }) => {
     const searchQa = async (query) => {
         try {
             setLoading(true);
-            const response = await axios.post('/api/wizard/search', { query });
-            setQaItems(response.data.results);
+            const response = await fetch(`${API_BASE_URL}/wizard/search`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ query })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to search Q&A');
+            }
+            
+            const data = await response.json();
+            setQaItems(data.results);
             setError(null);
         } catch (err) {
             setError('Failed to search Q&A');
@@ -86,7 +130,17 @@ export const WizardProvider = ({ children }) => {
     // Submit feedback on a Q&A item
     const submitFeedback = async (feedbackData) => {
         try {
-            await axios.post('/api/wizard/feedback', feedbackData);
+            const response = await fetch(`${API_BASE_URL}/wizard/feedback`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(feedbackData)
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to submit feedback');
+            }
+            
             return { success: true };
         } catch (err) {
             console.error('Error submitting feedback:', err);
@@ -97,9 +151,14 @@ export const WizardProvider = ({ children }) => {
     // Track view interaction
     const trackView = async (qaItemId) => {
         try {
-            await axios.post('/api/wizard/feedback', {
-                qa_item_id: qaItemId,
-                interaction_type: 'view'
+            await fetch(`${API_BASE_URL}/wizard/feedback`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    qa_item_id: qaItemId,
+                    interaction_type: 'view'
+                })
             });
         } catch (err) {
             console.error('Error tracking view:', err);
