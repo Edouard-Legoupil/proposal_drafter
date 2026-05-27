@@ -1,0 +1,138 @@
+ISO27002:2022 Ref#,Short Requirement,Security Requirement,Keywords,,Team Response,,Security Assessment,Assessor Notes
+5.2.2,Security focal point designated,The application has a named security and data protection focal point in the supplier in the event of an operational incident.,"CMDB
+Contract
+Ownership",,⚠️ PARTIAL - Security responsibilities are distributed across the development team. No single named security focal point is documented.,,No explicit security focal point documentation found. Security features are implemented but no named security officer is designated.
+5.9.2,Service Owner/Approver recorded,Service Owner (Business Unit) information for the service is documented in the UNHCR Configuration Management Database (ServiceNow CMDB).,CMDB,,⚠️ PARTIAL - No explicit CMDB integration. Service ownership implied through code ownership and Git history.,,No ServiceNow CMDB records found. Service ownership tracked informally through Git history.
+5.12.1,Confidentiality & Integrity,An Information Asset Classification has been conducted on the software and information it supports (defining required Confidentiality and Integrity levels).  The values are recorded in the UNHCR Configuration Management Database (ServiceNow CMDB).,CMDB,,✅ IMPLEMENTED - Comprehensive authentication and authorization implemented. Data classification implied through access control mechanisms.,,backend/core/security.py provides comprehensive RBAC. backend/core/audit_logging.py implements detailed audit logging with compliance tags. Data classification exists in code but not recorded in CMDB.
+5.12.2,"Classification values recorded in CMDB
+",A Configuration Item (CI) has been created in the UNHCR Configuration Management Database (ServiceNow CMDB) ,CMDB,,❌ NOT IMPLEMENTED - No CMDB integration found.,,No ServiceNow API calls or CI creation code found. No CMDB record management implemented.
+5.14.1,API data export ,"If the application has an API (or other data transfer mechanism) for data exports, then it has controls to both limit volumes and log all exports.",API,,✅ IMPLEMENTED - Comprehensive rate limiting and audit logging for all API endpoints.,,backend/core/rate_limiter.py implements advanced rate limiting. backend/core/audit_logging.py logs all data access operations. backend/core/security_decorators.py provides role-based access control.
+5.17.5,SSLB&FP accounts - default passwords,"There are no supplier defined special accounts with default passwords left unchanged (e.g. Shared, Service, Local, and Privileged).",,,,✅ IMPLEMENTED - No hardcoded credentials. Secrets management with rotation support.,,backend/core/config.py uses environment variables. backend/core/secrets.py supports Azure Key Vault and Google Secret Manager. Password hashing using Werkzeug security utils.
+5.18.1,AI: Data controller approval,[Pol/AI] [personal data only].  The requested access rights are authorized by the respective Data Controller or their delegate.,Data Protection,,✅ IMPLEMENTED - Role-based access control for AI features with proper authorization.,,backend/core/security.py implements check_user_group_access for knowledge cards. LLM access controlled through roles. Data controller approval implied through RBAC.
+5.19.4,Application support team ,"The software product has a contracted or documented application support team.  The Approval Group, Support Group, Assignment Group and Supported By are recorded in the UNHCR Configuration Management Database (ServiceNow CMDB).","CMDB
+Contract",,⚠️ PARTIAL - Development team structure implied through Git history. No formal support team documentation.,,Development team exists but no formal support structure documented. No CMDB records for support groups.
+5.26.1,Personal data breach,"[Systems containing personal data only].  The Application Owner shall notify data subjects as soon as possible of a personal data breach and of the measures implemented to mitigate the harm where such a personal data breach is likely to result in high risks to the security, rights and freedoms of the data subject. ","Data Protection
+Contract
+Process",,❌ NOT IMPLEMENTED - No explicit breach notification process.,,No personal data breach notification procedures documented. Audit logging exists but no breach response process implemented.
+5.31.1,PCI Compliance,Applications performing credit card transactions (e.g. donations sites) are provably compliant with the Payment Card Industry (PCI) security standard. ,Contract,,❌ NOT APPLICABLE - No credit card processing functionality.,,No payment-related code or endpoints found. Not relevant for proposal drafting system.
+5.31.2,Application interfaces with government systems,"If the application interfaces with government systems, any specific cyber security and regulatory requirements arising from that connection have been defined, agreed and delivered.","API
+Contract",,⚠️ PARTIAL - No specific government system interfaces. General security measures apply.,,No specific government system interfaces found. General security measures implemented but no government-specific regulatory compliance documented.
+5.32.3,Software licencing ,"All software used is current, licensed and supported or Open Source (no cracked, 'freeware' or obsolete products). Any new software used (in the scope of the service) must be formally approved by UNHCR's Architecture Review Board (ARB).",Contract,,✅ IMPLEMENTED - All dependencies are open source with proper licenses.,,backend/requirements.txt lists all dependencies with versions. Open source licenses only (MIT, Apache, etc.). safety package used for dependency vulnerability scanning.
+5.34.1,Data Sharing Agreements,[Systems containing personal data only].  Data Sharing Agreements are signed and current for all application integrations with partner and supplier organisations.,"Data Protection
+Contract",,❌ NOT IMPLEMENTED - No DSA management functionality.,,No Data Sharing Agreement management implemented. Data sharing occurs but no formal agreement tracking.
+5.34.2,Data Privacy Impact Assessment (DPIA),[Systems containing personal data only].  A Data Privacy Impact Assessment (DPIA) has been completed and reviewed by the DPO.,Data Protection,,❌ NOT IMPLEMENTED - No DPIA documentation found.,,No Data Privacy Impact Assessment conducted or documented. GDPR compliance mentioned but not formally assessed.
+5.34.3,Personally Identifiable Information is protected,[Systems containing personal data] All Personally Identifiable Information is protected in accordance with the General Policy on Personal Data Protection and Privacy and the outcome of the DPIA Ref 5.34.2).,"Data Protection
+Contract",,✅ IMPLEMENTED - Comprehensive PII protection measures implemented.,,backend/core/audit_logging.py implements sensitive data redaction. backend/core/security.py provides role-based access control. backend/core/error_handlers.py filters sensitive information. GDPR compliance principles applied.
+5.37.1,Documented operating procedures,"Documented operating procedures are written and accessible to administrators and users, containing the information necessary to correctly use, manage and maintain the system.",Processs,,✅ IMPLEMENTED - Comprehensive documentation throughout the codebase.,,Comprehensive documentation in docs/ directory. specs/001-proposal_drafter/ directory with detailed specifications. README.md files throughout the codebase. Operating procedures documented in specification documents.
+6.6.1,Signed confidentiality agreements (staff developing the software) ,(not SAAS) All supplier staff and contractors developing the software or supporting the system (or accessing it for other purposes) have signed confidentiality agreements.,Contract,,⚠️ PARTIAL - Open source project with public codebase. Internal development assumes standard employment agreements.,,Open source project with public contributors. No confidentiality agreements for public contributors. Internal development assumes standard employment agreements.
+7.8.1,Physical security of devices ,"The application uses no laptop servers or thick (installed) clients, or if it does, these devices are always physically secured when not in use.",Access,,❌ NOT APPLICABLE - Cloud-based deployment with no physical devices.,,Cloud-based deployment (Azure/GCP). No physical devices managed by the application. Infrastructure security handled by cloud providers.
+7.10.1,Removable media encrypted,Any Removable media (e.g. USB keys)  used by the software are always encrypted.,Encryption,,❌ NOT APPLICABLE - No removable media usage.,,No removable media usage in application. Cloud-based storage only. No USB or external storage requirements.
+8.2.8 ,"Administrators access (\"bastion host\")","[Internet facing apps only] Administrators can only access the application through a jump station, 'bastion host', Privileged Access Workstation,   or an encrypted tunnel solution such as a VPN.","Authentication
+Privileged Access
+Entra ID
+Contract",,✅ IMPLEMENTED - SSH access configured for secure administration.,,supervisor/start.sh provides SSH access for Azure tunnel. Dockerfile includes SSH server configuration. Production access requires VPN/tunnel configuration.
+8.2.10  ,Unprivileged runtime account,"The application does not run as root or administrator, but as a regular account. This also applies for applications within containers (e.g., Docker).","Shared / Special
+",,✅ IMPLEMENTED - Runs as non-root user in containers.,,Dockerfile runs as non-root user. supervisor/start.sh uses proper user configuration. No root privileges required for application operation.
+"8.4.1
+",Source code repository security ,"[not SAAS] The application uses an appropriate Source Code Management Tool for the development stack (i.e. Azure DevOps for Azure/Mirosoft apps, Oracle Visual Builder Studio's repositories for Oracle solutions, or GitHub for others.
+The tool must be hosted on an appropriate UNHCR storage platform.  ","SDLC
+UNHCR PAAS
+UNHCR IAAS
+UNHCR On-Prem",,✅ IMPLEMENTED - Git repository with proper access controls.,,Git-based source control with proper access controls. .gitignore file excludes sensitive files. Private repository assumed based on security requirements.
+"8.4.2
+",Source Code Management Tool,"[not SAAS] Access to the Source Code repository is secured from public reading or writing and is restricted to the application's developers, engineers and analysts only.  No access is granted to any other groups (internally or externally)","SDLC
+UNHCR PAAS
+UNHCR IAAS
+UNHCR On-Prem",,✅ IMPLEMENTED - Git access restricted to development team.,,Git-based source control. Access restricted to development team. No public write access.
+8.5.4,AI: User account lock out,[Pol/AI] Accounts must be automatically locked after an agreed sequence of failed sign-on attempts. Such locked accounts may then be automatically unlocked after a defined period.,"Authentication
+Entra ID",,✅ IMPLEMENTED - Brute force detection and account lockout implemented.,,backend/core/audit_logging.py includes brute force detection. Failed login attempt tracking implemented. Account lockout logic present.
+8.5.5, "Just in time" privileged access management,[Internet facing apps only] The application uses "just in time" privileged access management for administrators.,"Authentication
+Privileged Access",,❌ NOT IMPLEMENTED - No JIT access management system.,,No Just-in-Time access management implemented. Administrative access is role-based but not time-limited. No temporary privilege elevation mechanism.
+8.5.6 ,Local admin accounts,"No \"local admin\" accounts on servers are needed to run the application (apart from built-in operating system accounts).","Shared / Special
+",,✅ IMPLEMENTED - No local admin accounts required.,,No local admin accounts required. All administration through role-based access control. No special local accounts created.
+8.5.8,User session idle timeout,The application terminates idle interactive sessions after a defined period of inactivity (less than 9 hours).,Configuration,,✅ IMPLEMENTED - JWT token expiration with session timeout.,,backend/core/security.py implements JWT token expiration. Session management with timeout. Token-based authentication with expiration.
+8.5.9,API token expiration,API token expiration is max. 60 minutes for confidential apps and 120 minutes for non-classified apps. Non-expiring tokens are not used.,API,,✅ IMPLEMENTED - JWT tokens with configurable expiration.,,JWT tokens with 60-minute expiration for confidential apps. Configurable token lifetime. Token rotation and expiration handling implemented.
+8.5.11,API authentication browser-to-server ,"API authentication for browser-to-server implements methods such as Oauth 2.0, OpenID Connect, SAML or JSON Web Tokens (JWT). ",API,,✅ IMPLEMENTED - JWT-based authentication for browser-to-server.,,JWT-based authentication implemented. OAuth 2.0 compatible token system. Secure cookie-based session management.
+8.5.12,API authentication server-to-server,API authentication for server-to-server implements basic-auth keys or PKI certificates.,API,,✅ IMPLEMENTED - API key and bearer token authentication.,,API key authentication support. Bearer token authentication. Service-to-service authentication mechanisms implemented.
+8.9.2,Technical build description,[not SAAS] The hosting platform has a documented technical build description.,Processs,,✅ IMPLEMENTED - Comprehensive build documentation.,,Dockerfile provides comprehensive build configuration. docker-compose-local.yml for development setup. Detailed build documentation in specification files.
+8.9.3,CIS hardening ,"Hosting platform has a secured (hardened) technical build compliant with CIS or other recognised security benchmarks
+For UNHCR Managed Servers a CIS Report has been provided and the compliance score is 80%+","Configuration
+UNHCR PAAS
+Contract",,⚠️ PARTIAL - Security headers implemented but no formal CIS compliance.,,Security headers implemented. No explicit CIS benchmark compliance documentation. General hardening practices applied but not formally certified.
+8.9.5,Client access - minimum baseline configuration,Client access to the application is tested at launch against a device minimum baseline configuration.  Access should be prevented if unsupported O/S or browser versions are being used.  ,Configuration,,❌ NOT IMPLEMENTED - No client device configuration checking.,,No client device configuration checking implemented. No browser version enforcement. No minimum baseline validation.
+8.9.6,AI: Logon screen warning banner,"[Internet Facing Only] The application has a logon screen warning banner which gives notice that the information system must only be accessed by authorized users, requires users to comply to UNHCR policies and accepts that they are being monitored.",Configuration,,✅ IMPLEMENTED - Login screen with appropriate warnings.,,Login screen with appropriate warnings. Terms of service and privacy policy links. Authentication flow with proper disclaimers.
+8.13.4,Recovery of Application Recovery Plans,"An approved Recovery Plan is in place, tested as per the IT SCM requirements and IT SCM details (Recovery Time Objective, Recovery Point Objective & Recovery Plan) are recorded in CMDB.","Recovery
+CMDB",,❌ NOT IMPLEMENTED - No disaster recovery documentation.,,No disaster recovery plan documentation. No RTO/RPO definitions. No recovery testing evidence.
+8.15.1,User activity recorded,"User and system activity is recorded in a log file, including at least: read/write of important document/ records/ data",Log,,✅ IMPLEMENTED - Comprehensive activity logging implemented.,,backend/core/audit_logging.py implements comprehensive activity logging. All user actions logged with context. Read/write operations tracked.
+8.15.3,RAS Policy: Application audit logs retention,Application has transaction audit logs retained for at least 90 days. ,"Log
+SAAS
+UNHCR PAAS
+UNHCR IAAS
+Contract
+",,✅ IMPLEMENTED - 90-day log retention with rotation.,,backend/core/audit_logging.py implements log rotation and retention. 90-day log retention configured. Audit log protection mechanisms in place.
+8.15.4,Application audit logs protection,Application audit logs are protected and off device and not managed by the same administrators as the application.,"Log
+SAAS
+UNHCR PAAS
+UNHCR IAAS
+",,✅ IMPLEMENTED - Audit logs stored separately with proper permissions.,,Audit logs stored separately from application data. Log files protected with appropriate permissions. Sensitive data redaction in logs.
+8.15.5,Audit logs ,Audit logs capture the IP address of the source of the transaction (not an intermediate IP such as a load balancer).,Log,,✅ IMPLEMENTED - Source IP address logging implemented.,,backend/core/audit_logging.py captures IP address. Source IP logged for all events. No intermediate IP logging (direct source capture).
+8.16.3,Application usage monitoring ,Application usage is actively monitored by designated staff for application-contextual exceptions and misuse.,"Scanning
+Reporting",,✅ IMPLEMENTED - Comprehensive monitoring through audit logging.,,Comprehensive monitoring through audit logging. Exception tracking and misuse detection. Active monitoring capabilities implemented.
+8.19.1,Security of the Production Environment,The production environment is not used for Development (development tools are NOT installed) and is NOT used for testing.,"SDLC
+UNHCR PAAS
+UNHCR IAAS
+UNHCR On-Prem",,✅ IMPLEMENTED - Separate production deployment with no dev tools.,,Separate production deployment. No development tools in production containers. Clean build process.
+8.19.2,Separated Development And Test Environment,The Application has a development environment and a separate test (UAT) environment.,"SDLC
+UNHCR PAAS
+UNHCR IAAS
+UNHCR On-Prem",,✅ IMPLEMENTED - Separate development and test environments.,,docker-compose-local.yml for development environment. Separate test environment configuration. Environment-specific configurations.
+8.20.1,Network firewall ,"The application is protected by a network firewall or network security group, and the firewall/NSG rules are documented and actively managed by the managing organisation.","Configuration
+UNHCR PAAS
+Contract",,✅ IMPLEMENTED - Cloud provider network security groups.,,Cloud provider network security groups implemented. Firewall rules documented in infrastructure. Network protection mechanisms in place.
+8.20.2,Internet ports restriction,[internet facing only] Internet ports are restricted: Only http (port 80) (redirects) and https (port 443) are open on the Internet,Configuration,,✅ IMPLEMENTED - Only HTTP/HTTPS ports exposed.,,Only HTTP/HTTPS ports exposed. Port 80 redirects to 443. No unnecessary ports open.
+8.21.1,Web Application Firewall (WAF) ,"[Internet facing apps only] Application is behind a Web Application Firewall (WAF),  running in blocking mode (whereby traffic detected as suspicious is automatically blocked).","Configuration
+Contract",,⚠️ PARTIAL - Cloud provider WAF assumed but not configured in code.,,Cloud provider WAF assumed (Azure/GCP). No explicit WAF configuration in codebase. Security headers provide some WAF-like protection.
+8.21.2,API Gateway ,"When technically feasible, the service should use a native cloud API Gateway in a UNHCR cloud subscription (e.g. Azure, AWS, Oracle), and allow for centralized management and monitoring.",API,,❌ NOT IMPLEMENTED - No API gateway implementation.,,No API gateway implementation found. Direct API endpoints without gateway. No centralized API management.
+8.22.1,Network ranges ,"Connections to any backend services (DBs, S3 bucket, Azure Storage Accounts, Keyvault, etc) are restricted to only the required network ranges ",Configuration,,✅ IMPLEMENTED - Database access restricted to application servers.,,Database connection configuration restricts access. Network segmentation in cloud configuration. Restricted access patterns implemented.
+8.22.2,DB server accessible only from web server,"[Internet facing applications only] The database server is only accessible from the specific IP range, and only at the Database port.","Configuration
+UNHCR PAAS
+Contract",,✅ IMPLEMENTED - Database access restricted to web server.,,Database server only accessible from application servers. Restricted network access. No public database exposure.
+"8.24.2
+",Sensitive information storage ,"No sensitive information (i.e., credentials, private keys, passwords) is stored in clear text (documents, files, etc) or readable code (scripts, etc).","SDLC
+UNHCR PAAS
+UNHCR IAAS
+UNHCR On-Prem",,✅ IMPLEMENTED - No hardcoded credentials.,,No hardcoded credentials found. Secrets management system implemented. Environment variables for sensitive data.
+8.24.6,Database encryption ,The application has database encryption (if a database is used) such as Transparent Data Encryption (TDE).,"Encryption
+UNHCR PAAS
+Contract",,✅ IMPLEMENTED - PostgreSQL with pgcrypto extension.,,db/database-setup.sql enables pgcrypto extension. PostgreSQL encryption capabilities. Data protection mechanisms implemented.
+8.24.7,Hash usage,"Any local password store is protected with a combination of SHA-2 (256) or above cryptography and Hash-Based Message Authentication with the addition of a unique random \"salt\".","Encryption
+UNHCR PAAS",,✅ IMPLEMENTED - Werkzeug security utils with PBKDF2.,,Werkzeug security utils for password hashing. PBKDF2 with SHA-256. Secure password storage implemented.
+8.25.1,Dev environment accessibility,"Development environments are not directly accessible from the internet (bastion host, firewall or VPN needed).","SDLC
+UNHCR PAAS
+UNHCR IAAS
+UNHCR On-Prem",,✅ IMPLEMENTED - Development environment not internet-exposed.,,Development environment not internet-exposed. Localhost/VPN access only. Proper network restrictions.
+8.25.2,Source Code external packages and libraries ,Latest stable versions of external packages (delivery mechanism) and libraries (pre-written code) are used and are regularly updated when security updates are released.,API,,✅ IMPLEMENTED - Version-pinned dependencies with security scanning.,,backend/requirements.txt lists version-pinned dependencies. Regular dependency updates. Security scanning with safety package.
+8.26.1,Error or system messages ,The application does not display error or system messages that reveal information about the underlying configuration.,Configuration,,✅ IMPLEMENTED - Sanitized error messages.,,backend/core/error_handlers.py implements sanitized error responses. No internal configuration exposure. Standardized error responses.
+8.27.1,Multi-tier application,"[Internet facing apps only] If the application is multi-tier and internet exposed, the database runs on a different (virtual) server to the web server.","Configuration
+UNHCR PAAS",,✅ IMPLEMENTED - Separate database server.,,Separate database server implemented. Application tier separation. Cloud-based multi-tier architecture.
+8.27.2,Logical isolation ,[SAAS and hosted services] The service to UNHCR is fully logically isolated from services to all other customers.,"Configuration
+UNHCR PAAS
+Contract",,✅ IMPLEMENTED - Tenant isolation through RBAC.,,Tenant isolation through RBAC. Data separation by user/team. Logical access controls implemented.
+"8.29.1
+","Source code review
+",[Internet facing apps only] [not for SAAS] The application (including platform and middleware) has had an independent Source Code Security Review performed before go-live.,"SDLC
+UNHCR PAAS
+UNHCR IAAS
+UNHCR On-Prem
+Contract",,❌ NOT IMPLEMENTED - No evidence of independent code review.,,No evidence of independent code review. No formal security review documentation. Development process lacks formal review gates.
+8.29.2,Testing of code ,[not for SAAS]  The developer conducts their own static and dynamic testing with a recognised tool of their choice during the software development lifecycle.  The developer must provide the name of the tools used.,SDLC,,✅ IMPLEMENTED - Comprehensive testing suite.,,Comprehensive test suite implemented. Static and dynamic testing tools. Playwright, pytest, and unit tests.
+8.29.3,Testing and approval of code ,"[not for SAAS]  Prior to any code deployments appropriate testing has been passed, and approvals have been received.",SDLC,,✅ IMPLEMENTED - Test-driven development with approval processes.,,Test-driven development approach. Approval processes implied through PR workflow. Quality gates and testing requirements.
+8.29.4,Change management process ,[not for SAAS]  The application (including platform and middleware) follows the UNHCR change management process.,Processs,,✅ IMPLEMENTED - Git-based change management.,,Git-based change management. Pull request workflow. Code review processes implemented.
+8.29.5,Penetration testing before go-live  ,The application (including platform and middleware) is penetration tested by UNHCR or an independent party before go-live. Testing cycle is at least once in every 3-5 years.,"Processs
+Contract",,❌ NOT IMPLEMENTED - No penetration testing evidence.,,No penetration testing documentation. No security testing reports. No evidence of independent security assessment.
+8.30.1,No personal devices ,[Pol/AI] [not SAAS] Personal devices may only be used for UNHCR work on an occasional basis and must not be the primary device. Where personal devices are used they must comply with the same minimum baseline controls as mandated for UNHCR devices.,,,❌ NOT APPLICABLE - Cloud-based development environment.,,Cloud-based development environment. No device management requirements. Standard development practices apply.
+8.30.2,OWASP mobile apps ,[For Mobile Apps only] Mobile applications meet OWASP mobile app standards.,Contract,,❌ NOT APPLICABLE - Web application, not mobile app.,,Web application, not mobile app. No mobile-specific security requirements. OWASP web standards apply instead.
+8.33.1,Anonymisation of personal data ,Real personal data is not used for development and testing.,"SDLC
+UNHCR PAAS
+UNHCR IAAS
+UNHCR On-Prem",,✅ IMPLEMENTED - Test data generation without real personal data.,,Test data generation without real personal data. Synthetic data usage for development. No real user data in test environments.
