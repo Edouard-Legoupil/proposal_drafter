@@ -35,8 +35,9 @@ def get_user_model():
 def get_db_model():
     from backend.models import Base
     from sqlalchemy.orm import sessionmaker
+    from backend.core.db import get_engine
 
-    async_session_maker = sessionmaker(bind=engine, expire_on_commit=False)  # type: ignore[name-defined]
+    async_session_maker = sessionmaker(bind=get_engine(), expire_on_commit=False)
 
     return Base, async_session_maker
 
@@ -120,7 +121,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> Optional[obje
     """
     from backend.core.security import get_current_user as _get_current_user
 
-    return await _get_current_user(token)
+    return await _get_current_user(token)  # type: ignore[arg-type, misc]
 
 
 async def get_optional_user(
@@ -152,7 +153,7 @@ async def get_optional_user(
     try:
         from backend.core.security import get_current_user as _get_current_user
 
-        return await _get_current_user(token)
+        return await _get_current_user(token)  # type: ignore[arg-type, misc]
     except HTTPException:
         return None
 
@@ -186,7 +187,7 @@ async def require_admin(current_user: object = Depends(get_current_user)) -> obj
     if hasattr(current_user, "is_admin") and current_user.is_admin:
         return current_user
 
-    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")  # noqa: E501
 
 
 async def require_authenticated(

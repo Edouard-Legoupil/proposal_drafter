@@ -14,3 +14,6 @@ exclude = [
 # Treat FastAPI Depends and Query as immutable calls
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = ["fastapi.Depends", "fastapi.Query"]
+
+[tool.black]
+line-length = 88
