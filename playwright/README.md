@@ -196,7 +196,7 @@ Feature: Knowledge Card Review
     And the knowledge card should show the review status as "pending"
 ```
 
-### Peer Review 
+### Peer Review
 
  **`test_4_peer_review_new.py`** - Proposal peer review functionality
 
@@ -321,7 +321,7 @@ Feature: Incident Management
 
 ### Administration
 
-**`test_8_admin.py`** - System configuration and user management 
+**`test_8_admin.py`** - System configuration and user management
 
 ```gherkin
 Feature: User/Team Access Management
@@ -696,4 +696,3 @@ The frontend uses `data-testid` attributes for robust element selection. The cod
 - Record text input as `page.fill('selector', 'text')`
 
 After recording, copy the generated Python script into the appropriate test file and refactor as needed to use the fixtures and follow the test patterns.
-

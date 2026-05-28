@@ -1,25 +1,22 @@
 """
-Test suite for Administration 
+Test suite for Administration
 
 These tests verify that:
-1. Admin 
+1. Admin
 
 User Stories Covered:
 - Admin role
 """
 
-import re
 import pytest
-from playwright.sync_api import expect
+from playwright.sync_api import Page, expect
 
 # Import shared fixtures and helpers from central conftest
-from .conftest import TEST_USERS, take_screenshot
 
 
 # ============================================================================
 # Test: Navigate to Quality Review Page
 # ============================================================================
-
 
 
 @pytest.mark.admin
@@ -104,7 +101,6 @@ def test_access_management_error_handling(self, admin_page: Page):
     expect(admin_page.locator("text=Error")).to_be_visible()
 
 
-
 @pytest.mark.admin
 def test_admin_can_view_pending_role_requests(self, admin_page: Page):
     """Test that admin can view pending role requests"""
@@ -144,6 +140,7 @@ def test_admin_can_open_role_request_review_modal(self, admin_page: Page):
         admin_page.locator("button.modal-close").click()
     else:
         pytest.skip("No role requests available for testing")
+
 
 @pytest.mark.admin
 def test_admin_can_approve_role_request(self, admin_page: Page):
@@ -250,6 +247,7 @@ def test_admin_can_view_incident_list(self, admin_page: Page):
     expect(admin_page.locator("table")).to_be_visible()
     expect(admin_page.locator("th:has-text('Incident Type')")).to_be_visible()
     expect(admin_page.locator("th:has-text('Severity')")).to_be_visible()
+
 
 def test_admin_can_select_incident_for_access_management(self, admin_page: Page):
     """Test that admin can select an incident to manage access"""

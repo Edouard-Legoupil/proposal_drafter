@@ -292,3 +292,19 @@ def test_filter_proposals_by_status(logged_in_page, config):
 
     # Close filter modal
     page.get_by_test_id("filter-modal-close-button").click()
+
+    page.get_by_test_id("sidebar-link-proposals-draft").click()
+    page.get_by_test_id("sidebar-link-proposals-in_review").click()
+    page.get_by_test_id("sidebar-link-proposals-pre_submission").click()
+    page.get_by_test_id("sidebar-link-proposals-submitted").click()
+    page.get_by_test_id("sidebar-link-proposals-deleted").click()
+    page.get_by_test_id("sidebar-link-proposals-draft").click()
+    page.get_by_test_id("project-options-button").nth(1).click()
+    page.get_by_test_id("project-delete-button").nth(1).click()
+    page.get_by_test_id("project-options-button").nth(1).click()
+    page.get_by_test_id("project-delete-button").nth(1).click()
+    page.get_by_test_id("project-options-button").nth(1).click()
+    page.get_by_test_id("project-delete-button").nth(1).click()
+    page.get_by_test_id("project-card").click()
+    page.get_by_test_id("sidebar-option-monitoring").click()
+    page.get_by_test_id("regenerate-button-monitoring").click()
