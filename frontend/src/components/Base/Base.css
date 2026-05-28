@@ -27,6 +27,13 @@
         z-index: 10;
 }
 
+.Header_rightGroup {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-left: auto;
+}
+
 .Header_logoContainer {
         height: 100%;
 

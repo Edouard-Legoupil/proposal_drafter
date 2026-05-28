@@ -92,46 +92,48 @@ export default function Base(props) {
                                 <img className='Header_orgLogo' src={masterlogo} onClick={handleLogoClick} alt="Organisation" data-testid="logo" />
                         </span>
 
-                        <button className='User' popoverTarget='ID_Chat_logoutPopover' data-testid="user-menu-button">
-                                <div className="Displaypicture">{userDetails.name && userDetails.name.split('')[0].toUpperCase()}</div>
+                        <div className="Header_rightGroup">
+                                <WizardButton />
+                                <button className='User' popoverTarget='ID_Chat_logoutPopover' data-testid="user-menu-button">
+                                        <div className="Displaypicture">{userDetails.name && userDetails.name.split('')[0].toUpperCase()}</div>
 
-                                <div className='Identity'>
-                                        <div className='Identity-name'>{userDetails.name}</div>
-                                        <div className='Identity-email'>{userDetails.email}</div>
+                                        <div className='Identity'>
+                                                <div className='Identity-name'>{userDetails.name}</div>
+                                                <div className='Identity-email'>{userDetails.email}</div>
+                                        </div>
+
+                                        <img className="Chat_header_downarrow" src={downarrow} alt="My Rafiki" />
+
+                                </button>
+
+                                <div popover='auto' id="ID_Chat_logoutPopover" className='Chat_logoutPopover'>
+                                        <div onClick={() => setShowSettingsModal(true)} data-testid="settings-button">
+                                                <i className="fa-solid fa-gear" style={{ marginRight: '8px' }}></i>
+                                                Settings
+                                        </div>
+                                         {userDetails.is_admin && (
+                                                 <div onClick={() => navigate('/admin/access/users/latest')} data-testid="admin-button">
+                                                         <img src={settings_icon} style={{ filter: 'hue-rotate(90deg)' }} />
+                                                         Admin
+                                                 </div>
+                                         )}
+                                        <div onClick={handleLogoutClick} data-testid="logout-button">
+                                                <img src={logout_icon} alt="Logout" />
+                                                Logout
+                                        </div>
                                 </div>
-
-                                <img className="Chat_header_downarrow" src={downarrow} alt="My Rafiki" />
-
-                        </button>
-
-                        <div popover='auto' id="ID_Chat_logoutPopover" className='Chat_logoutPopover'>
-                                <div onClick={() => setShowSettingsModal(true)} data-testid="settings-button">
-                                        <i className="fa-solid fa-gear" style={{ marginRight: '8px' }}></i>
-                                        Settings
-                                </div>
-                                 {userDetails.is_admin && (
-                                         <div onClick={() => navigate('/admin/access/users/latest')} data-testid="admin-button">
-                                                 <img src={settings_icon} style={{ filter: 'hue-rotate(90deg)' }} />
-                                                 Admin
-                                         </div>
-                                 )}
-                                <div onClick={handleLogoutClick} data-testid="logout-button">
-                                        <img src={logout_icon} alt="Logout" />
-                                        Logout
-                                </div>
+                                {userDetails.requested_role_id ? (
+                                        <div className="Header_pendingRequest">
+                                                Waiting for approval
+                                        </div>
+                                ) : (
+                                        !userDetails.is_admin && userRoles.length <= 1 && userRoles[0] === 'proposal writer' && (
+                                                <button className="Header_requestButton" onClick={() => setShowSettingsModal(true)}>
+                                                        Request Elevated Access
+                                                </button>
+                                        )
+                                )}
                         </div>
-                        {userDetails.requested_role_id ? (
-                                <div className="Header_pendingRequest">
-                                        Waiting for approval
-                                </div>
-                        ) : (
-                                !userDetails.is_admin && userRoles.length <= 1 && userRoles[0] === 'proposal writer' && (
-                                        <button className="Header_requestButton" onClick={() => setShowSettingsModal(true)}>
-                                                Request Elevated Access
-                                        </button>
-                                )
-                        )}
-                        <WizardButton />
                 </header>
 
                 <div className='Base_content'>
