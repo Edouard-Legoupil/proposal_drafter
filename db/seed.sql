@@ -62,6 +62,14 @@ INSERT INTO roles (name) VALUES
   ('access_template'),
   ('access_incident'),
   ('access_quality_gate');
+
+
+INSERT INTO roles  VALUES
+
+  (7, 'access_metrics'),
+  (8, 'access_template'),
+  (9, 'access_incident'),
+  (10, 'access_quality_gate');
 --
 -- PostgreSQL database dump complete
 --

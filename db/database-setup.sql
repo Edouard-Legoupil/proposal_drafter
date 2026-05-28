@@ -140,7 +140,7 @@ CREATE INDEX IF NOT EXISTS idx_user_settings_requests_status ON user_settings_re
 CREATE INDEX IF NOT EXISTS idx_user_settings_requests_type ON user_settings_requests(setting_type);
 
 
---   Add team settings table and inheritance functions 
+--   Add team settings table and inheritance functions
 
 -- Create team_settings table
 CREATE TABLE IF NOT EXISTS team_settings (
@@ -173,18 +173,18 @@ BEGIN
         SELECT team_id FROM team_members WHERE user_id = get_inherited_settings_for_user.user_id
     )
     -- Get team settings for those teams
-    SELECT 
+    SELECT
         ts.setting_type,
         ts.setting_value,
         'team' AS source_type,
         ts.team_id AS source_id
     FROM team_settings ts
     JOIN user_teams ut ON ts.team_id = ut.team_id
-    
+
     UNION ALL
-    
+
     -- Also include user's direct settings for completeness
-    SELECT 
+    SELECT
         setting_type,
         setting_value,
         'user' AS source_type,
@@ -210,13 +210,13 @@ BEGIN
         )
     LOOP
         -- Check if user already has this setting
-        PERFORM 1 FROM user_settings_requests 
+        PERFORM 1 FROM user_settings_requests
         WHERE user_id = apply_inherited_settings_to_user.user_id
         AND setting_type = team_setting.setting_type
         AND setting_value = team_setting.setting_value
         AND status = 'approved'
         LIMIT 1;
-        
+
         IF NOT FOUND THEN
             -- User doesn't have this setting, so grant it
             INSERT INTO user_settings_requests (
@@ -244,7 +244,7 @@ BEGIN
         FROM team_members
         WHERE team_id = NEW.team_id;
     END IF;
-    
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -257,7 +257,7 @@ EXECUTE FUNCTION handle_team_settings_inheritance();
 
 -- Create view for comprehensive user settings
 CREATE OR REPLACE VIEW user_effective_settings AS
-SELECT 
+SELECT
     usr.user_id,
     usr.setting_type,
     usr.setting_value,
@@ -270,7 +270,7 @@ WHERE usr.status = 'approved'
 
 UNION ALL
 
-SELECT 
+SELECT
     tm.user_id,
     ts.setting_type,
     ts.setting_value,
@@ -2214,7 +2214,47 @@ FROM (
 WHERE kc.id = src.knowledge_card_id;
 
 
----
 
--- Wizard utility tables
-\i db/wizard_tables.sql
+
+CREATE TABLE qa_categories (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT qa_categories_name_unique UNIQUE (name)
+);
+
+
+CREATE TABLE qa_items (
+    id SERIAL PRIMARY KEY,
+    question TEXT NOT NULL,
+    answer TEXT NOT NULL,
+    category_id INTEGER REFERENCES qa_categories(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE,
+    CONSTRAINT qa_items_question_unique UNIQUE (question)
+);
+
+CREATE TABLE user_interactions (
+    id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL  REFERENCES users(id),
+    qa_item_id INTEGER REFERENCES qa_items(id),
+    interaction_type VARCHAR(50) NOT NULL CHECK (interaction_type IN ('view', 'search', 'feedback')),
+    feedback_score INTEGER CHECK (feedback_score BETWEEN 1 AND 5),
+    feedback_comment TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ip_address VARCHAR(45),
+    user_agent TEXT
+);
+
+
+
+CREATE INDEX idx_qa_items_category ON qa_items(category_id);
+CREATE INDEX idx_qa_items_active ON qa_items(is_active) WHERE is_active = TRUE;
+
+
+CREATE INDEX idx_user_interactions_user ON user_interactions(user_id);
+CREATE INDEX idx_user_interactions_qa ON user_interactions(qa_item_id);
+CREATE INDEX idx_user_interactions_type ON user_interactions(interaction_type);
+CREATE INDEX idx_user_interactions_created ON user_interactions(created_at);
