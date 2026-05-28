@@ -1,0 +1,16 @@
+[tool.ruff.lint]
+# Enable pycodestyle (`E`) and flake8-bugbear (`B`) rules by default.
+select = ["E", "F", "B"]
+
+# Exclude common directories
+exclude = [
+    ".git",
+    "__pycache__",
+    "*.pyc",
+    ".venv",
+    "venv",
+]
+
+# Treat FastAPI Depends and Query as immutable calls
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query"]
