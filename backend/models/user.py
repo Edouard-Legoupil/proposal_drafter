@@ -80,18 +80,19 @@ class User(Base):  # type: ignore[valid-type, misc]
     def roles(self) -> List[str]:
         """Get list of role names for the user (direct roles only)."""
         return [ur.role.name for ur in self.user_roles if ur.role]
-    
+
     def get_all_roles_with_inheritance(self, session) -> List[str]:
         """Get list of all role names for the user, including roles inherited from teams."""
         direct_roles = self.roles
-        
+
         # Get roles inherited from teams
         inherited_roles = []
         if self.team_id:
             from backend.models.team import TeamRole
+
             team_roles = session.query(TeamRole).filter_by(team_id=self.team_id).all()
             inherited_roles = [tr.role.name for tr in team_roles if tr.role]
-        
+
         # Combine and deduplicate
         all_roles = list(set(direct_roles + inherited_roles))
         return all_roles
