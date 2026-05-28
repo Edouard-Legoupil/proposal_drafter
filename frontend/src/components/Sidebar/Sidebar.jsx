@@ -1,109 +1,223 @@
-import React, { useContext } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { List, ListItem, ListItemIcon, ListItemText, Divider, Box, Tooltip } from '@mui/material';
-import { Dashboard, Analytics, Description, Assessment, BugReport, Groups, Lock } from '@mui/icons-material';
-import { hasPermission, getUIConfiguration } from '../../utils/roleUtils';
+import React, { useState, useEffect, useContext } from 'react';
+import { NavLink } from 'react-router-dom';
+import './Sidebar.css';
+import { hasPermission } from '../../utils/roleUtils';
+
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api";
 
 // Create a simple auth context for demonstration
-// In a real app, this would come from your actual auth system
 const AuthContext = React.createContext({
   user: null,
   setUser: () => {}
 });
 
-const Sidebar = () => {
-  const { user } = useContext(AuthContext);
-  const navigate = useNavigate();
-  
-  // Sidebar items configuration with role requirements
-  const sidebarItems = [
-    {
-      text: 'Dashboard',
-      icon: <Dashboard />,
-      path: '/dashboard',
-      permission: null // Always visible
-    },
-    {
-      text: 'Proposals',
-      icon: <Description />,
-      path: '/proposals',
-      permission: null // Always visible
-    },
-    {
-      text: 'Knowledge Cards',
-      icon: <Assessment />,
-      path: '/knowledge-cards',
-      permission: null // Always visible
-    },
-    {
-      text: 'Metrics Dashboard',
-      icon: <Analytics />,
-      path: '/dashboard/metrics',
-      permission: 'access_metrics'
-    },
-    {
-      text: 'Donor Templates',
-      icon: <Description />,
-      path: '/templates',
-      permission: 'access_template'
-    },
-    {
-      text: 'Quality Gate',
-      icon: <BugReport />,
-      path: '/quality-gate',
-      permission: 'access_quality_gate'
-    },
-    {
-      text: 'Incident Analysis',
-      icon: <BugReport />,
-      path: '/incidents',
-      permission: 'access_incident'
-    }
-  ];
-  
-  // Filter items based on permissions
-  const visibleItems = sidebarItems.filter(item => {
-    return !item.permission || hasPermission(item.permission);
-  });
-  
-  const handleNavigation = (path, permission) => {
-    if (permission && !hasPermission(permission)) {
-      // Prevent navigation and show unauthorized
-      navigate('/unauthorized');
-      return false;
-    }
-    return true;
-  };
-  
-  return (
-    <Box sx={{ width: 250, height: '100vh', backgroundColor: '#f5f5f5' }}>
-      <List>
-        {visibleItems.map((item, index) => (
-          <React.Fragment key={index}>
-            <ListItem
-              button
-              component={NavLink}
-              to={item.path}
-              exact={item.exact}
-              activeStyle={{ backgroundColor: 'rgba(0, 0, 0, 0.08)' }}
-              onClick={(e) => {
-                if (item.permission && !hasPermission(item.permission)) {
-                  e.preventDefault();
-                  handleNavigation(item.path, item.permission);
+const Sidebar = ({ userRoles, isOpen }) => {
+    const { user } = useContext(AuthContext);
+    const [expandedFolders, setExpandedFolders] = useState({
+        proposals: true,
+        knowledge: true,
+        templates: true,
+        otherProposals: false
+    });
+
+    const [teams, setTeams] = useState([]);
+    const [expandedTeams, setExpandedTeams] = useState({});
+
+    useEffect(() => {
+        const fetchTeams = async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/teams`);
+                const data = await response.json();
+                if (data.teams) {
+                    setTeams(data.teams);
                 }
-              }}
-            >
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItem>
-            
-            {/* Add dividers between sections */}
-            {index === 2 && <Divider sx={{ my: 1 }} />}
-          </React.Fragment>
-        ))}
-      </List>
-    </Box>
-  );
+            } catch (error) {
+                console.error('Error fetching teams:', error);
+            }
+        };
+
+        if (isOpen) {
+            fetchTeams();
+        }
+    }, [isOpen]);
+
+    const toggleFolder = (folder) => {
+        setExpandedFolders(prev => ({
+            ...prev,
+            [folder]: !prev[folder]
+        }));
+    };
+
+    const toggleTeam = (teamId) => {
+        setExpandedTeams(prev => ({
+            ...prev,
+            [teamId]: !prev[teamId]
+        }));
+    };
+
+    if (!isOpen) return null;
+
+    // Helper function to check permissions with RBAC
+    const canAccess = (permission) => {
+        if (!user) return false;
+        return hasPermission(user, permission);
+    };
+
+    return (
+        <aside className="Sidebar" data-testid="sidebar">
+            <nav className="Sidebar_nav">
+                {userRoles.includes('proposal writer') && (
+                    <div className="Sidebar_folder">
+                        <div className="Sidebar_folderHeader" onClick={() => toggleFolder('proposals')} data-testid="sidebar-proposals-folder">
+                            <i className={`fa-solid ${expandedFolders.proposals ? 'fa-folder-open' : 'fa-folder'}`}></i>
+                            <span>My Proposals</span>
+                            <i className={`fa-solid fa-chevron-${expandedFolders.proposals ? 'down' : 'right'} Sidebar_chevron`}></i>
+                        </div>
+                        {expandedFolders.proposals && (
+                            <div className="Sidebar_subItems">
+                                <NavLink to="/dashboard/proposals/all" className="Sidebar_link" data-testid="sidebar-link-proposals-all">
+                                    <i className="fa-solid fa-list-ul"></i> All
+                                </NavLink>
+                                <NavLink to="/dashboard/proposals/draft" className="Sidebar_link" data-testid="sidebar-link-proposals-draft">
+                                    <i className="fa-solid fa-pen-to-square status-draft-icon"></i> Drafting
+                                </NavLink>
+                                <NavLink to="/dashboard/proposals/in_review" className="Sidebar_link" data-testid="sidebar-link-proposals-in_review">
+                                    <i className="fa-solid fa-comments status-review-icon"></i> Peer Review
+                                </NavLink>
+                                <NavLink to="/dashboard/proposals/pre_submission" className="Sidebar_link" data-testid="sidebar-link-proposals-pre_submission">
+                                    <i className="fa-solid fa-paper-plane status-pre-submission-icon"></i> Pre-Submission
+                                </NavLink>
+                                <NavLink to="/dashboard/proposals/submitted" className="Sidebar_link" data-testid="sidebar-link-proposals-submitted">
+                                    <i className="fa-solid fa-circle-check status-submitted-icon"></i> Submitted
+                                </NavLink>
+                                <NavLink to="/dashboard/proposals/deleted" className="Sidebar_link" data-testid="sidebar-link-proposals-deleted">
+                                    <i className="fa-solid fa-trash-can"></i> Deleted
+                                </NavLink>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {userRoles.includes('project reviewer') && (
+                    <NavLink to="/dashboard/reviews" className="Sidebar_folderHeader Sidebar_link_header" data-testid="sidebar-link-reviews">
+                        <i className="fa-solid fa-clipboard-check"></i>
+                        <span>For Review</span>
+                    </NavLink>
+                )}
+
+                <div className="Sidebar_folder">
+                    <div className="Sidebar_folderHeader" onClick={() => toggleFolder('knowledge')} data-testid="sidebar-knowledge-folder">
+                        <i className={`fa-solid ${expandedFolders.knowledge ? 'fa-folder-open' : 'fa-folder'}`}></i>
+                        <span>Knowledge Cards</span>
+                        <i className={`fa-solid fa-chevron-${expandedFolders.knowledge ? 'down' : 'right'} Sidebar_chevron`}></i>
+                    </div>
+                    {expandedFolders.knowledge && (
+                        <div className="Sidebar_subItems">
+                            <NavLink to="/dashboard/knowledge/all" className="Sidebar_link" data-testid="sidebar-link-knowledge-all">
+                                <i className="fa-solid fa-layer-group"></i> All
+                            </NavLink>
+                            <NavLink to="/dashboard/knowledge/donor" className="Sidebar_link" data-testid="sidebar-link-knowledge-donor">
+                                <i className="fa-solid fa-money-bill-wave donor"></i> Donors
+                            </NavLink>
+                            <NavLink to="/dashboard/knowledge/outcome" className="Sidebar_link" data-testid="sidebar-link-knowledge-outcome">
+                                <i className="fa-solid fa-bullseye outcome"></i> Outcome
+                            </NavLink>
+                            <NavLink to="/dashboard/knowledge/field_context" className="Sidebar_link" data-testid="sidebar-link-knowledge-field_context">
+                                <i className="fa-solid fa-earth-americas field-context"></i> Field Context
+                            </NavLink>
+                        </div>
+                    )}
+                </div>
+
+                {/* Donor Templates - Protected by RBAC */}
+                {canAccess('access_template') && (
+                    <div className="Sidebar_folder">
+                        <div className="Sidebar_folderHeader" onClick={() => toggleFolder('templates')} data-testid="sidebar-templates-folder">
+                            <i className={`fa-solid ${expandedFolders.templates ? 'fa-folder-open' : 'fa-folder'}`}></i>
+                            <span>Donor Templates</span>
+                            <i className={`fa-solid fa-chevron-${expandedFolders.templates ? 'down' : 'right'} Sidebar_chevron`}></i>
+                        </div>
+                        {expandedFolders.templates && (
+                            <div className="Sidebar_subItems">
+                                <NavLink to="/dashboard/templates/all" className="Sidebar_link" data-testid="sidebar-link-templates-all">
+                                    <i className="fa-solid fa-layer-group"></i> All
+                                </NavLink>
+                                <NavLink to="/dashboard/templates/proposal" className="Sidebar_link" data-testid="sidebar-link-templates-proposal">
+                                    <i className="fa-solid fa-file-contract"></i> Proposal Templates
+                                </NavLink>
+                                <NavLink to="/dashboard/templates/concept_note" className="Sidebar_link" data-testid="sidebar-link-templates-concept-note">
+                                    <i className="fa-solid fa-file-lines"></i> Concept Note Templates
+                                </NavLink>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Metrics Dashboard - Protected by RBAC */}
+                {canAccess('access_metrics') && (
+                    <NavLink to="/dashboard/metrics" className="Sidebar_folderHeader Sidebar_link_header" data-testid="sidebar-link-metrics">
+                        <i className="fa-solid fa-gauge-high"></i>
+                        <span>Metrics</span>
+                    </NavLink>
+                )}
+
+                {/* Quality Gate - Protected by RBAC */}
+                {canAccess('access_quality_gate') && (
+                    <NavLink to="/quality-gate" className="Sidebar_folderHeader Sidebar_link_header" data-testid="sidebar-link-quality">
+                        <i className="fa-solid fa-shield-halved"></i>
+                        <span>Quality Gate</span>
+                    </NavLink>
+                )}
+
+                {userRoles.includes('project reviewer') && (
+                    <div className="Sidebar_folder">
+                        <div className="Sidebar_folderHeader" onClick={() => toggleFolder('otherProposals')} data-testid="sidebar-other-proposals-folder">
+                            <i className={`fa-solid ${expandedFolders.otherProposals ? 'fa-folder-open' : 'fa-folder'}`}></i>
+                            <span>Other Proposals</span>
+                            <i className={`fa-solid fa-chevron-${expandedFolders.otherProposals ? 'down' : 'right'} Sidebar_chevron`}></i>
+                        </div>
+                        {expandedFolders.otherProposals && (
+                            <div className="Sidebar_subItems">
+                                <NavLink to="/dashboard/other/all" className="Sidebar_link" data-testid="sidebar-link-other-all">
+                                    <i className="fa-solid fa-list-ul"></i> All
+                                </NavLink>
+                                {teams.map(team => (
+                                    <div key={team.id} className="Sidebar_teamFolder">
+                                        <div className="Sidebar_folderHeader Sidebar_subFolderHeader" onClick={() => toggleTeam(team.id)}>
+                                            <i className={`fa-solid ${expandedTeams[team.id] ? 'fa-folder-open' : 'fa-folder'}`}></i>
+                                            <span>{team.name}</span>
+                                            <i className={`fa-solid fa-chevron-${expandedTeams[team.id] ? 'down' : 'right'} Sidebar_chevron`}></i>
+                                        </div>
+                                        {expandedTeams[team.id] && (
+                                            <div className="Sidebar_subItems Sidebar_nestedSubItems">
+                                                <NavLink to={`/dashboard/other/${team.id}/all`} className="Sidebar_link">
+                                                    <i className="fa-solid fa-list-ul"></i> All
+                                                </NavLink>
+                                                <NavLink to={`/dashboard/other/${team.id}/draft`} className="Sidebar_link">
+                                                    <i className="fa-solid fa-pen-to-square status-draft-icon"></i> Drafting
+                                                </NavLink>
+                                                <NavLink to={`/dashboard/other/${team.id}/in_review`} className="Sidebar_link">
+                                                    <i className="fa-solid fa-comments status-review-icon"></i> Peer Review
+                                                </NavLink>
+                                                <NavLink to={`/dashboard/other/${team.id}/pre_submission`} className="Sidebar_link">
+                                                    <i className="fa-solid fa-paper-plane status-pre-submission-icon"></i> Pre-Submission
+                                                </NavLink>
+                                                <NavLink to={`/dashboard/other/${team.id}/submitted`} className="Sidebar_link">
+                                                    <i className="fa-solid fa-circle-check status-submitted-icon"></i> Submitted
+                                                </NavLink>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </nav>
+        </aside>
+    );
 };
 
 export default Sidebar;
+
+export { AuthContext };

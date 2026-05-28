@@ -130,15 +130,63 @@ export const useChatApi = () => {
   }, []);
 
   /**
-   * Filters field contexts based on geographical scope
+   * Filters field contexts based on geographical scope and user's approved settings
    * @param {string} scope - The geographical scope value
+   * @param {Array} approvedSettings - User's approved settings from backend
    */
-  const updateFilteredFieldContexts = useCallback((scope) => {
-    const filtered = scope
-      ? fieldContexts.filter(fc => fc.geographic_coverage === scope)
-      : fieldContexts;
-    setFilteredFieldContexts(filtered);
+  const updateFilteredFieldContexts = useCallback((scope, approvedSettings = []) => {
+    // Always include "Global" field context regardless of settings
+    const globalFieldContext = fieldContexts.find(fc => fc.name === 'Global' || fc.geographic_coverage === 'Global');
+
+    // Get approved field context IDs from settings
+    const approvedFieldContextIds = approvedSettings
+      .filter(s => s.setting_type === 'field_context_focal' && s.status === 'approved')
+      .map(s => s.setting_value);
+
+    // If user has approved settings, filter by scope and approved settings
+    // Otherwise only show Global field context
+    if (approvedFieldContextIds.length > 0) {
+      // Filter by geographical scope first
+      const scopeFiltered = scope
+        ? fieldContexts.filter(fc => fc.geographic_coverage === scope)
+        : fieldContexts;
+
+      // Filter to only approved field contexts
+      const settingsFiltered = scopeFiltered.filter(fc => approvedFieldContextIds.includes(fc.id));
+
+      // Combine global field context with filtered results
+      const result = globalFieldContext
+        ? [globalFieldContext, ...settingsFiltered.filter(fc => fc.id !== globalFieldContext.id)]
+        : settingsFiltered;
+
+      setFilteredFieldContexts(result);
+    } else {
+      // No approved settings - only show Global field context
+      setFilteredFieldContexts(globalFieldContext ? [globalFieldContext] : []);
+    }
   }, [fieldContexts]);
+
+  /**
+   * Filters donors based on user's approved settings
+   * @param {Array} approvedSettings - User's approved settings from backend
+   */
+  const updateFilteredDonors = useCallback((approvedSettings = []) => {
+    // Get approved donor IDs from settings
+    const approvedDonorIds = approvedSettings
+      .filter(s => s.setting_type === 'donor_focal' && s.status === 'approved')
+      .map(s => s.setting_value);
+
+    // Always include "UNHCR Default template" (ID 1) regardless of settings
+    const unhcrDefaultTemplate = donors.find(d => d.id === '1');
+
+    // If user has approved donors, filter to only those + UNHCR default
+    // Otherwise show only UNHCR default template
+    const filteredDonors = approvedDonorIds.length > 0
+      ? donors.filter(d => approvedDonorIds.includes(d.id) || d.id === '1')
+      : (unhcrDefaultTemplate ? [unhcrDefaultTemplate] : []);
+
+    setDonors(filteredDonors);
+  }, [donors]);
 
   return {
     // State
@@ -172,7 +220,8 @@ export const useChatApi = () => {
     getUsers,
     getTransferUsers,
     getProfile,
-    updateFilteredFieldContexts
+    updateFilteredFieldContexts,
+    updateFilteredDonors
   };
 };
 
