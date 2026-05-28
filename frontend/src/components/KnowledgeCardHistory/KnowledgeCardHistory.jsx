@@ -2,12 +2,12 @@ import './KnowledgeCardHistory.css';
 
 export default function KnowledgeCardHistory({ history, onClose }) {
     return (
-        <div className="kc-history-modal">
-            <div className="kc-history-content">
-                <button onClick={onClose} className="kc-history-close-btn">
+        <div className="kc-history-modal" data-testid="knowledge-card-history-modal">
+            <div className="kc-history-content" data-testid="knowledge-card-history-content">
+                <button onClick={onClose} className="kc-history-close-btn" data-testid="knowledge-card-history-close-button">
                     &times;
                 </button>
-                <h2>Knowledge Card History</h2>
+                <h2 data-testid="knowledge-card-history-title">Knowledge Card History</h2>
                 <div className="kc-history-timeline">
                     {history.map((entry, index) => (
                         <div key={index} className="kc-history-entry">

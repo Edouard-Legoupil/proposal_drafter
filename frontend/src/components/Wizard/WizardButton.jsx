@@ -25,6 +25,7 @@ const WizardButton = () => {
                 startIcon={<HelpOutlineIcon />}
                 sx={{ ml: 2 }}
                 aria-label="Open help wizard"
+                data-testid="wizard-help-button"
             >
                 Help
             </Button>

@@ -190,19 +190,19 @@ const Sidebar = ({ userRoles, isOpen }) => {
                                         </div>
                                         {expandedTeams[team.id] && (
                                             <div className="Sidebar_subItems Sidebar_nestedSubItems">
-                                                <NavLink to={`/dashboard/other/${team.id}/all`} className="Sidebar_link">
+                                                <NavLink to={`/dashboard/other/${team.id}/all`} className="Sidebar_link" data-testid={`sidebar-link-other-${team.id}-all`}>
                                                     <i className="fa-solid fa-list-ul"></i> All
                                                 </NavLink>
-                                                <NavLink to={`/dashboard/other/${team.id}/draft`} className="Sidebar_link">
+                                                <NavLink to={`/dashboard/other/${team.id}/draft`} className="Sidebar_link" data-testid={`sidebar-link-other-${team.id}-draft`}>
                                                     <i className="fa-solid fa-pen-to-square status-draft-icon"></i> Drafting
                                                 </NavLink>
-                                                <NavLink to={`/dashboard/other/${team.id}/in_review`} className="Sidebar_link">
+                                                <NavLink to={`/dashboard/other/${team.id}/in_review`} className="Sidebar_link" data-testid={`sidebar-link-other-${team.id}-in_review`}>
                                                     <i className="fa-solid fa-comments status-review-icon"></i> Peer Review
                                                 </NavLink>
-                                                <NavLink to={`/dashboard/other/${team.id}/pre_submission`} className="Sidebar_link">
+                                                <NavLink to={`/dashboard/other/${team.id}/pre_submission`} className="Sidebar_link" data-testid={`sidebar-link-other-${team.id}-pre_submission`}>
                                                     <i className="fa-solid fa-paper-plane status-pre-submission-icon"></i> Pre-Submission
                                                 </NavLink>
-                                                <NavLink to={`/dashboard/other/${team.id}/submitted`} className="Sidebar_link">
+                                                <NavLink to={`/dashboard/other/${team.id}/submitted`} className="Sidebar_link" data-testid={`sidebar-link-other-${team.id}-submitted`}>
                                                     <i className="fa-solid fa-circle-check status-submitted-icon"></i> Submitted
                                                 </NavLink>
                                             </div>

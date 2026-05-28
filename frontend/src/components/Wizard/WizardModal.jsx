@@ -142,7 +142,7 @@ const WizardModal = () => {
             </DialogContent>
             
             <DialogActions>
-                <Button onClick={() => setIsOpen(false)} color="primary">
+                <Button onClick={() => setIsOpen(false)} color="primary" data-testid="wizard-close-button">
                     Close
                 </Button>
             </DialogActions>
@@ -173,7 +173,7 @@ const MainView = ({
                     onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                     InputProps={{
                         endAdornment: (
-                            <IconButton onClick={handleSearch} edge="end" aria-label="Search">
+                            <IconButton onClick={handleSearch} edge="end" aria-label="Search" data-testid="wizard-search-button">
                                 <SearchIcon />
                             </IconButton>
                         )
@@ -184,9 +184,9 @@ const MainView = ({
             
             {/* Tabs */}
             <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-                <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)} aria-label="Wizard tabs">
-                    <Tab label="Categories" />
-                    <Tab label="Popular Questions" />
+                <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)} aria-label="Wizard tabs" data-testid="wizard-tabs">
+                    <Tab label="Categories" data-testid="categories-tab" />
+                    <Tab label="Popular Questions" data-testid="popular-questions-tab" />
                 </Tabs>
             </Box>
             
@@ -233,6 +233,7 @@ const CategoriesView = ({
                         onClick={() => handleCategorySelect(category)}
                         selected={selectedCategory?.id === category.id}
                         aria-label={`Select category ${category.name}`}
+                        data-testid={`category-item-${category.id}`}
                     >
                         <ListItemText
                             primary={category.name}
@@ -266,6 +267,7 @@ const CategoriesView = ({
                                         button
                                         onClick={() => handleQaItemSelect(item)}
                                         aria-label={`View answer to ${item.question}`}
+                                        data-testid={`qa-item-${item.id}`}
                                     >
                                         <ListItemText
                                             primary={item.question}
@@ -312,6 +314,7 @@ const PopularQuestionsView = ({ popularQuestions, handleQaItemSelect }) => {
                         button
                         onClick={() => handleQaItemSelect(item)}
                         aria-label={`View popular question ${index + 1}: ${item.question}`}
+                        data-testid={`popular-qa-item-${item.id}`}
                     >
                         <ListItemText
                             primary={`${index + 1}. ${item.question}`}
@@ -346,6 +349,7 @@ const QADetailView = ({
                     onClick={handleBackToQuestions}
                     startIcon={<ArrowBackIcon />}
                     aria-label="Back to questions"
+                    data-testid="wizard-back-button"
                 >
                     Back to Questions
                 </Button>
@@ -413,6 +417,7 @@ const QADetailView = ({
                 onClick={handleFeedbackSubmit}
                 disabled={feedbackScore === 0}
                 aria-label="Submit feedback"
+                data-testid="wizard-feedback-submit-button"
             >
                 Submit Feedback
             </Button>

@@ -52,9 +52,6 @@ export function ClientCompatibilityModal({ open, onClose, clientInfo }) {
           <Button variant="outlined" onClick={onClose}>
             Continue Anyway
           </Button>
-          <Button variant="contained" color="primary">
-            Learn More
-          </Button>
         </Box>
       </Box>
     </Modal>

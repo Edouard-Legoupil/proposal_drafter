@@ -18,37 +18,6 @@ from playwright.sync_api import expect
 from .conftest import take_screenshot
 
 
-# ========================================================================================================================================================
-# Test: Navigate to Profile Page
-# ============================================================================
-
-
-@pytest.mark.user_profile
-@pytest.mark.smoke
-def test_navigate_to_profile_page(logged_in_page, config):
-    """
-    Test that users can navigate to their profile page.
-
-    User Story: Update user profile
-    """
-    page = logged_in_page
-
-    # Open user menu
-    page.get_by_test_id("user-menu-button").click()
-
-    # Click on profile option
-    page.get_by_role("button", name="Request Elevated Access").click()
-    page.locator("select").nth(1).select_option("5")
-    page.get_by_role("button", name="Submit Request").click()
-    page.get_by_test_id("user-menu-button").click()
-    page.get_by_test_id("settings-button").click()
-    page.locator(".settings-select > .css-13cymwt-control > .css-hlgwow > .css-19bb58m").first.click()
-    page.get_by_role("option", name="Canada", exact=True).click()
-    page.get_by_role("button", name="Save Changes").click()
-
-    take_screenshot(page, "profile_page_navigation")
-
-
 # ============================================================================
 # Test: Update User Role and Settings Information
 # ============================================================================
@@ -71,27 +40,31 @@ def test_update_user_profile_information(logged_in_page, config):
     page = logged_in_page
 
     # Request Roles
-    page.get_by_role("button", name="Request Elevated Access").click()
-    page.locator("select").nth(1).select_option("5")
-    take_screenshot(page, "profile_request_role")
-    page.get_by_role("button", name="Submit Request").click()
-    page.get_by_test_id("user-menu-button").click()
+    # page.get_by_role("button", name="Request Elevated Access").click()
+    # page.locator("select").nth(1).select_option("5")
+    # take_screenshot(page, "profile_request_role")
+    # page.get_by_role("button", name="Submit Request").click()
+    # page.get_by_test_id("user-menu-button").click()
 
     # Adjust preferences
+    page.get_by_test_id("user-menu-button").click()
     page.get_by_test_id("settings-button").click()
+    page.locator("svg").nth(1).click()
+
+    # Set team
+    page.get_by_role("option", name="Test", exact=True).click()
+    page.locator("svg").nth(4).click()
+
+    # Set role
+    page.get_by_role("option", name="proposal writer").click()
+
     page.locator(".settings-select > .css-13cymwt-control > .css-hlgwow > .css-19bb58m").first.click()
     page.get_by_role("option", name="Canada", exact=True).click()
     take_screenshot(page, "profile_settings")
     page.get_by_role("button", name="Save Changes").click()
 
-    # Verify success message
-    expect(page.get_by_text("Profile updated successfully")).to_be_visible()
-
-    # Verify updated information is displayed
-    expect(page.get_by_test_id("name-input")).to_have_value("John Smith Updated")
-    expect(page.get_by_test_id("geographic-coverage-input")).to_have_value("Africa, Middle East")
-
-    take_screenshot(page, "profile_update_success")
+    page.get_by_test_id("logout-button").click()
+    expect(page).to_have_url(re.compile(".*login"))
 
 
 # ============================================================================

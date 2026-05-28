@@ -207,6 +207,8 @@ def logged_in_page(page, config, user=None):
 
     # Navigate to login page
     page.goto(f"{config['base_url']}")
+    # Click the button to continue anyway, if it exists
+    page.get_by_role("button", name="Continue Anyway").click()
 
     # Log in
     page.get_by_test_id("identifier-input").fill(user.email)

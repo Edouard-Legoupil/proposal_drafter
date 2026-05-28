@@ -213,6 +213,7 @@ export default function SectionReview({
                         title={localExpanded ? "Collapse" : "Report Issue"}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: (status === 'down' || localExpanded) ? '#d32f2f' : '#555', fontSize: '1.2rem', display: 'flex', alignItems: 'center', transition: 'color 0.2s' }}
                         type="button"
+                        data-testid={`report-issue-button-${section}`}
                     >
                         <FontAwesomeIcon icon={faThumbsDown} />
                         <span style={{ fontSize: '0.75rem', fontWeight: 600, marginLeft: 6 }}>
@@ -286,6 +287,7 @@ export default function SectionReview({
                                                 className="SectionReview_previous_feedback_remove"
                                                 onClick={() => onDeleteComment(feedback.id)}
                                                 title="Remove feedback"
+                                                data-testid={`delete-feedback-button-${feedback.id}`}
                                             >
                                                 <FontAwesomeIcon icon={faTrash} />
                                             </button>
@@ -294,6 +296,7 @@ export default function SectionReview({
                                             className="SectionReview_previous_feedback_reply"
                                             onClick={() => setReplyModalOpen(feedback.id)}
                                             title="Reply to feedback"
+                                            data-testid={`reply-feedback-button-${feedback.id}`}
                                         >
                                             <FontAwesomeIcon icon={faReply} />
                                         </button>
@@ -438,6 +441,7 @@ export default function SectionReview({
                             title="Save comment"
                             type="button"
                             disabled={!isSaveEnabled}
+                            data-testid={`save-comment-button-${section}`}
                         >
                             Save Comment
                         </button>
@@ -454,6 +458,7 @@ export default function SectionReview({
                             <button
                                 className="SectionReview_reply_modal_close"
                                 onClick={() => setReplyModalOpen(null)}
+                                data-testid="reply-modal-close-button"
                             >
                                 <FontAwesomeIcon icon={faTimes} />
                             </button>
@@ -482,6 +487,7 @@ export default function SectionReview({
                             <button
                                 className="btn btn--secondary btn--small"
                                 onClick={() => setReplyModalOpen(null)}
+                                data-testid="reply-modal-cancel-button"
                             >
                                 Cancel
                             </button>
@@ -489,6 +495,7 @@ export default function SectionReview({
                                 className="btn btn--primary btn--small"
                                 onClick={() => handleReplySubmit(replyModalOpen)}
                                 disabled={!replyText.trim()}
+                                data-testid="reply-modal-save-button"
                             >
                                 Save Reply
                             </button>

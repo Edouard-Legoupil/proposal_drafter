@@ -128,7 +128,7 @@ export default function Base(props) {
                                         </div>
                                 ) : (
                                         !userDetails.is_admin && userRoles.length <= 1 && userRoles[0] === 'proposal writer' && (
-                                                <button className="Header_requestButton" onClick={() => setShowSettingsModal(true)}>
+                                                <button className="Header_requestButton" onClick={() => setShowSettingsModal(true)} data-testid="request-elevated-access-button">
                                                         Request Elevated Access
                                                 </button>
                                         )
