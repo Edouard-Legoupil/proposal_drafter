@@ -77,10 +77,10 @@ Create a utility function in `/frontend/src/utils/roleUtils.js`:
 export function hasPermission(permission) {
   // Check if user data is available in Redux/Context
   const user = useSelector(state => state.auth.user);
-  
+
   // Admin users have all permissions
   if (user?.is_admin) return true;
-  
+
   // Check all roles (including inherited)
   return user?.all_roles?.includes(permission) || false;
 }
@@ -95,7 +95,7 @@ export async function checkPermission(permission) {
     const response = await fetch(`/api/authorization/check?permission=${encodeURIComponent(permission)}`, {
       credentials: 'include'
     });
-    
+
     if (response.ok) {
       const data = await response.json();
       return data.has_permission;
@@ -117,11 +117,11 @@ import { hasPermission } from '../../utils/roleUtils';
 
 function MetricsDashboard() {
   const user = useSelector(state => state.auth.user);
-  
+
   if (!hasPermission('access_metrics')) {
     return <UnauthorizedAccess component="Metrics Dashboard" />;
   }
-  
+
   // ... rest of component
 }
 ```
@@ -133,11 +133,11 @@ import { hasPermission } from '../../utils/roleUtils';
 
 function DonorTemplateDetail() {
   const user = useSelector(state => state.auth.user);
-  
+
   if (!hasPermission('access_template')) {
     return <UnauthorizedAccess component="Donor Template Detail" />;
   }
-  
+
   // ... rest of component
 }
 ```
@@ -149,11 +149,11 @@ import { hasPermission } from '../../utils/roleUtils';
 
 function QualityGate() {
   const user = useSelector(state => state.auth.user);
-  
+
   if (!hasPermission('access_incident') && !hasPermission('access_quality_gate')) {
     return <UnauthorizedAccess component="Quality Gate" />;
   }
-  
+
   // ... rest of component
 }
 ```
@@ -169,7 +169,7 @@ import { useNavigate } from 'react-router-dom';
 
 export function UnauthorizedAccess({ component }) {
   const navigate = useNavigate();
-  
+
   return (
     <Box sx={{ p: 4, textAlign: 'center' }}>
       <Typography variant="h4" color="error" gutterBottom>
@@ -181,7 +181,7 @@ export function UnauthorizedAccess({ component }) {
       <Typography variant="body2" color="text.secondary" paragraph>
         Please contact your administrator to request access.
       </Typography>
-      <Button 
+      <Button
         variant="contained"
         onClick={() => navigate('/dashboard')}
         sx={{ mt: 2 }}
@@ -223,15 +223,15 @@ const router = createBrowserRouter([
 // Create ProtectedRoute component
 function ProtectedRoute({ permission, children }) {
   const user = useSelector(state => state.auth.user);
-  
+
   if (!user) {
     return <Navigate to="/login" replace />;
   }
-  
+
   if (!hasPermission(permission)) {
     return <UnauthorizedAccess component={children.type.name} />;
   }
-  
+
   return children;
 }
 ```
@@ -244,9 +244,9 @@ Add team role management to the admin interface:
 // AdminTeamRoles.jsx
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { 
-  Table, TableBody, TableCell, TableContainer, 
-  TableHead, TableRow, Paper, Button, 
+import {
+  Table, TableBody, TableCell, TableContainer,
+  TableHead, TableRow, Paper, Button,
   Select, MenuItem, FormControl, InputLabel
 } from '@mui/material';
 
@@ -257,23 +257,23 @@ export function AdminTeamRoles() {
   const [selectedTeam, setSelectedTeam] = useState('');
   const [selectedRole, setSelectedRole] = useState('');
   const user = useSelector(state => state.auth.user);
-  
+
   useEffect(() => {
     async function fetchData() {
       // Fetch teams
       const teamsResponse = await fetch('/api/teams');
       const teamsData = await teamsResponse.json();
       setTeams(teamsData.teams);
-      
+
       // Fetch roles
       const rolesResponse = await fetch('/api/roles');
       const rolesData = await rolesResponse.json();
       setRoles(rolesData);
-      
+
       // Fetch current team roles
       const teamRolesResponse = await fetch('/api/admin/team-roles');
       const teamRolesData = await teamRolesResponse.json();
-      
+
       // Organize by team
       const organized = {};
       teamRolesData.forEach(tr => {
@@ -284,15 +284,15 @@ export function AdminTeamRoles() {
       });
       setTeamRoles(organized);
     }
-    
+
     if (user?.is_admin) {
       fetchData();
     }
   }, [user]);
-  
+
   const assignRoleToTeam = async () => {
     if (!selectedTeam || !selectedRole) return;
-    
+
     try {
       const response = await fetch('/api/admin/team-roles', {
         method: 'POST',
@@ -305,7 +305,7 @@ export function AdminTeamRoles() {
         }),
         credentials: 'include'
       });
-      
+
       if (response.ok) {
         // Refresh data
         window.location.reload();
@@ -314,7 +314,7 @@ export function AdminTeamRoles() {
       console.error('Failed to assign role:', error);
     }
   };
-  
+
   const removeRoleFromTeam = async (teamId, roleId) => {
     try {
       const response = await fetch(`/api/admin/team-roles`, {
@@ -328,7 +328,7 @@ export function AdminTeamRoles() {
         }),
         credentials: 'include'
       });
-      
+
       if (response.ok) {
         // Refresh data
         window.location.reload();
@@ -337,15 +337,15 @@ export function AdminTeamRoles() {
       console.error('Failed to remove role:', error);
     }
   };
-  
+
   if (!user?.is_admin) {
     return <UnauthorizedAccess component="Team Role Management" />;
   }
-  
+
   return (
     <div>
       <h2>Team Role Management</h2>
-      
+
       <div style={{ marginBottom: '20px', display: 'flex', gap: '10px', alignItems: 'center' }}>
         <FormControl sx={{ minWidth: 200 }}>
           <InputLabel>Team</InputLabel>
@@ -359,7 +359,7 @@ export function AdminTeamRoles() {
             ))}
           </Select>
         </FormControl>
-        
+
         <FormControl sx={{ minWidth: 200 }}>
           <InputLabel>Role</InputLabel>
           <Select
@@ -372,8 +372,8 @@ export function AdminTeamRoles() {
             ))}
           </Select>
         </FormControl>
-        
-        <Button 
+
+        <Button
           variant="contained"
           color="primary"
           onClick={assignRoleToTeam}
@@ -382,7 +382,7 @@ export function AdminTeamRoles() {
           Assign Role to Team
         </Button>
       </div>
-      
+
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -404,7 +404,7 @@ export function AdminTeamRoles() {
                 </TableCell>
                 <TableCell>
                   {teamRoles[team.id]?.map(roleId => (
-                    <Button 
+                    <Button
                       key={roleId}
                       variant="outlined"
                       color="error"
@@ -486,10 +486,10 @@ async def assign_role_to_team(
         data = await request.json()
         team_id = data.get("team_id")
         role_id = data.get("role_id")
-        
+
         if not team_id or not role_id:
             raise HTTPException(status_code=400, detail="team_id and role_id are required")
-        
+
         # Verify team and role exist
         with get_engine().connect() as connection:
             # Check team exists
@@ -497,36 +497,36 @@ async def assign_role_to_team(
                 text("SELECT 1 FROM teams WHERE id = :team_id"),
                 {"team_id": team_id}
             ).fetchone()
-            
+
             if not team_result:
                 raise HTTPException(status_code=404, detail="Team not found")
-            
+
             # Check role exists
             role_result = connection.execute(
                 text("SELECT 1 FROM roles WHERE id = :role_id"),
                 {"role_id": role_id}
             ).fetchone()
-            
+
             if not role_result:
                 raise HTTPException(status_code=404, detail="Role not found")
-            
+
             # Check if assignment already exists
             exists_result = connection.execute(
                 text("SELECT 1 FROM team_roles WHERE team_id = :team_id AND role_id = :role_id"),
                 {"team_id": team_id, "role_id": role_id}
             ).fetchone()
-            
+
             if exists_result:
                 return {"message": "Role already assigned to team"}
-            
+
             # Assign role to team
             connection.execute(
                 text("INSERT INTO team_roles (team_id, role_id) VALUES (:team_id, :role_id)"),
                 {"team_id": team_id, "role_id": role_id}
             )
-            
+
             return {"message": "Role assigned to team successfully"}
-    
+
     except Exception as e:
         logger.error(f"[ASSIGN ROLE TO TEAM ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Could not assign role to team.")
@@ -543,22 +543,22 @@ async def remove_role_from_team(
         data = await request.json()
         team_id = data.get("team_id")
         role_id = data.get("role_id")
-        
+
         if not team_id or not role_id:
             raise HTTPException(status_code=400, detail="team_id and role_id are required")
-        
+
         with get_engine().connect() as connection:
             # Remove role from team
             result = connection.execute(
                 text("DELETE FROM team_roles WHERE team_id = :team_id AND role_id = :role_id"),
                 {"team_id": team_id, "role_id": role_id}
             )
-            
+
             if result.rowcount === 0:
                 raise HTTPException(status_code=404, detail="Team role assignment not found")
-            
+
             return {"message": "Role removed from team successfully"}
-    
+
     except Exception as e:
         logger.error(f"[REMOVE ROLE FROM TEAM ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Could not remove role from team.")
