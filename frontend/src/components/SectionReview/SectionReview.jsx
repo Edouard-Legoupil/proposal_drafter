@@ -475,6 +475,7 @@ export default function SectionReview({
                                 <select
                                     value={replyStatus}
                                     onChange={(e) => setReplyStatus(e.target.value)}
+                                    data-testid={`reply-status-select-${section}`}
                                 >
                                     <option value="pending">Pending</option>
                                     <option value="resolved">Resolved</option>

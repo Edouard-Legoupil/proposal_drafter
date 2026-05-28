@@ -247,6 +247,7 @@ export default function DonorTemplateRequest() {
                                 onChange={(selected) => setFormData({ ...formData, donor_ids: (selected || []).map(s => s.value) })}
                                 className="multi-select"
                                 placeholder="Select one or more donors..."
+                                data-testid="donor-select"
                             />
                         </div>
                     </section>
@@ -357,6 +358,7 @@ export default function DonorTemplateRequest() {
                                                     <select
                                                         value={section.format_type}
                                                         onChange={e => handleSectionFieldChange(idx, 'format_type', e.target.value)}
+                                                        data-testid={`section-format-type-select-${idx}`}
                                                     >
                                                         {FORMAT_TYPES.map(f => (
                                                             <option key={f} value={f}>{f}</option>

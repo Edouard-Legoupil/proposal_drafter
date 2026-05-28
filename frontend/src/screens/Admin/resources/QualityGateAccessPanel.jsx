@@ -128,7 +128,7 @@ export default function QualityGateAccessPanel({ resourceId }) {
         <GrantTable grants={grants} permissionOptions={permissionOptions} onRevoke={revokeGrant} showScope={false} emptyMessage="No incident grants" />
         <form className="grant-form" onSubmit={handleGrant}>
           <label>Subject type
-            <select value={grantForm.subjectType} onChange={e => setGrantForm(prev => ({ ...prev, subjectType: e.target.value, subjectId: '' }))}>
+            <select value={grantForm.subjectType} onChange={e => setGrantForm(prev => ({ ...prev, subjectType: e.target.value, subjectId: '' }))} data-testid="quality-gate-subject-type-select">
               <option value="user">User</option><option value="team">Team</option><option value="role">Role</option>
             </select>
           </label>
@@ -164,7 +164,7 @@ export default function QualityGateAccessPanel({ resourceId }) {
               onChange={val => setTester(prev => ({ ...prev, subjectId: val }))} users={users} options={options} />
           </label>
           <label>Operation
-            <select value={tester.operation} onChange={e => setTester(prev => ({ ...prev, operation: e.target.value }))}>
+            <select value={tester.operation} onChange={e => setTester(prev => ({ ...prev, operation: e.target.value }))} data-testid="quality-gate-operation-select">
               {operationOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </label>

@@ -298,6 +298,7 @@ export default function UserSettingsModal({ show, onClose }) {
                                 className="settings-select"
                                 styles={pendingStyles('teams')}
                                 placeholder="Select teams to join..."
+                                data-testid="user-settings-teams-select"
                             />
                             <p className="field-hint">
                                 {selectedTeams.some(t => inheritedSettings.teams.includes(t.value)) ? '✓ Some teams have inherited settings • ' : ''}

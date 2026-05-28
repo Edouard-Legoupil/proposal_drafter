@@ -1,6 +1,6 @@
 /**
  * Wizard Button Component
- * 
+ *
  * Main help button that appears in the navigation to open the wizard modal
  */
 
@@ -11,11 +11,11 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
 const WizardButton = () => {
     const { setIsOpen } = useWizard();
-    
+
     const handleClick = () => {
         setIsOpen(true);
     };
-    
+
     return (
         <Tooltip title="Help & Support" arrow>
             <Button

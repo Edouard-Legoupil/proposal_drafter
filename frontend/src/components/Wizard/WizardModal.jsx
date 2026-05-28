@@ -1,6 +1,6 @@
 /**
  * Wizard Modal Component
- * 
+ *
  * Main modal interface for the wizard utility that provides:
  * - Search functionality
  * - Category browsing
@@ -12,10 +12,10 @@
 import React, { useState } from 'react';
 import { useWizard } from '../../context/WizardContext';
 import {
-    Dialog, DialogTitle, DialogContent, DialogActions, 
-    Button, TextField, CircularProgress, 
-    List, ListItem, ListItemText, Divider, 
-    Tabs, Tab, Box, Typography, Rating, 
+    Dialog, DialogTitle, DialogContent, DialogActions,
+    Button, TextField, CircularProgress,
+    List, ListItem, ListItemText, Divider,
+    Tabs, Tab, Box, Typography, Rating,
     Pagination, Chip, IconButton
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
@@ -23,20 +23,20 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 const WizardModal = () => {
     const {
-        isOpen, setIsOpen, 
-        categories, qaItems, loading, error, 
-        searchQuery, setSearchQuery, 
-        selectedCategory, setSelectedCategory, 
-        popularQuestions, fetchQaItems, searchQa, 
+        isOpen, setIsOpen,
+        categories, qaItems, loading, error,
+        searchQuery, setSearchQuery,
+        selectedCategory, setSelectedCategory,
+        popularQuestions, fetchQaItems, searchQa,
         submitFeedback, trackView,
         selectedQaItem, setSelectedQaItem,
         feedbackScore, setFeedbackScore,
         feedbackComment, setFeedbackComment,
         page, setPage
     } = useWizard();
-    
+
     const [activeTab, setActiveTab] = useState(0);
-    
+
     // Handle category selection
     const handleCategorySelect = (category) => {
         setSelectedCategory(category);
@@ -44,7 +44,7 @@ const WizardModal = () => {
         setPage(1);
         fetchQaItems({ category_id: category.id, limit: 10, offset: 0 });
     };
-    
+
     // Handle search
     const handleSearch = () => {
         if (searchQuery.trim()) {
@@ -53,13 +53,13 @@ const WizardModal = () => {
             setSelectedQaItem(null);
         }
     };
-    
+
     // Handle QA item selection
     const handleQaItemSelect = (item) => {
         setSelectedQaItem(item);
         trackView(item.id);
     };
-    
+
     // Handle feedback submission
     const handleFeedbackSubmit = async () => {
         if (selectedQaItem && feedbackScore > 0) {
@@ -68,14 +68,14 @@ const WizardModal = () => {
                 feedback_score: feedbackScore,
                 feedback_comment: feedbackComment
             });
-            
+
             if (result.success) {
                 setFeedbackScore(0);
                 setFeedbackComment('');
             }
         }
     };
-    
+
     // Handle page change
     const handlePageChange = (event, value) => {
         setPage(value);
@@ -86,14 +86,14 @@ const WizardModal = () => {
             fetchQaItems({ limit: 10, offset });
         }
     };
-    
+
     // Reset when going back to question list
     const handleBackToQuestions = () => {
         setSelectedQaItem(null);
         setFeedbackScore(0);
         setFeedbackComment('');
     };
-    
+
     return (
         <Dialog
             open={isOpen}
@@ -108,7 +108,7 @@ const WizardModal = () => {
                     Proposal Drafter Help
                 </Typography>
             </DialogTitle>
-            
+
             <DialogContent dividers>
                 {!selectedQaItem ? (
                     <MainView
@@ -140,7 +140,7 @@ const WizardModal = () => {
                     />
                 )}
             </DialogContent>
-            
+
             <DialogActions>
                 <Button onClick={() => setIsOpen(false)} color="primary" data-testid="wizard-close-button">
                     Close
@@ -181,7 +181,7 @@ const MainView = ({
                     aria-label="Search help topics"
                 />
             </Box>
-            
+
             {/* Tabs */}
             <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
                 <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)} aria-label="Wizard tabs" data-testid="wizard-tabs">
@@ -189,7 +189,7 @@ const MainView = ({
                     <Tab label="Popular Questions" data-testid="popular-questions-tab" />
                 </Tabs>
             </Box>
-            
+
             {/* Content based on active tab */}
             {activeTab === 0 ? (
                 <CategoriesView
@@ -243,7 +243,7 @@ const CategoriesView = ({
                     </ListItem>
                 ))}
             </List>
-            
+
             {/* Q&A Items for selected category */}
             {selectedCategory && (
                 <>
@@ -251,7 +251,7 @@ const CategoriesView = ({
                     <Typography variant="subtitle1" gutterBottom>
                         Questions in {selectedCategory.name}
                     </Typography>
-                    
+
                     {loading ? (
                         <Box display="flex" justifyContent="center" my={4}>
                             <CircularProgress aria-label="Loading questions" />
@@ -280,7 +280,7 @@ const CategoriesView = ({
                                     </ListItem>
                                 ))}
                             </List>
-                            
+
                             {qaItems.length > 0 && (
                                 <Box display="flex" justifyContent="center" mt={2}>
                                     <Pagination
@@ -354,12 +354,12 @@ const QADetailView = ({
                     Back to Questions
                 </Button>
             </Box>
-            
+
             {/* Question */}
             <Typography variant="h6" gutterBottom>
                 {item.question}
             </Typography>
-            
+
             {/* Category tag */}
             <Box sx={{ mb: 2 }}>
                 <Chip
@@ -369,19 +369,19 @@ const QADetailView = ({
                     aria-label={`Category: ${item.category?.name || 'General'}`}
                 />
             </Box>
-            
+
             {/* Answer */}
             <Typography variant="body1" paragraph>
                 {item.answer}
             </Typography>
-            
+
             <Divider sx={{ my: 3 }} />
-            
+
             {/* Feedback section */}
             <Typography variant="subtitle2" gutterBottom>
                 Was this helpful?
             </Typography>
-            
+
             {/* Rating */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <Rating
@@ -395,7 +395,7 @@ const QADetailView = ({
                     {feedbackScore || 'Rate this answer'}
                 </Typography>
             </Box>
-            
+
             {/* Comments */}
             <TextField
                 fullWidth
@@ -409,7 +409,7 @@ const QADetailView = ({
                 sx={{ mb: 2 }}
                 aria-label="Additional feedback comments"
             />
-            
+
             {/* Submit button */}
             <Button
                 variant="contained"
