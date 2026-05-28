@@ -15,7 +15,7 @@ import {
 } from 'chart.js';
 import { MatrixController, MatrixElement } from 'chartjs-chart-matrix';
 import { TreemapController, TreemapElement } from 'chartjs-chart-treemap';
-import { Box, MenuItem, Select, FormControl, InputLabel, Typography, Dialog, DialogTitle, DialogContent, IconButton, CircularProgress, Grid, Paper } from '@mui/material';
+import { Box, MenuItem, Select, FormControl, InputLabel, Typography, Dialog, DialogTitle, DialogContent, IconButton, CircularProgress, Grid, Paper, Alert, Chip, LinearProgress } from '@mui/material';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import CloseIcon from '@mui/icons-material/Close';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -23,6 +23,10 @@ import { LocalizationProvider } from '@mui/x-date-pickers';
 import { DatePicker } from '@mui/x-date-pickers';
 
 import './metrics-dashboard.css';
+
+// Import interaction metrics components
+import { UserActivityMetric, WizardUsageMetric, ErrorAnalysisMetric } from './InteractionMetrics';
+import { hasPermission } from '../../../../utils/roleUtils';
 
 ChartJS.register(
   CategoryScale,
@@ -702,6 +706,19 @@ export default function MetricsDashboard() {
         <MetricBar title="Card Impact Score" labels={metrics.cardImpactScore.labels} data={metrics.cardImpactScore.data} onExpand={setExpandedChart} />
         <MetricBar title="Knowledge Silos by Team" labels={metrics.knowledgeSilos.labels} data={metrics.knowledgeSilos.data} onExpand={setExpandedChart} />
       </Box>
+
+      {/* Section 4: User Interaction Analytics (Role-Based Access) */}
+      {hasPermission(user, 'ui_analysis') && (
+        <>
+          <Typography variant="h5" className="section-title">User Interaction Analytics</Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: 3, mb: 4, width: '100%', px: 2 }}>
+            {/* Import and use interaction metrics components */}
+            <UserActivityMetric user={user} dateRange={dateRange} />
+            <WizardUsageMetric user={user} dateRange={dateRange} />
+            <ErrorAnalysisMetric user={user} dateRange={dateRange} />
+          </Box>
+        </>
+      )}
 
       {/* Modal for Expanded Chart */}
       <Dialog open={!!expandedChart} onClose={() => setExpandedChart(null)} maxWidth="lg" fullWidth>
