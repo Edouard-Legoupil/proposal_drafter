@@ -184,8 +184,6 @@ export default function QualityGate() {
         setQualSortConfig({ key, direction })
     }
 
-        }
-
         // Sort
         if (qualSortConfig.key) {
             filtered.sort((a, b) => {
