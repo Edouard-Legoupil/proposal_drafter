@@ -41,6 +41,8 @@ export default function IncidentTable({
     statusOptions,
     isSystemAdmin,
     removingIncidentId,
+    analysisLoading,
+    loadingReviewId,
     onStatusFilterChange,
     onRequestSort,
     onRemoveIncident,
