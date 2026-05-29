@@ -6,6 +6,7 @@ import logging
 from backend.core.db import get_engine
 from backend.core.security import get_current_user
 from backend.utils.qualification_service import QualificationService
+from backend.config.qualification_rules import get_rule_set_for_artifact
 
 router = APIRouter()
 
@@ -37,6 +38,32 @@ async def get_qualification_status(
     valid_template_types = ["proposal", "knowledge_card", "template"]
     if template_type not in valid_template_types:
         raise HTTPException(status_code=400, detail=f"Invalid template_type. Must be one of: {valid_template_types}")
+    
+    # Get the simplified rule set for this template type
+    rule_set = get_rule_set_for_artifact(template_type)
+    
+    # Convert rules to simple dict format for API response
+    rules = []
+    for rule in rule_set.get_rules_by_priority():
+        if rule.is_active:
+            rules.append({
+                "rule_code": rule.rule_code,
+                "rule_name": rule.rule_name,
+                "description": rule.description,
+                "category": rule.category.value,
+                "severity": rule.severity.value,
+                "evaluation_mode": rule.evaluation_mode,
+                "metric_name": rule.metric_name,
+                "comparator": rule.comparator,
+                "threshold_numeric": rule.threshold_numeric,
+                "threshold_json": rule.threshold_json,
+                "weight": rule.weight,
+                "required": rule.required,
+                "remediation_guidance": rule.remediation_guidance
+            })
+    
+    # For now, use the original database query for template data
+    # In a full implementation, we'd integrate with the new rule engine
     query_rules = text(
         """
         SELECT qr.rule_code, qr.rule_name, qr.description
@@ -70,7 +97,6 @@ async def get_qualification_status(
     )
 
     with get_engine().connect() as conn:
-        rules = [dict(row) for row in conn.execute(query_rules, {"tpl": template_type}).mappings()]
         templates = [dict(row) for row in conn.execute(query_templates, {"tpl": template_type}).mappings()]
         rows = conn.execute(query_data, {"tpl": template_type}).mappings().all()
 
@@ -113,7 +139,9 @@ async def get_qualification_status(
 def _run_qualification_task(artifact_type: str, artifact_id: str) -> None:
     try:
         with get_engine().begin() as connection:
-            QualificationService(connection).run_for_artifact(artifact_type, artifact_id)
+            result = QualificationService(connection).run_for_artifact(artifact_type, artifact_id)
+            logger = logging.getLogger(__name__)
+            logger.info(f"Qualification completed for {artifact_type}/{artifact_id}: {'PASS' if result['overall_pass'] else 'FAIL'}")
     except SQLAlchemyError as e:
         # Log and swallow to avoid background crash
         logger = logging.getLogger(__name__)
