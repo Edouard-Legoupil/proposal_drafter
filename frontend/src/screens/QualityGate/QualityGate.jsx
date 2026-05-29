@@ -184,28 +184,6 @@ export default function QualityGate() {
         setQualSortConfig({ key, direction })
     }
 
-        // Sort
-        if (qualSortConfig.key) {
-            filtered.sort((a, b) => {
-                let av, bv;
-                if (qualSortConfig.key === 'overall') {
-                    av = a.overall ? 1 : 0;
-                    bv = b.overall ? 1 : 0;
-                } else if (qualSortConfig.key === 'template_name') {
-                    av = (a.template_name || '').toLowerCase();
-                    bv = (b.template_name || '').toLowerCase();
-                } else {
-                    av = a.results[qualSortConfig.key] ? 1 : 0;
-                    bv = b.results[qualSortConfig.key] ? 1 : 0;
-                }
-
-                if (av < bv) return qualSortConfig.direction === 'asc' ? -1 : 1
-                if (av > bv) return qualSortConfig.direction === 'asc' ? 1 : -1
-                return 0
-            })
-        }
-    }
-
     if (loading) return (
         <Base>
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
