@@ -204,7 +204,6 @@ export default function QualityGate() {
                 return 0
             })
         }
-        return filtered
     }
 
 
