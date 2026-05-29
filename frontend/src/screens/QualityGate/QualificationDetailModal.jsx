@@ -116,38 +116,40 @@ export default function QualificationDetailModal({
             maxWidth="md"
             className="qualification-detail-modal"
         >
-            <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="h6" component="div">
+            <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} data-testid="qualification-detail-title">
+                <Typography variant="h6" component="div" data-testid="template-name">
                     Qualification Details: {templateName}
                 </Typography>
-                <IconButton onClick={onClose} size="small">
+                <IconButton onClick={onClose} size="small" data-testid="close-modal-button">
                     <CloseIcon fontSize="small" />
                 </IconButton>
             </DialogTitle>
 
             <DialogContent dividers>
                 <Box sx={{ mb: 3 }}>
-                    <Typography variant="subtitle1" color="textSecondary" gutterBottom>
+                    <Typography variant="subtitle1" color="textSecondary" gutterBottom data-testid="template-id">
                         Template ID: {templateId}
                     </Typography>
                     
-                    <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                    <Box sx={{ display: 'flex', gap: 2, mb: 2 }} data-testid="status-chips">
                         {getStatusChip(currentResult.passed)}
                         {getSeverityChip(currentRule.severity)}
                         <Chip
                             label={currentRule.category}
                             size="small"
                             variant="outlined"
+                            data-testid="category-chip"
                         />
                     </Box>
                 </Box>
 
-                <Stepper activeStep={currentRuleIndex} alternativeLabel sx={{ mb: 3 }}>
+                <Stepper activeStep={currentRuleIndex} alternativeLabel sx={{ mb: 3 }} data-testid="criteria-stepper">
                     {qualRules.map((rule, index) => (
-                        <Step key={rule.rule_code} completed={qualResults.some(r => r.rule_code === rule.rule_code && r.passed)}>
+                        <Step key={rule.rule_code} completed={qualResults.some(r => r.rule_code === rule.rule_code && r.passed)} data-testid={`step-${index}`}>
                             <StepLabel
                                 onClick={() => onRuleChange(index)}
                                 style={{ cursor: 'pointer' }}
+                                data-testid={`step-label-${index}`}
                             >
                                 {rule.rule_code}
                             </StepLabel>
@@ -156,53 +158,53 @@ export default function QualificationDetailModal({
                 </Stepper>
 
                 <Paper elevation={0} sx={{ p: 3, mb: 3, backgroundColor: 'background.paper' }}>
-                    <Typography variant="h6" gutterBottom>
+                    <Typography variant="h6" gutterBottom data-testid="rule-title">
                         {friendlyDesc.title}
                     </Typography>
 
                     <Box sx={{ my: 2 }}>
-                        <Typography variant="subtitle2" color="primary" gutterBottom>
+                        <Typography variant="subtitle2" color="primary" gutterBottom data-testid="rule-code">
                             Rule Code: {currentRule.rule_code}
                         </Typography>
                     </Box>
 
-                    <Typography variant="body1" paragraph>
+                    <Typography variant="body1" paragraph data-testid="rule-description">
                         <strong>Description:</strong> {friendlyDesc.description}
                     </Typography>
 
-                    <Typography variant="body1" paragraph>
+                    <Typography variant="body1" paragraph data-testid="rule-why-matters">
                         <strong>Why it matters:</strong> {friendlyDesc.whyItMatters}
                     </Typography>
 
                     {currentResult.metric_name && (
-                        <Box sx={{ my: 2, p: 2, backgroundColor: 'action.hover', borderRadius: 1 }}>
-                            <Typography variant="body2" gutterBottom>
+                        <Box sx={{ my: 2, p: 2, backgroundColor: 'action.hover', borderRadius: 1 }} data-testid="metric-evaluation">
+                            <Typography variant="body2" gutterBottom data-testid="metric-evaluation-title">
                                 <strong>Metric Evaluation:</strong>
                             </Typography>
-                            <Typography variant="body2">
+                            <Typography variant="body2" data-testid="metric-value">
                                 {currentResult.metric_name}: {currentResult.metric_value}
                             </Typography>
-                            <Typography variant="body2">
+                            <Typography variant="body2" data-testid="metric-threshold">
                                 Threshold: {currentResult.comparator} {currentResult.threshold}
                             </Typography>
                         </Box>
                     )}
 
-                    <Typography variant="body1" paragraph sx={{ mt: 2 }}>
+                    <Typography variant="body1" paragraph sx={{ mt: 2 }} data-testid="rule-how-to-fix">
                         <strong>How to fix:</strong> {friendlyDesc.howToFix}
                     </Typography>
 
                     {currentRule.remediation_guidance && (
-                        <Typography variant="body2" color="textSecondary" paragraph>
+                        <Typography variant="body2" color="textSecondary" paragraph data-testid="technical-guidance">
                             <strong>Technical guidance:</strong> {currentRule.remediation_guidance}
                         </Typography>
                     )}
                 </Paper>
             </DialogContent>
 
-            <DialogActions sx={{ justifyContent: 'space-between', p: 2 }}>
+            <DialogActions sx={{ justifyContent: 'space-between', p: 2 }} data-testid="modal-actions">
                 <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Typography variant="caption" color="textSecondary">
+                    <Typography variant="caption" color="textSecondary" data-testid="rule-counter">
                         Rule {currentRuleIndex + 1} of {qualRules.length}
                     </Typography>
                 </Box>
@@ -213,6 +215,7 @@ export default function QualificationDetailModal({
                         disabled={currentRuleIndex === 0}
                         startIcon={<ArrowBack />}
                         variant="outlined"
+                        data-testid="previous-button"
                     >
                         Previous
                     </Button>
@@ -222,10 +225,11 @@ export default function QualificationDetailModal({
                         endIcon={<ArrowForward />}
                         variant="contained"
                         color="primary"
+                        data-testid="next-button"
                     >
                         Next
                     </Button>
-                    <Button onClick={onClose} variant="outlined">
+                    <Button onClick={onClose} variant="outlined" data-testid="close-button">
                         Close
                     </Button>
                 </Box>
