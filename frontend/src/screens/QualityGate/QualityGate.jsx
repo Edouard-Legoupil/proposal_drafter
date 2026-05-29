@@ -205,7 +205,6 @@ export default function QualityGate() {
                 if (av > bv) return qualSortConfig.direction === 'asc' ? 1 : -1
                 return 0
             })
-        }
         return filtered
     }
 
