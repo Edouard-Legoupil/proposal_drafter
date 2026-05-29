@@ -206,7 +206,6 @@ export default function QualityGate() {
         }
     }
 
-
     if (loading) return (
         <Base>
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
