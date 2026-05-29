@@ -65,58 +65,7 @@ export default function QualityGate() {
         }
     }
 
-    const handleStatusFilterChange = (event) => {
-        const value = event.target.value
-        setSelectedStatuses(typeof value === 'string' ? value.split(',') : value)
-    }
 
-    // Sorting function
-    const requestSort = (key) => {
-        let direction = 'asc';
-        if (sortConfig.key === key && sortConfig.direction === 'asc') {
-            direction = 'desc';
-        }
-        setSortConfig({ key, direction });
-    };
-
-    const requestQualSort = (key) => {
-        let direction = 'asc'
-        if (qualSortConfig.key === key && qualSortConfig.direction === 'asc') {
-            direction = 'desc'
-        }
-        setQualSortConfig({ key, direction })
-    }
-
-    const handleRemoveIncident = async (incident) => {
-        if (!window.confirm('Remove this incident and hide it from all dashboards?')) return
-        setRemovingIncidentId(incident.incident_id)
-        try {
-            const response = await fetch(`${API_BASE_URL}/metrics/quality-incidents/remove`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({
-                    incident_id: incident.incident_id,
-                    artifact_type: incident.artifact_type || 'proposal'
-                })
-            })
-
-            if (!response.ok) {
-                const payload = await response.json().catch(() => ({}))
-                throw new Error(payload.detail || 'Failed to remove incident')
-            }
-
-            await fetchQualityData(false)
-        } catch (err) {
-            console.error('Error removing incident:', err)
-            window.alert(err.message || 'Unable to remove this comment')
-        } finally {
-            setRemovingIncidentId(null)
-        }
-    }
-
-    // Process KPI for total by type
-    const statusOptions = ['submitted','pending','acknowledged','needs-more-info','resolved','removed']
 
     const fetchQualityData = async (showLoader = true) => {
         if (showLoader) {
