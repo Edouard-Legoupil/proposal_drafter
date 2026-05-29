@@ -14,8 +14,11 @@ import {
     Chip,
     TextField,
     TableSortLabel,
-    TablePagination
+    TablePagination,
+    Button,
+    Tooltip
 } from '@mui/material'
+import { Info as InfoIcon } from '@mui/icons-material'
 import './QualityGate.css'
 
 export default function QualificationSummary({
@@ -28,7 +31,8 @@ export default function QualificationSummary({
     onQualSearchChange,
     onQualSort,
     onQualPageChange,
-    onQualRowsPerPageChange
+    onQualRowsPerPageChange,
+    onViewDetails
 }) {
     const getFilteredAndSortedQualData = () => {
         const arr = Array.isArray(qualData) ? [...qualData] : []
@@ -73,10 +77,24 @@ export default function QualificationSummary({
         )
     }
 
+    const getSummaryStats = (row) => {
+        if (!qualRules || qualRules.length === 0) return { passed: 0, failed: 0 }
+        
+        const passed = qualRules.filter(rule => row.results[rule.rule_code]).length
+        const failed = qualRules.filter(rule => !row.results[rule.rule_code]).length
+        
+        return { passed, failed }
+    }
+
     return (
         <Card className="qual-card glass" sx={{ mb: 4 }}>
             <CardContent>
-                <Typography variant="h6" gutterBottom>Qualification Summary</Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="h6" gutterBottom>Qualification Summary</Typography>
+                    <Tooltip title="Shows overall qualification status for templates with links to detailed criteria">
+                        <InfoIcon color="action" fontSize="small" />
+                    </Tooltip>
+                </Box>
                 <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
                     Qualifications are automated structural and semantic rules evaluated against templates to guarantee compliance and quality standards.
                 </Typography>
@@ -111,46 +129,55 @@ export default function QualificationSummary({
                                         direction={qualSortConfig.direction}
                                         onClick={() => onQualSort('overall')}
                                     >
-                                        Status
+                                        Overall Status
                                     </TableSortLabel>
                                 </TableCell>
-                                {qualRules?.map(rule => (
-                                    <TableCell key={rule.rule_code} title={rule.description}>
-                                        <TableSortLabel
-                                            active={qualSortConfig.key === rule.rule_code}
-                                            direction={qualSortConfig.direction}
-                                            onClick={() => onQualSort(rule.rule_code)}
-                                        >
-                                            {`${rule.rule_code} - ${rule.rule_name}`}
-                                        </TableSortLabel>
-                                    </TableCell>
-                                ))}
+                                <TableCell>Passed/Total Rules</TableCell>
+                                <TableCell>Actions</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {getQualDataForDisplay()?.map(row => (
-                                <TableRow key={row.artifact_id} hover>
-                                    <TableCell>
-                                        {row.template_name || 'Unknown'}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Chip
-                                            label={row.overall ? 'PASS' : 'FAIL'}
-                                            size="small"
-                                            color={row.overall ? 'success' : 'error'}
-                                        />
-                                    </TableCell>
-                                    {qualRules?.map(rule => (
-                                        <TableCell key={rule.rule_code}>
+                            {getQualDataForDisplay()?.map(row => {
+                                const stats = getSummaryStats(row)
+                                return (
+                                    <TableRow key={row.artifact_id} hover>
+                                        <TableCell>
+                                            {row.template_name || 'Unknown'}
+                                        </TableCell>
+                                        <TableCell>
                                             <Chip
-                                                label={row.results[rule.rule_code] ? 'PASS' : 'FAIL'}
+                                                label={row.overall ? 'QUALIFIED' : 'NOT QUALIFIED'}
                                                 size="small"
-                                                color={row.results[rule.rule_code] ? 'success' : 'error'}
+                                                color={row.overall ? 'success' : 'error'}
+                                                sx={{ fontWeight: 'bold' }}
                                             />
                                         </TableCell>
-                                    ))}
-                                </TableRow>
-                            ))}
+                                        <TableCell>
+                                            <Typography variant="body2">
+                                                {stats.passed}/{stats.passed + stats.failed} rules passed
+                                            </Typography>
+                                            {!row.overall && stats.failed > 0 && (
+                                                <Chip
+                                                    label={`${stats.failed} failed`}
+                                                    size="small"
+                                                    color="error"
+                                                    sx={{ ml: 1, fontWeight: 'bold' }}
+                                                />
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Button
+                                                variant="outlined"
+                                                size="small"
+                                                onClick={() => onViewDetails(row.artifact_id, row.template_name)}
+                                                disabled={!qualRules || qualRules.length === 0}
+                                            >
+                                                View Details
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                )
+                            })}
                         </TableBody>
                     </Table>
                 </TableContainer>

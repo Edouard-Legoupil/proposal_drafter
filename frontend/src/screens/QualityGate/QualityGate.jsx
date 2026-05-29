@@ -11,6 +11,7 @@ import './QualityGate.css'
 import AnalysisModal from '../../components/AnalysisModal/AnalysisModal'
 import IncidentTable from './IncidentTable'
 import QualificationSummary from './QualificationSummary'
+import QualificationDetailModal from './QualificationDetailModal'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
 
@@ -34,6 +35,10 @@ export default function QualityGate() {
     const [analysisLoading, setAnalysisLoading] = useState(false)
     const [loadingReviewId, setLoadingReviewId] = useState(null)
     const [analysisModalOpen, setAnalysisModalOpen] = useState(false)
+    const [detailModalOpen, setDetailModalOpen] = useState(false)
+    const [selectedTemplateId, setSelectedTemplateId] = useState(null)
+    const [selectedTemplateName, setSelectedTemplateName] = useState('')
+    const [currentRuleIndex, setCurrentRuleIndex] = useState(0)
 
     const loadAnalysis = async (reviewId) => {
         setAnalysisLoading(true)
@@ -422,6 +427,12 @@ export default function QualityGate() {
                     onQualSort={requestQualSort}
                     onQualPageChange={handleQualPageChange}
                     onQualRowsPerPageChange={handleQualRowsPerPageChange}
+                    onViewDetails={(templateId, templateName) => {
+                        setSelectedTemplateId(templateId)
+                        setSelectedTemplateName(templateName)
+                        setCurrentRuleIndex(0)
+                        setDetailModalOpen(true)
+                    }}
                 />
 
                 {/* Incident Table Component */}
@@ -446,6 +457,16 @@ export default function QualityGate() {
                 open={analysisModalOpen}
                 onClose={() => setAnalysisModalOpen(false)}
                 analysis={analysis}
+            />
+            <QualificationDetailModal
+                open={detailModalOpen}
+                onClose={() => setDetailModalOpen(false)}
+                templateName={selectedTemplateName}
+                templateId={selectedTemplateId}
+                qualRules={qualRules}
+                qualResults={qualData.find(row => row.artifact_id === selectedTemplateId)?.results || []}
+                currentRuleIndex={currentRuleIndex}
+                onRuleChange={(newIndex) => setCurrentRuleIndex(newIndex)}
             />
         </Base>
     )
