@@ -7,7 +7,6 @@ import {
     Alert
 } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faInfoCircle, faSkullCrossbones, faExclamationTriangle, faExclamationCircle } from '@fortawesome/free-solid-svg-icons'
 import './QualityGate.css'
 import AnalysisModal from '../../components/AnalysisModal/AnalysisModal'
 import IncidentTable from './IncidentTable'
@@ -40,6 +39,45 @@ export default function QualityGate() {
     const [selectedTemplateId, setSelectedTemplateId] = useState(null)
     const [selectedTemplateName, setSelectedTemplateName] = useState('')
     const [currentRuleIndex, setCurrentRuleIndex] = useState(0)
+
+    const handleQualPageChange = (event, newPage) => {
+        setQualPage(newPage)
+    }
+
+    const handleQualRowsPerPageChange = (event) => {
+        setQualRowsPerPage(parseInt(event.target.value, 10))
+        setQualPage(0)
+    }
+
+    const statusOptions = ['submitted','pending','acknowledged','needs-more-info','resolved','removed']
+
+    const handleRemoveIncident = async (incident) => {
+        if (!window.confirm('Remove this incident and hide it from all dashboards?')) return
+        setRemovingIncidentId(incident.incident_id)
+        try {
+            const response = await fetch(`${API_BASE_URL}/metrics/quality-incidents/remove`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    incident_id: incident.incident_id,
+                    artifact_type: incident.artifact_type || 'proposal'
+                })
+            })
+
+            if (!response.ok) {
+                const payload = await response.json().catch(() => ({}))
+                throw new Error(payload.detail || 'Failed to remove incident')
+            }
+
+            await fetchQualityData(false)
+        } catch (err) {
+            console.error('Error removing incident:', err)
+            window.alert(err.message || 'Unable to remove this comment')
+        } finally {
+            setRemovingIncidentId(null)
+        }
+    }
 
     const loadAnalysis = async (reviewId) => {
         setAnalysisLoading(true)
@@ -146,16 +184,6 @@ export default function QualityGate() {
         setQualSortConfig({ key, direction })
     }
 
-    const getFilteredAndSortedQualData = () => {
-        const arr = Array.isArray(qualData) ? [...qualData] : []
-
-        // Filter by search term (template name)
-        let filtered = arr
-        if (qualSearch) {
-            const searchLower = qualSearch.toLowerCase()
-            filtered = arr.filter(row =>
-                (row.template_name || '').toLowerCase().includes(searchLower)
-            )
         }
 
         // Sort
