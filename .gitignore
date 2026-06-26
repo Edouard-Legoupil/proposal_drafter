@@ -45,3 +45,6 @@ scratch.py
 db/migrations/*
 docs/arc/*
 playwright/test-results/*
+azuredevops.bat
+azuredevops.bat.txt
+test_wizard.db
