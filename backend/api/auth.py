@@ -34,11 +34,16 @@ from backend.core.security import (
 )
 from backend.core.rate_limiter import check_api_rate_limit
 from backend.core.error_handlers import get_error_handler
-from backend.models.schemas import UserSettings
+from backend.models.schemas import SignupPreferences
 
 # This router handles all authentication-related endpoints, including user
 # registration, login, logout, profile management, and password recovery.
 router = APIRouter()
+
+
+def invalid_credentials_response() -> JSONResponse:
+    """Return one response for unknown accounts and incorrect passwords."""
+    return JSONResponse(status_code=401, content={"error": "Invalid credentials."})
 
 
 @router.get("/sso-status")
@@ -46,11 +51,7 @@ async def sso_status():
     """
     Returns the status of SSO.
     """
-    return {
-        "enabled": all(
-            [ENTRA_TENANT_ID, ENTRA_CLIENT_ID, ENTRA_CLIENT_SECRET, ENTRA_REDIRECT_URI]
-        )
-    }
+    return {"enabled": all([ENTRA_TENANT_ID, ENTRA_CLIENT_ID, ENTRA_CLIENT_SECRET, ENTRA_REDIRECT_URI])}
 
 
 def _get_msal_app():
@@ -167,7 +168,8 @@ async def callback(request: Request, code: str, state: str | None = None):
             user_id = str(uuid.uuid4())
             connection.execute(
                 text(
-                    "INSERT INTO users (id, email, name, team_id, password) VALUES (:id, :email, :name, :team_id, :password)"
+                    "INSERT INTO users (id, email, name, team_id, password) "
+                    "VALUES (:id, :email, :name, :team_id, :password)"
                 ),
                 {
                     "id": user_id,
@@ -239,7 +241,7 @@ async def signup(request: Request):
     ):
         return JSONResponse(status_code=400, content={"error": "All fields are required."})
 
-    settings = UserSettings(**settings_data)
+    settings = SignupPreferences.model_validate(settings_data)
 
     hashed_password = generate_password_hash(password)
     hashed_questions = {security_question: generate_password_hash(security_answer.strip().lower())}
@@ -273,8 +275,15 @@ async def signup(request: Request):
             connection.execute(
                 text(
                     """
-                    INSERT INTO users (id, email, name, team_id, password, security_questions, geographic_coverage_type, geographic_coverage_region, geographic_coverage_country)
-                    VALUES (:id, :email, :name, :team_id, :password, :security_questions, :geographic_coverage_type, :geographic_coverage_region, :geographic_coverage_country)
+                    INSERT INTO users (
+                        id, email, name, team_id, password, security_questions,
+                        geographic_coverage_type, geographic_coverage_region,
+                        geographic_coverage_country
+                    ) VALUES (
+                        :id, :email, :name, :team_id, :password, :security_questions,
+                        :geographic_coverage_type, :geographic_coverage_region,
+                        :geographic_coverage_country
+                    )
                 """
                 ),
                 {
@@ -290,52 +299,14 @@ async def signup(request: Request):
                 },
             )
 
-            # Insert new roles
-            if settings.roles:
-                role_insert_query = text("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, :role_id)")
-                connection.execute(
-                    role_insert_query,
-                    [{"user_id": user_id, "role_id": role_id} for role_id in settings.roles],
-                )
-            else:
-                # Assign default "proposal writer" role if no roles specified
-                role_result = connection.execute(text("SELECT id FROM roles WHERE name = 'proposal writer'"))
-                default_role = role_result.fetchone()
-                if default_role:
-                    connection.execute(
-                        text("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, :role_id)"),
-                        {"user_id": user_id, "role_id": default_role[0]},
-                    )
-
-            # Insert new donor groups
-            if settings.donor_groups:
-                donor_group_insert_query = text(
-                    "INSERT INTO user_donor_groups (user_id, donor_group) VALUES (:user_id, :donor_group)"
-                )
-                connection.execute(
-                    donor_group_insert_query,
-                    [{"user_id": user_id, "donor_group": dg} for dg in settings.donor_groups],
-                )
-
-            # Insert new outcomes
-            if settings.outcomes:
-                outcome_insert_query = text(
-                    "INSERT INTO user_outcomes (user_id, outcome_id) VALUES (:user_id, :outcome_id)"
-                )
-                connection.execute(
-                    outcome_insert_query,
-                    [{"user_id": user_id, "outcome_id": outcome_id} for outcome_id in settings.outcomes],
-                )
-
-            # Insert new field contexts
-            if settings.field_contexts:
-                fc_insert_query = text(
-                    "INSERT INTO user_field_contexts (user_id, field_context_id) VALUES (:user_id, :fc_id)"
-                )
-                connection.execute(
-                    fc_insert_query,
-                    [{"user_id": user_id, "fc_id": fc_id} for fc_id in settings.field_contexts],
-                )
+            role_result = connection.execute(text("SELECT id FROM roles WHERE name = 'proposal writer'"))
+            default_role = role_result.fetchone()
+            if not default_role:
+                raise RuntimeError("Required default role 'proposal writer' is not configured")
+            connection.execute(
+                text("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, :role_id)"),
+                {"user_id": user_id, "role_id": default_role[0]},
+            )
 
         return JSONResponse(status_code=201, content={"message": "Signup successful! Please log in."})
     except Exception as e:
@@ -388,7 +359,7 @@ async def login(request: Request):
 
             if not user:
                 logging.warning(f"Login attempt failed for non-existent user: {identifier}")
-                return JSONResponse(status_code=404, content={"error": "User does not exist!"})
+                return invalid_credentials_response()
 
             # user_data is guaranteed to be a tuple here because user exists
             if user_data is None:
@@ -404,7 +375,7 @@ async def login(request: Request):
 
         if not user_data:
             logging.warning(f"Login attempt failed for non-existent user: {identifier}")
-            return JSONResponse(status_code=404, content={"error": "User does not exist!"})
+            return invalid_credentials_response()
 
         # user_data is guaranteed to be a tuple here because user_data check passed
         if user_data is None:
@@ -414,7 +385,7 @@ async def login(request: Request):
 
         if not user:
             logging.warning(f"Login attempt failed for non-existent user: {identifier}")
-            return JSONResponse(status_code=404, content={"error": "User does not exist!"})
+            return invalid_credentials_response()
 
         # user_data is guaranteed to be a tuple here because user exists
         if user_data is None:
@@ -423,7 +394,7 @@ async def login(request: Request):
         user_id, email, _, stored_password = user_data
         if not check_password_hash(stored_password, password):
             logging.warning(f"Login attempt failed with invalid password for user ID: {user_id}")
-            return JSONResponse(status_code=401, content={"error": "Invalid password!"})
+            return invalid_credentials_response()
 
         # 3. Create a JWT token and set Redis session
         token = jwt.encode(
@@ -491,7 +462,7 @@ async def profile(current_user: dict = Depends(get_current_user)):
         security_error = error_handler.create_security_error(
             "llm_unavailable", details=f"Profile fetch failed: {str(e)}"
         )
-        raise security_error
+        raise security_error from e
 
 
 @router.post("/request-role")

@@ -3,6 +3,7 @@ import os
 import json
 import logging
 from typing import Dict, Any, Optional
+from urllib.parse import urlparse
 
 #  Third-Party Libraries
 from fastapi import HTTPException
@@ -72,9 +73,21 @@ logger = logging.getLogger(__name__)
 
 # --- Application Configuration ---
 
-# Secret key for JWT encoding and decoding.
-# It's crucial to set this in the environment for production.
-SECRET_KEY = get_secret("secret_key") or os.getenv("SECRET_KEY", "your_default_dev_secret")
+DEFAULT_DEV_SECRET = "your_default_dev_secret"
+APP_ENV = os.getenv("APP_ENV", "development").strip().lower()
+IS_TESTING = os.getenv("TESTING", "false").lower() == "true"
+
+
+def validate_secret_key(secret_key: str | None, environment: str, testing: bool) -> None:
+    """Reject absent or documented development signing keys outside local use."""
+    if testing or environment == "development":
+        return
+    if not secret_key or secret_key == DEFAULT_DEV_SECRET or len(secret_key) < 32:
+        raise ValueError("SECRET_KEY must be explicitly configured with at least 32 characters")
+
+
+SECRET_KEY = get_secret("secret_key") or os.getenv("SECRET_KEY") or DEFAULT_DEV_SECRET
+validate_secret_key(SECRET_KEY, APP_ENV, IS_TESTING)
 
 # --- EntraID Configuration ---
 ENTRA_TENANT_ID = get_secret("entra_tenant_id") or os.getenv("ENTRA_TENANT_ID")
@@ -134,15 +147,26 @@ on_gcp = os.getenv("DB_HOST") != "localhost"
 
 # --- CORS Configuration ---
 
+
 # List of allowed origins for Cross-Origin Resource Sharing (CORS).
 # This controls which frontend URLs can make requests to the API.
-origins = [
-    # "https://edouard-legoupil.github.io", # Client in github page
-    "http://localhost:8503",
-    "http://localhost:8503",  # Client for local dev
-    "https://localhost:8080",
-    "https://proposalgen-290826171799.europe-west9.run.app/",  ## GCP deployment
-]
+def _csv_setting(name: str, default: str) -> list[str]:
+    return [value.strip().rstrip("/") for value in os.getenv(name, default).split(",") if value.strip()]
+
+
+origins = _csv_setting(
+    "CORS_ORIGINS",
+    "http://localhost:8503,http://localhost:5173,https://localhost:8080,"
+    "https://proposalgen-290826171799.europe-west9.run.app",
+)
+allowed_hosts = _csv_setting(
+    "ALLOWED_HOSTS",
+    "localhost,127.0.0.1,testserver,proposalgen-290826171799.europe-west9.run.app",
+)
+if any("://" in host or urlparse(f"//{host}").hostname != host for host in allowed_hosts):
+    raise ValueError("ALLOWED_HOSTS must contain hostnames, not URLs")
+
+trusted_proxy_ips = set(_csv_setting("TRUSTED_PROXY_IPS", ""))
 
 
 # --- Proposal Configuration ---
@@ -282,7 +306,7 @@ def load_proposal_template(template_name: str, use_db_first: bool = True):
             return proposal_data
     except json.JSONDecodeError:
         logger.error(f"Error decoding JSON from proposal template file: {template_path}")
-        raise HTTPException(status_code=500, detail="Error parsing proposal template file.")
+        raise HTTPException(status_code=500, detail="Error parsing proposal template file.") from None
 
 
 def _load_template_from_db(template_name: str) -> Optional[Dict[str, Any]]:

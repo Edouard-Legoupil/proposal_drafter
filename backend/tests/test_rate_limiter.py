@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 # Third-Party Libraries
 import pytest
 from fastapi import HTTPException
+from starlette.requests import Request
 
 # Internal Modules
 from backend.core.rate_limiter import RateLimiter, get_rate_limiter
@@ -83,7 +84,7 @@ async def test_request_based_rate_limiting():
     mock_request.state.user = {"user_id": "test_user"}
 
     # Test within limits
-    for i in range(10):
+    for _ in range(10):
         result = await limiter.check_rate_limit(mock_request, "llm", 0)
         assert result is True
 
@@ -126,7 +127,7 @@ async def test_rate_limit_reset_after_window():
     mock_request.state.user = {"user_id": "test_user"}
 
     # Make requests to hit the limit
-    for i in range(10):
+    for _ in range(10):
         await limiter.check_rate_limit(mock_request, "llm", 0)
 
     # Verify we're at the limit
@@ -183,7 +184,7 @@ async def test_different_user_tiers():
     mock_free_request = MagicMock()
     mock_free_request.state.user = {"user_id": "free_user", "role": "guest"}
 
-    for i in range(10):
+    for _ in range(10):
         await limiter.check_rate_limit(mock_free_request, "llm", 0)
 
     with pytest.raises(HTTPException):
@@ -193,7 +194,7 @@ async def test_different_user_tiers():
     mock_premium_request = MagicMock()
     mock_premium_request.state.user = {"user_id": "premium_user", "role": "premium"}
 
-    for i in range(50):
+    for _ in range(50):
         result = await limiter.check_rate_limit(mock_premium_request, "llm", 0)
         assert result is True
 
@@ -320,7 +321,7 @@ async def test_concurrent_rate_limiting():
 
     # Test concurrent requests
     tasks = []
-    for i in range(8):  # Stay under the 10 request limit
+    for _ in range(8):  # Stay under the 10 request limit
         tasks.append(limiter.check_rate_limit(mock_request, "llm", 0))
 
     results = await asyncio.gather(*tasks)
@@ -352,3 +353,57 @@ async def test_rate_limiter_with_global_instance():
 
     result = await limiter.check_rate_limit(mock_request, "llm", 0)
     assert result is True
+
+
+def _proxy_request(peer_ip, forwarded_for=None):
+    headers = []
+    if forwarded_for:
+        headers.append((b"x-forwarded-for", forwarded_for.encode()))
+    return Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "path": "/api/login",
+            "headers": headers,
+            "client": (peer_ip, 1234),
+            "server": ("localhost", 80),
+        }
+    )
+
+
+def test_forwarded_ip_is_ignored_from_untrusted_peer():
+    limiter = RateLimiter(trusted_proxies={"10.0.0.5"})
+    key = asyncio.run(limiter.get_rate_limit_key(_proxy_request("198.51.100.4", "203.0.113.9")))
+    assert key == "ip:198.51.100.4"
+
+
+def test_forwarded_ip_is_used_from_trusted_proxy():
+    limiter = RateLimiter(trusted_proxies={"10.0.0.5"})
+    key = asyncio.run(limiter.get_rate_limit_key(_proxy_request("10.0.0.5", "203.0.113.9, 10.0.0.5")))
+    assert key == "ip:203.0.113.9"
+
+
+class FakeRedis:
+    def __init__(self):
+        self.values = {}
+        self.expirations = {}
+
+    def incr(self, key):
+        self.values[key] = self.values.get(key, 0) + 1
+        return self.values[key]
+
+    def expire(self, key, seconds):
+        self.expirations[key] = seconds
+
+    def ttl(self, key):
+        return self.expirations.get(key, -1)
+
+
+def test_shared_redis_counter_is_used_when_available():
+    storage = FakeRedis()
+    limiter = RateLimiter(redis_storage=storage, trusted_proxies=set())
+    request = _proxy_request("198.51.100.4")
+    asyncio.run(limiter.check_rate_limit(request, endpoint_type="login", max_requests=2, window_seconds=60))
+    asyncio.run(limiter.check_rate_limit(request, endpoint_type="login", max_requests=2, window_seconds=60))
+    assert storage.values == {"rate_limit:login:ip:198.51.100.4": 2}
+    assert storage.expirations == {"rate_limit:login:ip:198.51.100.4": 60}

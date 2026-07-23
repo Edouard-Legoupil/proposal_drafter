@@ -7,7 +7,7 @@ from typing import Optional, Any
 #  Third-Party Libraries
 import jwt
 from fastapi import Request, HTTPException, Depends
-from redis.exceptions import RedisError
+from redis.exceptions import RedisError  # type: ignore[import-untyped]
 from sqlalchemy import text
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -95,7 +95,8 @@ def get_current_user(request: Request) -> dict:
             if not is_session_token_active(user_id, token):
                 raise HTTPException(status_code=401, detail="Session is no longer active.")
 
-            # Try to fetch roles (including inherited from teams), donor_groups, and outcomes, but handle empty results gracefully.
+            # Fetch direct and inherited roles, tolerating deployments where
+            # optional access tables have not been created yet.
             # We use nested transactions (savepoints) to ensure that if one query fails,
             # it doesn't poison the entire connection/transaction.
             roles = []
@@ -140,9 +141,9 @@ def get_current_user(request: Request) -> dict:
             }
 
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired.")
+        raise HTTPException(status_code=401, detail="Token expired.") from None
     except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token.")
+        raise HTTPException(status_code=401, detail="Invalid token.") from None
     except HTTPException:
         raise
     except Exception as e:
@@ -151,7 +152,7 @@ def get_current_user(request: Request) -> dict:
             f"Authentication error for user {email if 'email' in locals() else 'unknown'}: {e}",
             exc_info=True,
         )
-        raise HTTPException(status_code=500, detail="Authentication error")
+        raise HTTPException(status_code=500, detail="Authentication error") from e
 
 
 def is_system_admin(current_user: dict = Depends(get_current_user)):
@@ -161,6 +162,20 @@ def is_system_admin(current_user: dict = Depends(get_current_user)):
     if not current_user.get("is_admin"):
         raise HTTPException(status_code=403, detail="Admin access required.")
     return current_user
+
+
+def require_any_role(*required_roles: str):
+    """Build a dependency that requires at least one direct or inherited role."""
+    normalized_required = {role.lower().replace("_", " ").strip() for role in required_roles}
+
+    def dependency(current_user: dict = Depends(get_current_user)) -> dict:
+        user_roles = current_user.get("all_roles", current_user.get("roles", []))
+        normalized_user_roles = {role.lower().replace("_", " ").strip() for role in user_roles}
+        if normalized_required.isdisjoint(normalized_user_roles):
+            raise HTTPException(status_code=403, detail="Required role is not assigned.")
+        return current_user
+
+    return dependency
 
 
 def check_user_group_access(
@@ -178,14 +193,15 @@ def check_user_group_access(
     """
     # Use all_roles to include inherited roles
     user_roles = current_user.get("all_roles", current_user.get("roles", []))
-    current_user_id = current_user.get("user_id")
-
     # Donor check
     if donor_id:
         if "knowledge manager donors" not in user_roles:
             raise HTTPException(
                 status_code=403,
-                detail="Access denied. You do not have the 'knowledge manager donors' role required to edit donor cards.",
+                detail=(
+                    "Access denied. You do not have the 'knowledge manager donors' "
+                    "role required to edit donor cards."
+                ),
             )
 
     # Outcome check
@@ -193,7 +209,10 @@ def check_user_group_access(
         if "knowledge manager outcome" not in user_roles:
             raise HTTPException(
                 status_code=403,
-                detail="Access denied. You do not have the 'knowledge manager outcome' role required to edit outcome cards.",
+                detail=(
+                    "Access denied. You do not have the 'knowledge manager outcome' "
+                    "role required to edit outcome cards."
+                ),
             )
 
     # Field context check (role-based)
@@ -201,7 +220,10 @@ def check_user_group_access(
         if "knowledge manager field context" not in user_roles:
             raise HTTPException(
                 status_code=403,
-                detail="Access denied. You do not have the 'knowledge manager field context' role required to edit field context cards.",
+                detail=(
+                    "Access denied. You do not have the 'knowledge manager field context' "
+                    "role required to edit field context cards."
+                ),
             )
 
 
@@ -209,6 +231,7 @@ def check_user_group_access(
 __all__ = [
     "get_current_user",
     "is_system_admin",
+    "require_any_role",
     "check_user_group_access",
     "generate_password_hash",
     "check_password_hash",

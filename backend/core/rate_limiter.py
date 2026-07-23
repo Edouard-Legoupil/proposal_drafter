@@ -10,6 +10,8 @@ from fastapi.security import HTTPBearer
 
 #  Internal Modules
 from backend.core.error_handlers import get_error_handler
+from backend.core.config import trusted_proxy_ips
+from backend.core.redis import is_redis_available, redis_client
 
 #  Configure logging
 logger = logging.getLogger(__name__)
@@ -32,8 +34,12 @@ class RateLimiter:
     - Integration with existing security system
     """
 
-    def __init__(self):
+    def __init__(self, redis_storage=None, trusted_proxies=None):
         self.error_handler = get_error_handler()
+        self.redis_storage = (
+            redis_storage if redis_storage is not None else (redis_client if is_redis_available() else None)
+        )
+        self.trusted_proxies = set(trusted_proxy_ips if trusted_proxies is None else trusted_proxies)
 
         # Rate limit configurations
         self.rate_limits = {
@@ -79,7 +85,12 @@ class RateLimiter:
             return f"user:{user['user_id']}"
         else:
             # Fall back to IP address for anonymous users
-            client_ip = request.headers.get("X-Forwarded-For") or (request.client.host if request.client else "unknown")
+            peer_ip = request.client.host if request.client else "unknown"
+            forwarded_for = request.headers.get("X-Forwarded-For")
+            if peer_ip in self.trusted_proxies and forwarded_for:
+                client_ip = forwarded_for.split(",", 1)[0].strip()
+            else:
+                client_ip = peer_ip
             return f"ip:{client_ip}"
 
     def get_user_tier(self, user: Optional[Dict[str, Any]]) -> str:
@@ -157,6 +168,17 @@ class RateLimiter:
         request_window = window_seconds if window_seconds is not None else limits["requests"]["window"]
         token_limit = limits["tokens"]["limit"]
         token_window = limits["tokens"]["window"]
+
+        if self.redis_storage is not None:
+            redis_key = f"rate_limit:{endpoint_type}:{limit_key}"
+            request_count = self.redis_storage.incr(redis_key)
+            if request_count == 1:
+                self.redis_storage.expire(redis_key, request_window)
+            if request_count > request_limit:
+                retry_after = max(1, int(self.redis_storage.ttl(redis_key)))
+                self._raise_rate_limit_exceeded(retry_after, tier)
+            if token_count == 0:
+                return True
 
         # Check request-based rate limiting
         if now - storage["request_timestamp"] > request_window:

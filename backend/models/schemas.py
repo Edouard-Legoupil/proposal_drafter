@@ -54,6 +54,31 @@ class UserSettings(BaseModel):
     requested_team_memberships: Optional[List[uuid.UUID]] = []
 
 
+class SignupPreferences(BaseModel):
+    """Preferences accepted during public registration.
+
+    Access grants are deliberately absent: roles and resource access are
+    assigned by the server or through an approval workflow.
+    """
+
+    geographic_coverage_type: Optional[str] = None
+    geographic_coverage_region: Optional[str] = None
+    geographic_coverage_country: Optional[str] = None
+
+
+class SelfServiceUserSettings(BaseModel):
+    """Fields a user may change or request without administrative approval."""
+
+    geographic_coverage_type: Optional[str] = None
+    geographic_coverage_region: Optional[str] = None
+    geographic_coverage_country: Optional[str] = None
+    requested_roles: List[int] = Field(default_factory=list)
+    requested_donor_ids: List[uuid.UUID] = Field(default_factory=list)
+    requested_outcomes: List[uuid.UUID] = Field(default_factory=list)
+    requested_field_contexts: List[uuid.UUID] = Field(default_factory=list)
+    requested_team_memberships: List[uuid.UUID] = Field(default_factory=list)
+
+
 class User(BaseModel):
     id: uuid.UUID
     email: str
@@ -260,7 +285,7 @@ class DonorTemplateStatusUpdate(BaseModel):
     status: str  # pending, approved, rejected, published
 
 
-### new class for incident
+# Incident schemas
 
 
 class ArtifactType(str, Enum):

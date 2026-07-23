@@ -10,7 +10,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy import text
 
 #  Internal Modules
-from backend.core.config import origins
+from backend.core.config import APP_ENV, allowed_hosts, origins
 from backend.core.db import engine
 
 # This module contains all custom middleware, exception handlers, and background tasks.
@@ -21,11 +21,6 @@ def setup_security_middleware(app):
     Configures and adds security-related middleware to the app.
     This includes security headers, trusted host middleware, and other security enhancements.
     """
-    # Temporarily disable TrustedHostMiddleware to fix startup issues
-    # allowed_hosts = ["localhost", "127.0.0.1", "*"]
-    # Add TrustedHostMiddleware to prevent HTTP Host header attacks
-    # For development, allow localhost and 127.0.0.1 in addition to the CORS origins
-    allowed_hosts = list(origins) + ["localhost", "127.0.0.1"]
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
 
     # Add security headers middleware
@@ -103,23 +98,15 @@ def get_cookie_settings(request: Request) -> dict:
     Dynamically configures secure cookie settings based on the request's origin.
     This helps handle different environments (e.g., localhost vs. production).
 
-    - In production (HTTPS), cookies are set with `Secure` and `SameSite=None`.
-    - In local development (HTTP), these restrictions are relaxed.
+    Cookies remain same-site so browser requests cannot attach the session to
+    cross-site state-changing requests.
     """
     host = request.headers.get("host", "")
-    origin = request.headers.get("origin", "")
-
-    # Detect if running in a strict localhost environment.
-    is_strict_localhost = all(
-        [
-            any(["localhost" in host, "127.0.0.1" in host]),
-            any(["localhost" in (origin or ""), "127.0.0.1" in (origin or "")]),
-        ]
-    )
+    is_localhost = "localhost" in host or "127.0.0.1" in host
 
     settings = {
-        "secure": not is_strict_localhost,
-        "samesite": "lax" if is_strict_localhost else "none",
+        "secure": APP_ENV != "development" or not is_localhost,
+        "samesite": "lax",
         "domain": None,
     }
     return settings
