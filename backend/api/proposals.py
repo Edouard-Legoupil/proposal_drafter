@@ -31,7 +31,7 @@ from backend.core.authorization import (
 )
 from backend.core.db import get_engine
 from backend.core.redis import redis_client
-from backend.core.security import get_current_user
+from backend.core.security import get_current_user, require_any_role
 from backend.core.config import (
     get_available_templates,
     load_proposal_template,
@@ -2784,7 +2784,10 @@ async def get_geographic_coverages():
 
 
 @router.post("/donors", status_code=201)
-async def create_donor(request: CreateDonorRequest, current_user: dict = Depends(get_current_user)):
+async def create_donor(
+    request: CreateDonorRequest,
+    current_user: dict = Depends(require_any_role("knowledge manager donors", "system admin")),
+):
     """
     Creates a new donor.
     """
@@ -2794,7 +2797,7 @@ async def create_donor(request: CreateDonorRequest, current_user: dict = Depends
             connection.execute(
                 text("INSERT INTO donors (id, name, created_by) VALUES (:id, :name, :user_id)"),
                 {
-                    "id": new_id,
+                    "id": str(new_id),
                     "name": request.name,
                     "user_id": current_user["user_id"],
                 },
@@ -2806,7 +2809,10 @@ async def create_donor(request: CreateDonorRequest, current_user: dict = Depends
 
 
 @router.post("/outcomes", status_code=201)
-async def create_outcome(request: CreateOutcomeRequest, current_user: dict = Depends(get_current_user)):
+async def create_outcome(
+    request: CreateOutcomeRequest,
+    current_user: dict = Depends(require_any_role("knowledge manager outcome", "system admin")),
+):
     """
     Creates a new outcome.
     """
@@ -2816,7 +2822,7 @@ async def create_outcome(request: CreateOutcomeRequest, current_user: dict = Dep
             connection.execute(
                 text("INSERT INTO outcomes (id, name, created_by) VALUES (:id, :name, :user_id)"),
                 {
-                    "id": new_id,
+                    "id": str(new_id),
                     "name": request.name,
                     "user_id": current_user["user_id"],
                 },
@@ -2828,7 +2834,10 @@ async def create_outcome(request: CreateOutcomeRequest, current_user: dict = Dep
 
 
 @router.post("/field-contexts", status_code=201)
-async def create_field_context(request: CreateFieldContextRequest, current_user: dict = Depends(get_current_user)):
+async def create_field_context(
+    request: CreateFieldContextRequest,
+    current_user: dict = Depends(require_any_role("knowledge manager field context", "system admin")),
+):
     """
     Creates a new field context.
     """
@@ -2840,7 +2849,7 @@ async def create_field_context(request: CreateFieldContextRequest, current_user:
                     "INSERT INTO field_contexts (id, title, name, category, geographic_coverage, created_by) VALUES (:id, :title, :name, :category, :geo, :user_id)"
                 ),
                 {
-                    "id": new_id,
+                    "id": str(new_id),
                     "title": request.name,
                     "name": request.name,
                     "category": request.category,
