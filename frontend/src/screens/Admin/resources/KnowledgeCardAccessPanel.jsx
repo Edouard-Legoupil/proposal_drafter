@@ -1,9 +1,13 @@
 import React, { useMemo, useState } from 'react'
-import GrantTable from '../components/GrantTable'
+import GrantSection from '../components/GrantSection'
 import AuditTimeline from '../components/AuditTimeline'
+import ErrorBanner from '../components/ErrorBanner'
 import SubjectPicker from '../components/SubjectPicker'
 import ResourcePicker from '../components/ResourcePicker'
 import { useAccessData, useAdminUsers, useAdminOptions, useAdminResourceList } from '../hooks/useAccessData'
+import { useGrantSection } from '../hooks/useGrantSection'
+import { useTesterSection } from '../hooks/useTesterSection'
+import TesterSection from '../components/TesterSection'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || '/api'
 
@@ -44,12 +48,20 @@ const kcColumns = [
 
 export default function KnowledgeCardAccessPanel({ resourceId: initialResourceId }) {
   const [selectedId, setSelectedId] = useState(initialResourceId !== 'latest' ? initialResourceId : null)
-  const [statusMessage, setStatusMessage] = useState('')
-  const [grantForm, setGrantForm] = useState({ subjectType: 'user', subjectId: '', permissions: ['read'] })
   const [ownerCandidate, setOwnerCandidate] = useState('')
-  const [tester, setTester] = useState({ subjectType: 'user', subjectId: '', operation: 'GET' })
-  const [testerResult, setTesterResult] = useState(null)
+  const [statusMessage, setStatusMessage] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
+  const { grantForm, setGrantForm, statusMessage: grantMsg, actionLoading: grantLoading, handleGrant, revokeGrant } =
+    useGrantSection({
+      endpoint: `/admin/knowledge-cards/${selectedId}/access`,
+      initialForm: { subjectType: 'user', subjectId: '', permissions: ['read'] },
+      refresh
+    })
+  const { tester, setTester, testerResult, statusMessage: testMsg, actionLoading: testLoading, handleTester } =
+    useTesterSection({
+      endpoint: `/admin/knowledge-cards/${selectedId}/access/test`,
+      initialForm: { subjectType: 'user', subjectId: '', operation: 'GET' }
+    })
 
   const { items: cards, loading: listLoading, error: listError } = useAdminResourceList('knowledge-cards')
   const { data: access, loading, error, refresh } = useAccessData(
@@ -78,58 +90,6 @@ export default function KnowledgeCardAccessPanel({ resourceId: initialResourceId
     })
   }
 
-  const handleGrant = async (e) => {
-    e.preventDefault()
-    if (!grantForm.subjectId) {
-      setStatusMessage('Select a subject to grant access')
-      return
-    }
-    setActionLoading(true)
-    setStatusMessage('Granting access…')
-    try {
-      const res = await fetch(`${API_BASE_URL}/admin/knowledge-cards/${selectedId}/access`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subject_type: grantForm.subjectType,
-          subject_id: grantForm.subjectId,
-          permissions: grantForm.permissions
-        })
-      })
-      if (!res.ok) throw new Error('Unable to share knowledge card')
-      setStatusMessage('Shared successfully')
-      setGrantForm(prev => ({ ...prev, subjectId: '' }))
-      await refresh()
-    } catch (err) {
-      console.error(err)
-      setStatusMessage(err.message)
-    } finally {
-      setActionLoading(false)
-    }
-  }
-
-  const revokeGrant = async (grantId) => {
-    setActionLoading(true)
-    setStatusMessage('Revoking…')
-    try {
-      const res = await fetch(`${API_BASE_URL}/admin/knowledge-cards/${selectedId}/access`, {
-        method: 'DELETE',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ grant_id: grantId })
-      })
-      if (!res.ok) throw new Error('Failed to revoke access')
-      setStatusMessage('Access revoked')
-      await refresh()
-    } catch (err) {
-      console.error(err)
-      setStatusMessage(err.message)
-    } finally {
-      setActionLoading(false)
-    }
-  }
-
   const handleTransfer = async (e) => {
     e.preventDefault()
     if (!ownerCandidate) {
@@ -148,32 +108,6 @@ export default function KnowledgeCardAccessPanel({ resourceId: initialResourceId
       if (!res.ok) throw new Error('Owner transfer failed')
       setStatusMessage('Owner updated')
       await refresh()
-    } catch (err) {
-      console.error(err)
-      setStatusMessage(err.message)
-    } finally {
-      setActionLoading(false)
-    }
-  }
-
-  const handleTester = async (e) => {
-    e.preventDefault()
-    if (!tester.subjectId) {
-      setStatusMessage('Select a subject to test')
-      return
-    }
-    setActionLoading(true)
-    setStatusMessage('Testing access…')
-    try {
-      const res = await fetch(`${API_BASE_URL}/admin/knowledge-cards/${selectedId}/access/test`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(tester)
-      })
-      if (!res.ok) throw new Error('Tester failed')
-      setTesterResult(await res.json())
-      setStatusMessage('Tester returned a result')
     } catch (err) {
       console.error(err)
       setStatusMessage(err.message)
@@ -218,7 +152,7 @@ export default function KnowledgeCardAccessPanel({ resourceId: initialResourceId
         <button type="button" className="ghost-button back-btn" onClick={() => setSelectedId(null)}>
           <i className="fa-solid fa-arrow-left" /> All knowledge cards
         </button>
-        <div className="panel-error">{error}</div>
+        <ErrorBanner message={error} />
       </section>
     )
   }
@@ -239,41 +173,20 @@ export default function KnowledgeCardAccessPanel({ resourceId: initialResourceId
 
       <div className="grant-section">
         <h3>Shared Subjects</h3>
-        <GrantTable
+        <GrantSection
           grants={grants}
           permissionOptions={permissionOptions}
-          onRevoke={revokeGrant}
           showScope={false}
+          grantForm={grantForm}
+          setGrantForm={setGrantForm}
+          statusMessage={grantMsg}
+          actionLoading={grantLoading}
+          onGrant={handleGrant}
+          onRevoke={revokeGrant}
+          users={users}
+          options={options}
           emptyMessage="No shared subjects"
         />
-        <form className="grant-form" onSubmit={handleGrant}>
-          <label>
-            Subject type
-            <select value={grantForm.subjectType} onChange={e => setGrantForm(prev => ({ ...prev, subjectType: e.target.value, subjectId: '' }))}>
-              <option value="user">User</option>
-              <option value="team">Team</option>
-            </select>
-          </label>
-          <label>
-            {grantForm.subjectType === 'user' ? 'User' : 'Team'}
-            <SubjectPicker
-              subjectType={grantForm.subjectType}
-              value={grantForm.subjectId}
-              onChange={val => setGrantForm(prev => ({ ...prev, subjectId: val }))}
-              users={users}
-              options={options}
-            />
-          </label>
-          <fieldset className="permissions-row">
-            {permissionOptions.map(opt => (
-              <label key={opt.key}>
-                <input type="checkbox" checked={grantForm.permissions.includes(opt.key)} onChange={() => togglePermission(opt.key)} />
-                {opt.label}
-              </label>
-            ))}
-          </fieldset>
-          <button type="submit" className="primary-button" disabled={actionLoading}>Share knowledge card</button>
-        </form>
       </div>
 
       <div className="ownership-panel">
@@ -296,31 +209,18 @@ export default function KnowledgeCardAccessPanel({ resourceId: initialResourceId
 
       <div className="tester-panel">
         <h3>Tester</h3>
-        <form className="tester-form" onSubmit={handleTester}>
-          <label>
-            Subject
-            <SubjectPicker
-              subjectType={tester.subjectType}
-              value={tester.subjectId}
-              onChange={val => setTester(prev => ({ ...prev, subjectId: val }))}
-              users={users}
-              options={options}
-            />
-          </label>
-          <label>
-            Operation
-            <select value={tester.operation} onChange={e => setTester(prev => ({ ...prev, operation: e.target.value }))}>
-              {operationOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-            </select>
-          </label>
-          <button type="submit" className="primary-button" disabled={actionLoading}>Test</button>
-        </form>
-        {testerResult && (
-          <div className="tester-result">
-            <p><strong>{testerResult.allowed ? '✅ Allowed' : '❌ Denied'}</strong> — {testerResult.reason || 'No reason provided'}</p>
-            <p>Source: {testerResult.source || testerResult.permission_source || '—'}</p>
-          </div>
-        )}
+        <TesterSection
+          tester={tester}
+          setTester={setTester}
+          testerResult={testerResult}
+          statusMessage={testMsg}
+          actionLoading={testLoading}
+          onTest={handleTester}
+          operationOptions={operationOptions}
+          users={users}
+          options={options}
+          subjectTypeOptions={['user', 'team']}
+        />
       </div>
 
       <section className="audit-panel">

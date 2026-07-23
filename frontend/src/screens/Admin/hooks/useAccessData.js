@@ -5,10 +5,14 @@ const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || '/api'
 export function useAccessData(relativePath) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(!!relativePath)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(relativePath ? '' : 'Metrics access management not available')
 
   const fetchData = useCallback(async () => {
-    if (!relativePath) return
+    if (!relativePath) {
+      setError('Metrics access management not available')
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError('')
     try {
@@ -16,7 +20,14 @@ export function useAccessData(relativePath) {
         credentials: 'include'
       })
       if (!res.ok) {
-        throw new Error(`Failed to load access data (${res.status})`)
+        const errorMsg = `Failed to load access data (${res.status})`
+        // Special handling for 404 errors
+        if (res.status === 404) {
+          setError('Metrics access management not available')
+        } else {
+          setError(errorMsg)
+        }
+        return
       }
       const payload = await res.json()
       setData(payload)
@@ -46,12 +57,14 @@ export function useAdminUsers() {
   const [error, setError] = useState('')
 
   useEffect(() => {
+    const controller = new AbortController()
     let active = true
     async function load() {
       setLoading(true)
       try {
         const res = await fetch(`${API_BASE_URL}/admin/users`, {
-          credentials: 'include'
+          credentials: 'include',
+          signal: controller.signal
         })
         if (!res.ok) {
           throw new Error('Unable to load users')
@@ -68,6 +81,7 @@ export function useAdminUsers() {
     load()
     return () => {
       active = false
+      controller.abort()
     }
   }, [])
 

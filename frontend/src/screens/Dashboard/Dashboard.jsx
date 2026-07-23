@@ -7,7 +7,7 @@ import Base from '../../components/Base/Base'
 import Project from './components/Project/Project'
 import KnowledgeCardPreview from './components/KnowledgeCard/KnowledgeCardPreview'
 import DonorTemplate from './components/DonorTemplate/DonorTemplate'
-import MetricsDashboard from './components/MetricsDashboard/MetricsDashboard'
+import MetricsDashboard from '../MetricsDashboard/MetricsDashboard'
 import SingleSelectUserModal from '../../components/SingleSelectUserModal/SingleSelectUserModal'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
@@ -657,7 +657,7 @@ export default function Dashboard() {
                         </section>
 
                         <section id="metrics-panel" role="tabpanel" className={`tab-panel ${selectedTab === 'metrics' ? 'active' : ''}`} hidden={selectedTab !== 'metrics'}>
-                                {selectedTab === 'metrics' && <MetricsDashboard />}
+                                {selectedTab === 'metrics' && <MetricsDashboard user={currentUser} dateRange={{ start: null, end: null }} />}
                         </section>
 
                         <section id="other-panel" role="tabpanel" className={`tab-panel ${selectedTab === 'other' ? 'active' : ''}`} hidden={selectedTab !== 'other'}>

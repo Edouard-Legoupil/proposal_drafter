@@ -15,7 +15,7 @@ const AuthProvider = ({ children }) => {
     roles: ['proposal writer'],
     all_roles: ['proposal writer'] // Add roles as needed for testing
   });
-  
+
   return (
     <AuthContext.Provider value={{ user, setUser }}>
       {children}
@@ -25,15 +25,13 @@ const AuthProvider = ({ children }) => {
 
 // Export the context for use in other components
 export { AuthContext };
-=======
-=======
 
 // Import your components
 import Login from './screens/Login';
 import Dashboard from './screens/Dashboard';
 import Proposals from './screens/Proposals';
 import KnowledgeCards from './screens/KnowledgeCards';
-import MetricsDashboard from './screens/Dashboard/components/MetricsDashboard/MetricsDashboard';
+import MetricsDashboard from './screens/MetricsDashboard/MetricsDashboard';
 import DonorTemplateDetail from './screens/DonorTemplateDetail/DonorTemplateDetail';
 import DonorTemplateRequest from './screens/DonorTemplateRequest/DonorTemplateRequest';
 import QualityGate from './screens/QualityGate/QualityGate';
@@ -58,7 +56,7 @@ function App() {
             {/* Protected routes with role requirements */}
             <Route path="dashboard/metrics" element={
               <ProtectedRoute permission="access_metrics">
-                <MetricsDashboard />
+                <MetricsDashboard user={null} dateRange={{ start: null, end: null }} />
               </ProtectedRoute>
             } />
 
@@ -92,7 +90,7 @@ function App() {
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Router>
-    </Provider>
+    </AuthProvider>
   );
 }
 

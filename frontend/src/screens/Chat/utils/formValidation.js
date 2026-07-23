@@ -16,12 +16,14 @@ export function getMissingFields(userPrompt, formData) {
   }
 
   for (const label in formData) {
-    const field = formData[label];
+    const field = formData[label]
     if (field?.mandatory) {
-      if (Array.isArray(field.value) && field.value.length === 0) {
-        missing.push(label);
-      } else if (!field.value || (typeof field.value === 'string' && !field.value.trim())) {
-        missing.push(label);
+      if (Array.isArray(field.value)) {
+        if (field.value.length === 0) missing.push(label)
+      } else if (typeof field.value === 'string') {
+        if (!field.value.trim()) missing.push(label)
+      } else if (field.value == null) {
+        missing.push(label)
       }
     }
   }

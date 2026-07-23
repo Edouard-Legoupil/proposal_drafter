@@ -1,0 +1,64 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`RegenerateModal Component > should match snapshot 1`] = `
+<DocumentFragment>
+  <dialog
+    class="Chat_regenerate"
+    data-testid="regenerate-dialog"
+    open=""
+  >
+    <header
+      class="Chat_regenerate_header"
+    >
+      Regenerate — Budget Section
+      <button
+        aria-label="Close"
+        data-testid="regenerate-dialog-close-button"
+        style="background: none; cursor: pointer; padding: 5px;"
+      >
+        <img
+          alt=""
+          src="close-icon.png"
+          style="width: 24px; height: 24px;"
+        />
+      </button>
+    </header>
+    <main
+      class="Chat_right"
+    >
+      <section
+        class="Chat_inputArea"
+      >
+        <textarea
+          class="Chat_inputArea_prompt"
+          data-testid="regenerate-dialog-prompt-input"
+          id="regenerate-prompt"
+          name="regenerate-prompt"
+        />
+        <div
+          class="Chat_inputArea_buttonContainer"
+          style="margin-top: 20px;"
+        >
+          <button
+            class="CommonButton  "
+            data-testid="regenerate-dialog-regenerate-button"
+            disabled=""
+            type="button"
+          >
+            <img
+              alt=""
+              aria-hidden="true"
+              class="Dashboard_top_createNewButton_icon"
+              role="presentation"
+              src="generate-icon.png"
+            />
+            <span>
+              Regenerate
+            </span>
+          </button>
+        </div>
+      </section>
+    </main>
+  </dialog>
+</DocumentFragment>
+`;

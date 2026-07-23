@@ -112,7 +112,7 @@ export default function Base(props) {
                                                 Settings
                                         </div>
                                          {userDetails.is_admin && (
-                                                 <div onClick={() => navigate('/admin/access/users/latest')} data-testid="admin-button">
+                                                 <div onClick={() => navigate('/admin/access/user-access/latest')} data-testid="admin-button">
                                                          <img src={settings_icon} style={{ filter: 'hue-rotate(90deg)' }} />
                                                          Admin
                                                  </div>

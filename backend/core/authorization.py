@@ -58,6 +58,7 @@ from backend.core.dependencies import get_db_session
 from backend.models.proposal import Proposal
 from backend.models.knowledge_card import KnowledgeCard
 from backend.models.template import Template
+from backend.models.team import TeamMember
 
 
 # Type for current user - dict from existing system
@@ -102,7 +103,7 @@ def has_permission(current_user: CurrentUser, permission: str) -> bool:
     """Check if current_user has a specific permission (including inherited roles)."""
     if is_admin(current_user):
         return True
-    
+
     # Check both direct roles and inherited roles
     all_roles = get_user_roles_with_inheritance(current_user)
     return permission in all_roles
@@ -671,18 +672,15 @@ async def check_proposal_access(
     proposal_id: Union[str, int], current_user: CurrentUser, db_connection=None
 ) -> Dict[str, Any]:
     """
-    Combined check for proposal access: ownership, team membership, or donor group membership.
+    Combined check for proposal access using the new object-level access control.
 
-    This function checks multiple access paths for proposals:
-    1. Admin users have full access
-    2. Owner can access
-    3. Team members can access (if proposal has team_id)
-    4. Donor group members can access (read-only, if proposal has donor_group_id)
+    This function uses the new check_object_access function that implements
+    the object-level access control specified in the access management spec.
 
     Args:
         proposal_id: ID of the proposal to check
         current_user: Current user dictionary from get_current_user
-        db_connection: Optional existing database connection
+        db_connection: Optional existing database connection (deprecated)
 
     Returns:
         The proposal data as a dictionary
@@ -691,93 +689,79 @@ async def check_proposal_access(
         HTTPException(404): If proposal doesn't exist
         HTTPException(403): If user doesn't have access
     """
-    user_id = get_user_id(current_user)
+    # Use the new object-level access control
+    try:
+        await check_object_access("proposal", proposal_id, current_user, "read")
 
-    # Admin bypass
-    if is_admin(current_user):
+        # If access is granted, return basic proposal info
+        user_id = get_user_id(current_user)
+
         try:
             with get_db_connection() as connection:
-                result = connection.execute(text("SELECT * FROM proposals WHERE id = :id"), {"id": proposal_id})
+                result = connection.execute(
+                    text("SELECT id, user_id, team_id FROM proposals WHERE id = CAST(:id AS UUID)"),
+                    {"id": str(proposal_id)},
+                )
                 proposal = result.fetchone()
+
                 if proposal is None:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail="Proposal not found",
-                    )
-                return dict(proposal)
-        except Exception:
+                    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Proposal not found")
+
+                return {
+                    "id": proposal[0],
+                    "owner_id": str(proposal[1]),
+                    "team_id": str(proposal[2]) if proposal[2] else None,
+                }
+        except Exception as e:
+            import logging
+
+            logger = logging.getLogger("security.authorization")
+            logger.error(f"Database error in check_proposal_access: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",
             )
-
-    # Query the proposal
-    try:
-        with get_db_connection() as connection:
-            result = connection.execute(
-                text("SELECT id, user_id FROM proposals WHERE id = CAST(:id AS UUID)"),
-                {"id": str(proposal_id)},
-            )
-            proposal = result.fetchone()
-
-            if proposal is None:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Proposal not found")
-
-            proposal_data = {
-                "id": proposal[0],
-                "owner_id": str(proposal[1]),
-                "team_id": None,  # Proposals don't have direct team_id in current schema
-                "donor_group_id": None,  # Proposals don't have direct donor_group_id in current schema
-            }
-
-            # Check ownership
-            if proposal_data["owner_id"] == user_id:
-                return proposal_data
-
-            # Check team membership
-            if proposal_data["team_id"] is not None:
-                try:
-                    await verify_team_membership(proposal_data["team_id"], current_user)
-                    return proposal_data
-                except HTTPException:
-                    pass  # Continue to next check
-
-            # Check donor group membership (read-only access)
-            if proposal_data["donor_group_id"] is not None:
-                try:
-                    await verify_donor_group_membership(proposal_data["donor_group_id"], current_user)
-                    return proposal_data
-                except HTTPException:
-                    pass
-
-            # No access granted
-            import logging
-
-            logger = logging.getLogger("security.authorization")
-            logger.warning(
-                "Unauthorized proposal access attempt",
-                extra={
-                    "user_id": user_id,
-                    "proposal_id": proposal_id,
-                    "action": "proposal_access_check",
-                    "result": "denied",
-                },
-            )
-
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
-
-    except Exception as e:
-        import logging
-
-        logger = logging.getLogger("security.authorization")
-        logger.error(f"Database error in check_proposal_access: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error",
-        )
+    except HTTPException:
+        raise
 
 
 async def check_knowledge_card_access(knowledge_card_id: int, current_user: CurrentUser) -> Dict[str, Any]:
+    """
+    Check knowledge card access using object-level access control.
+    """
+    try:
+        await check_object_access("knowledge_card", knowledge_card_id, current_user, "read")
+
+        # If access is granted, return basic knowledge card info
+        user_id = get_user_id(current_user)
+
+        try:
+            with get_db_connection() as connection:
+                result = connection.execute(
+                    text("SELECT id, created_by, team_id FROM knowledge_cards WHERE id = :id"),
+                    {"id": knowledge_card_id},
+                )
+                knowledge_card = result.fetchone()
+
+                if knowledge_card is None:
+                    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Knowledge card not found")
+
+                return {
+                    "id": knowledge_card[0],
+                    "created_by": str(knowledge_card[1]),
+                    "team_id": str(knowledge_card[2]) if knowledge_card[2] else None,
+                }
+        except Exception as e:
+            import logging
+
+            logger = logging.getLogger("security.authorization")
+            logger.error(f"Database error in check_knowledge_card_access: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            )
+    except HTTPException:
+        raise
     """
     Combined check for knowledge card access: ownership or shared access.
 
@@ -866,116 +850,162 @@ async def check_knowledge_card_access(knowledge_card_id: int, current_user: Curr
         )
 
 
-async def check_template_access(
-    template_id: int, current_user: CurrentUser, required_permission: str = "read"
-) -> Dict[str, Any]:
+async def check_object_access(
+    object_type: str, object_id: Union[str, int], current_user: CurrentUser, required_permission: str = "read"
+) -> bool:
     """
-    Combined check for template access: ownership, organization membership, or public.
+    Check object-level access control for proposals, knowledge cards, and templates.
+
+    This function implements the object-level access control specified in the access management spec.
+    It checks:
+    1. Admin users have full access
+    2. Owners have full access
+    3. Team members have access based on team permissions
+    4. Specific access rules defined in the object's access_rules field
 
     Args:
-        template_id: ID of the template to check
+        object_type: Type of object ('proposal', 'knowledge_card', 'template')
+        object_id: ID of the object to check
         current_user: Current user dictionary from get_current_user
-        required_permission: Required permission level ('read', 'write', 'delete')
+        required_permission: Required permission ('read', 'write', 'delete')
 
     Returns:
-        The template data as a dictionary
+        True if user has access, False otherwise
 
     Raises:
-        HTTPException(404): If template doesn't exist
+        HTTPException(404): If object doesn't exist
         HTTPException(403): If user doesn't have access
     """
     user_id = get_user_id(current_user)
 
     # Admin bypass
     if is_admin(current_user):
-        try:
-            with get_db_connection() as connection:
-                result = connection.execute(text("SELECT * FROM templates WHERE id = :id"), {"id": template_id})
-                template = result.fetchone()
-                if template is None:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail="Template not found",
-                    )
-                return dict(template)
-        except Exception:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Internal server error",
-            )
+        return True
 
-    # Query the template
+    # Map object types to models
+    model_map = {
+        "proposal": Proposal,
+        "knowledge_card": KnowledgeCard,
+        "template": Template,
+    }
+
+    model = model_map.get(object_type)
+    if model is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unknown object type: {object_type}",
+        )
+
     try:
-        with get_db_connection() as connection:
-            result = connection.execute(
-                text("SELECT id, owner_id, organization_id, is_public FROM templates WHERE id = :id"),
-                {"id": template_id},
-            )
-            template = result.fetchone()
+        async for session in get_db_session():
+            # Get the object
+            object_record = await session.get(model, str(object_id))
 
-            if template is None:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+            if object_record is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"{object_type.replace('_', ' ').title()} not found",
+                )
 
-            template_data = {
-                "id": template[0],
-                "owner_id": str(template[1]),
-                "organization_id": template[2],
-                "is_public": template[3],
-            }
+            # Check ownership
+            owner_id = getattr(object_record, "user_id", None) or getattr(object_record, "created_by", None)
+            if str(owner_id) == user_id:
+                return True  # Owners have full access
 
-            # Check ownership (full access)
-            if template_data["owner_id"] == user_id:
-                return template_data
+            # Check team membership and team-level permissions
+            team_id = getattr(object_record, "team_id", None)
+            if team_id:
+                # Check if user is active team member
+                is_team_member = await TeamMember.is_active_member(session, str(team_id), user_id)
 
-            # Check organization membership (for public templates or read access)
-            if template_data["organization_id"] is not None:
-                # Check if user is in the same organization
-                try:
-                    with get_db_connection() as conn:
-                        result = conn.execute(
-                            text(
-                                "SELECT 1 FROM organization_members "
-                                "WHERE organization_id = :org_id "
-                                "AND user_id = :user_id"
-                            ),
-                            {
-                                "org_id": template_data["organization_id"],
-                                "user_id": user_id,
-                            },
-                        )
-                        if result.fetchone() is not None and template_data["is_public"]:
-                            # Public template accessible to organization members
-                            if required_permission == "read":
-                                return template_data
-                except Exception:
-                    pass
+                if is_team_member:
+                    # Check access_rules for specific permissions
+                    access_rules = getattr(object_record, "access_rules", [])
+
+                    if not access_rules or access_rules == []:
+                        # Default: team members have read access
+                        if required_permission == "read":
+                            return True
+                    else:
+                        # Check if team has the required permission in access_rules
+                        for rule in access_rules:
+                            if rule.get("team_id") == str(team_id):
+                                permissions = rule.get("permissions", [])
+                                if required_permission in permissions:
+                                    return True
+
+            # Additional checks could go here (donor group membership, etc.)
 
             # No access granted
             import logging
 
             logger = logging.getLogger("security.authorization")
             logger.warning(
-                "Unauthorized template access attempt",
+                f"Unauthorized {object_type} access attempt",
                 extra={
                     "user_id": user_id,
-                    "template_id": template_id,
+                    "object_type": object_type,
+                    "object_id": object_id,
                     "required_permission": required_permission,
-                    "action": "template_access_check",
+                    "action": f"{object_type}_access_check",
                     "result": "denied",
                 },
             )
 
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
+    except HTTPException:
+        raise
     except Exception as e:
         import logging
 
         logger = logging.getLogger("security.authorization")
-        logger.error(f"Database error in check_template_access: {e}")
+        logger.error(f"Database error in check_object_access: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",
         )
+
+
+async def check_template_access(
+    template_id: Union[str, int], current_user: CurrentUser, required_permission: str = "read"
+) -> Dict[str, Any]:
+    """
+    Check template access using object-level access control.
+    """
+    try:
+        await check_object_access("template", template_id, current_user, required_permission)
+
+        # If access is granted, return basic template info
+        user_id = get_user_id(current_user)
+
+        try:
+            with get_db_connection() as connection:
+                result = connection.execute(
+                    text("SELECT id, created_by, team_id FROM templates WHERE id = :id"),
+                    {"id": str(template_id)},
+                )
+                template = result.fetchone()
+
+                if template is None:
+                    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+
+                return {
+                    "id": template[0],
+                    "created_by": str(template[1]),
+                    "team_id": str(template[2]) if template[2] else None,
+                }
+        except Exception as e:
+            import logging
+
+            logger = logging.getLogger("security.authorization")
+            logger.error(f"Database error in check_template_access: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            )
+    except HTTPException:
+        raise
 
 
 async def check_incident_access(

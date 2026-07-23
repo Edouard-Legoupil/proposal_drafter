@@ -1,50 +1,214 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../../mocks/server'
+import { MemoryRouter } from 'react-router-dom'
+import { WizardProvider } from '../../../context/WizardContext'
 
 import KnowledgeCardAccessPanel from './KnowledgeCardAccessPanel'
 
 describe('KnowledgeCardAccessPanel', () => {
-  it('renders owner info after payload loads', async () => {
+  const mockKnowledgeCards = [
+    {
+      id: 'kc-1',
+      title: 'Evacuation Plan for Sudan Crisis',
+      status: 'draft',
+      owner_name: 'Amina',
+      type: 'evacuation',
+      donor_name: 'UNHCR',
+      updated_at: '2026-05-15T14:30:00Z'
+    },
+    {
+      id: 'kc-2',
+      title: 'Health Response Protocol',
+      status: 'published',
+      owner_name: 'Kiran',
+      type: 'protocol',
+      outcome_name: 'Health Improved',
+      updated_at: '2026-05-10T09:15:00Z'
+    }
+  ]
+
+  const mockAccessData = {
+    knowledge_card: {
+      id: 'kc-1',
+      title: 'Evacuation Plan for Sudan Crisis',
+      status: 'draft',
+      owner: { id: 'owner-1', name: 'Amina Nyongo' },
+      updated_at: '2026-05-15T14:30:00Z'
+    },
+    grants: [
+      {
+        id: 'grant-1',
+        subject_id: 'user-2',
+        subject_name: 'Kiran Patel',
+        subject_type: 'user',
+        permissions: ['read', 'write'],
+        granted_by: 'owner-1',
+        granted_at: '2026-05-14T10:00:00Z'
+      }
+    ],
+    audit: [
+      {
+        id: 'audit-1',
+        action: 'create',
+        performed_by: 'Amina Nyongo',
+        performed_at: '2026-05-15T14:30:00Z',
+        details: 'Created knowledge card'
+      },
+      {
+        id: 'audit-2',
+        action: 'grant_access',
+        performed_by: 'Amina Nyongo',
+        performed_at: '2026-05-14T10:00:00Z',
+        details: 'Granted read/write access to Kiran Patel'
+      }
+    ]
+  }
+
+  const mockUsers = [
+    { id: 'owner-1', name: 'Amina Nyongo', email: 'amina@example.com' },
+    { id: 'user-2', name: 'Kiran Patel', email: 'kiran@example.com' }
+  ]
+
+  const mockOptions = {
+    roles: [],
+    donor_groups: ['UNHCR', 'WHO'],
+    outcomes: ['Health Improved', 'Shelter Provided'],
+    field_contexts: ['Sudan', 'Kenya'],
+    teams: []
+  }
+
+  beforeEach(() => {
     server.use(
       http.get('/api/admin/knowledge-cards/list', () =>
-        HttpResponse.json(
-          [{ id: 'kc-1', title: 'Evacuation Plan', status: 'draft', owner_name: 'Amina' }],
-          { status: 200 }
-        )
+        HttpResponse.json(mockKnowledgeCards, { status: 200 })
       ),
       http.get('/api/admin/knowledge-cards/kc-1/access', () =>
-        HttpResponse.json(
-          {
-            knowledge_card: {
-              id: 'kc-1',
-              title: 'Evacuation Plan',
-              owner: { id: 'owner-1', name: 'Amina' }
-            },
-            grants: [],
-            audit: []
-          },
-          { status: 200 }
-        )
+        HttpResponse.json(mockAccessData, { status: 200 })
       ),
       http.get('/api/admin/users', () =>
-        HttpResponse.json(
-          [{ id: 'owner-1', name: 'Amina' }],
-          { status: 200 }
-        )
+        HttpResponse.json(mockUsers, { status: 200 })
       ),
       http.get('/api/admin/options', () =>
-        HttpResponse.json(
-          { roles: [], donor_groups: [], outcomes: [], field_contexts: [], teams: [] },
-          { status: 200 }
-        )
+        HttpResponse.json(mockOptions, { status: 200 })
+      )
+    )
+  })
+
+  it('renders owner info after payload loads', async () => {
+    render(
+      <WizardProvider>
+        <MemoryRouter>
+          <KnowledgeCardAccessPanel resourceId="kc-1" />
+        </MemoryRouter>
+      </WizardProvider>
+    )
+
+    expect(await screen.findByText(/owner:/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Evacuation Plan for Sudan Crisis/i)).toBeInTheDocument()
+  })
+
+  it('displays knowledge card details and metadata', async () => {
+    render(
+      <WizardProvider>
+        <MemoryRouter>
+          <KnowledgeCardAccessPanel resourceId="kc-1" />
+        </MemoryRouter>
+      </WizardProvider>
+    )
+
+    expect(await screen.findByText(/Evacuation Plan for Sudan Crisis/i)).toBeInTheDocument()
+    expect(screen.getByText(/Amina Nyongo/i)).toBeInTheDocument()
+    expect(screen.getByText(/draft/i)).toBeInTheDocument()
+    expect(screen.getByText(/Owner/i)).toBeInTheDocument()
+  })
+
+  it('shows existing grants for the knowledge card', async () => {
+    render(
+      <WizardProvider>
+        <MemoryRouter>
+          <KnowledgeCardAccessPanel resourceId="kc-1" />
+        </MemoryRouter>
+      </WizardProvider>
+    )
+
+    expect(await screen.findByText(/Kiran Patel/i)).toBeInTheDocument()
+    expect(screen.getByText(/read/i)).toBeInTheDocument()
+    expect(screen.getByText(/write/i)).toBeInTheDocument()
+  })
+
+  it('displays audit timeline with knowledge card history', async () => {
+    render(
+      <WizardProvider>
+        <MemoryRouter>
+          <KnowledgeCardAccessPanel resourceId="kc-1" />
+        </MemoryRouter>
+      </WizardProvider>
+    )
+
+    expect(await screen.findByText(/Audit Timeline/i)).toBeInTheDocument()
+    expect(screen.getByText(/Created knowledge card/i)).toBeInTheDocument()
+    expect(screen.getByText(/Granted read\/write access to Kiran Patel/i)).toBeInTheDocument()
+  })
+
+  it('allows granting access to other users', async () => {
+    render(
+      <WizardProvider>
+        <MemoryRouter>
+          <KnowledgeCardAccessPanel resourceId="kc-1" />
+        </MemoryRouter>
+      </WizardProvider>
+    )
+
+    expect(await screen.findByText(/Grant Access/i)).toBeInTheDocument()
+    expect(screen.getByText(/Select a user or team/i)).toBeInTheDocument()
+  })
+
+  it('shows knowledge card list when no specific card is selected', async () => {
+    render(
+      <WizardProvider>
+        <MemoryRouter>
+          <KnowledgeCardAccessPanel resourceId="latest" />
+        </MemoryRouter>
+      </WizardProvider>
+    )
+
+    expect(await screen.findByText(/Select a Knowledge Card/i)).toBeInTheDocument()
+    expect(screen.getByText(/Evacuation Plan for Sudan Crisis/i)).toBeInTheDocument()
+    expect(screen.getByText(/Health Response Protocol/i)).toBeInTheDocument()
+  })
+
+  it('displays error when knowledge card access data fails to load', async () => {
+    server.use(
+      http.get('/api/admin/knowledge-cards/kc-1/access', () =>
+        HttpResponse.json(null, { status: 500 })
       )
     )
 
-    render(<KnowledgeCardAccessPanel resourceId="kc-1" />)
+    render(
+      <WizardProvider>
+        <MemoryRouter>
+          <KnowledgeCardAccessPanel resourceId="kc-1" />
+        </MemoryRouter>
+      </WizardProvider>
+    )
 
-    expect(await screen.findByText(/owner:/i)).toBeInTheDocument()
-    expect(await screen.findByText(/Evacuation Plan/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Failed to load access data/i)).toBeInTheDocument()
+  })
+
+  it('shows different knowledge card types and metadata in list', async () => {
+    render(
+      <WizardProvider>
+        <MemoryRouter>
+          <KnowledgeCardAccessPanel resourceId="latest" />
+        </MemoryRouter>
+      </WizardProvider>
+    )
+
+    expect(await screen.findByText(/evacuation/i)).toBeInTheDocument()
+    expect(screen.getByText(/UNHCR/i)).toBeInTheDocument()
+    expect(screen.getByText(/protocol/i)).toBeInTheDocument()
+    expect(screen.getByText(/Health Improved/i)).toBeInTheDocument()
   })
 })

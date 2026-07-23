@@ -18,7 +18,9 @@ export default function UserAccessPanel({ resourceId }) {
   const [bulkValue, setBulkValue] = useState(null)
   const [bulkLoading, setBulkLoading] = useState(false)
   const [roleRequests, setRoleRequests] = useState([])
+  const [settingsRequests, setSettingsRequests] = useState([])
   const [showRoleRequestModal, setShowRoleRequestModal] = useState(false)
+  const [showSettingsRequestModal, setShowSettingsRequestModal] = useState(false)
   const [selectedRequest, setSelectedRequest] = useState(null)
   const [approvalNote, setApprovalNote] = useState('')
   const [processingRequest, setProcessingRequest] = useState(false)
@@ -26,6 +28,7 @@ export default function UserAccessPanel({ resourceId }) {
   useEffect(() => {
     fetchData()
     fetchRoleRequests()
+    fetchSettingsRequests()
   }, [])
 
   const fetchRoleRequests = async () => {
@@ -38,6 +41,19 @@ export default function UserAccessPanel({ resourceId }) {
       }
     } catch (err) {
       console.error('Failed to fetch role requests:', err)
+    }
+  }
+
+  const fetchSettingsRequests = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/settings-requests`, {
+        credentials: 'include'
+      })
+      if (res.ok) {
+        setSettingsRequests(await res.json())
+      }
+    } catch (err) {
+      console.error('Failed to fetch settings requests:', err)
     }
   }
 
@@ -73,12 +89,22 @@ export default function UserAccessPanel({ resourceId }) {
     }
   }
 
+  const requestTypeToField = (settingType) => {
+    const mapping = {
+      'donor_focal': 'donor_groups',
+      'outcome_focal': 'outcomes',
+      'field_context_focal': 'field_contexts'
+    }
+    return mapping[settingType] || settingType
+  }
+
   const stats = useMemo(() => ({
     totalUsers: users.length,
     totalTeams: options.teams.length,
     pendingRequests: users.filter(u => u.requested_role_id).length,
-    pendingTemplates: options.template_requests.filter(r => r.status === 'pending').length
-  }), [users, options])
+    pendingTemplates: options.template_requests.filter(r => r.status === 'pending').length,
+    pendingSettings: settingsRequests.length
+  }), [users, options, settingsRequests])
 
   const handleCreateTeam = async () => {
     if (!newTeamName.trim()) return
@@ -125,31 +151,54 @@ export default function UserAccessPanel({ resourceId }) {
   const handleSettingChange = async (userId, type, selectedOptions) => {
     const user = users.find(u => u.id === userId)
     if (!user) return
-    const payload = {
-      role_ids: type === 'roles' ? (selectedOptions || []).map(o => o.value) : (user.roles || []).map(r => r.id),
-      donor_groups: type === 'donor_groups' ? (selectedOptions || []).map(o => o.value) : (user.donor_groups || []),
-      outcomes: type === 'outcomes' ? (selectedOptions || []).map(o => o.value) : (user.outcomes || []),
-      field_contexts: type === 'field_contexts' ? (selectedOptions || []).map(o => o.value) : (user.field_contexts || [])
-    }
+
+    const selectedValues = selectedOptions.map(o => o.value)
+
+    // Get current user data
+    const currentApproved = user[type] || []
+    const currentRequested = user[`${type}_requested`] || []
+
+    // Determine what's being added/removed
+    const added = selectedValues.filter(v => !currentApproved.includes(v) && !currentRequested.includes(v))
+    const removed = currentApproved.filter(v => !selectedValues.includes(v))
+
     try {
+      // Prepare the updated settings for the user
+      const updatedSettings = {
+        role_ids: (user.roles || []).filter(r => r?.id).map(r => r.id),
+        donor_groups: type === 'donor_groups' ? selectedValues : (user.donor_groups || []),
+        outcomes: type === 'outcomes' ? selectedValues : (user.outcomes || []),
+        field_contexts: type === 'field_contexts' ? selectedValues : (user.field_contexts || [])
+      }
+
       const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/settings`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload), credentials: 'include'
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedSettings),
+        credentials: 'include'
       })
+
       if (response.ok) {
+        // Update UI to reflect the changes
         setUsers(users.map(u => {
           if (u.id === userId) {
-            const updated = { ...u }
-            if (type === 'roles') updated.roles = selectedOptions.map(o => ({ id: o.value, name: o.label }))
-            if (type === 'donor_groups') updated.donor_groups = selectedOptions.map(o => o.value)
-            if (type === 'outcomes') updated.outcomes = selectedOptions.map(o => o.value)
-            if (type === 'field_contexts') updated.field_contexts = selectedOptions.map(o => o.value)
-            return updated
+            return {
+              ...u,
+              [type]: selectedValues,
+              [`${type}_requested`]: [] // Clear any pending requests for this type
+            }
           }
           return u
         }))
-      } else { alert("Failed to update user settings.") }
-    } catch (err) { alert("An error occurred while updating settings.") }
+      } else {
+        const errorData = await response.json()
+        console.error(`Error updating ${type}:`, errorData.detail || 'Unknown error')
+        alert(`Failed to update ${type}: ${errorData.detail || 'Unknown error'}`)
+      }
+    } catch (err) {
+      console.error(`Error updating ${type} access:`, err)
+      alert(`Error updating ${type} access`)
+    }
   }
 
   const handleDownloadTemplate = (request) => {
@@ -232,6 +281,89 @@ export default function UserAccessPanel({ resourceId }) {
     }
   }
 
+  const handleApproveSettingsRequest = async () => {
+    if (!selectedRequest || processingRequest) return
+
+    setProcessingRequest(true)
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/settings-requests/${selectedRequest.request_id}/approve?admin_note=${encodeURIComponent(approvalNote)}`, {
+        method: 'POST',
+        credentials: 'include'
+      })
+
+      if (res.ok) {
+        const result = await res.json()
+        // Update the user in the list
+        const fieldName = requestTypeToField(result.setting_type)
+        setUsers(users.map(u => {
+          if (u.id === result.user_id) {
+            return {
+              ...u,
+              [fieldName]: [...(u[fieldName] || []), result.setting_value],
+              [`${fieldName}_requested`]: (u[`${fieldName}_requested`] || []).filter(v => v !== result.setting_value)
+            }
+          }
+          return u
+        }))
+        // Remove from settings requests
+        setSettingsRequests(settingsRequests.filter(r => r.request_id !== selectedRequest.request_id))
+        setShowSettingsRequestModal(false)
+        setApprovalNote('')
+        // Show success message
+        alert(`Settings request approved for ${result.user_name}`)
+      } else {
+        const errorData = await res.json()
+        alert(`Failed to approve settings request: ${errorData.detail || 'Unknown error'}`)
+      }
+    } catch (err) {
+      console.error('Error approving settings request:', err)
+      alert('Error approving settings request')
+    } finally {
+      setProcessingRequest(false)
+    }
+  }
+
+  const handleRejectSettingsRequest = async () => {
+    if (!selectedRequest || processingRequest) return
+
+    setProcessingRequest(true)
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/settings-requests/${selectedRequest.request_id}/reject?admin_note=${encodeURIComponent(approvalNote)}`, {
+        method: 'POST',
+        credentials: 'include'
+      })
+
+      if (res.ok) {
+        const result = await res.json()
+        // Update the user in the list to remove the pending request
+        const fieldName = requestTypeToField(result.setting_type)
+        setUsers(users.map(u => {
+          if (u.id === result.user_id) {
+            return {
+              ...u,
+              [`${fieldName}_requested`]: (u[`${fieldName}_requested`] || []).filter(v => v !== result.setting_value)
+            }
+          }
+          return u
+        }))
+        // Remove from settings requests
+        setSettingsRequests(settingsRequests.filter(r => r.request_id !== selectedRequest.request_id))
+        setShowSettingsRequestModal(false)
+        setApprovalNote('')
+        // Show success message
+        alert(`Settings request rejected for ${result.user_name}`)
+      } else {
+        const errorData = await res.json()
+        alert(`Failed to reject settings request: ${errorData.detail || 'Unknown error'}`)
+      }
+    } catch (err) {
+      console.error('Error rejecting settings request:', err)
+      alert('Error rejecting settings request')
+    } finally {
+      setProcessingRequest(false)
+    }
+  }
+
   // Bulk actions
   const toggleSelect = (userId) => {
     setSelectedIds(prev => {
@@ -264,7 +396,7 @@ export default function UserAccessPanel({ resourceId }) {
       } else if (bulkAction === 'role') {
         await Promise.allSettled(ids.map(id => {
           const user = users.find(u => u.id === id)
-          const existingRoleIds = (user?.roles || []).map(r => r.id)
+          const existingRoleIds = (user?.roles || []).filter(r => r?.id).map(r => r.id)
           const newRoleIds = [...new Set([...existingRoleIds, bulkValue.value])]
           return fetch(`${API_BASE_URL}/admin/users/${id}/settings`, {
             method: 'PUT', headers: { 'Content-Type': 'application/json' },
@@ -299,7 +431,8 @@ export default function UserAccessPanel({ resourceId }) {
   return (
     <>
       <header className="section-header">
-        <h2>User Administration</h2>
+        <h2>User Access Management</h2>
+        <p className="section-subtitle">Manage users, teams, roles, and access settings</p>
       </header>
 
       {/* Summary stat cards */}
@@ -314,7 +447,11 @@ export default function UserAccessPanel({ resourceId }) {
         </div>
         <div className="admin-stat-card accent">
           <span className="stat-value">{stats.pendingRequests}</span>
-          <span className="stat-label">Pending Access Requests</span>
+          <span className="stat-label">Pending Role Requests</span>
+        </div>
+        <div className="admin-stat-card accent">
+          <span className="stat-value">{stats.pendingSettings}</span>
+          <span className="stat-label">Pending Settings Requests</span>
         </div>
         <div className="admin-stat-card accent">
           <span className="stat-value">{stats.pendingTemplates}</span>
@@ -369,7 +506,14 @@ export default function UserAccessPanel({ resourceId }) {
         {users.some(u => u.requested_role_id) && (
           <div className="admin-notification">
             <i className="fa-solid fa-bell"></i>
-            <strong>Pending Access Requests:</strong> {users.filter(u => u.requested_role_id).length} users are requesting elevated access.
+            <strong>Pending Role Requests:</strong> {users.filter(u => u.requested_role_id).length} users are requesting elevated access.
+          </div>
+        )}
+
+        {settingsRequests.length > 0 && (
+          <div className="admin-notification">
+            <i className="fa-solid fa-cog"></i>
+            <strong>Pending Settings Requests:</strong> {settingsRequests.length} settings requests are awaiting review.
           </div>
         )}
 
@@ -423,38 +567,108 @@ export default function UserAccessPanel({ resourceId }) {
                     </td>
                     <td>
                       <Select isMulti options={options.roles}
-                        value={(user.roles || []).map(r => ({ value: r.id, label: r.name }))}
+                        value={(user.roles || []).filter(r => r?.id && r?.name).map(r => ({ value: r.id, label: r.name }))}
                         onChange={selected => handleSettingChange(user.id, 'roles', selected)}
                         className={`${user.requested_role_id ? 'select-highlight' : ''} admin-select`} placeholder="Roles…"
                         menuPortalTarget={document.body}
                       />
                     </td>
                     <td>
-                      <Select isMulti options={options.donor_groups}
-                        value={(user.donor_groups || []).map(dg => ({ value: dg, label: dg }))}
+                      <Select isMulti
+                        options={options.donor_groups}
+                        value={
+                          (user.donor_groups_requested || []).map(dg => ({
+                            value: dg,
+                            label: `${dg} (Pending)`,
+                            isPending: true
+                          })).concat(
+                            (user.donor_groups || []).filter(dg => !(user.donor_groups_requested || []).includes(dg))
+                              .map(dg => ({ value: dg, label: dg }))
+                          )
+                        }
                         onChange={selected => handleSettingChange(user.id, 'donor_groups', selected)}
-                        className="admin-select" placeholder="Donors…" menuPortalTarget={document.body}
+                        className={`admin-select ${(user.donor_groups_requested || []).length > 0 ? 'select-highlight' : ''}`}
+                        placeholder="Donors…"
+                        menuPortalTarget={document.body}
+                        styles={{
+                          multiValue: (styles, { data }) => ({
+                            ...styles,
+                            backgroundColor: data.isPending ? '#ffeb3b' : '#e3f2fd'
+                          })
+                        }}
                       />
+                      {(user.donor_groups_requested || []).length > 0 && (
+                        <div className="pending-indicator">
+                          <i className="fa-solid fa-clock"></i>
+                          <span>{(user.donor_groups_requested || []).length} pending</span>
+                        </div>
+                      )}
                     </td>
                     <td>
-                      <Select isMulti options={options.outcomes}
-                        value={(user.outcomes || []).map(oid => {
-                          const opt = options.outcomes.find(o => o.value === oid)
-                          return opt || { value: oid, label: oid }
-                        })}
+                      <Select isMulti
+                        options={options.outcomes}
+                        value={
+                          (user.outcomes_requested || []).map(oid => {
+                            const opt = options.outcomes.find(o => o.value === oid)
+                            return { ...opt, label: `${opt?.label || oid} (Pending)`, isPending: true }
+                          }).concat(
+                            (user.outcomes || []).filter(oid => !(user.outcomes_requested || []).includes(oid))
+                              .map(oid => {
+                                const opt = options.outcomes.find(o => o.value === oid)
+                                return opt || { value: oid, label: oid }
+                              })
+                          )
+                        }
                         onChange={selected => handleSettingChange(user.id, 'outcomes', selected)}
-                        className="admin-select" placeholder="Outcomes…" menuPortalTarget={document.body}
+                        className={`admin-select ${(user.outcomes_requested || []).length > 0 ? 'select-highlight' : ''}`}
+                        placeholder="Outcomes…"
+                        menuPortalTarget={document.body}
+                        styles={{
+                          multiValue: (styles, { data }) => ({
+                            ...styles,
+                            backgroundColor: data.isPending ? '#ffeb3b' : '#e3f2fd'
+                          })
+                        }}
                       />
+                      {(user.outcomes_requested || []).length > 0 && (
+                        <div className="pending-indicator">
+                          <i className="fa-solid fa-clock"></i>
+                          <span>{(user.outcomes_requested || []).length} pending</span>
+                        </div>
+                      )}
                     </td>
                     <td>
-                      <Select isMulti options={options.field_contexts}
-                        value={(user.field_contexts || []).map(fcid => {
-                          const opt = options.field_contexts.find(fc => fc.value === fcid)
-                          return opt || { value: fcid, label: fcid }
-                        })}
+                      <Select isMulti
+                        options={options.field_contexts}
+                        value={
+                          (user.field_contexts_requested || []).map(fcid => {
+                            const opt = options.field_contexts.find(fc => fc.value === fcid)
+                            return { ...opt, label: `${opt?.label || fcid} (Pending)`, isPending: true }
+                          }).concat(
+                            (user.field_contexts || []).filter(fcid => !(user.field_contexts_requested || []).includes(fcid))
+                              .map(fcid => {
+                                const opt = options.field_contexts.find(fc => fc.value === fcid)
+                                return opt || { value: fcid, label: fcid }
+                              })
+                          )
+                        }
                         onChange={selected => handleSettingChange(user.id, 'field_contexts', selected)}
-                        className="admin-select" placeholder="Field Contexts…" menuPortalTarget={document.body}
+                        className={`admin-select ${(user.field_contexts_requested || []).length > 0 ? 'select-highlight' : ''}`}
+                        placeholder="Field Contexts…"
+                        menuPortalTarget={document.body}
+                        styles={{
+                          multiValue: (styles, { data }) => ({
+                            ...styles,
+                            backgroundColor: data.isPending ? '#ffeb3b' : '#e3f2fd'
+                          })
+                        }}
                       />
+                      {(user.field_contexts_requested || []).length > 0 && (
+                        <div className="pending-indicator">
+                          <i className="fa-solid fa-clock"></i>
+                          <span>{(user.field_contexts_requested || []).length} pending</span>
+                        </div>
+                      )}
                     </td>
                     <td>
                       <button className="icon-button delete-button" onClick={() => handleDeleteUser(user.id)} title="Delete User">
@@ -495,6 +709,56 @@ export default function UserAccessPanel({ resourceId }) {
                           onClick={() => {
                             setSelectedRequest(req)
                             setShowRoleRequestModal(true)
+                          }}
+                          disabled={processingRequest}
+                        >
+                          <i className="fa-solid fa-check"></i> Review
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {settingsRequests.length > 0 && (
+          <div className="admin-section">
+            <h3><i className="fa-solid fa-cog"></i> Pending Settings Requests</h3>
+            <div className="users-table-container">
+              <table className="users-table">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Setting Type</th>
+                    <th>Requested Value</th>
+                    <th>Requested</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {settingsRequests.map(req => (
+                    <tr key={req.request_id} className="row-highlight">
+                      <td>
+                        <div className="user-info">
+                          <span className="user-name">{req.user_name}</span>
+                          <span className="user-email">{req.user_email}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="setting-type-badge">
+                          {req.setting_type.replace('_focal', '').replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td>{req.display_name || req.setting_value}</td>
+                      <td>{req.requested_at ? new Date(req.requested_at).toLocaleDateString() : '—'}</td>
+                      <td>
+                        <button
+                          className="primary-button small"
+                          onClick={() => {
+                            setSelectedRequest(req)
+                            setShowSettingsRequestModal(true)
                           }}
                           disabled={processingRequest}
                         >

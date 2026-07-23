@@ -618,10 +618,26 @@ async def upload_proposal_to_sharepoint(
         with get_engine().connect() as connection:
             if form_data.get("Targeted Donor"):
                 donor_id = form_data["Targeted Donor"]
-                donor_name = connection.execute(
-                    text("SELECT name FROM donors WHERE id = :id"), {"id": donor_id}
-                ).scalar()
-                form_data["Targeted Donor"] = donor_name or form_data["Targeted Donor"]
+
+                # Handle both single UUID and list of UUIDs
+                if isinstance(donor_id, list):
+                    if donor_id:
+                        donor_uuids = [UUID(did) for did in donor_id]
+                        donor_names = (
+                            connection.execute(
+                                text("SELECT name FROM donors WHERE id = ANY(:ids)"), {"ids": donor_uuids}
+                            )
+                            .scalars()
+                            .all()
+                        )
+                        form_data["Targeted Donor"] = (
+                            ", ".join(donor_names) if donor_names else form_data["Targeted Donor"]
+                        )
+                else:
+                    donor_name = connection.execute(
+                        text("SELECT name FROM donors WHERE id = :id"), {"id": donor_id}
+                    ).scalar()
+                    form_data["Targeted Donor"] = donor_name or form_data["Targeted Donor"]
 
             if form_data.get("Main Outcome"):
                 outcome_ids = form_data["Main Outcome"]

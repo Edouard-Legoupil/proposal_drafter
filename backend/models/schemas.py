@@ -45,8 +45,13 @@ class UserSettings(BaseModel):
     requested_roles: Optional[List[int]] = []
     donor_groups: Optional[List[str]] = None
     donor_ids: Optional[List[uuid.UUID]] = []
+    requested_donor_ids: Optional[List[uuid.UUID]] = []
     outcomes: Optional[List[uuid.UUID]] = None
+    requested_outcomes: Optional[List[uuid.UUID]] = []
     field_contexts: Optional[List[uuid.UUID]] = None
+    requested_field_contexts: Optional[List[uuid.UUID]] = []
+    team_memberships: Optional[List[uuid.UUID]] = []
+    requested_team_memberships: Optional[List[uuid.UUID]] = []
 
 
 class User(BaseModel):

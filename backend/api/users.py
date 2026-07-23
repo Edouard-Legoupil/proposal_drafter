@@ -171,7 +171,7 @@ async def get_user_settings(current_user: dict = Depends(get_current_user)):
         with get_engine().connect() as connection:
             user_query = text(
                 """
-                SELECT geographic_coverage_type, geographic_coverage_region, 
+                SELECT geographic_coverage_type, geographic_coverage_region,
                 geographic_coverage_country FROM users WHERE id = :user_id
                 """
             )
@@ -203,6 +203,52 @@ async def get_user_settings(current_user: dict = Depends(get_current_user)):
             donor_ids_result = connection.execute(donor_ids_query, {"user_id": user_id}).fetchall()
             donor_ids = [row[0] for row in donor_ids_result]
 
+            # Get requested settings from user_settings_requests table
+            requested_donor_ids_query = text(
+                """
+                SELECT setting_value FROM user_settings_requests
+                WHERE user_id = :user_id AND setting_type = 'donor_focal' AND status = 'pending'
+            """
+            )
+            requested_donor_ids_result = connection.execute(requested_donor_ids_query, {"user_id": user_id}).fetchall()
+            requested_donor_ids = [row[0] for row in requested_donor_ids_result]
+
+            requested_outcomes_query = text(
+                """
+                SELECT setting_value FROM user_settings_requests
+                WHERE user_id = :user_id AND setting_type = 'outcome_focal' AND status = 'pending'
+            """
+            )
+            requested_outcomes_result = connection.execute(requested_outcomes_query, {"user_id": user_id}).fetchall()
+            requested_outcomes = [row[0] for row in requested_outcomes_result]
+
+            requested_field_contexts_query = text(
+                """
+                SELECT setting_value FROM user_settings_requests
+                WHERE user_id = :user_id AND setting_type = 'field_context_focal' AND status = 'pending'
+            """
+            )
+            requested_field_contexts_result = connection.execute(
+                requested_field_contexts_query, {"user_id": user_id}
+            ).fetchall()
+            requested_field_contexts = [row[0] for row in requested_field_contexts_result]
+
+            requested_team_memberships_query = text(
+                """
+                SELECT setting_value FROM user_settings_requests
+                WHERE user_id = :user_id AND setting_type = 'team_membership' AND status = 'pending'
+            """
+            )
+            requested_team_memberships_result = connection.execute(
+                requested_team_memberships_query, {"user_id": user_id}
+            ).fetchall()
+            requested_team_memberships = [row[0] for row in requested_team_memberships_result]
+
+            # Get team memberships
+            team_memberships_query = text("SELECT team_id FROM team_members WHERE user_id = :user_id")
+            team_memberships_result = connection.execute(team_memberships_query, {"user_id": user_id}).fetchall()
+            team_memberships = [row[0] for row in team_memberships_result]
+
             return UserSettings(
                 geographic_coverage_type=user_result[0],
                 geographic_coverage_region=user_result[1],
@@ -211,8 +257,13 @@ async def get_user_settings(current_user: dict = Depends(get_current_user)):
                 requested_roles=requested_roles,
                 donor_groups=donor_groups,
                 donor_ids=donor_ids,
+                requested_donor_ids=requested_donor_ids,
                 outcomes=outcomes,
+                requested_outcomes=requested_outcomes,
                 field_contexts=field_contexts,
+                requested_field_contexts=requested_field_contexts,
+                team_memberships=team_memberships,
+                requested_team_memberships=requested_team_memberships,
             )
     except Exception as e:
         logger.error(f"[GET USER SETTINGS ERROR] {e}", exc_info=True)
@@ -271,6 +322,12 @@ async def update_user_settings(settings: UserSettings, current_user: dict = Depe
                 )
                 connection.execute(
                     text("DELETE FROM user_field_contexts WHERE user_id = :user_id"),
+                    {"user_id": user_id},
+                )
+
+                # Clear existing team memberships
+                connection.execute(
+                    text("DELETE FROM team_members WHERE user_id = :user_id"),
                     {"user_id": user_id},
                 )
 
@@ -342,6 +399,119 @@ async def update_user_settings(settings: UserSettings, current_user: dict = Depe
                         fc_insert_query,
                         [{"user_id": user_id, "fc_id": fc_id} for fc_id in settings.field_contexts],
                     )
+
+                # Insert new team memberships
+                if settings.team_memberships:
+                    team_insert_query = text("INSERT INTO team_members (user_id, team_id) VALUES (:user_id, :team_id)")
+                    connection.execute(
+                        team_insert_query,
+                        [{"user_id": user_id, "team_id": team_id} for team_id in settings.team_memberships],
+                    )
+
+                # Insert requested settings into user_settings_requests table (like requested_roles)
+                if settings.requested_donor_ids:
+                    for donor_id in settings.requested_donor_ids:
+                        # Check if this request already exists
+                        existing_request = connection.execute(
+                            text(
+                                """
+                                SELECT 1 FROM user_settings_requests
+                                WHERE user_id = :user_id AND setting_type = 'donor_focal'
+                                AND setting_value = :setting_value AND status = 'pending'
+                            """
+                            ),
+                            {"user_id": user_id, "setting_value": str(donor_id)},
+                        ).fetchone()
+
+                        if not existing_request:
+                            connection.execute(
+                                text(
+                                    """
+                                    INSERT INTO user_settings_requests
+                                    (user_id, setting_type, setting_value, status)
+                                    VALUES (:user_id, 'donor_focal', :setting_value, 'pending')
+                                """
+                                ),
+                                {"user_id": user_id, "setting_value": str(donor_id)},
+                            )
+
+                if settings.requested_outcomes:
+                    for outcome_id in settings.requested_outcomes:
+                        # Check if this request already exists
+                        existing_request = connection.execute(
+                            text(
+                                """
+                                SELECT 1 FROM user_settings_requests
+                                WHERE user_id = :user_id AND setting_type = 'outcome_focal'
+                                AND setting_value = :setting_value AND status = 'pending'
+                            """
+                            ),
+                            {"user_id": user_id, "setting_value": str(outcome_id)},
+                        ).fetchone()
+
+                        if not existing_request:
+                            connection.execute(
+                                text(
+                                    """
+                                    INSERT INTO user_settings_requests
+                                    (user_id, setting_type, setting_value, status)
+                                    VALUES (:user_id, 'outcome_focal', :setting_value, 'pending')
+                                """
+                                ),
+                                {"user_id": user_id, "setting_value": str(outcome_id)},
+                            )
+
+                if settings.requested_field_contexts:
+                    for fc_id in settings.requested_field_contexts:
+                        # Check if this request already exists
+                        existing_request = connection.execute(
+                            text(
+                                """
+                                SELECT 1 FROM user_settings_requests
+                                WHERE user_id = :user_id AND setting_type = 'field_context_focal'
+                                AND setting_value = :setting_value AND status = 'pending'
+                            """
+                            ),
+                            {"user_id": user_id, "setting_value": str(fc_id)},
+                        ).fetchone()
+
+                        if not existing_request:
+                            connection.execute(
+                                text(
+                                    """
+                                    INSERT INTO user_settings_requests
+                                    (user_id, setting_type, setting_value, status)
+                                    VALUES (:user_id, 'field_context_focal', :setting_value, 'pending')
+                                """
+                                ),
+                                {"user_id": user_id, "setting_value": str(fc_id)},
+                            )
+
+                if settings.requested_team_memberships:
+                    for team_id in settings.requested_team_memberships:
+                        # Check if this request already exists
+                        existing_request = connection.execute(
+                            text(
+                                """
+                                SELECT 1 FROM user_settings_requests
+                                WHERE user_id = :user_id AND setting_type = 'team_membership'
+                                AND setting_value = :setting_value AND status = 'pending'
+                            """
+                            ),
+                            {"user_id": user_id, "setting_value": str(team_id)},
+                        ).fetchone()
+
+                        if not existing_request:
+                            connection.execute(
+                                text(
+                                    """
+                                    INSERT INTO user_settings_requests
+                                    (user_id, setting_type, setting_value, status)
+                                    VALUES (:user_id, 'team_membership', :setting_value, 'pending')
+                                """
+                                ),
+                                {"user_id": user_id, "setting_value": str(team_id)},
+                            )
     except Exception as e:
         logger.error(f"[UPDATE USER SETTINGS ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Could not update user settings.")

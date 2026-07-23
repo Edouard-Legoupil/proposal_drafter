@@ -24,20 +24,38 @@ async def get_admin_users(admin: dict = Depends(is_system_admin)):
     """
     try:
         from sqlalchemy.orm import Session
-        from backend.models.donor_group import DonorGroupMember
-        from backend.models.user_associations import UserOutcome, UserFieldContext
 
         with get_engine().connect() as connection:
             # Create a session for ORM operations
             session = Session(connection)
 
-            # Fetch all users
+            # Fetch all users with all their data in a single optimized query
             users_query = text(
                 """
-                SELECT u.id, u.name, u.email, t.name as team_name, u.requested_role_id, r.name as requested_role_name
+                SELECT
+                    u.id as user_id,
+                    u.name as user_name,
+                    u.email as user_email,
+                    t.name as team_name,
+                    u.requested_role_id,
+                    r.name as requested_role_name,
+                    -- Roles
+                    array_agg(DISTINCT jsonb_build_object('id', ur.role_id, 'name', roles.name)) FILTER (WHERE ur.role_id IS NOT NULL) as roles,
+                    -- Donor groups
+                    array_agg(DISTINCT dg.donor_group) FILTER (WHERE dg.donor_group IS NOT NULL) as donor_groups,
+                    -- Outcomes
+                    array_agg(DISTINCT ou.outcome_id) FILTER (WHERE ou.outcome_id IS NOT NULL) as outcomes,
+                    -- Field contexts
+                    array_agg(DISTINCT fc.field_context_id) FILTER (WHERE fc.field_context_id IS NOT NULL) as field_contexts
                 FROM users u
                 LEFT JOIN teams t ON u.team_id = t.id
                 LEFT JOIN roles r ON u.requested_role_id = r.id
+                LEFT JOIN user_roles ur ON u.id = ur.user_id
+                LEFT JOIN roles ON ur.role_id = roles.id
+                LEFT JOIN user_donor_groups dg ON u.id = dg.user_id
+                LEFT JOIN user_outcomes ou ON u.id = ou.user_id
+                LEFT JOIN user_field_contexts fc ON u.id = fc.user_id
+                GROUP BY u.id, u.name, u.email, t.name, u.requested_role_id, r.name
                 ORDER BY u.name
             """
             )
@@ -45,33 +63,18 @@ async def get_admin_users(admin: dict = Depends(is_system_admin)):
 
             users_list = []
             for user in users_result:
-                user_id = str(user["id"])
-                # Fetch roles
-                roles_query = text(
-                    """
-                    SELECT r.id, r.name
-                    FROM roles r
-                    JOIN user_roles ur ON r.id = ur.role_id
-                    WHERE ur.user_id = :user_id
-                """
-                )
-                roles_result = connection.execute(roles_query, {"user_id": user_id}).mappings().all()
-
-                # Fetch donor groups using ORM with session
-                donor_groups = DonorGroupMember.get_user_groups(session, user_id)
-
-                # Fetch outcomes using ORM with session
-                outcome_ids = UserOutcome.get_user_outcomes(session, user_id)
-
-                # Fetch field contexts using ORM with session
-                field_context_ids = UserFieldContext.get_user_field_contexts(session, user_id)
-
-                user_dict = dict(user)
-                user_dict["id"] = user_id
-                user_dict["roles"] = [dict(role) for role in roles_result]
-                user_dict["donor_groups"] = donor_groups
-                user_dict["outcomes"] = outcome_ids
-                user_dict["field_contexts"] = field_context_ids
+                user_dict = {
+                    "id": str(user["user_id"]),
+                    "name": user["user_name"],
+                    "email": user["user_email"],
+                    "team_name": user["team_name"],
+                    "requested_role_id": user["requested_role_id"],
+                    "requested_role_name": user["requested_role_name"],
+                    "roles": user["roles"] or [],
+                    "donor_groups": user["donor_groups"] or [],
+                    "outcomes": user["outcomes"] or [],
+                    "field_contexts": user["field_contexts"] or [],
+                }
                 users_list.append(user_dict)
 
             # Debug: log the number of users returned
@@ -93,74 +96,99 @@ async def update_admin_user_settings(user_id: str, settings: dict, admin: dict =
         outcomes = settings.get("outcomes", [])
         field_contexts = settings.get("field_contexts", [])
 
-        with get_engine().connect() as connection:
-            with connection.begin():
-                # Verify user exists
-                user_check = connection.execute(
-                    text("SELECT id FROM users WHERE id = :user_id"),
-                    {"user_id": user_id},
-                ).fetchone()
-                if not user_check:
-                    raise HTTPException(status_code=404, detail="User not found.")
+        # Convert string IDs to integers for role_ids and validate
+        role_ids = []
+        for rid in settings.get("role_ids", []):
+            if isinstance(rid, str) and rid.isdigit():
+                role_ids.append(int(rid))
+            elif isinstance(rid, int):
+                role_ids.append(rid)
+            else:
+                logger.warning(f"Invalid role ID type: {type(rid)} - {rid}")
 
-                # Clear all existing associations
-                connection.execute(
-                    text("DELETE FROM user_roles WHERE user_id = :user_id"),
-                    {"user_id": user_id},
-                )
-                connection.execute(
-                    text("DELETE FROM user_donor_groups WHERE user_id = :user_id"),
-                    {"user_id": user_id},
-                )
-                connection.execute(
-                    text("DELETE FROM user_outcomes WHERE user_id = :user_id"),
-                    {"user_id": user_id},
-                )
-                connection.execute(
-                    text("DELETE FROM user_field_contexts WHERE user_id = :user_id"),
-                    {"user_id": user_id},
-                )
+        with get_engine().begin() as connection:
+            # Verify user exists
+            user_check = connection.execute(
+                text("SELECT id FROM users WHERE id = :user_id"),
+                {"user_id": user_id},
+            ).fetchone()
+            if not user_check:
+                raise HTTPException(status_code=404, detail=f"User {user_id} not found.")
 
-                # Clear pending role request
-                connection.execute(
-                    text("UPDATE users SET requested_role_id = NULL WHERE id = :user_id"),
-                    {"user_id": user_id},
-                )
+            # Clear all existing associations
+            connection.execute(
+                text("DELETE FROM user_roles WHERE user_id = :user_id"),
+                {"user_id": user_id},
+            )
+            connection.execute(
+                text("DELETE FROM user_donor_groups WHERE user_id = :user_id"),
+                {"user_id": user_id},
+            )
+            connection.execute(
+                text("DELETE FROM user_outcomes WHERE user_id = :user_id"),
+                {"user_id": user_id},
+            )
+            connection.execute(
+                text("DELETE FROM user_field_contexts WHERE user_id = :user_id"),
+                {"user_id": user_id},
+            )
 
-                # Insert new roles
-                if role_ids:
+            # Clear pending role request
+            connection.execute(
+                text("UPDATE users SET requested_role_id = NULL WHERE id = :user_id"),
+                {"user_id": user_id},
+            )
+
+            # Insert new roles
+            if role_ids:
+                try:
                     connection.execute(
                         text("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, :role_id)"),
                         [{"user_id": user_id, "role_id": rid} for rid in role_ids],
                     )
+                except Exception as e:
+                    logger.error(f"Failed to insert roles: {e}")
+                    raise HTTPException(status_code=400, detail=f"Failed to insert roles: {str(e)}")
 
-                # Insert new donor groups
-                if donor_groups:
+            # Insert new donor groups
+            if donor_groups:
+                try:
                     connection.execute(
                         text("INSERT INTO user_donor_groups (user_id, donor_group) VALUES (:user_id, :donor_group)"),
                         [{"user_id": user_id, "donor_group": dg} for dg in donor_groups],
                     )
+                except Exception as e:
+                    logger.error(f"Failed to insert donor groups: {e}")
+                    raise HTTPException(status_code=400, detail=f"Failed to insert donor groups: {str(e)}")
 
-                # Insert new outcomes
-                if outcomes:
+            # Insert new outcomes
+            if outcomes:
+                try:
                     connection.execute(
                         text("INSERT INTO user_outcomes (user_id, outcome_id) VALUES (:user_id, :outcome_id)"),
                         [{"user_id": user_id, "outcome_id": oid} for oid in outcomes],
                     )
+                except Exception as e:
+                    logger.error(f"Failed to insert outcomes: {e}")
+                    raise HTTPException(status_code=400, detail=f"Failed to insert outcomes: {str(e)}")
 
-                # Insert new field contexts
-                if field_contexts:
+            # Insert new field contexts
+            if field_contexts:
+                try:
                     connection.execute(
                         text("INSERT INTO user_field_contexts (user_id, field_context_id) VALUES (:user_id, :fc_id)"),
                         [{"user_id": user_id, "fc_id": fcid} for fcid in field_contexts],
                     )
+                except Exception as e:
+                    logger.error(f"Failed to insert field contexts: {e}")
+                    raise HTTPException(status_code=400, detail=f"Failed to insert field contexts: {str(e)}")
 
-            return {"message": "User settings updated successfully."}
+        return {"message": "User settings updated successfully."}
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"[UPDATE ADMIN USER SETTINGS ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Could not update user settings.")
+        raise HTTPException(status_code=500, detail=f"Could not update user settings: {str(e)}")
 
 
 @router.get("/admin/options")

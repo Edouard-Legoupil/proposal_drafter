@@ -32,12 +32,17 @@ const FollowUpModal = ({
     >
       <header className="Chat_regenerate_header">
         Provide Follow-up Instructions
-        <img
-          src={regenerateCloseIcon}
-          alt=""
+        <button
           onClick={onClose}
-          style={{ cursor: 'pointer' }}
-        />
+          aria-label="Close"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px' }}
+        >
+          <img
+            src={regenerateCloseIcon}
+            alt=""
+            style={{ width: '24px', height: '24px' }}
+          />
+        </button>
       </header>
       <main className="Chat_right" style={{ padding: '20px' }}>
         <p style={{ marginBottom: '15px', color: '#666' }}>

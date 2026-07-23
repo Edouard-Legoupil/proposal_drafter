@@ -2228,7 +2228,7 @@ async def delete_knowledge_card_comment(
     Remove an individual comment from a knowledge card.
     """
     user_id = current_user["user_id"]
-    is_admin = any(role in ["admin", "knowledge manager donors"] for role in current_user.get("roles", []))
+    is_admin = any(role in ["system admin"] for role in current_user.get("roles", []))
 
     try:
         with engine.begin() as connection:

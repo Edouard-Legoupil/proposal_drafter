@@ -69,7 +69,7 @@ def test_get_user_tier():
 
     # Test premium tier
     assert limiter.get_user_tier({"role": "premium"}) == "premium"
-    assert limiter.get_user_tier({"role": "admin"}) == "premium"
+    assert limiter.get_user_tier({"role": "system admin"}) == "premium"
     assert limiter.get_user_tier({"role": "premium_user"}) == "premium"
 
 

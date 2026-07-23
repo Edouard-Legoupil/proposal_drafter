@@ -76,6 +76,21 @@ class User(Base):  # type: ignore[valid-type, misc]
         """Check if user has admin privileges based on roles."""
         return "system admin" in [ur.role.name for ur in self.user_roles if ur.role]
 
+    def is_team_leader(self, team_id: str, session) -> bool:
+        """Check if user is a team leader of a specific team."""
+        from backend.models.team import TeamMember, TeamRole
+
+        # Check if user is active member of the team with TEAM_LEADER role
+        team_member = (
+            session.query(TeamMember).filter_by(team_id=team_id, user_id=str(self.id), status="ACTIVE").first()
+        )
+
+        if team_member:
+            team_role = session.query(TeamRole).filter_by(team_id=team_id, role_id=998).first()  # TEAM_LEADER role ID
+            return team_role is not None
+
+        return False
+
     @property
     def roles(self) -> List[str]:
         """Get list of role names for the user (direct roles only)."""

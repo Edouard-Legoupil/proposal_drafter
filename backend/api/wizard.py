@@ -19,7 +19,7 @@ from datetime import datetime, timedelta
 from backend.core.dependencies import get_db_session
 from backend.models.wizard_models import QACategory, QAItem, UserInteraction
 from backend.core.security import get_current_user
-from backend.schemas.wizard_schemas import (
+from backend.models.wizard_schemas import (
     QACategoryResponse,
     UserFeedback,
     QASearchRequest,

@@ -1,0 +1,58 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ValidationModal Component > should match snapshot 1`] = `
+<DocumentFragment>
+  <dialog
+    class="Chat_regenerate"
+    open=""
+    style="height: auto; max-height: 80vh; top: 10%;"
+  >
+    <header
+      class="Chat_regenerate_header"
+    >
+      Missing Required Fields
+    </header>
+    <main
+      class="Chat_right"
+      style="padding: 20px;"
+    >
+      <p
+        style="margin-bottom: 15px;"
+      >
+        The following mandatory parameters are missing:
+      </p>
+      <ul
+        style="list-style-type: disc; padding-left: 20px; margin-bottom: 20px; color: rgb(20, 20, 25);"
+      >
+        <li
+          style="margin-bottom: 5px;"
+        >
+          Field 1
+        </li>
+        <li
+          style="margin-bottom: 5px;"
+        >
+          Field 2
+        </li>
+        <li
+          style="margin-bottom: 5px;"
+        >
+          Field 3
+        </li>
+      </ul>
+      <div
+        class="Chat_inputArea_buttonContainer"
+      >
+        <button
+          class="CommonButton  "
+          type="button"
+        >
+          <span>
+            Close
+          </span>
+        </button>
+      </div>
+    </main>
+  </dialog>
+</DocumentFragment>
+`;

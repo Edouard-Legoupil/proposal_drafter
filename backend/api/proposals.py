@@ -1931,10 +1931,8 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
                 is_admin = any(
                     role
                     in [
-                        "admin",
-                        "knowledge manager donors",
-                        "knowledge manager outcome",
-                        "knowledge manager field context",
+                        "system admin",
+                        "project reviewer",
                     ]
                     for role in current_user.get("roles", [])
                 )
@@ -3115,10 +3113,8 @@ async def get_peer_reviews(proposal_id: uuid.UUID, current_user: dict = Depends(
             is_admin = any(
                 role
                 in [
-                    "admin",
-                    "knowledge manager donors",
-                    "knowledge manager outcome",
-                    "knowledge manager field context",
+                    "system admin",
+                    "project reviewer",
                 ]
                 for role in user_roles
             )

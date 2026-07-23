@@ -16,8 +16,8 @@ export default function CommonButton(props) {
                         </>
                         :
                         <>
-                                {props?.icon ? <img className='Dashboard_top_createNewButton_icon' src={props?.icon} alt="Button Icon" /> : ""}
-                                {props?.label}
+                                {props?.icon ? <img className='Dashboard_top_createNewButton_icon' src={props?.icon} alt="" aria-hidden="true" role="presentation" /> : ""}
+                                <span>{props?.label}</span>
                         </>
                 }
         </button>

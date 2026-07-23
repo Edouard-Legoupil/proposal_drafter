@@ -99,6 +99,64 @@ def test_engine():
             connection.execute(
                 text(
                     """
+                CREATE TABLE IF NOT EXISTS user_settings_requests (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id TEXT NOT NULL,
+                    setting_type TEXT NOT NULL,
+                    setting_value TEXT NOT NULL,
+                    requested_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    status TEXT DEFAULT 'pending',
+                    approved_by TEXT,
+                    approved_at DATETIME,
+                    rejection_reason TEXT,
+                    FOREIGN KEY (user_id) REFERENCES users(id),
+                    FOREIGN KEY (approved_by) REFERENCES users(id)
+                )
+            """
+                )
+            )
+            connection.execute(
+                text(
+                    """
+                CREATE TABLE IF NOT EXISTS user_donors (
+                    user_id TEXT NOT NULL,
+                    donor_id TEXT NOT NULL,
+                    PRIMARY KEY (user_id, donor_id),
+                    FOREIGN KEY (user_id) REFERENCES users(id),
+                    FOREIGN KEY (donor_id) REFERENCES donors(id)
+                )
+            """
+                )
+            )
+            connection.execute(
+                text(
+                    """
+                CREATE TABLE IF NOT EXISTS user_outcomes (
+                    user_id TEXT NOT NULL,
+                    outcome_id TEXT NOT NULL,
+                    PRIMARY KEY (user_id, outcome_id),
+                    FOREIGN KEY (user_id) REFERENCES users(id),
+                    FOREIGN KEY (outcome_id) REFERENCES outcomes(id)
+                )
+            """
+                )
+            )
+            connection.execute(
+                text(
+                    """
+                CREATE TABLE IF NOT EXISTS user_field_contexts (
+                    user_id TEXT NOT NULL,
+                    field_context_id TEXT NOT NULL,
+                    PRIMARY KEY (user_id, field_context_id),
+                    FOREIGN KEY (user_id) REFERENCES users(id),
+                    FOREIGN KEY (field_context_id) REFERENCES field_contexts(id)
+                )
+            """
+                )
+            )
+            connection.execute(
+                text(
+                    """
                 CREATE TABLE IF NOT EXISTS user_roles (
                     user_id TEXT, role_id INTEGER,
                     PRIMARY KEY (user_id, role_id),

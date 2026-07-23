@@ -1,9 +1,13 @@
 import React, { useMemo, useState } from 'react'
-import GrantTable from '../components/GrantTable'
+import GrantSection from '../components/GrantSection'
 import AuditTimeline from '../components/AuditTimeline'
 import SubjectPicker from '../components/SubjectPicker'
 import ResourcePicker from '../components/ResourcePicker'
 import { useAccessData, useAdminUsers, useAdminOptions, useAdminResourceList } from '../hooks/useAccessData'
+import ErrorBanner from '../components/ErrorBanner'
+import { useGrantSection } from '../hooks/useGrantSection'
+import { useTesterSection } from '../hooks/useTesterSection'
+import TesterSection from '../components/TesterSection'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || '/api'
 
@@ -220,7 +224,7 @@ export default function TemplateAccessPanel({ resourceId: initialResourceId }) {
         <button type="button" className="ghost-button back-btn" onClick={() => setSelectedId(null)}>
           <i className="fa-solid fa-arrow-left" /> All templates
         </button>
-        <div className="panel-error">{error}</div>
+        <ErrorBanner message={error} />
       </section>
     )
   }
@@ -252,72 +256,35 @@ export default function TemplateAccessPanel({ resourceId: initialResourceId }) {
 
       <div className="grant-section">
         <h3>Granted subjects</h3>
-        <GrantTable
+        <GrantSection
           grants={grants}
           permissionOptions={permissionOptions}
-          onRevoke={revokeGrant}
           showScope
+          grantForm={grantForm}
+          setGrantForm={setGrantForm}
+          statusMessage={statusMessage}
+          actionLoading={actionLoading}
+          onGrant={handleGrant}
+          onRevoke={revokeGrant}
+          users={users}
+          options={options}
           emptyMessage="No template grants"
         />
-        <form className="grant-form" onSubmit={handleGrant}>
-          <label>
-            Subject type
-            <select value={grantForm.subjectType} onChange={e => setGrantForm(prev => ({ ...prev, subjectType: e.target.value, subjectId: '' }))}>
-              <option value="user">User</option>
-              <option value="team">Team</option>
-              <option value="organization">Organization</option>
-            </select>
-          </label>
-          <label>
-            {grantForm.subjectType === 'user' ? 'User' : grantForm.subjectType === 'team' ? 'Team' : 'Organization'}
-            <SubjectPicker
-              subjectType={grantForm.subjectType}
-              value={grantForm.subjectId}
-              onChange={val => setGrantForm(prev => ({ ...prev, subjectId: val }))}
-              users={users}
-              options={options}
-            />
-          </label>
-          <fieldset className="permissions-row">
-            {permissionOptions.map(opt => (
-              <label key={opt.key}>
-                <input type="checkbox" checked={grantForm.permissions.includes(opt.key)} onChange={() => togglePermission(opt.key)} />
-                {opt.label}
-              </label>
-            ))}
-          </fieldset>
-          <button type="submit" className="primary-button" disabled={actionLoading}>Save grant</button>
-        </form>
       </div>
 
       <section className="tester-panel">
-        <div className="section-header">
-          <h3>Tester</h3>
-        </div>
-        <form className="tester-form" onSubmit={handleTester}>
-          <label>
-            Subject
-            <SubjectPicker
-              subjectType={tester.subjectType}
-              value={tester.subjectId}
-              onChange={val => setTester(prev => ({ ...prev, subjectId: val }))}
-              users={users}
-              options={options}
-            />
-          </label>
-          <label>
-            Operation
-            <select value={tester.operation} onChange={e => setTester(prev => ({ ...prev, operation: e.target.value }))}>
-              {operationOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-            </select>
-          </label>
-          <button type="submit" className="primary-button" disabled={actionLoading}>Test</button>
-        </form>
-        {testerResult && (
-          <div className="tester-result">
-            <p><strong>{testerResult.allowed ? '✅ Allowed' : '❌ Denied'}</strong> — {testerResult.reason || 'No reason'}</p>
-          </div>
-        )}
+        <div className="section-header"><h3>Tester</h3></div>
+        <TesterSection
+          tester={tester}
+          setTester={setTester}
+          testerResult={testerResult}
+          statusMessage={testMsg}
+          actionLoading={testLoading}
+          onTest={handleTester}
+          operationOptions={operationOptions}
+          users={users}
+          options={options}
+        />
       </section>
 
       <section className="audit-panel">

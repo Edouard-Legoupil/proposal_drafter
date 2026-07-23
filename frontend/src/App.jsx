@@ -9,6 +9,7 @@ import DonorTemplateDetail from './screens/DonorTemplateDetail/DonorTemplateDeta
 import QualityGate from './screens/QualityGate/QualityGate'
 import AccessManagement from './screens/Admin/AccessManagement'
 import WizardModal from './components/Wizard/WizardModal'
+import WizardDebug from './components/Wizard/WizardDebug'
 
 export default function App()
 {
@@ -34,6 +35,7 @@ export default function App()
                         <Route path="/admin/access/:resourceType/:resourceId" element={<AccessManagement />} />
                 </Routes>
                 <WizardModal />
+                <WizardDebug />
             </>
         )
 }

@@ -387,7 +387,7 @@ async def update_request_status(
     """
     # Simplified RBAC: any user with 'admin' or 'knowledge manager' role
     roles = current_user.get("roles", [])
-    if not any(role in ["admin", "knowledge manager donors"] for role in roles):
+    if not any(role in ["system admin", "knowledge manager donors"] for role in roles):
         raise HTTPException(
             status_code=403,
             detail="Only admins or knowledge managers can update status.",
@@ -518,7 +518,9 @@ async def reply_to_template_feedback(
             if str(owner_id) != str(user_id) and not current_user.get("is_admin", False):
                 # Check if user is an admin via roles
                 roles = current_user.get("roles", [])
-                is_admin = any(r == "admin" or (isinstance(r, dict) and r.get("name") == "admin") for r in roles)
+                is_admin = any(
+                    r == "system admin" or (isinstance(r, dict) and r.get("name") == "system admin") for r in roles
+                )
                 if not is_admin:
                     raise HTTPException(status_code=403, detail="Permission denied.")
 

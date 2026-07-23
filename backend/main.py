@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 #  Internal Modules
 from backend.api import (
     admin,
+    admin_settings_requests,
     auth,
     documents,
     health,
@@ -24,6 +25,7 @@ from backend.api import (
     proposals,
     qualification,
     session,
+    settings_requests,
     sharepoint,
     template_management,
     templates,
@@ -135,9 +137,11 @@ app.include_router(session.router, prefix="/api", tags=["Session Management"])
 app.include_router(proposals.router, prefix="/api", tags=["Proposals"])
 app.include_router(documents.router, prefix="/api", tags=["Documents"])
 app.include_router(users.router, prefix="/api", tags=["Users"])
+app.include_router(settings_requests.router, prefix="/api", tags=["Settings Requests"])
 app.include_router(knowledge.router, prefix="/api", tags=["Knowledge"])
 app.include_router(metrics.router, prefix="/api", tags=["Metrics"])
 app.include_router(admin.router, prefix="/api", tags=["Admin"])
+app.include_router(admin_settings_requests.router, prefix="/api", tags=["Admin Settings Requests"])
 app.include_router(templates.router, prefix="/api/templates", tags=["Donor Templates"])
 app.include_router(template_management.router, prefix="/api/admin", tags=["Template Management"])
 app.include_router(incident.router, prefix="/api", tags=["Incidents"])

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Wizard Fallback Test</title>
+    <script type="module">
+        import { getMockCategories, getMockPopularQuestions, getMockQaItems } from './context/WizardContext';
+
+        // Test the mock data functions
+        console.log('Testing Wizard Context Mock Data...');
+
+        try {
+            const categories = getMockCategories();
+            console.log('✅ Categories:', categories);
+            console.log('Categories count:', categories.length);
+
+            const popularQuestions = getMockPopularQuestions();
+            console.log('✅ Popular Questions:', popularQuestions);
+            console.log('Popular Questions count:', popularQuestions.length);
+
+            const allQaItems = getMockQaItems();
+            console.log('✅ All QA Items:', allQaItems);
+            console.log('All QA Items count:', allQaItems.length);
+
+            const generalQaItems = getMockQaItems(1);
+            console.log('✅ General QA Items:', generalQaItems);
+            console.log('General QA Items count:', generalQaItems.length);
+
+            document.getElementById('result').innerHTML = `
+                <h2>✅ Mock Data Test Successful!</h2>
+                <p>Categories: ${categories.length}</p>
+                <p>Popular Questions: ${popularQuestions.length}</p>
+                <p>All QA Items: ${allQaItems.length}</p>
+                <p>General QA Items: ${generalQaItems.length}</p>
+            `;
+        } catch (error) {
+            console.error('❌ Error testing mock data:', error);
+            document.getElementById('result').innerHTML = `
+                <h2>❌ Mock Data Test Failed!</h2>
+                <p>Error: ${error.message}</p>
+            `;
+        }
+    </script>
+</head>
+<body>
+    <h1>Wizard Context Mock Data Test</h1>
+    <div id="result">Loading test...</div>
+</body>
+</html>

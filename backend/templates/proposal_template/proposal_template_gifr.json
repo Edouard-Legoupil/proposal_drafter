@@ -1,0 +1,402 @@
+{
+    "template_type": "Proposal",
+    "donors": [
+        "Global Islamic Fund for Refugees"
+    ],
+    "special_requirements": {
+        "instructions": [
+            "Ensure compliance with GIFR eligibility: max USD 1,000,000 budget and 12-month implementation. if instructions violate this eligibility,prioritize eligibility requirements, automatically adjust the budget and duration to comply with eligibility.",
+            "Target refugees, IDPs, stateless people, and host communities in IsDB member countries: Kingdom of Saudi Arabia;Islamic Republic of Iran ; State of Libya ; State of Qatar ; Republic of Indonesia ; Arab Republic of Egypt ; State of Kuwait ; Federal Republic of Nigeria ; United Arab Emirates ; Republic of Türkiye ; Islamic Republic of Pakistan ; People's Democratic Republic of Algeria ; Malaysia ; Kingdom of Morocco ; People's Republic of Bangladesh ; Republic of Azerbaijan ; Republic of Sudan ; Hashemite Kingdom of Jordan ; Republic of Yemen ; Sultanate of Oman ; Republic of Cameroon; Republic of Senegal; Republic of Tunisia; Republic of Iraq; Brunei Darussalam ; Republic of Niger ; Burkina Faso ; Republic of Uganda ; Kingdom of Bahrain; Republic of Benin; Gabonese Republic; Republic of Kazakhstan; Republic of Mali; Republic of Guinea; Islamic Republic of Mauritania; Republic of Lebanon; Republic of the Gambia; Kyrgyz Republic; Republic of Mozambique; Republic of Maldives; Republic of Sierra Leone; Togolese Republic; Republic of Tajikistan; State of Palestine; Syrian Arab Republic; Republic of Uzbekistan; Republic of Côte d’Ivoire; Union of Comoros; Islamic Republic of Afghanistan; Republic of Chad; Republic of Albania; Republic of Suriname ; Republic of Djibouti; Turkmenistan; Republic of Guinea-Bissau; Federal Republic of Somalia; Co-operative Republic of Guyana - if this is not the case- include a warning message in the project title",
+            "Integrate sustainability, self-reliance, and market-based approaches.",
+            "Align explicitly with GIFR KPIs and Multi-Dimensional Poverty Index (MDPI).",
+            "Highlight how the project contributes to strengthenig humanitarian–development nexus, enhance localization and partnerships with national and community-based actors, include gender-responsive and youth-focused programming, contribute to digital inclusion and financial access for displaced populations and is scalable and replicable across operations",
+            "Ensure the project fit into existing innovative Islamic finance modalities (e.g., zakat, waqf-linked programming, blended finance)",
+            "Highlight co-financing and partnerships where applicable.",
+            "Use a professional donor-facing tone; avoid generic statements and emphasize measurable results.",
+            "Ensure alignment with priority sectors: Health, Shelter, WASH, Climate Resilience, Education/Vocational Training.",
+            "Show UNHCR's unique capacity and access",
+            "Strictly base all content on the provided inputs and knowledge base.",
+            "Do not invent or hallucinate facts, figures, or dates.",
+            "If information is missing, explicitly state that it is not available in the context.",
+            "If there is no mention in the context of the targeted population size for the project, asssume the project target the entire population of interest for the designated field context.",
+            "Ensure tone, style, and formatting match a professional humanitarian proposal.",
+            "when referencing donor, use donor name and never  donor_id",
+            "when referencing outcomes, use outcome name and never  outcome_id",
+            "when referencing, field context, use field_context name and never field context_id"
+        ]
+    },
+    "section_sequence": [
+        "project_title",
+        "background",
+        "rationale_objectives",
+        "project_description",
+        "justification_alignment",
+        "beneficiary_institution",
+        "results_framework_annex",
+        "timeline",
+        "time_plan_annex",
+        "detailed_cost_financing_plan_annex",
+        "procurement",
+        "budget_summary",
+        "risks_sustainability",
+        "sustainability_strategy",
+        "communication",
+        "reporting",
+        "exit_strategy",
+        "executive_summary"
+    ],
+    "sections": [
+        {
+            "section_name": "project_title",
+            "section_label": "Project Title",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 20,
+            "instructions": "Provide a concise, impactful project title reflecting sector, target population, and intended outcome."
+        },
+        {
+            "section_name": "executive_summary",
+            "section_label": "Executive Summary",
+            "section_parent": "1. Project Executive Summary Sheet",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 300,
+            "instructions": "Summarize the project including: context, target population, objectives (max 3), expected results with quantified outputs, total budget, duration (<=12 months), and alignment with GIFR priorities and KPIs."
+        },
+        {
+            "section_name": "project_metadata",
+            "section_label": "Project Overview Table",
+            "section_parent": "1. Project Executive Summary Sheet",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Fill in a structured summary of key project details.",
+            "columns": [
+                {
+                    "name": "Field",
+                    "format_type": "text",
+                    "instructions": "Project metadata label"
+                },
+                {
+                    "name": "Value",
+                    "format_type": "text",
+                    "instructions": "Provide concise and accurate value"
+                }
+            ],
+            "rows": [
+                {
+                    "row_title": "Country",
+                    "instructions": "Country of implementation (IsDB member country required)."
+                },
+                {
+                    "row_title": "Sector",
+                    "instructions": "Select from priority sectors."
+                },
+                {
+                    "row_title": "Implementing Agency",
+                    "instructions": "Responsible entity."
+                },
+                {
+                    "row_title": "Total Budget (USD)",
+                    "instructions": "Must be <= 1,000,000 USD."
+                },
+                {
+                    "row_title": "Duration (months)",
+                    "instructions": "Must be <= 12 months."
+                },
+                {
+                    "row_title": "Target Beneficiaries",
+                    "instructions": "Specify refugees, IDPs, host communities."
+                },
+                {
+                    "row_title": "Co-financing",
+                    "instructions": "List co-funders if available."
+                }
+            ]
+        },
+        {
+            "section_name": "background",
+            "section_label": "2. Project Background",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 400,
+            "instructions": "Describe the crisis context, socio-economic conditions, vulnerability drivers, and relevance to target population. Include MDPI-related deprivations where possible."
+        },
+        {
+            "section_name": "rationale_objectives",
+            "section_label": "3. Rationale, Objectives and Key Results",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 400,
+            "instructions": "Define up to 3 SMART objectives and expected results. Each result must be explicitly linked to at least one GIFR KPI indicator using the codes listed below: \n\nKPI 1 – Resilience and Dignified Life Outcomes:\n1a Shelter Solutions – number of individuals or families receiving adequate shelter;\n1b Health Service Coverage – percentage of beneficiaries with access to essential health services;\n1c WASH Access – number of beneficiaries with access to safe water and sanitation;\n1d Cash Assistance – volume of assistance and number of beneficiaries.\n\nKPI 2 – Economic Empowerment and Sustainable Development:\n2a Livelihood Outcomes – number of individuals securing employment or starting businesses;\n2b Educational Outcomes – number of beneficiaries enrolled or completing education/training.\n\nKPI 3 – Programmatic Adaptability and Environmental Sustainability:\n3a Emergency Response Agility – time to approve funding;\n3b Climate Action Integration – number/percentage of projects integrating climate or green solutions.\n\nKPI 4 – Geographic and Demographic Inclusivity:\n4a Target Group Reach – proportion of refugees, IDPs, stateless people, and host communities;\n4b Exceptional Programs – projects outside IsDB geography.\n\nKPI 5 – Program Accountability and Reporting:\n5a Implementation Progress – rate of execution and funds disbursed;\n5b Fund Misuse/Refund – amount refunded;\n5c Donor Engagement – reporting frequency and transparency."
+        },
+        {
+            "section_name": "justification_alignment",
+            "section_label": "4. Project Justification",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 350,
+            "instructions": "Demonstrate strategic fit with GIFR vision, humanitarian-development nexus, Islamic finance modalities if relevant, and explain additionality of GIFR funding."
+        },
+        {
+            "section_name": "beneficiary_institution",
+            "section_label": "5. Beneficiary Institution",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 300,
+            "instructions": "Describe implementing agency capacity, experience, governance, roles and responsibilities, and partnership arrangements including localization."
+        },
+        {
+            "section_name": "project_description",
+            "section_label": "6. The Project",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 500,
+            "instructions": "Describe project components, outputs, and key activities. Ensure logical structure linking activities to outputs and outcomes."
+        },
+        {
+            "section_name": "timeline",
+            "section_label": "Implementation Timeline",
+            "section_parent": "7. Implementation Timeline and Procurement Arrangements",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 150,
+            "instructions": "Describe implementation timeline (<=12 months) with key milestones. Include only a couple of sentences and a succinct summary of major milestones. summary only (not table). Detailed schedule must be provided in Annex 3"
+        },
+        {
+            "section_name": "procurement",
+            "section_label": "Procurement Arrangements",
+            "section_parent": "7. Implementation Timeline and Procurement Arrangements",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Articulate in details the agreed procurement procedures for the project.",
+            "columns": [
+                {
+                    "name": "Activity",
+                    "format_type": "text",
+                    "instructions": "Describe the activity"
+                },
+                {
+                    "name": "Timeline",
+                    "format_type": "text",
+                    "instructions": "Expected procurement timeline"
+                },
+                {
+                    "name": "Package in USD",
+                    "format_type": "number",
+                    "instructions": "Provide numerical targets."
+                },
+                {
+                    "name": "Mode of Procurement",
+                    "format_type": "text",
+                    "instructions": "Mode of procurement"
+                }
+            ]
+        },
+        {
+            "section_name": "budget_summary",
+            "section_label": "8. Cost Estimate & Financing Plan",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 200,
+            "instructions": "Summarize total cost, breakdown, co-financing, and value for money rationale. Explain Financial Management Procedures and Plan."
+        },
+        {
+            "section_name": "risks_sustainability",
+            "section_label": "Risks and Mitigation Measures",
+            "section_parent": "9. Risks and Sustainability",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Identify key risks and mitigation measures.",
+            "columns": [
+                {
+                    "name": "Risk",
+                    "format_type": "text",
+                    "instructions": "Describe risk."
+                },
+                {
+                    "name": "Level",
+                    "format_type": "text",
+                    "instructions": "Low/Medium/High."
+                },
+                {
+                    "name": "Mitigation",
+                    "format_type": "text",
+                    "instructions": "Mitigation strategy."
+                }
+            ]
+        },
+        {
+            "section_name": "sustainability_strategy",
+            "section_label": "Sustainability Strategy",
+            "section_parent": "10. Risks and Sustainability",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 250,
+            "instructions": "Outline key measures for the sustainability of the Grant Operation and its results in the medium to long term, including technical sustainability, economic/financial sustainability, and institutional/social and environmental sustainability of the Grant Operation"
+        },
+        {
+            "section_name": "communication",
+            "section_label": "11. Communication and Visibility",
+            "format_type": "fixed_text",
+            "mandatory": true,
+            "word_limit": 200,
+            "fixed_text": "For the purposes of this project, the UNHCR is to commit to the following activities: \n - Placement of GIFR and GIFR Donors’ logos on equipment, banners and implementation sites of the project. \n - Acknowledge GIFR and GIFR Donors’ contribution in UNHCR’s annual report on its website, as well as in the project’s final report.\n - Share audiovisual materials reflecting the humanitarian support enabled by GIFR and GIFR Donors’ contributions. \n - Invite the donors (GIFR and GIFR Donors) to attend landmark steps in the implementation of the project activities (such as the; letter of engagements  with government partners, the handover of equipment, opening of boreholes…etc.). \n - Provide GIFR and GIFR Donors with human success stories and photos with the necessary authorization for publication to enable IsDB to communicate on the project. \n \n   Any communication will be shared in advance with each party and require written approval before any direct or indirect publication. "
+        },
+        {
+            "section_name": "reporting",
+            "section_label": "12. Reporting Plan",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 150,
+            "instructions": "Describe reporting frequency, KPIs tracking, and accountability mechanisms."
+        },
+        {
+            "section_name": "exit_strategy",
+            "section_label": "13. Exit Plan and Sustainability",
+            "format_type": "text",
+            "mandatory": true,
+            "word_limit": 200,
+            "instructions": "Explain exit strategy, handover, and long-term impact sustainability."
+        },
+        {
+            "section_name": "results_framework_annex",
+            "section_label": "Annex 1- Results Based Logical Framework",
+            "section_parent": "Annex",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Develop a full logical framework using ONLY the KPI list below as reference. Each row must include a valid KPI code (e.g., 1a, 2b, 3b).\n\nKPI LIST:\n1a Shelter Solutions;\n1b Health Service Coverage;\n1c WASH Access;\n1d Cash Assistance;\n2a Livelihood Outcomes;\n2b Educational Outcomes;\n3a Emergency Response Agility;\n3b Climate Action Integration;\n4a Target Group Reach;\n4b Exceptional Programs;\n5a Implementation Progress;\n5b Fund Misuse/Refund;\n5c Donor Engagement.",
+            "columns": [
+                {
+                    "name": "Outcome/Output",
+                    "format_type": "text",
+                    "instructions": "State outcome or output clearly. Describe the result chain element."
+                },
+                {
+                    "name": "Indicator",
+                    "format_type": "text",
+                    "instructions": "Define a SMART indicator strictlyaligned with the KPI indicator listed in instructions"
+                },
+                {
+                    "name": "Target",
+                    "format_type": "number",
+                    "instructions": "Provide achievable numerical targets aligned with the available resources and project scope."
+                },
+                {
+                    "name": "Means of Verification",
+                    "format_type": "text",
+                    "instructions": "Data sources."
+                }
+            ]
+        },
+        {
+            "section_name": "detailed_cost_financing_plan_annex",
+            "section_label": "Annex 2 - Detailed Cost & Financing Plan (Amount US$) ",
+            "section_parent": "Annex",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Create a detailed cost and financing plan for the project. The plan should include the following information: Total cost of the project, Breakdown of costs by activity, Financing plan,including co-financing and partnerships where applicable.",
+            "columns": [
+                {
+                    "name": "Activity",
+                    "format_type": "text",
+                    "instructions": "Project activity."
+                },
+                {
+                    "name": "Unit Cost",
+                    "format_type": "number",
+                    "instructions": "Cost per unit (USD)."
+                },
+                {
+                    "name": "Quantity",
+                    "format_type": "number",
+                    "instructions": "Number of units."
+                },
+                {
+                    "name": "Total Cost (USD)",
+                    "format_type": "number",
+                    "instructions": "Total cost."
+                }
+            ]
+        },
+        {
+            "section_name": "time_plan_annex",
+            "section_label": "Annex 3 - Project Time Plan ",
+            "section_parent": "Annex",
+            "format_type": "table",
+            "mandatory": true,
+            "instructions": "Provide a structured project implementation timeline covering the full duration of the project (maximum 12 months). The table should present the sequencing of key outcomes, outputs, and activities across months, clearly indicating when each activity will start and end. Ensure that: \n - The timeline aligns with the logical framework and project activities described in earlier sections. \n- Each activity is realistically scheduled, reflecting implementation feasibility and dependencies. \n- Major milestones (e.g., project start, mid-term review, completion) are clearly identifiable.\n - Overlaps and sequencing between activities are coherent and justified. \n - The plan demonstrates efficient use of time and supports timely delivery of results. \n\n Use the table format to map activities against months (Month 1–Month 12), marking the periods of implementation (e.g., with “X”).",
+            "columns": [
+                {
+                    "name": "Outcome/Output",
+                    "format_type": "text",
+                    "instructions": "Indicate the corresponding outcome or output from the results framework. Ensure consistency with previously defined results."
+                },
+                {
+                    "name": "Activity",
+                    "format_type": "text",
+                    "instructions": "List the key activity contributing to the outcome/output. Activities should match those described in the project scope."
+                },
+                {
+                    "name": "Month 1",
+                    "format_type": "text",
+                    "instructions": "Mark 'X' if the activity is implemented in Month 1."
+                },
+                {
+                    "name": "Month 2",
+                    "format_type": "text",
+                    "instructions": "Mark 'X' if the activity is implemented in Month 2."
+                },
+                {
+                    "name": "Month 3",
+                    "format_type": "text",
+                    "instructions": "Mark 'X' if the activity is implemented in Month 3."
+                },
+                {
+                    "name": "Month 4",
+                    "format_type": "text",
+                    "instructions": "Mark 'X' if the activity is implemented in Month 4."
+                },
+                {
+                    "name": "Month 5",
+                    "format_type": "text",
+                    "instructions": "Mark 'X' if the activity is implemented in Month 5."
+                },
+                {
+                    "name": "Month 6",
+                    "format_type": "text",
+                    "instructions": "Mark 'X' if the activity is implemented in Month 6."
+                },
+                {
+                    "name": "Month 7",
+                    "format_type": "text",
+                    "instructions": "Mark 'X' if the activity is implemented in Month 7."
+                },
+                {
+                    "name": "Month 8",
+                    "format_type": "text",
+                    "instructions": "Mark 'X' if the activity is implemented in Month 8."
+                },
+                {
+                    "name": "Month 9",
+                    "format_type": "text",
+                    "instructions": "Mark 'X' if the activity is implemented in Month 9."
+                },
+                {
+                    "name": "Month 10",
+                    "format_type": "text",
+                    "instructions": "Mark 'X' if the activity is implemented in Month 10."
+                },
+                {
+                    "name": "Month 11",
+                    "format_type": "text",
+                    "instructions": "Mark 'X' if the activity is implemented in Month 11."
+                },
+                {
+                    "name": "Month 12",
+                    "format_type": "text",
+                    "instructions": "Mark 'X' if the activity is implemented in Month 12. Ensure the full plan does not exceed 12 months."
+                }
+            ]
+        }
+    ]
+}

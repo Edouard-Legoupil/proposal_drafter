@@ -1,9 +1,13 @@
 import React, { useMemo, useState } from 'react'
-import GrantTable from '../components/GrantTable'
-import AuditTimeline from '../components/AuditTimeline'
-import SubjectPicker from '../components/SubjectPicker'
 import ResourcePicker from '../components/ResourcePicker'
+import AuditTimeline from '../components/AuditTimeline'
+import GrantSection from '../components/GrantSection'
+import TesterSection from '../components/TesterSection'
+import ErrorBanner from '../components/ErrorBanner'
+import SubjectPicker from '../components/SubjectPicker'
 import { useAccessData, useAdminUsers, useAdminOptions, useAdminResourceList } from '../hooks/useAccessData'
+import { useGrantSection } from '../hooks/useGrantSection'
+import { useTesterSection } from '../hooks/useTesterSection'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || '/api'
 
@@ -45,12 +49,20 @@ const proposalColumns = [
 
 export default function ProposalAccessPanel({ resourceId: initialResourceId }) {
   const [selectedId, setSelectedId] = useState(initialResourceId !== 'latest' ? initialResourceId : null)
-  const [statusMessage, setStatusMessage] = useState('')
-  const [grantForm, setGrantForm] = useState({ subjectType: 'user', subjectId: '', permissions: ['read'], dataScope: 'self' })
   const [ownerCandidate, setOwnerCandidate] = useState('')
-  const [tester, setTester] = useState({ subjectType: 'user', subjectId: '', operation: 'GET' })
-  const [testerResult, setTesterResult] = useState(null)
+  const [statusMessage, setStatusMessage] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
+  const { grantForm, setGrantForm, statusMessage: grantMsg, actionLoading: grantLoading, handleGrant, revokeGrant } =
+    useGrantSection({
+      endpoint: `/admin/proposals/${selectedId}/access`,
+      initialForm: { subjectType: 'user', subjectId: '', permissions: ['read'], dataScope: 'self' },
+      refresh
+    })
+  const { tester, setTester, testerResult, statusMessage: testMsg, actionLoading: testLoading, handleTester } =
+    useTesterSection({
+      endpoint: `/admin/proposals/${selectedId}/access/test`,
+      initialForm: { subjectType: 'user', subjectId: '', operation: 'GET' }
+    })
 
   const { items: proposals, loading: listLoading, error: listError } = useAdminResourceList('proposals')
   const { data: access, loading, error, refresh } = useAccessData(
@@ -68,60 +80,6 @@ export default function ProposalAccessPanel({ resourceId: initialResourceId }) {
 
   const grants = access?.grants || []
   const audit = access?.audit || []
-
-  const revokeGrant = async (grantId) => {
-    setActionLoading(true)
-    setStatusMessage('Revoking grant…')
-    try {
-      const res = await fetch(`${API_BASE_URL}/admin/proposals/${selectedId}/access`, {
-        method: 'DELETE',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ grant_id: grantId })
-      })
-      if (!res.ok) throw new Error('Failed to revoke grant')
-      setStatusMessage('Grant revoked')
-      await refresh()
-    } catch (err) {
-      console.error(err)
-      setStatusMessage(err.message)
-    } finally {
-      setActionLoading(false)
-    }
-  }
-
-  const handleGrant = async (e) => {
-    e.preventDefault()
-    if (!grantForm.subjectId) {
-      setStatusMessage('Select a subject before granting access')
-      return
-    }
-    setActionLoading(true)
-    setStatusMessage('Saving grant…')
-    try {
-      const payload = {
-        subject_type: grantForm.subjectType,
-        subject_id: grantForm.subjectId,
-        permissions: grantForm.permissions,
-        data_scope: grantForm.dataScope
-      }
-      const res = await fetch(`${API_BASE_URL}/admin/proposals/${selectedId}/access`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-      if (!res.ok) throw new Error('Failed to grant access')
-      setStatusMessage('Access granted')
-      setGrantForm(prev => ({ ...prev, subjectId: '' }))
-      await refresh()
-    } catch (err) {
-      console.error(err)
-      setStatusMessage(err.message)
-    } finally {
-      setActionLoading(false)
-    }
-  }
 
   const handleTransfer = async (e) => {
     e.preventDefault()
@@ -141,32 +99,6 @@ export default function ProposalAccessPanel({ resourceId: initialResourceId }) {
       if (!res.ok) throw new Error('Ownership transfer failed')
       setStatusMessage('Ownership transferred')
       await refresh()
-    } catch (err) {
-      console.error(err)
-      setStatusMessage(err.message)
-    } finally {
-      setActionLoading(false)
-    }
-  }
-
-  const handleTester = async (e) => {
-    e.preventDefault()
-    if (!tester.subjectId) {
-      setStatusMessage('Select a user/team/donor to test')
-      return
-    }
-    setActionLoading(true)
-    setStatusMessage('Running access test…')
-    try {
-      const res = await fetch(`${API_BASE_URL}/admin/proposals/${selectedId}/access/test`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(tester)
-      })
-      if (!res.ok) throw new Error('Tester failed')
-      setTesterResult(await res.json())
-      setStatusMessage('Test complete')
     } catch (err) {
       console.error(err)
       setStatusMessage(err.message)
@@ -222,7 +154,7 @@ export default function ProposalAccessPanel({ resourceId: initialResourceId }) {
         <button type="button" className="ghost-button back-btn" onClick={() => setSelectedId(null)}>
           <i className="fa-solid fa-arrow-left" /> All proposals
         </button>
-        <div className="panel-error">{error}</div>
+        <ErrorBanner message={error} />
       </section>
     )
   }
@@ -252,11 +184,19 @@ export default function ProposalAccessPanel({ resourceId: initialResourceId }) {
         <div className="section-header">
           <h3>Access Grants</h3>
         </div>
-        <GrantTable
+        <GrantSection
           grants={grants}
           permissionOptions={permissionOptions}
-          onRevoke={revokeGrant}
           showScope
+          dataScopeOptions={['self','team','organization','global']}
+          grantForm={grantForm}
+          setGrantForm={setGrantForm}
+          statusMessage={grantMsg}
+          actionLoading={grantLoading}
+          onGrant={handleGrant}
+          onRevoke={revokeGrant}
+          users={users}
+          options={options}
           emptyMessage="No explicit grants"
         />
 
@@ -326,49 +266,17 @@ export default function ProposalAccessPanel({ resourceId: initialResourceId }) {
 
       <section className="tester-panel">
         <h3>Effective Access Tester</h3>
-        <form className="tester-form" onSubmit={handleTester}>
-          <div className="form-row">
-            <label>
-              Subject type
-              <select value={tester.subjectType} onChange={e => setTester(prev => ({ ...prev, subjectType: e.target.value, subjectId: '' }))}>
-                <option value="user">User</option>
-                <option value="team">Team</option>
-                <option value="donor_group">Donor Group</option>
-              </select>
-            </label>
-            <label>
-              Subject
-              <SubjectPicker
-                subjectType={tester.subjectType}
-                value={tester.subjectId}
-                onChange={val => setTester(prev => ({ ...prev, subjectId: val }))}
-                users={users}
-                options={options}
-              />
-            </label>
-            <label>
-              Operation
-              <select value={tester.operation} onChange={e => setTester(prev => ({ ...prev, operation: e.target.value }))}>
-                {operationOptions.map(opt => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <button type="submit" className="primary-button" disabled={actionLoading}>Run test</button>
-        </form>
-        {testerResult && (
-          <article className="tester-result">
-            <p>
-              <strong>{testerResult.allowed ? '✅ Allowed' : '❌ Denied'}</strong> — {testerResult.reason || 'No reason provided'}
-            </p>
-            <p>Source: {testerResult.source || testerResult.permission_source || '—'}</p>
-            <p>HTTP status: {testerResult.http_status || testerResult.status || '—'}</p>
-            <p>Scope: {testerResult.data_scope || '—'}</p>
-          </article>
-        )}
+        <TesterSection
+          tester={tester}
+          setTester={setTester}
+          testerResult={testerResult}
+          statusMessage={testMsg}
+          actionLoading={testLoading}
+          onTest={handleTester}
+          operationOptions={operationOptions}
+          users={users}
+          options={options}
+        />
       </section>
 
       <section className="audit-panel">

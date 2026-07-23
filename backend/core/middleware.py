@@ -21,6 +21,8 @@ def setup_security_middleware(app):
     Configures and adds security-related middleware to the app.
     This includes security headers, trusted host middleware, and other security enhancements.
     """
+    # Temporarily disable TrustedHostMiddleware to fix startup issues
+    # allowed_hosts = ["localhost", "127.0.0.1", "*"]
     # Add TrustedHostMiddleware to prevent HTTP Host header attacks
     # For development, allow localhost and 127.0.0.1 in addition to the CORS origins
     allowed_hosts = list(origins) + ["localhost", "127.0.0.1"]

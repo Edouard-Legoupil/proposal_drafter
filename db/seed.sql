@@ -26,7 +26,8 @@ INSERT INTO donor_groups (id, name) VALUES
 
 -- -- Insert Donors
 INSERT INTO donors (id, account_id, name, country, donor_group) VALUES
-(gen_random_uuid(), 'IGOV-EU-10723', 'EU ECHO', 'EU', 'Brussels Donor Group');
+(gen_random_uuid(), 'IGOV-EU-10723', 'EU ECHO', 'EU', 'Brussels Donor Group'),
+(gen_random_uuid(), 'IGOV-GIFR-001', 'Global Islamic Fund for Refugees', 'Global', 'Islamic Finance Group');
 
 INSERT INTO field_contexts (id, name, category, geographic_coverage) VALUES
 (gen_random_uuid(),  'Afghanistan', 'Country', 'One Country Operation'),

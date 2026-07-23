@@ -1,0 +1,90 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ProgressModal Component > should match snapshot for failure state 1`] = `
+<DocumentFragment>
+  <dialog
+    class="Chat_regenerate"
+    open=""
+    style="height: 360px;"
+  >
+    <header
+      class="Chat_regenerate_header"
+      style="padding: 20px;"
+    >
+      <div
+        style="width: 100%; height: 30px; border-radius: 10px; background-color: rgb(224, 224, 224); position: relative; overflow: hidden;"
+      >
+        <div
+          style="width: 100%; height: 100%; background-color: rgb(255, 68, 68); transition: width 0.3s ease; border-radius: 10px;"
+        />
+      </div>
+    </header>
+    <main
+      class="Chat_right"
+      style="padding: 20px;"
+    >
+      <p
+        style="text-align: center; font-weight: 600;"
+      >
+        Generation failed!
+      </p>
+      <p
+        style="text-align: center; margin-top: 10px;"
+      >
+        100%
+      </p>
+      <div
+        class="Chat_inputArea_buttonContainer"
+        style="justify-content: center;"
+      >
+        <button
+          class="CommonButton  "
+          type="button"
+        >
+          <span>
+            Close
+          </span>
+        </button>
+      </div>
+    </main>
+  </dialog>
+</DocumentFragment>
+`;
+
+exports[`ProgressModal Component > should match snapshot for success state 1`] = `
+<DocumentFragment>
+  <dialog
+    class="Chat_regenerate"
+    open=""
+    style="height: 360px;"
+  >
+    <header
+      class="Chat_regenerate_header"
+      style="padding: 20px;"
+    >
+      <div
+        style="width: 100%; height: 30px; border-radius: 10px; background-color: rgb(224, 224, 224); position: relative; overflow: hidden;"
+      >
+        <div
+          style="width: 100%; height: 100%; background-color: rgb(76, 175, 80); transition: width 0.3s ease; border-radius: 10px;"
+        />
+      </div>
+    </header>
+    <main
+      class="Chat_right"
+      style="padding: 20px;"
+    >
+      <p
+        style="text-align: center; font-weight: 600;"
+      >
+        Generation completed!
+      </p>
+      <p
+        style="text-align: center; margin-top: 10px;"
+      >
+        100%
+      </p>
+    </main>
+  </dialog>
+</DocumentFragment>
+`;

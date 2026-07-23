@@ -26,12 +26,18 @@ const RegenerateModal = ({
     >
       <header className='Chat_regenerate_header'>
         Regenerate — {sectionName || "Section"}
-        <img
-          src={regenerateCloseIcon}
-          alt=""
+        <button
           onClick={onClose}
+          aria-label="Close"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '5px' }}
           data-testid="regenerate-dialog-close-button"
-        />
+        >
+          <img
+            src={regenerateCloseIcon}
+            alt=""
+            style={{ width: '24px', height: '24px' }}
+          />
+        </button>
       </header>
 
       <main className='Chat_right'>

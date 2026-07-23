@@ -5,6 +5,7 @@ import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../mocks/server'
 import { BrowserRouter } from 'react-router-dom'
+import { WizardProvider } from '../../context/WizardContext'
 import Chat from './Chat'
 
 vi.mock('../../utils/downloadFile', () => ({
@@ -35,7 +36,9 @@ describe('Proposal Drafter – Form validation', () => {
                 )
                 render(
                         <BrowserRouter>
-                                <Chat />
+                                <WizardProvider>
+                                        <Chat />
+                                </WizardProvider>
                         </BrowserRouter>
                 )
 
@@ -134,7 +137,9 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                 )
                 render(
                         <BrowserRouter>
-                                <Chat />
+                                <WizardProvider>
+                                        <Chat />
+                                </WizardProvider>
                         </BrowserRouter>
                 )
 
@@ -224,7 +229,9 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                 )
                 render(
                         <BrowserRouter>
-                                <Chat />
+                                <WizardProvider>
+                                        <Chat />
+                                </WizardProvider>
                         </BrowserRouter>
                 )
 
@@ -316,7 +323,9 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                 sessionStorage.setItem('proposal_id', 'submitted-proposal-123')
                 render(
                         <BrowserRouter>
-                                <Chat />
+                                <WizardProvider>
+                                        <Chat />
+                                </WizardProvider>
                         </BrowserRouter>
                 )
 

@@ -83,6 +83,7 @@ class TeamMember(Base):  # type: ignore[valid-type, misc]
     Attributes:
         team_id: Foreign key to teams table
         user_id: Foreign key to users table
+        status: Membership status (PENDING, ACTIVE, REJECTED)
         team: Relationship to Team
         user: Relationship to User
     """
@@ -91,15 +92,32 @@ class TeamMember(Base):  # type: ignore[valid-type, misc]
 
     team_id = Column(String, ForeignKey("teams.id"), primary_key=True, nullable=False)
     user_id = Column(String, ForeignKey("users.id"), primary_key=True, nullable=False)
+    status = Column(String, default="ACTIVE", nullable=False)
 
     # Relationships
     team = relationship("Team", back_populates="members")
     # Note: user relationship is defined in User model to avoid circular imports
 
     def __repr__(self):
-        return f"<TeamMember(team_id={self.team_id}, user_id={self.user_id})>"
+        return f"<TeamMember(team_id={self.team_id}, user_id={self.user_id}, status={self.status})>"
 
     @classmethod
     def is_member(cls, session, team_id: str, user_id: str) -> bool:
         """Check if a user is a member of a team."""
         return session.query(cls).filter_by(team_id=team_id, user_id=user_id).first() is not None
+
+    @classmethod
+    def is_active_member(cls, session, team_id: str, user_id: str) -> bool:
+        """Check if a user is an active member of a team."""
+        return session.query(cls).filter_by(team_id=team_id, user_id=user_id, status="ACTIVE").first() is not None
+
+    @classmethod
+    def get_membership_status(cls, session, team_id: str, user_id: str) -> str:
+        """Get the membership status of a user in a team."""
+        membership = session.query(cls).filter_by(team_id=team_id, user_id=user_id).first()
+        return membership.status if membership else "NOT_MEMBER"
+
+    @classmethod
+    def get_pending_requests(cls, session, team_id: str) -> list:
+        """Get all pending membership requests for a team."""
+        return session.query(cls).filter_by(team_id=team_id, status="PENDING").all()

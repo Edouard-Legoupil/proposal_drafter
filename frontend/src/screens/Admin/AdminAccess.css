@@ -49,6 +49,66 @@
   box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
 }
 
+/* Pending settings indicators */
+.select-highlight {
+  border: 2px solid #ff9800 !important;
+  box-shadow: 0 0 0 1px #ff9800;
+}
+
+.pending-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 0.8em;
+  color: #ff9800;
+}
+
+.pending-indicator i {
+  font-size: 0.9em;
+}
+
+/* Settings request modal */
+.settings-request-modal {
+  max-width: 500px;
+  width: 90%;
+}
+
+.setting-type-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background-color: #e3f2fd;
+  color: #1976d2;
+  font-size: 0.9em;
+  font-weight: 500;
+}
+
+/* Notification badges */
+.admin-notification {
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.admin-notification.alert {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.admin-notification i {
+  font-size: 1.1em;
+}
+
+.admin-notification strong {
+  margin-right: 8px;
+}
+
 .section-header {
   margin-bottom: 16px;
   display: flex;

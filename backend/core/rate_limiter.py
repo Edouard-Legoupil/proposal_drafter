@@ -97,7 +97,7 @@ class RateLimiter:
 
         # Check user role for premium access
         role = user.get("role", "").lower()
-        if "premium" in role or "admin" in role:
+        if "premium" in role or "system admin" in role:
             return "premium"
         elif "basic" in role or "member" in role:
             return "basic"

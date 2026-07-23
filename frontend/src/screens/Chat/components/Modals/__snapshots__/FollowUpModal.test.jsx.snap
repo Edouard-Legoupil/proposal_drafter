@@ -1,0 +1,86 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`FollowUpModal Component > should match snapshot 1`] = `
+<DocumentFragment>
+  <dialog
+    class="Chat_regenerate"
+    data-testid="followup-modal"
+    open=""
+    style="height: auto; max-height: 80vh; top: 10%; width: 60vw; max-width: 800px;"
+  >
+    <header
+      class="Chat_regenerate_header"
+    >
+      Provide Follow-up Instructions
+      <button
+        aria-label="Close"
+        style="background: none; cursor: pointer; padding: 5px;"
+      >
+        <img
+          alt=""
+          src="close-icon.png"
+          style="width: 24px; height: 24px;"
+        />
+      </button>
+    </header>
+    <main
+      class="Chat_right"
+      style="padding: 20px;"
+    >
+      <p
+        style="margin-bottom: 15px; color: rgb(102, 102, 102);"
+      >
+        Please provide any follow-up instructions or refinements you'd like to make. The AI will use the existing content as context and apply your instructions to improve it.
+      </p>
+      <textarea
+        class="Chat_inputArea_prompt"
+        data-testid="followup-instruction-input"
+        id="followup-instruction"
+        name="followup-instruction"
+        placeholder="e.g., 'Make the budget section more detailed', 'Focus more on gender equality', 'Revise the timeline to be more realistic'..."
+        style="min-height: 100px; margin-bottom: 20px;"
+      />
+      <div
+        class="Chat_inputArea_buttonContainer"
+        style="display: flex; gap: 10px; justify-content: flex-end;"
+      >
+        <button
+          class="CommonButton  "
+          data-testid="followup-skip-button"
+          type="button"
+        >
+          <span>
+            Skip
+          </span>
+        </button>
+        <button
+          class="CommonButton  "
+          data-testid="followup-save-button"
+          type="button"
+        >
+          <span>
+            Save for Later
+          </span>
+        </button>
+        <button
+          class="CommonButton  "
+          data-testid="followup-regenerate-button"
+          disabled=""
+          type="button"
+        >
+          <img
+            alt=""
+            aria-hidden="true"
+            class="Dashboard_top_createNewButton_icon"
+            role="presentation"
+            src="generate-icon.png"
+          />
+          <span>
+            Regenerate Now
+          </span>
+        </button>
+      </div>
+    </main>
+  </dialog>
+</DocumentFragment>
+`;

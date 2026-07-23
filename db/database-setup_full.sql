@@ -80,6 +80,26 @@ CREATE TABLE IF NOT EXISTS user_field_contexts (
     PRIMARY KEY (user_id, field_context_id)
 );
 
+-- Create User Settings Requests table for approval-based settings changes
+CREATE TABLE IF NOT EXISTS user_settings_requests (
+    id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL,
+    setting_type VARCHAR(50) NOT NULL,
+    setting_value TEXT NOT NULL,
+    requested_at TIMESTAMPTZ DEFAULT NOW(),
+    status VARCHAR(20) DEFAULT 'pending',
+    approved_by UUID,
+    approved_at TIMESTAMPTZ,
+    rejection_reason TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Create indexes for user_settings_requests performance
+CREATE INDEX IF NOT EXISTS idx_user_settings_requests_user ON user_settings_requests(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_settings_requests_status ON user_settings_requests(status);
+CREATE INDEX IF NOT EXISTS idx_user_settings_requests_type ON user_settings_requests(setting_type);
+
 
 -- Create Donors table
 CREATE TABLE IF NOT EXISTS donors (

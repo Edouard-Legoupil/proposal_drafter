@@ -5,35 +5,23 @@ import UserAccessPanel from './resources/UserAccessPanel'
 import ProposalAccessPanel from './resources/ProposalAccessPanel'
 import KnowledgeCardAccessPanel from './resources/KnowledgeCardAccessPanel'
 import TemplateAccessPanel from './resources/TemplateAccessPanel'
-import MetricsAccessPanel from './resources/MetricsAccessPanel'
-import QualityGateAccessPanel from './resources/QualityGateAccessPanel'
-import TeamsRolesPanel from './resources/TeamsRolesPanel'
-import TeamSettingsPanel from './resources/TeamSettingsPanel'
-import IncidentAccessPanel from './resources/IncidentAccessPanel'
+import TeamsAccessPanel from './resources/TeamsAccessPanel'
 import Base from '../../components/Base/Base'
 
 const resourcePanels = {
-  users: UserAccessPanel,
+  'user-access': UserAccessPanel,
+  teams: TeamsAccessPanel,
   proposals: ProposalAccessPanel,
   'knowledge-cards': KnowledgeCardAccessPanel,
-  templates: TemplateAccessPanel,
-  metrics: MetricsAccessPanel,
-  'quality-gate': QualityGateAccessPanel,
-  'teams-roles': TeamsRolesPanel,
-  'team-settings': TeamSettingsPanel,
-  incidents: IncidentAccessPanel
+  templates: TemplateAccessPanel
 }
 
 const navItems = [
-  { key: 'users', label: 'Users' },
-  { key: 'teams-roles', label: 'Teams & Roles' },
-  { key: 'team-settings', label: 'Team Settings' },
+  { key: 'user-access', label: 'User Access' },
+  { key: 'teams', label: 'Teams' },
   { key: 'proposals', label: 'Proposals' },
   { key: 'knowledge-cards', label: 'Knowledge Cards' },
-  { key: 'templates', label: 'Templates' },
-  { key: 'metrics', label: 'Metrics Dashboard' },
-  { key: 'quality-gate', label: 'Quality Gate' },
-  { key: 'incidents', label: 'Incidents' }
+  { key: 'templates', label: 'Templates' }
 ]
 
 export default function AccessManagement() {
@@ -52,7 +40,7 @@ export default function AccessManagement() {
         <header>
           <h1>Access Management</h1>
           <p className="admin-access-subtitle">
-            Manage object-level permissions for proposals, knowledge cards, templates, dashboards, and quality gate/incident workflows.
+            Manage user access, team roles, and object-level permissions for proposals, knowledge cards, and templates.
           </p>
         </header>
         <nav className="admin-access-tabs">
