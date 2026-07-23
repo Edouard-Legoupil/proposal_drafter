@@ -1,7 +1,9 @@
 #  Standard Library
 import json
+import hmac
 import logging
 import os
+import secrets
 import uuid
 from datetime import datetime, timedelta
 
@@ -44,7 +46,11 @@ async def sso_status():
     """
     Returns the status of SSO.
     """
-    return {"enabled": all([ENTRA_TENANT_ID, ENTRA_CLIENT_ID, ENTRA_CLIENT_SECRET])}
+    return {
+        "enabled": all(
+            [ENTRA_TENANT_ID, ENTRA_CLIENT_ID, ENTRA_CLIENT_SECRET, ENTRA_REDIRECT_URI]
+        )
+    }
 
 
 def _get_msal_app():
@@ -60,55 +66,51 @@ async def sso_login(request: Request):
     """
     Redirects the user to the Microsoft identity platform for authentication.
     """
-    if not all([ENTRA_TENANT_ID, ENTRA_CLIENT_ID, ENTRA_CLIENT_SECRET]):
-        return JSONResponse(status_code=404, content={"error": "SSO not configured"})
+    if not all([ENTRA_TENANT_ID, ENTRA_CLIENT_ID, ENTRA_CLIENT_SECRET, ENTRA_REDIRECT_URI]):
+        return JSONResponse(status_code=503, content={"error": "SSO not configured"})
 
     msal_app = _get_msal_app()
-    # Dynamically determine redirect URI if not explicitly configured
-    if ENTRA_REDIRECT_URI:
-        redirect_uri = ENTRA_REDIRECT_URI
-    else:
-        base_url = str(request.base_url).rstrip("/")
-        forwarded_proto = request.headers.get("x-forwarded-proto", "").lower()
-        if forwarded_proto == "https" and base_url.startswith("http://"):
-            base_url = base_url.replace("http://", "https://", 1)
-        redirect_uri = f"{base_url}/api/callback"
-
-    logging.info(f"SSO Login - request.base_url: {request.base_url}")
-    logging.info(f"SSO Login - X-Forwarded-Proto: {request.headers.get('x-forwarded-proto')}")
-    logging.info(f"SSO Login - redirect_uri: {redirect_uri}")
+    oauth_state = secrets.token_urlsafe(32)
 
     auth_url = msal_app.get_authorization_request_url(
         scopes=["User.Read"],
-        redirect_uri=redirect_uri,
+        redirect_uri=ENTRA_REDIRECT_URI,
+        state=oauth_state,
     )
-    logging.info(f"SSO Login - auth_url: {auth_url}")
-    return RedirectResponse(url=auth_url)
+    response = RedirectResponse(url=auth_url)
+    cookie_settings = get_cookie_settings(request)
+    response.set_cookie(
+        key="oauth_state",
+        value=oauth_state,
+        httponly=True,
+        secure=cookie_settings["secure"],
+        samesite="lax",
+        path="/api",
+        max_age=600,
+    )
+    return response
 
 
 @router.get("/callback")
-async def callback(request: Request, code: str):
+async def callback(request: Request, code: str, state: str | None = None):
     """
     Handles the response from the Microsoft identity platform.
     """
-    if not all([ENTRA_TENANT_ID, ENTRA_CLIENT_ID, ENTRA_CLIENT_SECRET]):
-        return JSONResponse(status_code=404, content={"error": "SSO not configured"})
+    if not all([ENTRA_TENANT_ID, ENTRA_CLIENT_ID, ENTRA_CLIENT_SECRET, ENTRA_REDIRECT_URI]):
+        return JSONResponse(status_code=503, content={"error": "SSO not configured"})
+
+    expected_state = request.cookies.get("oauth_state")
+    if not expected_state or not state or not hmac.compare_digest(expected_state, state):
+        response = JSONResponse(status_code=400, content={"error": "Invalid OAuth state"})
+        response.delete_cookie(key="oauth_state", path="/api")
+        return response
 
     msal_app = _get_msal_app()
-    # Use the same dynamic redirect URI logic as in sso-login
-    if ENTRA_REDIRECT_URI:
-        redirect_uri = ENTRA_REDIRECT_URI
-    else:
-        base_url = str(request.base_url).rstrip("/")
-        forwarded_proto = request.headers.get("x-forwarded-proto", "").lower()
-        if forwarded_proto == "https" and base_url.startswith("http://"):
-            base_url = base_url.replace("http://", "https://", 1)
-        redirect_uri = f"{base_url}/api/callback"
 
     result = msal_app.acquire_token_by_authorization_code(
         code,
         scopes=["User.Read"],
-        redirect_uri=redirect_uri,
+        redirect_uri=ENTRA_REDIRECT_URI,
     )
 
     if "error" in result:
@@ -203,6 +205,7 @@ async def callback(request: Request, code: str):
         max_age=28800,
         **cookie_settings,
     )
+    response.delete_cookie(key="oauth_state", path="/api")
     return response
 
 
