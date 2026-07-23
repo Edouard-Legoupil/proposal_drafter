@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useTeamMembership } from '../../../../hooks/useTeamMembership';
-import { TeamMembershipManagement } from '../../../../components/TeamMembershipManagement';
-import { useAuth } from '../../../../context/AuthContext';
+import { useTeamMembership } from '../../../hooks/useTeamMembership';
+import { TeamMembershipManagement } from '../../../components/TeamMembershipManagement';
+import { useAuth } from '../../../context/AuthContext';
 import {
   Box,
   Typography,
@@ -129,7 +129,7 @@ export default function TeamsAccessPanel({ resourceId }) {
               placeholder="Search teams..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps{{
+              InputProps={{
                 startAdornment: <Search sx={{ color: 'action.active', mr: 1 }} />
               }}
             />

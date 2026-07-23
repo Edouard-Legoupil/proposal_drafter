@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import Select from 'react-select'
-import '../../../components/UserAdminModal/UserAdminModal.css'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
 

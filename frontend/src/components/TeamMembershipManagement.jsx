@@ -203,7 +203,7 @@ export function TeamMembershipManagement({ team }) {
                   <ListItemText
                     primary={request.user_name}
                     secondary={request.user_email}
-                  />>
+                  />
                 </ListItem>
               ))}
             </List>
