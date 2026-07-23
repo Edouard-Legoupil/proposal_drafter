@@ -18,7 +18,7 @@ async def request_team_membership(team_id: str, current_user: dict = Depends(get
     try:
         user_id = current_user["user_id"]
 
-        with get_engine().connect() as connection:
+        with get_engine().begin() as connection:
             # Check if team exists
             team_exists = connection.execute(
                 text("SELECT 1 FROM teams WHERE id = :team_id"), {"team_id": team_id}
@@ -68,8 +68,8 @@ async def request_team_membership(team_id: str, current_user: dict = Depends(get
 
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to submit membership request: {str(e)}")
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Failed to submit membership request") from exc
 
 
 @router.get("/teams/{team_id}/requests")
@@ -81,7 +81,7 @@ async def get_team_membership_requests(team_id: str, current_user: dict = Depend
     try:
         user_id = current_user["user_id"]
 
-        with get_engine().connect() as connection:
+        with get_engine().begin() as connection:
             # Check if user is admin
             is_admin = connection.execute(
                 text(
@@ -151,8 +151,10 @@ async def get_team_membership_requests(team_id: str, current_user: dict = Depend
             ],
         }
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch membership requests: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Failed to fetch membership requests") from exc
 
 
 @router.post("/teams/{team_id}/approve/{user_id}")
@@ -164,7 +166,7 @@ async def approve_team_membership(team_id: str, user_id: str, current_user: dict
     try:
         admin_user_id = current_user["user_id"]
 
-        with get_engine().connect() as connection:
+        with get_engine().begin() as connection:
             # Check if user is admin
             is_admin = connection.execute(
                 text(
@@ -262,8 +264,10 @@ async def approve_team_membership(team_id: str, user_id: str, current_user: dict
             "status": "ACTIVE",
         }
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to approve team membership: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Failed to approve team membership") from exc
 
 
 @router.post("/teams/{team_id}/reject/{user_id}")
@@ -275,7 +279,7 @@ async def reject_team_membership(team_id: str, user_id: str, current_user: dict 
     try:
         admin_user_id = current_user["user_id"]
 
-        with get_engine().connect() as connection:
+        with get_engine().begin() as connection:
             # Check if user is admin
             is_admin = connection.execute(
                 text(
@@ -373,8 +377,10 @@ async def reject_team_membership(team_id: str, user_id: str, current_user: dict 
             "status": "REJECTED",
         }
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to reject team membership: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Failed to reject team membership") from exc
 
 
 @router.get("/teams/{team_id}/roles")
@@ -386,7 +392,7 @@ async def get_team_roles(team_id: str, current_user: dict = Depends(get_current_
     try:
         user_id = current_user["user_id"]
 
-        with get_engine().connect() as connection:
+        with get_engine().begin() as connection:
             # Check if user is admin
             is_admin = connection.execute(
                 text(
@@ -443,8 +449,10 @@ async def get_team_roles(team_id: str, current_user: dict = Depends(get_current_
             "roles": [{"role_id": row[0], "role_name": row[1]} for row in roles],
         }
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch team roles: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Failed to fetch team roles") from exc
 
 
 @router.post("/teams/{team_id}/roles")
@@ -459,7 +467,7 @@ async def assign_role_to_team(team_id: str, role_data: dict, admin: dict = Depen
         if not role_id:
             raise HTTPException(status_code=400, detail="role_id is required")
 
-        with get_engine().connect() as connection:
+        with get_engine().begin() as connection:
             # Check if team exists
             team_exists = connection.execute(
                 text("SELECT 1 FROM teams WHERE id = :team_id"), {"team_id": team_id}
@@ -521,8 +529,10 @@ async def assign_role_to_team(team_id: str, role_data: dict, admin: dict = Depen
             "role_id": role_id,
         }
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to assign role to team: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Failed to assign role to team") from exc
 
 
 @router.delete("/teams/{team_id}/roles/{role_id}")
@@ -532,7 +542,7 @@ async def remove_role_from_team(team_id: str, role_id: int, admin: dict = Depend
     Only accessible to system admins.
     """
     try:
-        with get_engine().connect() as connection:
+        with get_engine().begin() as connection:
             # Check if assignment exists
             assignment_exists = connection.execute(
                 text("SELECT 1 FROM team_roles WHERE team_id = :team_id AND role_id = :role_id"),
@@ -578,5 +588,7 @@ async def remove_role_from_team(team_id: str, role_id: int, admin: dict = Depend
             "role_id": role_id,
         }
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to remove role from team: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Failed to remove role from team") from exc

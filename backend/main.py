@@ -20,6 +20,7 @@ from backend.api import (
     documents,
     health,
     incident,
+    interaction_analytics,
     knowledge,
     metrics,
     proposals,
@@ -27,7 +28,7 @@ from backend.api import (
     session,
     settings_requests,
     sharepoint,
-    template_management,
+    team_membership,
     templates,
     users,
     wizard,
@@ -143,7 +144,8 @@ app.include_router(metrics.router, prefix="/api", tags=["Metrics"])
 app.include_router(admin.router, prefix="/api", tags=["Admin"])
 app.include_router(admin_settings_requests.router, prefix="/api", tags=["Admin Settings Requests"])
 app.include_router(templates.router, prefix="/api/templates", tags=["Donor Templates"])
-app.include_router(template_management.router, prefix="/api/admin", tags=["Template Management"])
+app.include_router(team_membership.router, prefix="/api", tags=["Team Membership"])
+app.include_router(interaction_analytics.router, prefix="/api")
 app.include_router(incident.router, prefix="/api", tags=["Incidents"])
 app.include_router(qualification.router, prefix="/api", tags=["Qualification"])
 app.include_router(health.router, tags=["Health & Debugging"])
