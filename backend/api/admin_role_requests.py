@@ -135,7 +135,7 @@ async def reject_role_request(
                 {'request_id': request_id}
             )
             
-            if result.rowcount === 0:
+            if result.rowcount == 0:
                 raise HTTPException(
                     status_code=404,
                     detail="Role request not found"

@@ -1,8 +1,10 @@
 # Standard Library
 import uuid
+import json
 from sqlalchemy import text
 
 # Internal Modules
+from backend.models.user import User
 
 
 def test_team_membership_workflow(test_engine):
@@ -11,19 +13,30 @@ def test_team_membership_workflow(test_engine):
         # Setup: Create team and users
         team_id = str(uuid.uuid4())
         connection.execute(
-            text("INSERT INTO teams (id, name) VALUES (:id, :name)"), {"id": team_id, "name": "Test Team"}
+            text("INSERT INTO teams (id, name) VALUES (:id, :name)"),
+            {"id": team_id, "name": "Test Team"},
         )
 
         user_id = str(uuid.uuid4())
         connection.execute(
             text("INSERT INTO users (id, email, password, name) VALUES (:id, :email, :password, :name)"),
-            {"id": user_id, "email": "test@example.com", "password": "password", "name": "Test User"},
+            {
+                "id": user_id,
+                "email": "test@example.com",
+                "password": "password",
+                "name": "Test User",
+            },
         )
 
         team_leader_id = str(uuid.uuid4())
         connection.execute(
             text("INSERT INTO users (id, email, password, name) VALUES (:id, :email, :password, :name)"),
-            {"id": team_leader_id, "email": "leader@example.com", "password": "password", "name": "Team Leader"},
+            {
+                "id": team_leader_id,
+                "email": "leader@example.com",
+                "password": "password",
+                "name": "Team Leader",
+            },
         )
 
         # Make user a team leader
@@ -102,19 +115,30 @@ def test_team_leader_role(test_engine):
         # Setup: Create team and users
         team_id = str(uuid.uuid4())
         connection.execute(
-            text("INSERT INTO teams (id, name) VALUES (:id, :name)"), {"id": team_id, "name": "Test Team"}
+            text("INSERT INTO teams (id, name) VALUES (:id, :name)"),
+            {"id": team_id, "name": "Test Team"},
         )
 
         leader_id = str(uuid.uuid4())
         connection.execute(
             text("INSERT INTO users (id, email, password, name) VALUES (:id, :email, :password, :name)"),
-            {"id": leader_id, "email": "leader@example.com", "password": "password", "name": "Team Leader"},
+            {
+                "id": leader_id,
+                "email": "leader@example.com",
+                "password": "password",
+                "name": "Team Leader",
+            },
         )
 
         member_id = str(uuid.uuid4())
         connection.execute(
             text("INSERT INTO users (id, email, password, name) VALUES (:id, :email, :password, :name)"),
-            {"id": member_id, "email": "member@example.com", "password": "password", "name": "Team Member"},
+            {
+                "id": member_id,
+                "email": "member@example.com",
+                "password": "password",
+                "name": "Team Member",
+            },
         )
 
         # Make leader a team leader
@@ -139,12 +163,12 @@ def test_team_leader_role(test_engine):
         # Test with leader
         leader = User()
         leader.id = leader_id
-        assert leader.is_team_leader(team_id, connection) == True
+        assert leader.is_team_leader(team_id, connection) is True
 
         # Test with regular member
         member = User()
         member.id = member_id
-        assert member.is_team_leader(team_id, connection) == False
+        assert member.is_team_leader(team_id, connection) is False
 
 
 def test_object_level_access_control(test_engine):
@@ -153,25 +177,41 @@ def test_object_level_access_control(test_engine):
         # Setup: Create team, users, and proposal
         team_id = str(uuid.uuid4())
         connection.execute(
-            text("INSERT INTO teams (id, name) VALUES (:id, :name)"), {"id": team_id, "name": "Test Team"}
+            text("INSERT INTO teams (id, name) VALUES (:id, :name)"),
+            {"id": team_id, "name": "Test Team"},
         )
 
         owner_id = str(uuid.uuid4())
         connection.execute(
             text("INSERT INTO users (id, email, password, name) VALUES (:id, :email, :password, :name)"),
-            {"id": owner_id, "email": "owner@example.com", "password": "password", "name": "Owner"},
+            {
+                "id": owner_id,
+                "email": "owner@example.com",
+                "password": "password",
+                "name": "Owner",
+            },
         )
 
         team_member_id = str(uuid.uuid4())
         connection.execute(
             text("INSERT INTO users (id, email, password, name) VALUES (:id, :email, :password, :name)"),
-            {"id": team_member_id, "email": "member@example.com", "password": "password", "name": "Team Member"},
+            {
+                "id": team_member_id,
+                "email": "member@example.com",
+                "password": "password",
+                "name": "Team Member",
+            },
         )
 
         non_member_id = str(uuid.uuid4())
         connection.execute(
             text("INSERT INTO users (id, email, password, name) VALUES (:id, :email, :password, :name)"),
-            {"id": non_member_id, "email": "nonmember@example.com", "password": "password", "name": "Non Member"},
+            {
+                "id": non_member_id,
+                "email": "nonmember@example.com",
+                "password": "password",
+                "name": "Non Member",
+            },
         )
 
         # Make team member part of team
@@ -208,7 +248,7 @@ def test_object_level_access_control(test_engine):
             {"user_id": owner_id, "proposal_id": proposal_id},
         ).scalar()
 
-        assert has_access == True
+        assert has_access is True
 
         # Team member should have access
         has_access = connection.execute(
@@ -220,7 +260,7 @@ def test_object_level_access_control(test_engine):
             {"user_id": team_member_id, "proposal_id": proposal_id},
         ).scalar()
 
-        assert has_access == True
+        assert has_access is True
 
         # Team member should have write access
         has_access = connection.execute(
@@ -232,7 +272,7 @@ def test_object_level_access_control(test_engine):
             {"user_id": team_member_id, "proposal_id": proposal_id},
         ).scalar()
 
-        assert has_access == True
+        assert has_access is True
 
         # Non-member should NOT have access
         has_access = connection.execute(
@@ -244,7 +284,7 @@ def test_object_level_access_control(test_engine):
             {"user_id": non_member_id, "proposal_id": proposal_id},
         ).scalar()
 
-        assert has_access == False
+        assert has_access is False
 
 
 def test_role_inheritance_with_team_leader(test_engine):
@@ -256,7 +296,8 @@ def test_role_inheritance_with_team_leader(test_engine):
         # Create team
         team_id = str(uuid.uuid4())
         connection.execute(
-            text("INSERT INTO teams (id, name) VALUES (:id, :name)"), {"id": team_id, "name": "Test Team"}
+            text("INSERT INTO teams (id, name) VALUES (:id, :name)"),
+            {"id": team_id, "name": "Test Team"},
         )
 
         # Create users
@@ -312,7 +353,8 @@ def test_role_inheritance_with_team_leader(test_engine):
 
         # Test role inheritance for leader
         result = connection.execute(
-            text("SELECT * FROM get_user_roles_with_inheritance(:user_id)"), {"user_id": leader_id}
+            text("SELECT * FROM get_user_roles_with_inheritance(:user_id)"),
+            {"user_id": leader_id},
         ).fetchall()
 
         role_names = [role[1] for role in result]
@@ -321,7 +363,8 @@ def test_role_inheritance_with_team_leader(test_engine):
 
         # Test role inheritance for regular member
         result = connection.execute(
-            text("SELECT * FROM get_user_roles_with_inheritance(:user_id)"), {"user_id": member_id}
+            text("SELECT * FROM get_user_roles_with_inheritance(:user_id)"),
+            {"user_id": member_id},
         ).fetchall()
 
         role_names = [role[1] for role in result]
@@ -338,7 +381,8 @@ def test_team_role_assignment(test_engine):
         # Create team
         team_id = str(uuid.uuid4())
         connection.execute(
-            text("INSERT INTO teams (id, name) VALUES (:id, :name)"), {"id": team_id, "name": "Test Team"}
+            text("INSERT INTO teams (id, name) VALUES (:id, :name)"),
+            {"id": team_id, "name": "Test Team"},
         )
 
         # Assign roles to team
@@ -354,7 +398,8 @@ def test_team_role_assignment(test_engine):
 
         # Verify roles are assigned
         roles = connection.execute(
-            text("SELECT role_id FROM team_roles WHERE team_id = :team_id ORDER BY role_id"), {"team_id": team_id}
+            text("SELECT role_id FROM team_roles WHERE team_id = :team_id ORDER BY role_id"),
+            {"team_id": team_id},
         ).fetchall()
 
         assert len(roles) == 2
@@ -369,7 +414,8 @@ def test_team_role_assignment(test_engine):
 
         # Verify role was removed
         roles = connection.execute(
-            text("SELECT role_id FROM team_roles WHERE team_id = :team_id"), {"team_id": team_id}
+            text("SELECT role_id FROM team_roles WHERE team_id = :team_id"),
+            {"team_id": team_id},
         ).fetchall()
 
         assert len(roles) == 1

@@ -315,7 +315,8 @@ async def get_templates(current_user: dict = Depends(get_current_user)):
             exc_info=True,
         )
         raise InternalServerError(
-            error_code="TEMPLATE_RETRIEVAL_FAILED", detail="Could not retrieve proposal templates"
+            error_code="TEMPLATE_RETRIEVAL_FAILED",
+            detail="Could not retrieve proposal templates",
         )
 
 
@@ -1669,16 +1670,16 @@ async def get_proposals_for_review(current_user: dict = Depends(get_current_user
                         "project_title": form_data.get("Project Draft Short name")
                         or form_data.get("Project title", "Untitled Proposal"),
                         "summary": row["project_description"] or "",
-                        "created_at": row["created_at"].isoformat() if row["created_at"] else None,
-                        "updated_at": row["updated_at"].isoformat() if row["updated_at"] else None,
+                        "created_at": (row["created_at"].isoformat() if row["created_at"] else None),
+                        "updated_at": (row["updated_at"].isoformat() if row["updated_at"] else None),
                         "is_accepted": row["is_accepted"],
                         "status": row["status"],
                         "requester_name": row["requester_name"],
-                        "deadline": row["deadline"].isoformat() if row["deadline"] else None,
+                        "deadline": (row["deadline"].isoformat() if row["deadline"] else None),
                         "is_sample": False,
                         "donor": row["donor_name"],
                         "country": row["country_name"],
-                        "outcomes": row["outcome_names"].split(", ") if row["outcome_names"] else [],
+                        "outcomes": (row["outcome_names"].split(", ") if row["outcome_names"] else []),
                         "budget": form_data.get("Budget Range", "N/A"),
                         "review_status": review_status,
                         "review_completed_at": (
@@ -1775,15 +1776,15 @@ async def list_drafts(status: Optional[str] = None, current_user: dict = Depends
                         "project_title": form_data.get("Project Draft Short name")
                         or form_data.get("Project title", "Untitled Proposal"),
                         "summary": row["project_description"] or "",
-                        "created_at": row["created_at"].isoformat() if row["created_at"] else None,
-                        "updated_at": row["updated_at"].isoformat() if row["updated_at"] else None,
+                        "created_at": (row["created_at"].isoformat() if row["created_at"] else None),
+                        "updated_at": (row["updated_at"].isoformat() if row["updated_at"] else None),
                         "is_accepted": row["is_accepted"],
                         "status": row["status"],
                         "is_sample": False,
                         # New relational fields
                         "donor": row["donor_name"],
                         "country": row["country_name"],
-                        "outcomes": row["outcome_names"].split(", ") if row["outcome_names"] else [],
+                        "outcomes": (row["outcome_names"].split(", ") if row["outcome_names"] else []),
                         "budget": form_data.get("Budget Range", "N/A"),
                     }
                 )
@@ -1867,13 +1868,13 @@ async def list_all_proposals(current_user: dict = Depends(get_current_user)):
                         "project_title": form_data.get("Project Draft Short name")
                         or form_data.get("Project title", "Untitled Proposal"),
                         "summary": row["project_description"] or "",
-                        "created_at": row["created_at"].isoformat() if row["created_at"] else None,
-                        "updated_at": row["updated_at"].isoformat() if row["updated_at"] else None,
+                        "created_at": (row["created_at"].isoformat() if row["created_at"] else None),
+                        "updated_at": (row["updated_at"].isoformat() if row["updated_at"] else None),
                         "is_accepted": row["is_accepted"],
                         "status": row["status"],
                         "donor": row["donor_name"],
                         "country": row["country_name"],
-                        "outcomes": row["outcome_names"].split(", ") if row["outcome_names"] else [],
+                        "outcomes": (row["outcome_names"].split(", ") if row["outcome_names"] else []),
                         "budget": form_data.get("Budget Range", "N/A"),
                         "team_name": row["team_name"],
                         "team_id": str(row["team_id"]),
@@ -1997,8 +1998,8 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
                     "generated_sections": {sec: sections.get(sec) for sec in section_names},
                     "is_accepted": draft.is_accepted,
                     "status": draft.status,
-                    "created_at": draft.created_at.isoformat() if draft.created_at else None,
-                    "updated_at": draft.updated_at.isoformat() if draft.updated_at else None,
+                    "created_at": (draft.created_at.isoformat() if draft.created_at else None),
+                    "updated_at": (draft.updated_at.isoformat() if draft.updated_at else None),
                     "is_sample": False,
                     "template_name": template_name,
                     "proposal_template": proposal_template,
@@ -2696,8 +2697,8 @@ async def get_proposal_for_review(proposal_id: uuid.UUID, current_user: dict = D
                 "generated_sections": {sec: sections.get(sec) for sec in section_names},
                 "is_accepted": draft.is_accepted,
                 "status": draft.status,
-                "created_at": draft.created_at.isoformat() if draft.created_at else None,
-                "updated_at": draft.updated_at.isoformat() if draft.updated_at else None,
+                "created_at": (draft.created_at.isoformat() if draft.created_at else None),
+                "updated_at": (draft.updated_at.isoformat() if draft.updated_at else None),
                 "review_status": review_status,
                 "draft_comments": draft_comments,
             }
@@ -3169,8 +3170,8 @@ async def get_peer_reviews(proposal_id: uuid.UUID, current_user: dict = Depends(
                     "severity": row.severity,
                     "type_of_comment": row.type_of_comment,
                     "reviewer_id": row.reviewer_id,
-                    "created_at": row.created_at.isoformat() if row.created_at else None,
-                    "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+                    "created_at": (row.created_at.isoformat() if row.created_at else None),
+                    "updated_at": (row.updated_at.isoformat() if row.updated_at else None),
                     "reviewer_name": row.reviewer_name,
                     "proposal_owner_name": row.proposal_owner_name,
                 }

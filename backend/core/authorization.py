@@ -705,7 +705,10 @@ async def check_proposal_access(
                 proposal = result.fetchone()
 
                 if proposal is None:
-                    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Proposal not found")
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail="Proposal not found",
+                    )
 
                 return {
                     "id": proposal[0],
@@ -744,7 +747,10 @@ async def check_knowledge_card_access(knowledge_card_id: int, current_user: Curr
                 knowledge_card = result.fetchone()
 
                 if knowledge_card is None:
-                    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Knowledge card not found")
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail="Knowledge card not found",
+                    )
 
                 return {
                     "id": knowledge_card[0],
@@ -851,7 +857,10 @@ async def check_knowledge_card_access(knowledge_card_id: int, current_user: Curr
 
 
 async def check_object_access(
-    object_type: str, object_id: Union[str, int], current_user: CurrentUser, required_permission: str = "read"
+    object_type: str,
+    object_id: Union[str, int],
+    current_user: CurrentUser,
+    required_permission: str = "read",
 ) -> bool:
     """
     Check object-level access control for proposals, knowledge cards, and templates.
@@ -968,7 +977,9 @@ async def check_object_access(
 
 
 async def check_template_access(
-    template_id: Union[str, int], current_user: CurrentUser, required_permission: str = "read"
+    template_id: Union[str, int],
+    current_user: CurrentUser,
+    required_permission: str = "read",
 ) -> Dict[str, Any]:
     """
     Check template access using object-level access control.
@@ -988,7 +999,10 @@ async def check_template_access(
                 template = result.fetchone()
 
                 if template is None:
-                    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail="Template not found",
+                    )
 
                 return {
                     "id": template[0],

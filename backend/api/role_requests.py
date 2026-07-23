@@ -192,7 +192,7 @@ async def cancel_role_request(
                 {'user_id': current_user['user_id'], 'role_id': role_id}
             )
             
-            if result.rowcount === 0:
+            if result.rowcount == 0:
                 raise HTTPException(
                     status_code=404,
                     detail="No pending request found for this role"

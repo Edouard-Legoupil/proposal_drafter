@@ -13,26 +13,38 @@ def test_settings_based_proposal_filtering(test_engine):
         admin_id = str(uuid.uuid4())
         connection.execute(
             text("INSERT INTO users (id, email, password, name) VALUES (:id, :email, :password, :name)"),
-            {"id": admin_id, "email": "admin@example.com", "password": "password", "name": "Admin"},
+            {
+                "id": admin_id,
+                "email": "admin@example.com",
+                "password": "password",
+                "name": "Admin",
+            },
         )
 
         # Make admin
         connection.execute(text("INSERT INTO roles (id, name) VALUES (999, 'system admin')"))
         connection.execute(
-            text("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, 999)"), {"user_id": admin_id}
+            text("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, 999)"),
+            {"user_id": admin_id},
         )
 
         # Create regular user with specific settings
         user_id = str(uuid.uuid4())
         connection.execute(
             text("INSERT INTO users (id, email, password, name) VALUES (:id, :email, :password, :name)"),
-            {"id": user_id, "email": "user@example.com", "password": "password", "name": "Regular User"},
+            {
+                "id": user_id,
+                "email": "user@example.com",
+                "password": "password",
+                "name": "Regular User",
+            },
         )
 
         # Create team
         team_id = str(uuid.uuid4())
         connection.execute(
-            text("INSERT INTO teams (id, name) VALUES (:id, :name)"), {"id": team_id, "name": "Test Team"}
+            text("INSERT INTO teams (id, name) VALUES (:id, :name)"),
+            {"id": team_id, "name": "Test Team"},
         )
 
         # Add user to team
@@ -44,7 +56,8 @@ def test_settings_based_proposal_filtering(test_engine):
         # Create donor
         donor_id = str(uuid.uuid4())
         connection.execute(
-            text("INSERT INTO donors (id, name) VALUES (:id, :name)"), {"id": donor_id, "name": "Test Donor"}
+            text("INSERT INTO donors (id, name) VALUES (:id, :name)"),
+            {"id": donor_id, "name": "Test Donor"},
         )
 
         # Add donor to user
@@ -56,7 +69,8 @@ def test_settings_based_proposal_filtering(test_engine):
         # Create outcome
         outcome_id = str(uuid.uuid4())
         connection.execute(
-            text("INSERT INTO outcomes (id, name) VALUES (:id, :name)"), {"id": outcome_id, "name": "Test Outcome"}
+            text("INSERT INTO outcomes (id, name) VALUES (:id, :name)"),
+            {"id": outcome_id, "name": "Test Outcome"},
         )
 
         # Add outcome to user
@@ -103,7 +117,12 @@ def test_settings_based_proposal_filtering(test_engine):
         other_user_id = str(uuid.uuid4())
         connection.execute(
             text("INSERT INTO users (id, email, password, name) VALUES (:id, :email, :password, :name)"),
-            {"id": other_user_id, "email": "other@example.com", "password": "password", "name": "Other User"},
+            {
+                "id": other_user_id,
+                "email": "other@example.com",
+                "password": "password",
+                "name": "Other User",
+            },
         )
 
         # Add other user to same team
@@ -132,13 +151,19 @@ def test_settings_based_proposal_filtering(test_engine):
         proposal_3_id = str(uuid.uuid4())
         other_team_id = str(uuid.uuid4())
         connection.execute(
-            text("INSERT INTO teams (id, name) VALUES (:id, :name)"), {"id": other_team_id, "name": "Other Team"}
+            text("INSERT INTO teams (id, name) VALUES (:id, :name)"),
+            {"id": other_team_id, "name": "Other Team"},
         )
 
         other_user_2_id = str(uuid.uuid4())
         connection.execute(
             text("INSERT INTO users (id, email, password, name) VALUES (:id, :email, :password, :name)"),
-            {"id": other_user_2_id, "email": "other2@example.com", "password": "password", "name": "Other User 2"},
+            {
+                "id": other_user_2_id,
+                "email": "other2@example.com",
+                "password": "password",
+                "name": "Other User 2",
+            },
         )
 
         connection.execute(
@@ -241,7 +266,14 @@ def test_settings_based_proposal_filtering(test_engine):
         accessible_proposals = []
         inaccessible_proposals = []
 
-        for proposal_id in [proposal_1_id, proposal_2_id, proposal_3_id, proposal_4_id, proposal_5_id, proposal_6_id]:
+        for proposal_id in [
+            proposal_1_id,
+            proposal_2_id,
+            proposal_3_id,
+            proposal_4_id,
+            proposal_5_id,
+            proposal_6_id,
+        ]:
             has_access = connection.execute(
                 text(
                     """
@@ -265,7 +297,14 @@ def test_settings_based_proposal_filtering(test_engine):
         assert proposal_6_id in inaccessible_proposals  # No connection
 
         # Test admin access (should see all proposals)
-        for proposal_id in [proposal_1_id, proposal_2_id, proposal_3_id, proposal_4_id, proposal_5_id, proposal_6_id]:
+        for proposal_id in [
+            proposal_1_id,
+            proposal_2_id,
+            proposal_3_id,
+            proposal_4_id,
+            proposal_5_id,
+            proposal_6_id,
+        ]:
             has_access = connection.execute(
                 text(
                     """
@@ -284,14 +323,20 @@ def test_team_leader_access_control(test_engine):
         # Setup: Create team with leader and member
         team_id = str(uuid.uuid4())
         connection.execute(
-            text("INSERT INTO teams (id, name) VALUES (:id, :name)"), {"id": team_id, "name": "Test Team"}
+            text("INSERT INTO teams (id, name) VALUES (:id, :name)"),
+            {"id": team_id, "name": "Test Team"},
         )
 
         # Create team leader
         leader_id = str(uuid.uuid4())
         connection.execute(
             text("INSERT INTO users (id, email, password, name) VALUES (:id, :email, :password, :name)"),
-            {"id": leader_id, "email": "leader@example.com", "password": "password", "name": "Team Leader"},
+            {
+                "id": leader_id,
+                "email": "leader@example.com",
+                "password": "password",
+                "name": "Team Leader",
+            },
         )
 
         connection.execute(
@@ -309,7 +354,12 @@ def test_team_leader_access_control(test_engine):
         member_id = str(uuid.uuid4())
         connection.execute(
             text("INSERT INTO users (id, email, password, name) VALUES (:id, :email, :password, :name)"),
-            {"id": member_id, "email": "member@example.com", "password": "password", "name": "Team Member"},
+            {
+                "id": member_id,
+                "email": "member@example.com",
+                "password": "password",
+                "name": "Team Member",
+            },
         )
 
         connection.execute(
@@ -378,19 +428,30 @@ def test_object_level_access_control_edge_cases(test_engine):
         # Setup: Create team and users
         team_id = str(uuid.uuid4())
         connection.execute(
-            text("INSERT INTO teams (id, name) VALUES (:id, :name)"), {"id": team_id, "name": "Test Team"}
+            text("INSERT INTO teams (id, name) VALUES (:id, :name)"),
+            {"id": team_id, "name": "Test Team"},
         )
 
         owner_id = str(uuid.uuid4())
         connection.execute(
             text("INSERT INTO users (id, email, password, name) VALUES (:id, :email, :password, :name)"),
-            {"id": owner_id, "email": "owner@example.com", "password": "password", "name": "Owner"},
+            {
+                "id": owner_id,
+                "email": "owner@example.com",
+                "password": "password",
+                "name": "Owner",
+            },
         )
 
         team_member_id = str(uuid.uuid4())
         connection.execute(
             text("INSERT INTO users (id, email, password, name) VALUES (:id, :email, :password, :name)"),
-            {"id": team_member_id, "email": "member@example.com", "password": "password", "name": "Team Member"},
+            {
+                "id": team_member_id,
+                "email": "member@example.com",
+                "password": "password",
+                "name": "Team Member",
+            },
         )
 
         connection.execute(
@@ -401,7 +462,12 @@ def test_object_level_access_control_edge_cases(test_engine):
         non_member_id = str(uuid.uuid4())
         connection.execute(
             text("INSERT INTO users (id, email, password, name) VALUES (:id, :email, :password, :name)"),
-            {"id": non_member_id, "email": "nonmember@example.com", "password": "password", "name": "Non Member"},
+            {
+                "id": non_member_id,
+                "email": "nonmember@example.com",
+                "password": "password",
+                "name": "Non Member",
+            },
         )
 
         # Test 1: Proposal with no team_id (legacy proposal)
@@ -537,14 +603,20 @@ def test_membership_status_enforcement(test_engine):
         # Setup: Create team and users
         team_id = str(uuid.uuid4())
         connection.execute(
-            text("INSERT INTO teams (id, name) VALUES (:id, :name)"), {"id": team_id, "name": "Test Team"}
+            text("INSERT INTO teams (id, name) VALUES (:id, :name)"),
+            {"id": team_id, "name": "Test Team"},
         )
 
         # Create active member
         active_member_id = str(uuid.uuid4())
         connection.execute(
             text("INSERT INTO users (id, email, password, name) VALUES (:id, :email, :password, :name)"),
-            {"id": active_member_id, "email": "active@example.com", "password": "password", "name": "Active Member"},
+            {
+                "id": active_member_id,
+                "email": "active@example.com",
+                "password": "password",
+                "name": "Active Member",
+            },
         )
 
         connection.execute(
@@ -556,7 +628,12 @@ def test_membership_status_enforcement(test_engine):
         pending_member_id = str(uuid.uuid4())
         connection.execute(
             text("INSERT INTO users (id, email, password, name) VALUES (:id, :email, :password, :name)"),
-            {"id": pending_member_id, "email": "pending@example.com", "password": "password", "name": "Pending Member"},
+            {
+                "id": pending_member_id,
+                "email": "pending@example.com",
+                "password": "password",
+                "name": "Pending Member",
+            },
         )
 
         connection.execute(
@@ -645,7 +722,8 @@ def test_membership_status_enforcement(test_engine):
 
         # Check role inheritance for active member (should work)
         active_roles = connection.execute(
-            text("SELECT * FROM get_user_roles_with_inheritance(:user_id)"), {"user_id": active_member_id}
+            text("SELECT * FROM get_user_roles_with_inheritance(:user_id)"),
+            {"user_id": active_member_id},
         ).fetchall()
 
         role_names = [role[1] for role in active_roles]
@@ -653,7 +731,8 @@ def test_membership_status_enforcement(test_engine):
 
         # Check role inheritance for pending member (should NOT work)
         pending_roles = connection.execute(
-            text("SELECT * FROM get_user_roles_with_inheritance(:user_id)"), {"user_id": pending_member_id}
+            text("SELECT * FROM get_user_roles_with_inheritance(:user_id)"),
+            {"user_id": pending_member_id},
         ).fetchall()
 
         pending_role_names = [role[1] for role in pending_roles]

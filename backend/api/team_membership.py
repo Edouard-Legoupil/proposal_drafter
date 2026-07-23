@@ -1,6 +1,7 @@
 # Standard Library
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
+import json
 
 # Internal Modules
 from backend.core.db import get_engine
@@ -35,7 +36,8 @@ async def request_team_membership(team_id: str, current_user: dict = Depends(get
             if existing_membership:
                 if existing_membership[0] == "PENDING":
                     raise HTTPException(
-                        status_code=400, detail="You already have a pending membership request for this team"
+                        status_code=400,
+                        detail="You already have a pending membership request for this team",
                     )
                 elif existing_membership[0] == "ACTIVE":
                     raise HTTPException(status_code=400, detail="You are already a member of this team")
@@ -48,7 +50,10 @@ async def request_team_membership(team_id: str, current_user: dict = Depends(get
                         {"team_id": team_id, "user_id": user_id},
                     )
 
-                return {"message": "Membership request updated successfully", "status": "PENDING"}
+                return {
+                    "message": "Membership request updated successfully",
+                    "status": "PENDING",
+                }
 
             # Create new pending membership request
             connection.execute(
@@ -56,7 +61,10 @@ async def request_team_membership(team_id: str, current_user: dict = Depends(get
                 {"team_id": team_id, "user_id": user_id},
             )
 
-        return {"message": "Membership request submitted successfully", "status": "PENDING"}
+        return {
+            "message": "Membership request submitted successfully",
+            "status": "PENDING",
+        }
 
     except HTTPException:
         raise
@@ -107,7 +115,8 @@ async def get_team_membership_requests(team_id: str, current_user: dict = Depend
 
             if not is_admin and not is_team_leader:
                 raise HTTPException(
-                    status_code=403, detail="Only team leaders and administrators can view membership requests"
+                    status_code=403,
+                    detail="Only team leaders and administrators can view membership requests",
                 )
 
             # Get pending requests
@@ -132,7 +141,13 @@ async def get_team_membership_requests(team_id: str, current_user: dict = Depend
         return {
             "team_id": team_id,
             "pending_requests": [
-                {"user_id": row[0], "user_name": row[1], "user_email": row[2], "status": row[3]} for row in requests
+                {
+                    "user_id": row[0],
+                    "user_name": row[1],
+                    "user_email": row[2],
+                    "status": row[3],
+                }
+                for row in requests
             ],
         }
 
@@ -183,7 +198,8 @@ async def approve_team_membership(team_id: str, user_id: str, current_user: dict
 
             if not is_admin and not is_team_leader:
                 raise HTTPException(
-                    status_code=403, detail="Only team leaders and administrators can approve membership requests"
+                    status_code=403,
+                    detail="Only team leaders and administrators can approve membership requests",
                 )
 
             # Check if the membership request exists and is pending
@@ -228,7 +244,13 @@ async def approve_team_membership(team_id: str, user_id: str, current_user: dict
                     "event_type": "team_membership.approved",
                     "resource_type": "team_member",
                     "resource_id": f"{team_id}-{user_id}",
-                    "details": json.dumps({"team_id": team_id, "user_id": user_id, "approved_by": admin_user_id}),
+                    "details": json.dumps(
+                        {
+                            "team_id": team_id,
+                            "user_id": user_id,
+                            "approved_by": admin_user_id,
+                        }
+                    ),
                     "user_id": admin_user_id,
                 },
             )
@@ -287,7 +309,8 @@ async def reject_team_membership(team_id: str, user_id: str, current_user: dict 
 
             if not is_admin and not is_team_leader:
                 raise HTTPException(
-                    status_code=403, detail="Only team leaders and administrators can reject membership requests"
+                    status_code=403,
+                    detail="Only team leaders and administrators can reject membership requests",
                 )
 
             # Check if the membership request exists and is pending
@@ -332,7 +355,13 @@ async def reject_team_membership(team_id: str, user_id: str, current_user: dict 
                     "event_type": "team_membership.rejected",
                     "resource_type": "team_member",
                     "resource_id": f"{team_id}-{user_id}",
-                    "details": json.dumps({"team_id": team_id, "user_id": user_id, "rejected_by": admin_user_id}),
+                    "details": json.dumps(
+                        {
+                            "team_id": team_id,
+                            "user_id": user_id,
+                            "rejected_by": admin_user_id,
+                        }
+                    ),
                     "user_id": admin_user_id,
                 },
             )
@@ -390,7 +419,10 @@ async def get_team_roles(team_id: str, current_user: dict = Depends(get_current_
             ).scalar()
 
             if not is_admin and not is_team_leader:
-                raise HTTPException(status_code=403, detail="Only team leaders and administrators can view team roles")
+                raise HTTPException(
+                    status_code=403,
+                    detail="Only team leaders and administrators can view team roles",
+                )
 
             # Get team roles
             roles = connection.execute(
@@ -406,7 +438,10 @@ async def get_team_roles(team_id: str, current_user: dict = Depends(get_current_
                 {"team_id": team_id},
             ).fetchall()
 
-        return {"team_id": team_id, "roles": [{"role_id": row[0], "role_name": row[1]} for row in roles]}
+        return {
+            "team_id": team_id,
+            "roles": [{"role_id": row[0], "role_name": row[1]} for row in roles],
+        }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch team roles: {str(e)}")
@@ -469,12 +504,22 @@ async def assign_role_to_team(team_id: str, role_data: dict, admin: dict = Depen
                     "event_type": "team_role.assigned",
                     "resource_type": "team_role",
                     "resource_id": f"{team_id}-{role_id}",
-                    "details": json.dumps({"team_id": team_id, "role_id": role_id, "assigned_by": admin["user_id"]}),
+                    "details": json.dumps(
+                        {
+                            "team_id": team_id,
+                            "role_id": role_id,
+                            "assigned_by": admin["user_id"],
+                        }
+                    ),
                     "user_id": admin["user_id"],
                 },
             )
 
-        return {"message": "Role assigned to team successfully", "team_id": team_id, "role_id": role_id}
+        return {
+            "message": "Role assigned to team successfully",
+            "team_id": team_id,
+            "role_id": role_id,
+        }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to assign role to team: {str(e)}")
@@ -516,12 +561,22 @@ async def remove_role_from_team(team_id: str, role_id: int, admin: dict = Depend
                     "event_type": "team_role.removed",
                     "resource_type": "team_role",
                     "resource_id": f"{team_id}-{role_id}",
-                    "details": json.dumps({"team_id": team_id, "role_id": role_id, "removed_by": admin["user_id"]}),
+                    "details": json.dumps(
+                        {
+                            "team_id": team_id,
+                            "role_id": role_id,
+                            "removed_by": admin["user_id"],
+                        }
+                    ),
                     "user_id": admin["user_id"],
                 },
             )
 
-        return {"message": "Role removed from team successfully", "team_id": team_id, "role_id": role_id}
+        return {
+            "message": "Role removed from team successfully",
+            "team_id": team_id,
+            "role_id": role_id,
+        }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to remove role from team: {str(e)}")

@@ -51,7 +51,9 @@ router = APIRouter(
     description="Creates a new user session for tracking interactions",
 )
 async def start_user_session(
-    session_data: UserSessionCreate, current_user: User = Depends(get_current_user), db=Depends(get_db)
+    session_data: UserSessionCreate,
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_db),
 ) -> UserSessionResponse:
     """
     Start a new user session.
@@ -74,7 +76,8 @@ async def start_user_session(
         )
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to start session: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to start session: {str(e)}",
         )
 
 
@@ -103,7 +106,8 @@ async def end_session(
         return {"message": "Session ended successfully"}
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=f"Session not found or already ended: {str(e)}"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session not found or already ended: {str(e)}",
         )
 
 
@@ -114,7 +118,9 @@ async def end_session(
     description="Records a user interaction for analytics and debugging",
 )
 async def log_interaction(
-    interaction_data: UserInteractionCreate, current_user: User = Depends(get_current_user), db=Depends(get_db)
+    interaction_data: UserInteractionCreate,
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_db),
 ) -> UserInteractionResponse:
     """
     Log a user interaction.
@@ -139,7 +145,8 @@ async def log_interaction(
         )
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to log interaction: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to log interaction: {str(e)}",
         )
 
 
@@ -150,7 +157,9 @@ async def log_interaction(
     description="Records a wizard-specific interaction for learning and improvement",
 )
 async def log_wizard_interaction(
-    wizard_data: WizardInteractionCreate, current_user: User = Depends(get_current_user), db=Depends(get_db)
+    wizard_data: WizardInteractionCreate,
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_db),
 ) -> WizardInteractionResponse:
     """
     Log a wizard interaction.
@@ -176,7 +185,8 @@ async def log_wizard_interaction(
         )
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to log wizard interaction: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to log wizard interaction: {str(e)}",
         )
 
 
@@ -215,7 +225,8 @@ async def get_user_interactions_endpoint(
     # Check permissions - only admin or the user themselves can access
     if current_user.id != user_id and not current_user.is_admin:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to access this user's interactions"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access this user's interactions",
         )
 
     try:
@@ -240,7 +251,8 @@ async def get_user_interactions_endpoint(
         ]
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to retrieve interactions: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve interactions: {str(e)}",
         )
 
 
@@ -251,7 +263,11 @@ async def get_user_interactions_endpoint(
     description="Retrieves all wizard interactions for a specific user",
 )
 async def get_user_wizard_interactions(
-    user_id: UUID, limit: int = 100, offset: int = 0, current_user: User = Depends(get_current_user), db=Depends(get_db)
+    user_id: UUID,
+    limit: int = 100,
+    offset: int = 0,
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_db),
 ) -> List[WizardInteractionResponse]:
     """
     Get user wizard interactions.
@@ -269,7 +285,8 @@ async def get_user_wizard_interactions(
     # Check permissions
     if current_user.id != user_id and not current_user.is_admin:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to access this user's wizard interactions"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access this user's wizard interactions",
         )
 
     try:
@@ -322,7 +339,8 @@ async def get_journey_patterns(
     # Check permissions
     if current_user.id != user_id and not current_user.is_admin:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to access this user's journey patterns"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access this user's journey patterns",
         )
 
     try:
@@ -343,7 +361,8 @@ async def get_journey_patterns(
         ]
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to retrieve journey patterns: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve journey patterns: {str(e)}",
         )
 
 
@@ -354,7 +373,9 @@ async def get_journey_patterns(
     description="Retrieves aggregated analytics data for interactions",
 )
 async def get_analytics(
-    date_range: Optional[str] = "30d", current_user: User = Depends(get_current_user), db=Depends(get_db)
+    date_range: Optional[str] = "30d",
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_db),
 ) -> InteractionAnalytics:
     """
     Get interaction analytics.
@@ -402,7 +423,8 @@ async def get_analytics(
         )
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to retrieve analytics: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve analytics: {str(e)}",
         )
 
 
@@ -433,7 +455,10 @@ async def get_context_aware_suggestions(
     try:
         # Get user's recent interactions
         recent_interactions = await get_user_interactions(
-            db, current_user.id, limit=50, start_date=datetime.now() - timedelta(hours=2)
+            db,
+            current_user.id,
+            limit=50,
+            start_date=datetime.now() - timedelta(hours=2),
         )
 
         # Get user's journey patterns
@@ -506,5 +531,6 @@ async def get_context_aware_suggestions(
 
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to generate suggestions: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate suggestions: {str(e)}",
         )

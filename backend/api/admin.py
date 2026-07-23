@@ -26,8 +26,8 @@ async def get_admin_users(admin: dict = Depends(is_system_admin)):
         from sqlalchemy.orm import Session
 
         with get_engine().connect() as connection:
-            # Create a session for ORM operations
-            session = Session(connection)
+            # Create a session for ORM operations (unused but kept for potential future use)
+            _session = Session(connection)
 
             # Fetch all users with all their data in a single optimized query
             users_query = text(
@@ -159,7 +159,10 @@ async def update_admin_user_settings(user_id: str, settings: dict, admin: dict =
                     )
                 except Exception as e:
                     logger.error(f"Failed to insert donor groups: {e}")
-                    raise HTTPException(status_code=400, detail=f"Failed to insert donor groups: {str(e)}")
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Failed to insert donor groups: {str(e)}",
+                    )
 
             # Insert new outcomes
             if outcomes:
@@ -181,7 +184,10 @@ async def update_admin_user_settings(user_id: str, settings: dict, admin: dict =
                     )
                 except Exception as e:
                     logger.error(f"Failed to insert field contexts: {e}")
-                    raise HTTPException(status_code=400, detail=f"Failed to insert field contexts: {str(e)}")
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Failed to insert field contexts: {str(e)}",
+                    )
 
         return {"message": "User settings updated successfully."}
     except HTTPException:
@@ -449,7 +455,8 @@ async def approve_role_request(user_id: str, admin_note: str | None = None, admi
 
             # Clear the pending request
             connection.execute(
-                text("UPDATE users SET requested_role_id = NULL WHERE id = :user_id"), {"user_id": user_id}
+                text("UPDATE users SET requested_role_id = NULL WHERE id = :user_id"),
+                {"user_id": user_id},
             )
 
             # Log the approval
@@ -533,7 +540,8 @@ async def reject_role_request(user_id: str, admin_note: str | None = None, admin
 
             # Clear the pending request
             connection.execute(
-                text("UPDATE users SET requested_role_id = NULL WHERE id = :user_id"), {"user_id": user_id}
+                text("UPDATE users SET requested_role_id = NULL WHERE id = :user_id"),
+                {"user_id": user_id},
             )
 
             # Log the rejection
@@ -658,8 +666,8 @@ async def list_admin_proposals(admin: dict = Depends(is_system_admin)):
                     "owner_name": r["owner_name"],
                     "owner_email": r["owner_email"],
                     "owner_id": str(r["owner_id"]),
-                    "created_at": r["created_at"].isoformat() if r["created_at"] else None,
-                    "updated_at": r["updated_at"].isoformat() if r["updated_at"] else None,
+                    "created_at": (r["created_at"].isoformat() if r["created_at"] else None),
+                    "updated_at": (r["updated_at"].isoformat() if r["updated_at"] else None),
                 }
                 for r in rows
             ]
@@ -714,8 +722,8 @@ async def list_admin_knowledge_cards(admin: dict = Depends(is_system_admin)):
                     "donor_name": r["donor_name"],
                     "outcome_name": r["outcome_name"],
                     "field_context_name": r["field_context_name"],
-                    "created_at": r["created_at"].isoformat() if r["created_at"] else None,
-                    "updated_at": r["updated_at"].isoformat() if r["updated_at"] else None,
+                    "created_at": (r["created_at"].isoformat() if r["created_at"] else None),
+                    "updated_at": (r["updated_at"].isoformat() if r["updated_at"] else None),
                 }
                 for r in rows
             ]
@@ -761,8 +769,8 @@ async def list_admin_templates(admin: dict = Depends(is_system_admin)):
                     "owner_name": r["owner_name"],
                     "owner_email": r["owner_email"],
                     "owner_id": str(r["owner_id"]) if r["owner_id"] else None,
-                    "created_at": r["created_at"].isoformat() if r["created_at"] else None,
-                    "updated_at": r["updated_at"].isoformat() if r["updated_at"] else None,
+                    "created_at": (r["created_at"].isoformat() if r["created_at"] else None),
+                    "updated_at": (r["updated_at"].isoformat() if r["updated_at"] else None),
                 }
                 for r in rows
             ]

@@ -4,13 +4,25 @@ Interaction Tracking Database Models
 This module contains SQLAlchemy models for user interaction tracking.
 """
 
-from sqlalchemy import Column, String, Text, DateTime, Boolean, Integer, ForeignKey, Interval
+from sqlalchemy import (
+    Column,
+    String,
+    Text,
+    DateTime,
+    Boolean,
+    Integer,
+    ForeignKey,
+    Interval,
+    Index,
+)
 from sqlalchemy.dialects.postgresql import UUID, JSONB, ENUM
-from sqlalchemy.sql import func
+from sqlalchemy.sql import func, text
 from sqlalchemy.orm import relationship
 import uuid
+from datetime import date as Date
+from typing import Float
 
-from app.db.base import Base
+from backend.db.base import Base
 
 
 # Define interaction_type enum
@@ -76,7 +88,10 @@ class UserInteraction(Base):
     session = relationship("UserSession", back_populates="interactions")
     user = relationship("User")
     wizard_interaction = relationship(
-        "WizardInteraction", back_populates="interaction", uselist=False, cascade="all, delete-orphan"
+        "WizardInteraction",
+        back_populates="interaction",
+        uselist=False,
+        cascade="all, delete-orphan",
     )
 
 
@@ -87,7 +102,9 @@ class WizardInteraction(Base):
 
     wizard_interaction_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     interaction_id = Column(
-        UUID(as_uuid=True), ForeignKey("user_interactions.interaction_id", ondelete="CASCADE"), unique=True
+        UUID(as_uuid=True),
+        ForeignKey("user_interactions.interaction_id", ondelete="CASCADE"),
+        unique=True,
     )
     session_id = Column(UUID(as_uuid=True), ForeignKey("user_sessions.session_id", ondelete="CASCADE"))
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
@@ -95,10 +112,14 @@ class WizardInteraction(Base):
     action_type = Column(String(50), nullable=False)
     search_query = Column(Text, nullable=True)
     selected_category_id = Column(
-        UUID(as_uuid=True), ForeignKey("wizard_categories.category_id", ondelete="SET NULL"), nullable=True
+        UUID(as_uuid=True),
+        ForeignKey("wizard_categories.category_id", ondelete="SET NULL"),
+        nullable=True,
     )
     viewed_qa_item_id = Column(
-        UUID(as_uuid=True), ForeignKey("wizard_qa_items.qa_item_id", ondelete="SET NULL"), nullable=True
+        UUID(as_uuid=True),
+        ForeignKey("wizard_qa_items.qa_item_id", ondelete="SET NULL"),
+        nullable=True,
     )
     feedback_score = Column(Integer, nullable=True)
     feedback_comment = Column(Text, nullable=True)

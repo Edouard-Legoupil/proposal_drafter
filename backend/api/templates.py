@@ -217,7 +217,7 @@ async def list_templates(current_user: dict = Depends(get_current_user), engine=
                         "template_type": row["template_type"],
                         "creator": row["creator_name"],
                         "donor": row["donor_name"] or ("Multiple" if row["donor_ids"] else None),
-                        "donor_ids": [str(d) for d in row["donor_ids"]] if row["donor_ids"] else [],
+                        "donor_ids": ([str(d) for d in row["donor_ids"]] if row["donor_ids"] else []),
                         "created_at": _to_iso(row["created_at"]),
                         "type": "db",
                     }
@@ -247,14 +247,14 @@ async def create_template_request(
         # Build a draft initial file content that mirrors the real JSON template format
         initial_file_content = {
             "template_name": request.name,
-            "template_type": "Proposal" if template_type == "proposal" else "Concept Note",
+            "template_type": ("Proposal" if template_type == "proposal" else "Concept Note"),
             "donors": [request.name],
             "special_requirements": {"instructions": high_level_instructions},
             "section_sequence": [
                 s.get("section_name", s) if isinstance(s, dict) else s
                 for s in sorted(
                     sections,
-                    key=lambda s: s.get("generation_sequence", 999) if isinstance(s, dict) else 999,
+                    key=lambda s: (s.get("generation_sequence", 999) if isinstance(s, dict) else 999),
                 )
             ],
             "sections": sections,
@@ -359,7 +359,7 @@ async def get_template_request(
                 ),
                 "donor_names": donor_names,
                 "donor_id": str(row["donor_id"]) if row["donor_id"] else None,
-                "donor_ids": [str(did) for did in row["donor_ids"]] if row["donor_ids"] else [],
+                "donor_ids": ([str(did) for did in row["donor_ids"]] if row["donor_ids"] else []),
                 "template_type": row.get("template_type", "proposal"),
                 "configuration": _parse_json(row["configuration"]),
                 "initial_file_content": _parse_json(row["initial_file_content"]),

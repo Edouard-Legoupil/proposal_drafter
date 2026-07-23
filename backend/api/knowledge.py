@@ -1496,7 +1496,7 @@ async def get_knowledge_card_status(card_id: uuid.UUID, current_user: dict = Dep
                         progress_obj = json.loads(progress_data) if progress_data else {}
                         if progress_obj.get("progress", 0) >= 100 or progress_obj.get("progress", 0) == -1:
                             break
-                    except:
+                    except Exception:
                         pass
 
                     await asyncio.sleep(1)  # Poll every second
@@ -1519,7 +1519,7 @@ async def get_knowledge_card_status(card_id: uuid.UUID, current_user: dict = Dep
                             progress_obj = json.loads(message["data"])
                             if progress_obj.get("progress", 0) >= 100 or progress_obj.get("progress", 0) == -1:
                                 break
-                        except:
+                        except Exception:
                             pass
 
                     # Add small sleep to prevent busy waiting
@@ -1531,7 +1531,7 @@ async def get_knowledge_card_status(card_id: uuid.UUID, current_user: dict = Dep
                 try:
                     await pubsub.unsubscribe(channel)
                     await pubsub.close()
-                except:
+                except Exception:
                     pass
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
@@ -1573,7 +1573,7 @@ async def get_knowledge_card_ingest_status(card_id: uuid.UUID, current_user: dic
                             "skipped",
                         ]:
                             break
-                    except:
+                    except Exception:
                         pass
 
                     await asyncio.sleep(1)
@@ -1599,7 +1599,7 @@ async def get_knowledge_card_ingest_status(card_id: uuid.UUID, current_user: dic
                                 "skipped",
                             ]:
                                 break
-                        except:
+                        except Exception:
                             pass
 
                     await asyncio.sleep(0.1)
@@ -1610,7 +1610,7 @@ async def get_knowledge_card_ingest_status(card_id: uuid.UUID, current_user: dic
                 try:
                     await pubsub.unsubscribe(channel)
                     await pubsub.close()
-                except:
+                except Exception:
                     pass
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")

@@ -625,7 +625,8 @@ async def upload_proposal_to_sharepoint(
                         donor_uuids = [UUID(did) for did in donor_id]
                         donor_names = (
                             connection.execute(
-                                text("SELECT name FROM donors WHERE id = ANY(:ids)"), {"ids": donor_uuids}
+                                text("SELECT name FROM donors WHERE id = ANY(:ids)"),
+                                {"ids": donor_uuids},
                             )
                             .scalars()
                             .all()
