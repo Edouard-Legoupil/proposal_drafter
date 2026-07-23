@@ -9,7 +9,9 @@ def test_store_base_data(authenticated_client):
         "template_name": "proposal_template_unhcr.json",
     }
 
-    response = client.post("/api/store_base_data", json=payload)
+    response = client.post(
+        "/api/store_base_data", json=payload, headers={"host": "localhost"}
+    )
     json_response = response.json()
 
     assert response.status_code == 200

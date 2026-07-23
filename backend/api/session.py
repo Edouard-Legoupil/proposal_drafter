@@ -75,6 +75,9 @@ async def get_base_data(session_id: str, current_user: dict = Depends(get_curren
     # Parse and validate session data
     session_data = json.loads(data)
 
+    if session_data.get("user_id") != current_user["user_id"]:
+        raise HTTPException(status_code=403, detail="You do not have access to this session.")
+
     # Check if session has expired
     expires_at = session_data.get("expires_at")
     if expires_at:
