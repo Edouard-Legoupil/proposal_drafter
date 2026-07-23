@@ -10,6 +10,8 @@ import asyncio
 
 from typing import Union
 
+redis_available = False
+
 try:
     # Attempt to connect to the Redis server.
     # `decode_responses=True` ensures that data read from Redis is automatically
@@ -18,6 +20,7 @@ try:
 
     # `ping()` checks if the connection to Redis is alive.
     redis_client.ping()
+    redis_available = True
     print("Successfully connected to Redis")
 
 except redis.ConnectionError:
@@ -75,3 +78,8 @@ except redis.ConnectionError:
 
     # Instantiate the fallback storage.
     redis_client = DictStorage()
+
+
+def is_redis_available() -> bool:
+    """Return whether the application is connected to the shared Redis service."""
+    return redis_available

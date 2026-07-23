@@ -453,7 +453,6 @@ def authenticated_client(client, db_session):
     token_data = {"email": user_email, "exp": datetime.utcnow() + timedelta(minutes=30)}
     token = jwt.encode(token_data, os.environ["SECRET_KEY"], algorithm="HS256")
     client.cookies["auth_token"] = token
-
     yield client
 
     app.dependency_overrides.pop(get_current_user, None)

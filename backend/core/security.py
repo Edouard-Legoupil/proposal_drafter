@@ -1,3 +1,4 @@
+import hmac
 import logging
 
 #  Standard Library
@@ -6,6 +7,7 @@ from typing import Optional, Any
 #  Third-Party Libraries
 import jwt
 from fastapi import Request, HTTPException, Depends
+from redis.exceptions import RedisError
 from sqlalchemy import text
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -18,12 +20,31 @@ from backend.core.config import (
     ENTRA_REDIRECT_URI,
 )
 from backend.core.db import get_engine
+from backend.core.redis import is_redis_available, redis_client
 
 # Configure logging for this module.
 logger = logging.getLogger(__name__)
 
 # This module centralizes security-related functions, such as authentication,
 # token handling, and password management.
+
+
+def is_session_token_active(user_id: str, token: str) -> bool:
+    """Validate a JWT against the user's active session when Redis is available."""
+    if not is_redis_available():
+        logger.warning("Redis unavailable; accepting cryptographically valid JWT")
+        return True
+
+    try:
+        active_token = redis_client.get(f"user_session:{user_id}")
+    except RedisError as exc:
+        logger.warning("Redis session validation failed; accepting valid JWT: %s", exc)
+        return True
+
+    if not isinstance(active_token, str) or not active_token:
+        return False
+
+    return hmac.compare_digest(active_token, token)
 
 
 def get_current_user(request: Request) -> dict:
@@ -71,6 +92,9 @@ def get_current_user(request: Request) -> dict:
             user_id = str(user[0])
             is_sso = user[3] == "SSO_USER_NO_PASSWORD"
 
+            if not is_session_token_active(user_id, token):
+                raise HTTPException(status_code=401, detail="Session is no longer active.")
+
             # Try to fetch roles (including inherited from teams), donor_groups, and outcomes, but handle empty results gracefully.
             # We use nested transactions (savepoints) to ensure that if one query fails,
             # it doesn't poison the entire connection/transaction.
@@ -84,12 +108,12 @@ def get_current_user(request: Request) -> dict:
                     )
                     roles_result = connection.execute(roles_query, {"user_id": user_id}).fetchall()
                     roles = [row[0] for row in roles_result] if roles_result else []
-                    
+
                     # Get inherited roles from teams
                     inherited_roles_query = text(
                         """
-                        SELECT DISTINCT r.name 
-                        FROM roles r 
+                        SELECT DISTINCT r.name
+                        FROM roles r
                         JOIN team_roles tr ON r.id = tr.role_id
                         JOIN team_members tm ON tr.team_id = tm.team_id
                         WHERE tm.user_id = :user_id
@@ -97,10 +121,10 @@ def get_current_user(request: Request) -> dict:
                     )
                     inherited_roles_result = connection.execute(inherited_roles_query, {"user_id": user_id}).fetchall()
                     inherited_roles = [row[0] for row in inherited_roles_result] if inherited_roles_result else []
-                    
+
                     # Combine and deduplicate
                     all_roles = list(set(roles + inherited_roles))
-                    
+
             except Exception as e:
                 logger.warning(f"Failed to fetch roles for user {user_id}: {e}")
 
@@ -188,6 +212,7 @@ __all__ = [
     "check_user_group_access",
     "generate_password_hash",
     "check_password_hash",
+    "is_session_token_active",
     "ENTRA_TENANT_ID",
     "ENTRA_CLIENT_ID",
     "ENTRA_CLIENT_SECRET",
