@@ -165,19 +165,6 @@ echo ""
 
 
 # -------------------------
-# Start SSH (for Azure tunnel) + App
-# -------------------------
-# Export current env vars to interactive shells (optional)
-eval "$(printenv | sed -n 's/^\([^=]\+\)=\(.*\)$/export \1=\2/p' \
-  | sed 's/\"/\\\"/g' | sed '/=/s//=\"/' | sed 's/$/\"/' >> /etc/profile)"
-
-echo "Starting sshd..."
-mkdir -p /var/run/sshd
-/usr/sbin/sshd -D &
-
-
-
-# -------------------------
 # START SERVER
 # -------------------------
 echo "============================================================"
