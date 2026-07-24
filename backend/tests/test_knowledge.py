@@ -3,7 +3,7 @@ import json
 import uuid
 import io
 from unittest.mock import patch, MagicMock, AsyncMock
-from slugify import slugify
+from slugify import slugify  # type: ignore[import-untyped]
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 from backend.core.security import get_current_user
@@ -102,7 +102,8 @@ def test_upload_pdf_reference_success(
 
     db_session.execute(
         text(
-            "INSERT INTO knowledge_cards (id, summary, created_by, updated_by) VALUES (:id, 'Test Card for PDF Upload', :user_id, :user_id)"
+            "INSERT INTO knowledge_cards (id, summary, created_by, updated_by) "
+            "VALUES (:id, 'Test Card for PDF Upload', :user_id, :user_id)"
         ),
         {"id": card_id, "user_id": user_id},
     )
@@ -192,10 +193,9 @@ def test_identify_references_keeps_existing_links(authenticated_client: TestClie
         ]
     )
 
-    with patch(
-        "backend.api.knowledge.ReferenceIdentificationCrew.kickoff",
-        return_value=mock_result,
-    ):
+    mock_crew = MagicMock()
+    mock_crew.kickoff.return_value = mock_result
+    with patch("backend.api.knowledge.ReferenceIdentificationCrew", return_value=mock_crew):
         response = authenticated_client.post(
             f"/api/knowledge-cards/{card_id}/identify-references",
             json={"title": "test", "linked_element": "donor", "summary": ""},

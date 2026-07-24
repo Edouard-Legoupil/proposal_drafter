@@ -124,12 +124,12 @@ class AuditLogger:
 
     def __init__(
         self,
-        log_file: str = "audit.log",
+        log_file: Optional[str] = None,
         max_log_size: int = 10 * 1024 * 1024,  # 10MB
         max_log_files: int = 5,
         failed_login_threshold: int = 5,
     ):
-        self.log_file = log_file
+        self.log_file: str = log_file or os.getenv("AUDIT_LOG_FILE") or "audit.log"
         self.max_log_size = max_log_size
         self.max_log_files = max_log_files
         self.failed_login_threshold = failed_login_threshold
@@ -139,7 +139,7 @@ class AuditLogger:
         self.lock = threading.Lock()
 
         # Ensure log directory exists if log_file is a path
-        log_dir = os.path.dirname(log_file) if os.path.dirname(log_file) else "."
+        log_dir = os.path.dirname(self.log_file) or "."
         os.makedirs(log_dir, exist_ok=True)
 
         # Initialize logging
@@ -247,19 +247,25 @@ class AuditLogger:
             level="WARNING" if not success else "INFO",
         )
 
+        alert_message = None
         with self.lock:
             self.log_events.append(event)
             self.security_events.append(event)
 
             # Track failed login attempts for brute force detection
             if not success and "login" in event_type:
-                if user_id not in self.failed_login_attempts:
-                    self.failed_login_attempts[user_id] = []
-                self.failed_login_attempts[user_id].append(event)
+                failure_key = user_id or "<unknown>"
+                if failure_key not in self.failed_login_attempts:
+                    self.failed_login_attempts[failure_key] = []
+                self.failed_login_attempts[failure_key].append(event)
 
                 # Check threshold
-                if len(self.failed_login_attempts[user_id]) >= self.failed_login_threshold:
-                    self._trigger_alert(f"Brute force attempt detected for user {user_id}")
+                if len(self.failed_login_attempts[failure_key]) >= self.failed_login_threshold:
+                    alert_message = f"Brute force attempt detected for user {user_id}"
+
+        # Alert handling records another event and must run after releasing self.lock.
+        if alert_message:
+            self._trigger_alert(alert_message)
 
         # Write to log file
         log_entry = json.dumps(event.to_dict())
@@ -270,7 +276,7 @@ class AuditLogger:
         user_id: Optional[str],
         endpoint: str,
         method: str,
-        status_code: int,
+        status_code: int = 200,
         ip_address: Optional[str] = None,
         user_agent: Optional[str] = None,
         response_time_ms: Optional[int] = None,
@@ -482,12 +488,8 @@ class AuditLogger:
         recent_failures = []
 
         for event in reversed(self.security_events[-10:]):  # Check last 10 events
-            if (
-                event.user_id == user_id
-                or (ip_address and event.metadata.get("ip_address") == ip_address)
-                and event.event_type == "security.login"
-                and not event.metadata.get("success", True)
-            ):
+            matches_actor = event.user_id == user_id or (ip_address and event.metadata.get("ip_address") == ip_address)
+            if matches_actor and event.event_type == "security.login" and not event.metadata.get("success", True):
                 recent_failures.append(event)
 
         if len(recent_failures) >= 3:
@@ -655,13 +657,13 @@ class AuditLogger:
         security_events = len(recent_security)
 
         # Count by event type
-        event_types = {}
+        event_types: Dict[str, int] = {}
         for event in recent_events:
             event_type = event.event_type.split(".")[0]
             event_types[event_type] = event_types.get(event_type, 0) + 1
 
         # Count security events by type
-        security_types = {}
+        security_types: Dict[str, int] = {}
         for event in recent_security:
             sec_type = event.event_type.split(".")[1] if len(event.event_type.split(".")) > 1 else "other"
             security_types[sec_type] = security_types.get(sec_type, 0) + 1
@@ -814,7 +816,7 @@ class AuditLogger:
                     unique_users.add(event.user_id)
 
             # Get event types
-            event_types = {}
+            event_types: Dict[str, int] = {}
             for event in self.log_events:
                 event_type = event.event_type.split(".")[0]
                 event_types[event_type] = event_types.get(event_type, 0) + 1
@@ -878,7 +880,7 @@ def setup_audit_logging(app):
 
         # Get user ID if available
         user_id = None
-        if hasattr(request.state, 'user"') and request.state.user:
+        if hasattr(request.state, "user") and request.state.user:
             user_id = request.state.user.get("user_id")
 
         # Log the API call
@@ -906,23 +908,11 @@ def log_security_event(
     metadata: Optional[Dict[str, Any]] = None,
 ):
     """Convenience function for logging security events."""
-    if hasattr(log_security_event, "_audit_logger"):
-        logger = getattr(log_security_event, "_audit_logger")
-    else:
+    logger = getattr(log_security_event, "_audit_logger", None)
+    if logger is None:
         from backend.main import app
 
-    if logger:
-        logger.log_sensitive_data_access(user_id, data_type, resource_id, operation, justification, ip_address, request)
-
-    if logger:
-        logger.log_sensitive_data_access(user_id, data_type, resource_id, operation, justification, ip_address, request)
         logger = app.state.audit_logger if hasattr(app.state, "audit_logger") else None
-
-    if logger:
-        logger.log_sensitive_data_access(user_id, data_type, resource_id, operation, justification, ip_address, request)
-
-    if logger:
-        logger.log_sensitive_data_access(user_id, data_type, resource_id, operation, justification, ip_address, request)
 
     if logger:
         logger.log_security_event(user_id, event_type, success, ip_address, None, metadata)
@@ -932,13 +922,13 @@ def log_api_call(
     user_id: Optional[str],
     endpoint: str,
     method: str,
-    status_code: int,
+    status_code: int = 200,
     ip_address: Optional[str] = None,
     metadata: Optional[Dict[str, Any]] = None,
 ):
     """Convenience function for logging API calls."""
     if hasattr(log_api_call, "_audit_logger"):
-        logger = getattr(log_api_call, "_audit_logger")
+        logger = log_api_call._audit_logger
     else:
         from backend.main import app
 
@@ -958,7 +948,7 @@ def log_data_access(
 ):
     """Convenience function for logging data access."""
     if hasattr(log_data_access, "_audit_logger"):
-        logger = getattr(log_data_access, "_audit_logger")
+        logger = log_data_access._audit_logger
     else:
         from backend.main import app
 
@@ -976,7 +966,7 @@ def log_system_event(
 ):
     """Convenience function for logging system events."""
     if hasattr(log_system_event, "_audit_logger"):
-        logger = getattr(log_system_event, "_audit_logger")
+        logger = log_system_event._audit_logger
     else:
         from backend.main import app
 
@@ -996,7 +986,7 @@ def log_comprehensive_security_event(
 ):
     """Convenience function for comprehensive security event logging."""
     if hasattr(log_comprehensive_security_event, "_audit_logger"):
-        logger = getattr(log_comprehensive_security_event, "_audit_logger")
+        logger = log_comprehensive_security_event._audit_logger
     else:
         from backend.main import app
 
@@ -1015,7 +1005,7 @@ def log_rate_limit_event(
 ):
     """Convenience function for logging rate limit events."""
     if hasattr(log_rate_limit_event, "_audit_logger"):
-        logger = getattr(log_rate_limit_event, "_audit_logger")
+        logger = log_rate_limit_event._audit_logger
     else:
         from backend.main import app
 
@@ -1036,7 +1026,7 @@ def log_sensitive_data_access(
 ):
     """Convenience function for logging sensitive data access."""
     if hasattr(log_sensitive_data_access, "_audit_logger"):
-        logger = getattr(log_sensitive_data_access, "_audit_logger")
+        logger = log_sensitive_data_access._audit_logger
     else:
         from backend.main import app
 

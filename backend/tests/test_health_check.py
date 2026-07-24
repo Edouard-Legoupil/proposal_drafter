@@ -6,7 +6,7 @@ from httpx import ASGITransport
 
 @pytest.mark.asyncio
 async def test_health_check():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://localhost") as ac:
         response = await ac.get("/health")
     assert response.status_code == 200
     assert response.json()["status"] == "لْحَمْدُ لِلَّٰهِ -- API is running"

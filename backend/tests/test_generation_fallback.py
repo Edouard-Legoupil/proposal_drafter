@@ -20,7 +20,8 @@ def test_process_section_fallback(authenticated_client, mocker, test_engine):
         # Insert a proposal to test against
         conn.execute(
             text(
-                "INSERT INTO proposals (id, user_id, form_data, status, is_accepted) VALUES (:id, :uid, :form, 'draft', False)"
+                "INSERT INTO proposals (id, user_id, form_data, status, is_accepted) "
+                "VALUES (:id, :uid, :form, 'draft', False)"
             ),
             {"id": proposal_id, "uid": user_id, "form": json.dumps({})},
         )
@@ -29,10 +30,9 @@ def test_process_section_fallback(authenticated_client, mocker, test_engine):
     # Mock the crew kickoff method to return empty result
     mock_result = MagicMock()
     mock_result.raw = '{"generated_content": "", "evaluation_status": "Approved"}'
-    mocker.patch(
-        "backend.api.proposals.ProposalCrew.generate_proposal_crew",
-        return_value=MagicMock(kickoff=MagicMock(return_value=mock_result)),
-    )
+    proposal_crew = MagicMock()
+    proposal_crew.generate_proposal_crew.return_value.kickoff.return_value = mock_result
+    mocker.patch("backend.api.proposals.ProposalCrew", return_value=proposal_crew)
 
     # Mock redis calls
     mocker.patch(

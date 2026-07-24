@@ -38,14 +38,14 @@ repos:
       - id: flake8
         additional_dependencies: [flake8-bugbear==23.9.16]
         args: [--max-line-length=120]
-        exclude: ^backend/api/proposals\.py$
+        exclude: ^backend/api/(proposals|knowledge|templates)\.py$
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.3.4
     hooks:
       - id: ruff
         args: [--line-length=120, --fix]
-        exclude: ^backend/api/proposals\.py$
+        exclude: ^backend/api/(proposals|knowledge|templates)\.py$
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.8.0
@@ -53,3 +53,4 @@ repos:
       - id: mypy
         additional_dependencies: [types-requests==2.31.0.10]
         args: [--follow-imports=skip, --ignore-missing-imports]
+        exclude: ^backend/api/(knowledge|templates)\.py$

@@ -4,6 +4,7 @@ import uuid
 import jwt
 from datetime import datetime, timedelta
 from sqlalchemy import create_engine, text
+from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
 
 # --- Environment Variable Setup ---
@@ -22,19 +23,21 @@ os.environ["AZURE_OPENAI_DEPLOYMENT"] = "test-deployment"
 os.environ["AZURE_DEPLOYMENT_NAME"] = "test-deployment"
 os.environ["AZURE_OPENAI_EMBEDDING_DEPLOYMENT"] = "test-embedding-deployment"
 os.environ["SERPER_API_KEY"] = "test_serper_key"
+os.environ.setdefault("AUDIT_LOG_FILE", "/tmp/proposal-drafter-test-audit.log")
 
 # --- Application and Dependency Imports ---
-from backend.main import app
-from backend.core.db import get_engine
-from backend.core.security import get_current_user
+from backend.main import app  # noqa: E402
+from backend.core import db as db_module  # noqa: E402
+from backend.core.db import get_engine  # noqa: E402
+from backend.core.security import get_current_user  # noqa: E402
 
 
-@pytest.fixture(scope="function")
-def test_engine():
-    """Creates a fresh, in-memory SQLite engine for each test function."""
+def _create_test_engine():
+    """Build an isolated SQLite database with the API's supported test schema."""
     engine = create_engine(
-        "sqlite:///file::memory:?cache=shared",
+        "sqlite://",
         connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
     )
     with engine.connect() as connection:
         # Use transaction to ensure DDL is committed
@@ -57,24 +60,6 @@ def test_engine():
             """
                 )
             )
-            # Insert some basic roles for testing
-            connection.execute(
-                text(
-                    """
-                INSERT OR IGNORE INTO roles (name) VALUES
-                ('proposal writer'),
-                ('knowledge manager donors'),
-                ('knowledge manager outcome'),
-                ('knowledge manager field context'),
-                ('project reviewer'),
-                ('system admin'),
-                ('access_metrics'),
-                ('access_template'),
-                ('access_incident'),
-                ('access_quality_gate')
-            """
-                )
-            )
             connection.execute(
                 text(
                     """
@@ -89,9 +74,23 @@ def test_engine():
                     """
                 CREATE TABLE IF NOT EXISTS team_members (
                     team_id TEXT, user_id TEXT,
+                    status TEXT NOT NULL DEFAULT 'ACTIVE',
                     PRIMARY KEY (team_id, user_id),
                     FOREIGN KEY (team_id) REFERENCES teams(id),
                     FOREIGN KEY (user_id) REFERENCES users(id)
+                )
+            """
+                )
+            )
+            connection.execute(
+                text(
+                    """
+                CREATE TABLE IF NOT EXISTS team_roles (
+                    team_id TEXT NOT NULL,
+                    role_id INTEGER NOT NULL,
+                    PRIMARY KEY (team_id, role_id),
+                    FOREIGN KEY (team_id) REFERENCES teams(id),
+                    FOREIGN KEY (role_id) REFERENCES roles(id)
                 )
             """
                 )
@@ -109,6 +108,7 @@ def test_engine():
                     approved_by TEXT,
                     approved_at DATETIME,
                     rejection_reason TEXT,
+                    UNIQUE (user_id, setting_type, setting_value),
                     FOREIGN KEY (user_id) REFERENCES users(id),
                     FOREIGN KEY (approved_by) REFERENCES users(id)
                 )
@@ -157,6 +157,18 @@ def test_engine():
             connection.execute(
                 text(
                     """
+                CREATE TABLE IF NOT EXISTS user_donor_groups (
+                    user_id TEXT NOT NULL,
+                    donor_group TEXT NOT NULL,
+                    PRIMARY KEY (user_id, donor_group),
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )
+            """
+                )
+            )
+            connection.execute(
+                text(
+                    """
                 CREATE TABLE IF NOT EXISTS user_roles (
                     user_id TEXT, role_id INTEGER,
                     PRIMARY KEY (user_id, role_id),
@@ -169,9 +181,27 @@ def test_engine():
             connection.execute(
                 text(
                     """
+                CREATE TABLE IF NOT EXISTS user_role_requests (
+                    user_id TEXT NOT NULL,
+                    role_id INTEGER NOT NULL,
+                    PRIMARY KEY (user_id, role_id),
+                    FOREIGN KEY (user_id) REFERENCES users(id),
+                    FOREIGN KEY (role_id) REFERENCES roles(id)
+                )
+            """
+                )
+            )
+            connection.execute(
+                text(
+                    """
                 CREATE TABLE IF NOT EXISTS users (
                     id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, password TEXT NOT NULL,
-                    name TEXT, security_questions TEXT, session_active BOOLEAN,
+                    name TEXT, team_id TEXT, security_questions TEXT, session_active BOOLEAN,
+                    is_admin BOOLEAN DEFAULT FALSE,
+                    geographic_coverage_type TEXT,
+                    geographic_coverage_region TEXT,
+                    geographic_coverage_country TEXT,
+                    requested_role_id INTEGER,
                     created_at DATETIME, updated_at DATETIME
                 )
             """
@@ -183,9 +213,45 @@ def test_engine():
                 CREATE TABLE IF NOT EXISTS proposals (
                     id TEXT PRIMARY KEY, user_id TEXT, form_data TEXT, project_description TEXT,
                     generated_sections TEXT, is_accepted BOOLEAN, template_name TEXT,
-                    status TEXT, contribution_id TEXT,
+                    status TEXT, contribution_id TEXT, team_id TEXT, access_rules TEXT,
+                    reviews TEXT, created_by TEXT, updated_by TEXT,
+                    template_registry_id TEXT, template_version_id TEXT,
                     created_at DATETIME, updated_at DATETIME,
                     FOREIGN KEY (user_id) REFERENCES users(id)
+                )
+            """
+                )
+            )
+            connection.execute(
+                text(
+                    """
+                CREATE TABLE IF NOT EXISTS artifact_runs (
+                    id TEXT PRIMARY KEY,
+                    artifact_type TEXT NOT NULL,
+                    artifact_id TEXT NOT NULL,
+                    user_id TEXT NOT NULL,
+                    run_status TEXT NOT NULL DEFAULT 'drafting',
+                    start_time DATETIME,
+                    end_time DATETIME,
+                    agents_executed TEXT DEFAULT '[]',
+                    model_deployment TEXT,
+                    tokens_input INTEGER DEFAULT 0,
+                    tokens_output INTEGER DEFAULT 0,
+                    estimated_cost REAL DEFAULT 0,
+                    step_count INTEGER DEFAULT 0,
+                    retry_count INTEGER DEFAULT 0,
+                    failure_count INTEGER DEFAULT 0,
+                    total_latency_ms INTEGER,
+                    stage_latencies TEXT DEFAULT '{}',
+                    sections_generated INTEGER DEFAULT 0,
+                    pages_generated INTEGER DEFAULT 0,
+                    words_generated INTEGER DEFAULT 0,
+                    export_events TEXT DEFAULT '[]',
+                    template_name TEXT,
+                    template_version TEXT,
+                    metadata TEXT DEFAULT '{}',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             """
                 )
@@ -201,6 +267,18 @@ def test_engine():
             """
                 )
             )
+            for join_table, value_column in (
+                ("proposal_donors", "donor_id"),
+                ("proposal_outcomes", "outcome_id"),
+                ("proposal_field_contexts", "field_context_id"),
+            ):
+                connection.execute(
+                    text(
+                        f"CREATE TABLE IF NOT EXISTS {join_table} ("
+                        f"proposal_id TEXT NOT NULL, {value_column} TEXT NOT NULL, "
+                        f"PRIMARY KEY (proposal_id, {value_column}))"
+                    )
+                )
             connection.execute(
                 text(
                     """
@@ -273,7 +351,7 @@ def test_engine():
                     """
                 CREATE TABLE IF NOT EXISTS knowledge_card_references (
                     id TEXT PRIMARY KEY,
-                    knowledge_card_id TEXT NOT NULL,
+                    knowledge_card_id TEXT,
                     url TEXT,
                     reference_type TEXT,
                     summary TEXT,
@@ -355,6 +433,8 @@ def test_engine():
                     id TEXT PRIMARY KEY,
                     name TEXT NOT NULL,
                     donor_id TEXT,
+                    donor_ids TEXT,
+                    template_type TEXT DEFAULT 'proposal',
                     configuration TEXT,
                     initial_file_content TEXT,
                     status TEXT DEFAULT 'pending',
@@ -389,12 +469,29 @@ def test_engine():
     return engine
 
 
+@pytest.fixture
+def test_engine_factory():
+    """Return a factory so isolation itself can be regression tested."""
+    return _create_test_engine
+
+
+@pytest.fixture(scope="function")
+def test_engine(test_engine_factory):
+    """Create and dispose an isolated SQLite engine for each test."""
+    engine = test_engine_factory()
+    yield engine
+    engine.dispose()
+
+
 @pytest.fixture(scope="function", autouse=True)
 def override_get_engine(test_engine):
     """Fixture to override the get_engine dependency for all tests."""
+    previous_engine = db_module.engine
+    db_module.engine = test_engine
     app.dependency_overrides[get_engine] = lambda: test_engine
     yield
     app.dependency_overrides.pop(get_engine, None)
+    db_module.engine = previous_engine
 
 
 @pytest.fixture(scope="function")
@@ -403,7 +500,8 @@ def db_session(test_engine):
     connection = test_engine.connect()
     transaction = connection.begin()
     yield connection
-    transaction.rollback()
+    if transaction.is_active:
+        transaction.rollback()
     connection.close()
 
 

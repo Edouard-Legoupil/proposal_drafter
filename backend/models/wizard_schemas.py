@@ -88,8 +88,27 @@ class QASearchRequest(BaseModel):
     category_ids: Optional[List[int]] = None
 
 
+class QAListResponse(BaseModel):
+    """Paginated Q&A listing response."""
+
+    total: int
+    limit: int
+    offset: int
+    items: List[QAItemResponse]
+
+
+class QASearchResult(BaseModel):
+    """Compact item returned by the dedicated search endpoint."""
+
+    id: int
+    question: str
+    answer_preview: str
+    category: str
+    relevance_score: float
+
+
 class QASearchResponse(BaseModel):
     """Schema for Q&A search responses."""
 
     total: int
-    results: List[QAItemResponse]
+    results: List[QASearchResult]

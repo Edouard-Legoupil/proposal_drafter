@@ -365,14 +365,14 @@ def test_validate_output_length_limit():
 
 def test_sanitize_task_inputs_integration():
     """Test integration with CrewProposal sanitize_task_inputs method."""
-    from backend.utils.crew_proposal import CrewProposal
+    from backend.utils.crew_proposal import ProposalCrew
 
     # Mock the crew and other dependencies
     with patch("backend.utils.crew_proposal.Crew") as mock_crew:
         mock_crew_instance = MagicMock()
         mock_crew.return_value = mock_crew_instance
 
-        crew_proposal = CrewProposal()
+        crew_proposal = ProposalCrew()
 
         # Test with clean inputs
         clean_inputs = {
@@ -398,14 +398,13 @@ def test_sanitize_task_inputs_integration():
 
 def test_validate_llm_output_integration():
     """Test integration with CrewProposal validate_llm_output method."""
-    from backend.utils.crew_proposal import CrewProposal
+    from backend.utils.crew_proposal import ProposalCrew
 
-    crew_proposal = CrewProposal()
+    crew_proposal = ProposalCrew()
 
     # Test valid output
     valid_output = {
-        "proposal_title": "Education Initiative",
-        "sections": {"background": "...", "objectives": "..."},
+        "generated_content": "Education Initiative",
     }
 
     result = crew_proposal.validate_llm_output(valid_output)
@@ -443,15 +442,8 @@ def test_comprehensive_injection_attacks():
     ]
 
     for attack in attack_patterns:
-        # Some attacks may not exceed threshold alone, so we'll test detection without requiring SecurityError
-        result = sanitizer.sanitize_user_input(attack)
-        if result.threat_score >= 5.0:
-            # If it exceeds threshold, it should raise SecurityError
-            with pytest.raises(SecurityError):
-                sanitizer.sanitize_user_input(attack)
-        else:
-            # If it doesn't exceed threshold, just verify it's detected
-            assert len(result.detected_threats) > 0
+        with pytest.raises(SecurityError):
+            sanitizer.sanitize_user_input(attack)
 
 
 def test_edge_cases_and_boundary_conditions():
@@ -486,7 +478,7 @@ def test_logging_functionality():
     """Test that security events are properly logged."""
     sanitizer = PromptSanitizer()
 
-    with patch("backend.utils.prompt_sanitizer.logging") as mock_logging:
+    with patch("backend.utils.prompt_sanitizer.logger") as mock_logging:
         # Test clean input logging
         sanitizer.sanitize_user_input("Clean input")
         mock_logging.info.assert_called()

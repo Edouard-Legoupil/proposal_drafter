@@ -150,7 +150,7 @@ app.include_router(incident.router, prefix="/api", tags=["Incidents"])
 app.include_router(qualification.router, prefix="/api", tags=["Qualification"])
 app.include_router(health.router, tags=["Health & Debugging"])
 app.include_router(sharepoint.router, prefix="/api", tags=["SharePoint"])
-app.include_router(wizard.router, prefix="/api", tags=["Wizard Utility"])
+app.include_router(wizard.router, tags=["Wizard Utility"])
 
 
 # --- Root Endpoint: Health Check + SPA ---

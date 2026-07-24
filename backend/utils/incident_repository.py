@@ -16,10 +16,10 @@ class IncidentRepository:
             query = text(
                 """
                 SELECT
-                    ppr.id::text AS review_id,
-                    ppr.proposal_id::text AS proposal_id,
-                    ppr.reviewer_id::text AS reviewer_id,
-                    ppr.proposal_status_history_id::text AS proposal_status_history_id,
+                    CAST(ppr.id AS TEXT) AS review_id,
+                    CAST(ppr.proposal_id AS TEXT) AS proposal_id,
+                    CAST(ppr.reviewer_id AS TEXT) AS reviewer_id,
+                    CAST(ppr.proposal_status_history_id AS TEXT) AS proposal_status_history_id,
                     ppr.section_name,
                     ppr.rating,
                     ppr.status AS review_status,
@@ -30,8 +30,8 @@ class IncidentRepository:
                     ppr.severity,
                     ppr.created_at AS review_created_at,
                     ppr.updated_at AS review_updated_at,
-                    p.id::text AS proposal_pk,
-                    p.user_id::text AS proposal_user_id,
+                    CAST(p.id AS TEXT) AS proposal_pk,
+                    CAST(p.user_id AS TEXT) AS proposal_user_id,
                     p.template_name,
                     p.form_data,
                     p.project_description,
@@ -136,7 +136,8 @@ class IncidentRepository:
         query = text(
             """
             UPDATE proposal_peer_reviews
-            SET author_response = :response, status = :status, author_response_by = :response_author, updated_at = CURRENT_TIMESTAMP
+            SET author_response = :response, status = :status,
+                author_response_by = :response_author, updated_at = CURRENT_TIMESTAMP
             WHERE id = :id
         """
         )
@@ -160,7 +161,8 @@ class IncidentRepository:
         query = text(
             """
             UPDATE knowledge_card_reviews
-            SET author_response = :response, status = :status, author_response_by = :response_author, updated_at = CURRENT_TIMESTAMP
+            SET author_response = :response, status = :status,
+                author_response_by = :response_author, updated_at = CURRENT_TIMESTAMP
             WHERE id = :id
         """
         )

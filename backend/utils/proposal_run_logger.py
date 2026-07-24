@@ -25,7 +25,41 @@ class ArtifactRunLogger:
     """
 
     def __init__(self):
-        self.engine = get_engine()
+        pass
+
+    @property
+    def engine(self):
+        """Resolve the current engine so tests and runtime reconfiguration do not retain stale connections."""
+        return get_engine()
+
+    @staticmethod
+    def _json_value(value: Any, default: Any) -> Any:
+        if value is None:
+            return default
+        if isinstance(value, str):
+            try:
+                return json.loads(value)
+            except json.JSONDecodeError:
+                return default
+        return value
+
+    def _normalize_run_data(self, run_data: Dict[str, Any]) -> Dict[str, Any]:
+        for key in ["start_time", "end_time", "created_at", "updated_at"]:
+            if run_data.get(key) and isinstance(run_data[key], datetime):
+                run_data[key] = run_data[key].isoformat()
+        json_fields: tuple[tuple[str, Any], ...] = (
+            ("agents_executed", []),
+            ("export_events", []),
+            ("metadata", {}),
+        )
+        for key, default in json_fields:
+            if key in run_data:
+                run_data[key] = self._json_value(run_data[key], default)
+        if "artifact_id" in run_data:
+            run_data["proposal_id"] = run_data["artifact_id"] if run_data.get("artifact_type") == "proposal" else None
+        if "id" in run_data:
+            run_data["run_id"] = run_data["id"]
+        return run_data
 
     def create_run_record(
         self,
@@ -55,6 +89,7 @@ class ArtifactRunLogger:
 
         try:
             with self.engine.begin() as connection:
+                agents_executed = [] if connection.dialect.name == "postgresql" else json.dumps([])
                 connection.execute(
                     text(
                         """
@@ -79,7 +114,7 @@ class ArtifactRunLogger:
                         "model_deployment": model_deployment,
                         "template_name": template_name,
                         "template_version": template_version,
-                        "agents_executed": [],
+                        "agents_executed": agents_executed,
                         "metadata": json.dumps({"initiated_by": "system"}),
                     },
                 )
@@ -166,12 +201,12 @@ class ArtifactRunLogger:
                 if not result:
                     raise ValueError(f"Run {run_id} not found")
 
-                agents_executed = list(result[0]) if result[0] else []
+                agents_executed = list(self._json_value(result[0], []))
                 current_step_count = result[1] if result[1] else 0
                 result[2] if result[2] else 0
                 result[3] if result[3] else 0
                 current_tokens_output = result[4] if result[4] else 0
-                stage_latencies = result[5] if result[5] else {}
+                stage_latencies = dict(self._json_value(result[5], {}))
 
                 # Update arrays and counters
                 if agent_name not in agents_executed:
@@ -199,7 +234,9 @@ class ArtifactRunLogger:
                     ),
                     {
                         "run_id": run_id,
-                        "agents_executed": agents_executed,
+                        "agents_executed": (
+                            agents_executed if connection.dialect.name == "postgresql" else json.dumps(agents_executed)
+                        ),
                         "step_count": current_step_count,
                         "tokens_output": current_tokens_output,
                         "stage_latencies": json.dumps(stage_latencies),
@@ -238,7 +275,7 @@ class ArtifactRunLogger:
                     raise ValueError(f"Run {run_id} not found")
 
                 current_retry_count = result[0] if result[0] else 0
-                stage_latencies = result[1] if result[1] else {}
+                stage_latencies = dict(self._json_value(result[1], {}))
 
                 # Update retry count
                 current_retry_count += 1
@@ -297,7 +334,7 @@ class ArtifactRunLogger:
                     raise ValueError(f"Run {run_id} not found")
 
                 current_failure_count = result[0] if result[0] else 0
-                metadata = result[1] if result[1] else {}
+                metadata = dict(self._json_value(result[1], {}))
 
                 # Update failure count
                 current_failure_count += 1
@@ -566,7 +603,7 @@ class ArtifactRunLogger:
                     text(
                         """
                         SELECT
-                            id, proposal_id, user_id, run_status, start_time, end_time,
+                            id, artifact_type, artifact_id, user_id, run_status, start_time, end_time,
                             agents_executed, model_deployment, tokens_input, tokens_output,
                             estimated_cost, step_count, retry_count, failure_count,
                             total_latency_ms, sections_generated, pages_generated,
@@ -585,7 +622,8 @@ class ArtifactRunLogger:
                 # Convert result to dictionary
                 columns = [
                     "id",
-                    "proposal_id",
+                    "artifact_type",
+                    "artifact_id",
                     "user_id",
                     "run_status",
                     "start_time",
@@ -611,13 +649,7 @@ class ArtifactRunLogger:
                 ]
 
                 run_data = dict(zip(columns, result))
-
-                # Convert datetime objects to ISO format strings
-                for key in ["start_time", "end_time", "created_at", "updated_at"]:
-                    if run_data[key] and isinstance(run_data[key], datetime):
-                        run_data[key] = run_data[key].isoformat()
-
-                return run_data
+                return self._normalize_run_data(run_data)
 
         except Exception as e:
             logger.error(f"Failed to get run details for {run_id}: {e}", exc_info=True)
@@ -681,12 +713,7 @@ class ArtifactRunLogger:
                 for result in results:
                     run_data = dict(zip(columns, result))
 
-                    # Convert datetime objects to ISO format strings
-                    for key in ["start_time", "end_time"]:
-                        if run_data[key] and isinstance(run_data[key], datetime):
-                            run_data[key] = run_data[key].isoformat()
-
-                    runs.append(run_data)
+                    runs.append(self._normalize_run_data(run_data))
 
                 return runs
 
@@ -756,12 +783,7 @@ class ArtifactRunLogger:
                 for result in results:
                     run_data = dict(zip(columns, result))
 
-                    # Convert datetime objects to ISO format strings
-                    for key in ["start_time", "end_time"]:
-                        if run_data[key] and isinstance(run_data[key], datetime):
-                            run_data[key] = run_data[key].isoformat()
-
-                    runs.append(run_data)
+                    runs.append(self._normalize_run_data(run_data))
 
                 return runs
 
@@ -789,7 +811,7 @@ class ArtifactRunLogger:
                     text(
                         """
                         SELECT
-                            id, proposal_id, user_id, run_status, start_time, end_time,
+                            id, artifact_type, artifact_id, user_id, run_status, start_time, end_time,
                             agents_executed, model_deployment, tokens_input, tokens_output,
                             estimated_cost, step_count, retry_count, failure_count,
                             total_latency_ms, sections_generated, pages_generated,
@@ -806,7 +828,8 @@ class ArtifactRunLogger:
                 runs = []
                 columns = [
                     "id",
-                    "proposal_id",
+                    "artifact_type",
+                    "artifact_id",
                     "user_id",
                     "run_status",
                     "start_time",
@@ -830,12 +853,7 @@ class ArtifactRunLogger:
                 for result in results:
                     run_data = dict(zip(columns, result))
 
-                    # Convert datetime objects to ISO format strings
-                    for key in ["start_time", "end_time"]:
-                        if run_data[key] and isinstance(run_data[key], datetime):
-                            run_data[key] = run_data[key].isoformat()
-
-                    runs.append(run_data)
+                    runs.append(self._normalize_run_data(run_data))
 
                 return runs
 
@@ -856,28 +874,34 @@ class ArtifactRunLogger:
         """
         try:
             with self.engine.connect() as connection:
+                agent_filter = (
+                    ":agent_name = ANY(agents_executed)"
+                    if connection.dialect.name == "postgresql"
+                    else "agents_executed LIKE :agent_pattern"
+                )
                 results = connection.execute(
                     text(
-                        """
+                        f"""
                         SELECT
-                            id, proposal_id, user_id, run_status, start_time, end_time,
+                            id, artifact_type, artifact_id, user_id, run_status, start_time, end_time,
                             agents_executed, model_deployment, tokens_input, tokens_output,
                             estimated_cost, step_count, retry_count, failure_count,
                             total_latency_ms, sections_generated, pages_generated,
                             words_generated, template_name, template_version
                         FROM artifact_runs
-                        WHERE :agent_name = ANY(agents_executed)
+                        WHERE {agent_filter}
                         ORDER BY start_time DESC
                         LIMIT :limit
                     """
                     ),
-                    {"agent_name": agent_name, "limit": limit},
+                    {"agent_name": agent_name, "agent_pattern": f'%"{agent_name}"%', "limit": limit},
                 ).fetchall()
 
                 runs = []
                 columns = [
                     "id",
-                    "proposal_id",
+                    "artifact_type",
+                    "artifact_id",
                     "user_id",
                     "run_status",
                     "start_time",
@@ -901,12 +925,7 @@ class ArtifactRunLogger:
                 for result in results:
                     run_data = dict(zip(columns, result))
 
-                    # Convert datetime objects to ISO format strings
-                    for key in ["start_time", "end_time"]:
-                        if run_data[key] and isinstance(run_data[key], datetime):
-                            run_data[key] = run_data[key].isoformat()
-
-                    runs.append(run_data)
+                    runs.append(self._normalize_run_data(run_data))
 
                 return runs
 

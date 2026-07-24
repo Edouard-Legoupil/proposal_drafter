@@ -19,7 +19,8 @@ async def test_regenerate_section(authenticated_client, mocker):
     # Mock the database check for is_accepted
     mock_engine = MagicMock()
     mock_connection = MagicMock()
-    mock_connection.execute.return_value.scalar.return_value = False  # Not accepted
+    mock_connection.execute.return_value.fetchone.return_value = (False,)
+    mock_connection.execute.return_value.scalar.return_value = "proposal_template_unhcr.json"
     mock_engine.connect.return_value.__enter__.return_value = mock_connection
     mocker.patch("backend.api.proposals.get_engine", return_value=mock_engine)
 

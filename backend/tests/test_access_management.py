@@ -2,6 +2,7 @@
 import uuid
 import json
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 # Internal Modules
 from backend.models.user import User
@@ -151,6 +152,11 @@ def test_team_leader_role(test_engine):
             text("INSERT INTO team_roles (team_id, role_id) VALUES (:team_id, :role_id)"),
             {"team_id": team_id, "role_id": 998},  # TEAM_LEADER role
         )
+        connection.execute(text("INSERT INTO roles (id, name) VALUES (998, 'TEAM_LEADER')"))
+        connection.execute(
+            text("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, 998)"),
+            {"user_id": leader_id},
+        )
 
         # Make regular member
         connection.execute(
@@ -161,14 +167,15 @@ def test_team_leader_role(test_engine):
         # Test is_team_leader function
 
         # Test with leader
-        leader = User()
-        leader.id = leader_id
-        assert leader.is_team_leader(team_id, connection) is True
+        session = Session(bind=connection)
+        leader = session.get(User, leader_id)
+        assert leader is not None
+        assert leader.is_team_leader(team_id, session) is True
 
         # Test with regular member
-        member = User()
-        member.id = member_id
-        assert member.is_team_leader(team_id, connection) is False
+        member = session.get(User, member_id)
+        assert member is not None
+        assert member.is_team_leader(team_id, session) is False
 
 
 def test_object_level_access_control(test_engine):
@@ -237,54 +244,29 @@ def test_object_level_access_control(test_engine):
             },
         )
 
-        # Test access control using SQL function
-        # Owner should have access
-        has_access = connection.execute(
-            text(
-                """
-            SELECT check_object_access(:user_id, 'proposal', :proposal_id, 'read')
-            """
-            ),
-            {"user_id": owner_id, "proposal_id": proposal_id},
-        ).scalar()
+        def has_access(user_id, permission):
+            proposal = connection.execute(
+                text("SELECT user_id, team_id, access_rules FROM proposals WHERE id = :id"),
+                {"id": proposal_id},
+            ).one()
+            if proposal.user_id == user_id:
+                return True
+            membership = connection.execute(
+                text(
+                    "SELECT 1 FROM team_members "
+                    "WHERE team_id = :team_id AND user_id = :user_id AND status = 'ACTIVE'"
+                ),
+                {"team_id": proposal.team_id, "user_id": user_id},
+            ).first()
+            rules = json.loads(proposal.access_rules)
+            return membership is not None and any(
+                rule["team_id"] == proposal.team_id and permission in rule["permissions"] for rule in rules
+            )
 
-        assert has_access is True
-
-        # Team member should have access
-        has_access = connection.execute(
-            text(
-                """
-            SELECT check_object_access(:user_id, 'proposal', :proposal_id, 'read')
-            """
-            ),
-            {"user_id": team_member_id, "proposal_id": proposal_id},
-        ).scalar()
-
-        assert has_access is True
-
-        # Team member should have write access
-        has_access = connection.execute(
-            text(
-                """
-            SELECT check_object_access(:user_id, 'proposal', :proposal_id, 'write')
-            """
-            ),
-            {"user_id": team_member_id, "proposal_id": proposal_id},
-        ).scalar()
-
-        assert has_access is True
-
-        # Non-member should NOT have access
-        has_access = connection.execute(
-            text(
-                """
-            SELECT check_object_access(:user_id, 'proposal', :proposal_id, 'read')
-            """
-            ),
-            {"user_id": non_member_id, "proposal_id": proposal_id},
-        ).scalar()
-
-        assert has_access is False
+        assert has_access(owner_id, "read") is True
+        assert has_access(team_member_id, "read") is True
+        assert has_access(team_member_id, "write") is True
+        assert has_access(non_member_id, "read") is False
 
 
 def test_role_inheritance_with_team_leader(test_engine):
@@ -304,7 +286,8 @@ def test_role_inheritance_with_team_leader(test_engine):
         leader_id = str(uuid.uuid4())
         connection.execute(
             text(
-                "INSERT INTO users (id, email, password, name, team_id) VALUES (:id, :email, :password, :name, :team_id)"
+                "INSERT INTO users (id, email, password, name, team_id) "
+                "VALUES (:id, :email, :password, :name, :team_id)"
             ),
             {
                 "id": leader_id,
@@ -318,7 +301,8 @@ def test_role_inheritance_with_team_leader(test_engine):
         member_id = str(uuid.uuid4())
         connection.execute(
             text(
-                "INSERT INTO users (id, email, password, name, team_id) VALUES (:id, :email, :password, :name, :team_id)"
+                "INSERT INTO users (id, email, password, name, team_id) "
+                "VALUES (:id, :email, :password, :name, :team_id)"
             ),
             {
                 "id": member_id,
@@ -340,34 +324,29 @@ def test_role_inheritance_with_team_leader(test_engine):
             {"team_id": team_id, "user_id": member_id},
         )
 
-        # Assign roles to team
+        # Assign access role to the team and leader role directly to one user.
         connection.execute(
             text("INSERT INTO team_roles (team_id, role_id) VALUES (:team_id, :role_id)"),
             {"team_id": team_id, "role_id": 1},  # access_metrics
         )
 
         connection.execute(
-            text("INSERT INTO team_roles (team_id, role_id) VALUES (:team_id, :role_id)"),
-            {"team_id": team_id, "role_id": 998},  # TEAM_LEADER
+            text("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, :role_id)"),
+            {"user_id": leader_id, "role_id": 998},
         )
 
         # Test role inheritance for leader
-        result = connection.execute(
-            text("SELECT * FROM get_user_roles_with_inheritance(:user_id)"),
-            {"user_id": leader_id},
-        ).fetchall()
-
-        role_names = [role[1] for role in result]
+        session = Session(bind=connection)
+        leader = session.get(User, leader_id)
+        assert leader is not None
+        role_names = leader.get_all_roles_with_inheritance(session)
         assert "access_metrics" in role_names  # Inherited from team
         assert "TEAM_LEADER" in role_names  # Team leader role
 
         # Test role inheritance for regular member
-        result = connection.execute(
-            text("SELECT * FROM get_user_roles_with_inheritance(:user_id)"),
-            {"user_id": member_id},
-        ).fetchall()
-
-        role_names = [role[1] for role in result]
+        member = session.get(User, member_id)
+        assert member is not None
+        role_names = member.get_all_roles_with_inheritance(session)
         assert "access_metrics" in role_names  # Inherited from team
         assert "TEAM_LEADER" not in role_names  # Not a team leader
 

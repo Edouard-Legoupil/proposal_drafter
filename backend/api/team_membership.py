@@ -102,10 +102,11 @@ async def get_team_membership_requests(team_id: str, current_user: dict = Depend
                     """
                 SELECT EXISTS (
                     SELECT 1 FROM team_members tm
-                    JOIN team_roles tr ON tm.team_id = tr.team_id
+                    JOIN user_roles ur ON tm.user_id = ur.user_id
+                    JOIN roles r ON ur.role_id = r.id
                     WHERE tm.user_id = :user_id
                     AND tm.team_id = :team_id
-                    AND tr.role_id = 998  -- TEAM_LEADER role
+                    AND r.name = 'TEAM_LEADER'
                     AND tm.status = 'ACTIVE'
                 )
                 """
@@ -187,10 +188,11 @@ async def approve_team_membership(team_id: str, user_id: str, current_user: dict
                     """
                 SELECT EXISTS (
                     SELECT 1 FROM team_members tm
-                    JOIN team_roles tr ON tm.team_id = tr.team_id
+                    JOIN user_roles ur ON tm.user_id = ur.user_id
+                    JOIN roles r ON ur.role_id = r.id
                     WHERE tm.user_id = :user_id
                     AND tm.team_id = :team_id
-                    AND tr.role_id = 998  -- TEAM_LEADER role
+                    AND r.name = 'TEAM_LEADER'
                     AND tm.status = 'ACTIVE'
                 )
                 """
@@ -300,10 +302,11 @@ async def reject_team_membership(team_id: str, user_id: str, current_user: dict 
                     """
                 SELECT EXISTS (
                     SELECT 1 FROM team_members tm
-                    JOIN team_roles tr ON tm.team_id = tr.team_id
+                    JOIN user_roles ur ON tm.user_id = ur.user_id
+                    JOIN roles r ON ur.role_id = r.id
                     WHERE tm.user_id = :user_id
                     AND tm.team_id = :team_id
-                    AND tr.role_id = 998  -- TEAM_LEADER role
+                    AND r.name = 'TEAM_LEADER'
                     AND tm.status = 'ACTIVE'
                 )
                 """
@@ -413,10 +416,11 @@ async def get_team_roles(team_id: str, current_user: dict = Depends(get_current_
                     """
                 SELECT EXISTS (
                     SELECT 1 FROM team_members tm
-                    JOIN team_roles tr ON tm.team_id = tr.team_id
+                    JOIN user_roles ur ON tm.user_id = ur.user_id
+                    JOIN roles r ON ur.role_id = r.id
                     WHERE tm.user_id = :user_id
                     AND tm.team_id = :team_id
-                    AND tr.role_id = 998  -- TEAM_LEADER role
+                    AND r.name = 'TEAM_LEADER'
                     AND tm.status = 'ACTIVE'
                 )
                 """

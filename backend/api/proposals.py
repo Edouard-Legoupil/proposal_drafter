@@ -393,7 +393,7 @@ async def create_session(request: CreateSessionRequest, current_user: dict = Dep
                 """
                 ),
                 {
-                    "id": proposal_id,
+                    "id": str(proposal_id),
                     "uid": user_id,
                     "form": json.dumps(request.form_data),
                     "desc": request.project_description,
@@ -404,9 +404,11 @@ async def create_session(request: CreateSessionRequest, current_user: dict = Dep
             # Log the initial 'draft' status with an empty sections snapshot
             connection.execute(
                 text(
-                    "INSERT INTO proposal_status_history (proposal_id, status, generated_sections_snapshot) VALUES (:pid, 'draft', '{}'::jsonb)"
+                    "INSERT INTO proposal_status_history "
+                    "(proposal_id, status, generated_sections_snapshot) "
+                    "VALUES (:pid, 'draft', :snapshot)"
                 ),
-                {"pid": proposal_id},
+                {"pid": str(proposal_id), "snapshot": json.dumps({})},
             )
 
             # Insert into join tables
@@ -427,7 +429,7 @@ async def create_session(request: CreateSessionRequest, current_user: dict = Dep
                     if donor_id:
                         connection.execute(
                             text("INSERT INTO proposal_donors (proposal_id, donor_id) VALUES (:pid, :did)"),
-                            {"pid": proposal_id, "did": donor_id},
+                            {"pid": str(proposal_id), "did": donor_id},
                         )
 
             if outcome_ids and isinstance(outcome_ids, list):
@@ -435,7 +437,7 @@ async def create_session(request: CreateSessionRequest, current_user: dict = Dep
                     if outcome_id:  # Ensure outcome_id is not empty
                         connection.execute(
                             text("INSERT INTO proposal_outcomes (proposal_id, outcome_id) VALUES (:pid, :oid)"),
-                            {"pid": proposal_id, "oid": outcome_id},
+                            {"pid": str(proposal_id), "oid": outcome_id},
                         )
 
             if field_context_ids:
@@ -445,7 +447,7 @@ async def create_session(request: CreateSessionRequest, current_user: dict = Dep
                             text(
                                 "INSERT INTO proposal_field_contexts (proposal_id, field_context_id) VALUES (:pid, :fid)"
                             ),
-                            {"pid": proposal_id, "fid": field_context_id},
+                            {"pid": str(proposal_id), "fid": field_context_id},
                         )
 
         # Load the full proposal template.
@@ -894,12 +896,12 @@ async def process_section(
     with get_engine().connect() as connection:
         proposal_info = connection.execute(
             text("SELECT is_accepted FROM proposals WHERE id = :id AND user_id = :uid"),
-            {"id": request.proposal_id, "uid": current_user["user_id"]},
+            {"id": str(request.proposal_id), "uid": current_user["user_id"]},
         ).fetchone()
 
         if not proposal_info:
             raise HTTPException(status_code=404, detail="Proposal not found.")
-
+        if proposal_info[0]:
             raise HTTPException(
                 status_code=403,
                 detail="This proposal is finalized and cannot be modified.",
@@ -983,7 +985,7 @@ async def process_section(
         with get_engine().begin() as conn:
             db_res = conn.execute(
                 text("SELECT generated_sections FROM proposals WHERE id = :id"),
-                {"id": request.proposal_id},
+                {"id": str(request.proposal_id)},
             ).scalar()
 
             # The database driver is already converting JSON to a dict,
@@ -1009,7 +1011,7 @@ async def process_section(
                 text(
                     "UPDATE proposals SET generated_sections = :sections, updated_at = CURRENT_TIMESTAMP WHERE id = :id"
                 ),
-                {"sections": json.dumps(sections), "id": request.proposal_id},
+                {"sections": json.dumps(sections), "id": str(request.proposal_id)},
             )
     except Exception as e:
         logger.exception(
@@ -1045,7 +1047,7 @@ async def regenerate_section(
 
         if not proposal_info:
             raise HTTPException(status_code=404, detail="Proposal not found.")
-
+        if proposal_info[0]:
             raise HTTPException(
                 status_code=403,
                 detail="This proposal is finalized and cannot be modified.",
@@ -2329,7 +2331,9 @@ async def submit_review(
             # Check if the user is assigned to review this proposal
             reviewer_id_from_db = connection.execute(
                 text(
-                    "SELECT reviewer_id FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND reviewer_id = :user_id LIMIT 1"
+                    "SELECT reviewer_id FROM proposal_peer_reviews "
+                    "WHERE proposal_id = :proposal_id AND reviewer_id = :user_id "
+                    "AND status IN ('pending', 'draft') LIMIT 1"
                 ),
                 {"proposal_id": str(proposal_id), "user_id": str(user_id)},
             ).scalar()
@@ -2357,19 +2361,34 @@ async def submit_review(
                 {"proposal_id": str(proposal_id), "user_id": str(user_id)},
             )
 
+            # The pending row represents the assignment, not a review comment.
+            # Consume it so a completed assignment cannot be submitted repeatedly.
+            connection.execute(
+                text(
+                    "DELETE FROM proposal_peer_reviews WHERE proposal_id = :proposal_id "
+                    "AND reviewer_id = :user_id AND status = 'pending'"
+                ),
+                {"proposal_id": str(proposal_id), "user_id": str(user_id)},
+            )
+
             # Insert each comment as a new row
             new_review_ids = []
             for comment in request.comments:
-                if comment.review_text:  # Save if text exists
-                    result = connection.execute(
+                if comment.review_text or comment.rating:
+                    review_id = str(uuid.uuid4())
+                    connection.execute(
                         text(
                             """
-                            INSERT INTO proposal_peer_reviews (proposal_id, reviewer_id, proposal_status_history_id, section_name, review_text, type_of_comment, severity, status)
-                            VALUES (:pid, :rid, :hid, :section, :text, :type, :severity, 'completed')
-                            RETURNING id::text
+                            INSERT INTO proposal_peer_reviews
+                                (id, proposal_id, reviewer_id, proposal_status_history_id,
+                                 section_name, review_text, type_of_comment, severity, rating, status)
+                            VALUES
+                                (:id, :pid, :rid, :hid, :section, :text, :type,
+                                 :severity, :rating, 'completed')
                         """
                         ),
                         {
+                            "id": review_id,
                             "pid": str(proposal_id),
                             "rid": str(user_id),
                             "hid": str(history_id) if history_id else None,
@@ -2377,18 +2396,15 @@ async def submit_review(
                             "text": comment.review_text,
                             "type": comment.type_of_comment,
                             "severity": comment.severity,
+                            "rating": comment.rating,
                         },
                     )
-                    new_review_ids.append(result.scalar())
+                    new_review_ids.append(review_id)
 
-        # Trigger analysis in background for each comment
-        for rid in new_review_ids:
-            background_tasks.add_task(_run_auto_analysis, ArtifactType.proposal, rid)
-
-            # Check if all reviews are completed
             pending_reviews = connection.execute(
                 text(
-                    "SELECT COUNT(*) FROM proposal_peer_reviews WHERE proposal_id = :proposal_id AND status = 'pending'"
+                    "SELECT COUNT(*) FROM proposal_peer_reviews "
+                    "WHERE proposal_id = :proposal_id AND status = 'pending'"
                 ),
                 {"proposal_id": str(proposal_id)},
             ).scalar()
@@ -2396,12 +2412,19 @@ async def submit_review(
             if pending_reviews == 0:
                 connection.execute(
                     text(
-                        "UPDATE proposals SET status = 'pre_submission', updated_at = CURRENT_TIMESTAMP WHERE id = :id"
+                        "UPDATE proposals SET status = 'pre_submission', "
+                        "updated_at = CURRENT_TIMESTAMP WHERE id = :id"
                     ),
                     {"id": str(proposal_id)},
                 )
 
+        # Trigger analysis in background for each comment
+        for rid in new_review_ids:
+            background_tasks.add_task(_run_auto_analysis, ArtifactType.proposal, rid)
+
         return {"message": "Review submitted successfully."}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"[SUBMIT REVIEW ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to submit review.")

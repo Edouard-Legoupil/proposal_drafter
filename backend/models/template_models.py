@@ -38,7 +38,7 @@ class TemplateUpdate(BaseModel):
 class TemplateVersionBase(BaseModel):
     """Base template version model"""
 
-    version_number: str
+    version_number: str = "1.0"
     version_notes: Optional[str] = None
     status: str = "draft"
 

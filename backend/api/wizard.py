@@ -22,6 +22,7 @@ from backend.core.security import get_current_user
 from backend.models.wizard_schemas import (
     QACategoryResponse,
     UserFeedback,
+    QAListResponse,
     QASearchRequest,
     QASearchResponse,
 )
@@ -48,7 +49,7 @@ async def get_categories(db: AsyncSession = Depends(get_db_session)):
     return categories
 
 
-@router.get("/qa", response_model=QASearchResponse)
+@router.get("/qa", response_model=QAListResponse)
 async def get_qa_items(
     category_id: Optional[int] = None,
     search: Optional[str] = None,
@@ -129,11 +130,11 @@ async def submit_feedback(
         Success message
     """
     # Validate feedback score
-    if feedback.feedback_score and (feedback.feedback_score < 1 or feedback.feedback_score > 5):
+    if feedback.feedback_score is not None and (feedback.feedback_score < 1 or feedback.feedback_score > 5):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Feedback score must be between 1 and 5")
 
     interaction = UserInteraction(
-        user_id=current_user.id,
+        user_id=current_user["user_id"],
         qa_item_id=feedback.qa_item_id,
         interaction_type="feedback",
         feedback_score=feedback.feedback_score,
@@ -172,7 +173,8 @@ async def get_popular_questions(
         )
         .join(QACategory, QAItem.category_id == QACategory.id)
         .outerjoin(
-            UserInteraction, or_(UserInteraction.qa_item_id == QAItem.id, UserInteraction.interaction_type == "view")
+            UserInteraction,
+            (UserInteraction.qa_item_id == QAItem.id) & (UserInteraction.interaction_type == "view"),
         )
         .where(QAItem.is_active)
         .group_by(QAItem.id, QAItem.question, QACategory.name)

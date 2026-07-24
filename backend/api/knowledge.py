@@ -743,7 +743,7 @@ async def update_knowledge_card(
             # Fetch the generated_sections again to get the updated state
             updated_card = connection.execute(
                 text("SELECT generated_sections FROM knowledge_cards WHERE id = :id"),
-                {"id": card_id},
+                {"id": str(card_id)},
             ).fetchone()
 
             # Handle both string and dict types
@@ -1699,22 +1699,25 @@ async def identify_references(
                     reference_id = existing_ref.id
                 else:
                     # Insert new reference
-                    new_ref_id = connection.execute(
+                    reference_id = str(uuid.uuid4())
+                    connection.execute(
                         text(
                             """
-                            INSERT INTO knowledge_card_references (url, reference_type, summary, created_by, updated_by, created_at, updated_at)
-                            VALUES (:url, :reference_type, :summary, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                            RETURNING id
+                            INSERT INTO knowledge_card_references
+                                (id, url, reference_type, summary, created_by, updated_by, created_at, updated_at)
+                            VALUES
+                                (:id, :url, :reference_type, :summary, :user_id, :user_id,
+                                 CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                         """
                         ),
                         {
+                            "id": reference_id,
                             "url": url,
                             "reference_type": ref.get("reference_type"),
                             "summary": ref.get("summary") or "",
                             "user_id": user_id,
                         },
-                    ).scalar_one()
-                    reference_id = new_ref_id
+                    )
 
                 # Link reference to knowledge card
                 connection.execute(
@@ -1725,13 +1728,13 @@ async def identify_references(
                         ON CONFLICT (knowledge_card_id, reference_id) DO NOTHING
                     """
                     ),
-                    {"kcid": card_id, "ref_id": reference_id},
+                    {"kcid": str(card_id), "ref_id": reference_id},
                 )
 
             # Handle both string and dict types for generated_sections
             result = connection.execute(
                 text("SELECT generated_sections FROM knowledge_cards WHERE id = :id"),
-                {"id": card_id},
+                {"id": str(card_id)},
             ).fetchone()
 
             if result and result.generated_sections:
@@ -1937,7 +1940,8 @@ async def get_knowledge_card_for_review(card_id: uuid.UUID, current_user: dict =
                 """
                 SELECT id, section_name, review_text, type_of_comment, severity, rating, author_response, author_response_by
                 FROM knowledge_card_reviews
-                WHERE knowledge_card_id = :card_id AND reviewer_id = :user_id AND status = 'draft'
+                WHERE knowledge_card_id = :card_id AND reviewer_id = :user_id
+                ORDER BY created_at DESC
             """
             )
             reviews = (

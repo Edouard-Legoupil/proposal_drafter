@@ -12,11 +12,19 @@ from backend.models.template_models import (
 )
 
 
+def _configure_transaction(mock_conn):
+    transaction = MagicMock()
+    transaction.__aenter__ = AsyncMock(return_value=None)
+    transaction.__aexit__ = AsyncMock(return_value=False)
+    mock_conn.transaction = MagicMock(return_value=transaction)
+
+
 @pytest.fixture
 def mock_db_pool():
     """Create a mock database pool"""
     mock_pool = MagicMock()
     mock_conn = AsyncMock()
+    _configure_transaction(mock_conn)
     mock_pool.acquire.return_value.__aenter__.return_value = mock_conn
     return mock_pool
 
@@ -287,20 +295,15 @@ async def test_get_template_donors(template_service):
 
 
 # Test the config.py template loading functions
-@patch("backend.core.config.TemplateService")
-def test_load_proposal_template_db_fallback(mock_template_service):
+@patch("backend.core.config._load_template_from_db", return_value=None)
+def test_load_proposal_template_db_fallback(mock_db_load):
     """Test that template loading falls back to file system when DB fails"""
     from backend.core.config import load_proposal_template
 
-    # Mock the database service to return None
-    mock_service_instance = MagicMock()
-    mock_service_instance.get_template_by_filename.return_value = None
-    mock_template_service.return_value = mock_service_instance
-
     # Mock file system functions
-    with patch("backend.core.config._find_template_path") as mock_find_path, patch(
-        "builtins.open", create=True
-    ) as mock_open, patch("json.load") as mock_json_load:
+    with patch("backend.core.config.get_available_templates", return_value={"test.json": "test.json"}), patch(
+        "backend.core.config._find_template_path"
+    ) as mock_find_path, patch("builtins.open", create=True) as mock_open, patch("json.load") as mock_json_load:
         # Setup mocks
         mock_find_path.return_value = "/path/to/template.json"
         mock_file = MagicMock()
@@ -316,19 +319,17 @@ def test_load_proposal_template_db_fallback(mock_template_service):
         assert result == {"test": "template"}
 
 
-@patch("backend.core.config.TemplateService")
-def test_load_proposal_template_db_success(mock_template_service):
+@patch(
+    "backend.core.config._load_template_from_db",
+    return_value={"template_data": {"db": "template"}},
+)
+def test_load_proposal_template_db_success(mock_db_load):
     """Test that template loading uses DB when available"""
     from backend.core.config import load_proposal_template
-
-    # Mock the database service to return template data
-    mock_service_instance = MagicMock()
-    mock_service_instance.get_template_by_filename.return_value = {"template_data": {"db": "template"}}
-    mock_template_service.return_value = mock_service_instance
 
     # Call the function
     result = load_proposal_template("test.json")
 
     # Verify it used DB
-    mock_service_instance.get_template_by_filename.assert_called_once_with("test.json")
-    assert result == {"db": "template"}
+    mock_db_load.assert_called_once_with("test.json")
+    assert result == {"template_data": {"db": "template"}}

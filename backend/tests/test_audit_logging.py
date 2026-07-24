@@ -11,6 +11,7 @@ from unittest.mock import patch, MagicMock
 from backend.core.audit_logging import (
     AuditLogger,
     AuditEvent,
+    log_security_event,
     setup_audit_logging,
 )
 
@@ -271,7 +272,7 @@ def test_security_event_thresholds():
     logger = AuditLogger(failed_login_threshold=3)
 
     # Add failed login attempts
-    for i in range(3):
+    for _ in range(3):
         logger.log_security_event(
             user_id="attacker",
             event_type="login.failed",
@@ -293,6 +294,19 @@ def test_security_event_thresholds():
         assert "Brute force attempt detected" in call_args[0]
 
 
+def test_security_event_convenience_function_delegates():
+    logger = MagicMock()
+    log_security_event._audit_logger = logger
+    try:
+        log_security_event("user-1", "login.success", True, "127.0.0.1", {"source": "test"})
+    finally:
+        del log_security_event._audit_logger
+
+    logger.log_security_event.assert_called_once_with(
+        "user-1", "login.success", True, "127.0.0.1", None, {"source": "test"}
+    )
+
+
 def test_compliance_reporting():
     """Test generation of compliance reports."""
     logger = AuditLogger()
@@ -301,7 +315,7 @@ def test_compliance_reporting():
     logger.log_security_event(user_id="user1", event_type="login.success", success=True)
     logger.log_security_event(user_id="user2", event_type="login.failed", success=False)
     logger.log_api_call(user_id="user1", endpoint="/api/sensitive", method="GET")
-    logger.log_data_access(user_id="user1", resource_type="proposal", action="read")
+    logger.log_data_access(user_id="user1", resource_type="proposal", resource_id="proposal-1", action="read")
 
     # Generate compliance report
     report = logger.generate_compliance_report()
@@ -310,7 +324,7 @@ def test_compliance_reporting():
     assert "security_events" in report
     assert "api_calls" in report
     assert "data_access" in report
-    assert "users" in report
+    assert report["unique_users"] == 2
     assert report["total_events"] >= 4
 
 

@@ -16,11 +16,6 @@ from starlette.status import (
     HTTP_503_SERVICE_UNAVAILABLE,
 )
 
-# Local Imports
-from backend.core.custom_errors import (
-    standardize_error_response,
-)
-
 # Configure logging
 logger = logging.getLogger(__name__)
 
@@ -200,9 +195,23 @@ class ErrorHandler:
 
     def _handle_http_exception(self, request: Request, exception: HTTPException, request_id: str) -> JSONResponse:
         """Handle HTTPException with standardized format."""
-        # Use our standardized error response format
-        error_response = standardize_error_response(exception)
         status_code = exception.status_code
+        code_by_status = {
+            HTTP_400_BAD_REQUEST: "VAL_001",
+            HTTP_401_UNAUTHORIZED: "AUTH_001",
+            HTTP_403_FORBIDDEN: "AUTHZ_001",
+            HTTP_404_NOT_FOUND: "AUTHZ_002",
+            HTTP_429_TOO_MANY_REQUESTS: "RATE_001",
+            HTTP_500_INTERNAL_SERVER_ERROR: "GEN_001",
+            HTTP_503_SERVICE_UNAVAILABLE: "GEN_002",
+        }
+        error_code = code_by_status.get(status_code, "GEN_003")
+        error_response = ErrorResponse(
+            error_code=error_code,
+            message=self.ERROR_CODES[error_code],
+            status_code=status_code,
+            request_id=request_id,
+        ).to_dict()
 
         # Log the original error details
         logger.warning(
@@ -471,12 +480,12 @@ def llm_circuit_breaker(func):
 
             # Create appropriate error
             if isinstance(e, SecurityError):
-                raise e
+                raise
             else:
                 security_error = handler.create_security_error(
                     "llm_unavailable", details=f"LLM operation failed: {str(e)}"
                 )
-                raise security_error
+                raise security_error from e
 
     return wrapper
 

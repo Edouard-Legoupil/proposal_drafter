@@ -78,7 +78,8 @@ class User(Base):  # type: ignore[valid-type, misc]
 
     def is_team_leader(self, team_id: str, session) -> bool:
         """Check if user is a team leader of a specific team."""
-        from backend.models.team import TeamMember, TeamRole
+        from backend.models.role import Role, UserRole
+        from backend.models.team import TeamMember
 
         # Check if user is active member of the team with TEAM_LEADER role
         team_member = (
@@ -86,8 +87,13 @@ class User(Base):  # type: ignore[valid-type, misc]
         )
 
         if team_member:
-            team_role = session.query(TeamRole).filter_by(team_id=team_id, role_id=998).first()  # TEAM_LEADER role ID
-            return team_role is not None
+            leader_role = (
+                session.query(UserRole)
+                .join(Role, UserRole.role_id == Role.id)
+                .filter(UserRole.user_id == str(self.id), Role.name == "TEAM_LEADER")
+                .first()
+            )
+            return leader_role is not None
 
         return False
 

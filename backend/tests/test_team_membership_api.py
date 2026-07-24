@@ -66,3 +66,20 @@ def test_membership_request_listing_preserves_forbidden_response(client, monkeyp
         app.dependency_overrides.pop(get_current_user, None)
 
     assert response.status_code == 403
+
+
+def test_team_role_does_not_promote_every_member_to_team_leader(client, monkeypatch):
+    engine = _engine()
+    with engine.begin() as connection:
+        connection.execute(text("INSERT INTO roles VALUES (998, 'TEAM_LEADER')"))
+        connection.execute(text("INSERT INTO team_roles VALUES ('team-1', 998)"))
+        connection.execute(text("INSERT INTO team_members VALUES ('team-1', 'user-1', 'ACTIVE')"))
+
+    monkeypatch.setattr(team_membership, "get_engine", lambda: engine)
+    app.dependency_overrides[get_current_user] = lambda: {"user_id": "user-1"}
+    try:
+        response = client.get("/api/teams/team-1/requests", headers={"host": "localhost"})
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+    assert response.status_code == 403

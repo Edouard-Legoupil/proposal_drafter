@@ -148,22 +148,6 @@ async def get_donor_groups():
         raise HTTPException(status_code=500, detail="Could not retrieve donor groups.") from e
 
 
-@router.get("/outcomes")
-async def get_outcomes():
-    """
-    Returns a list of all outcomes.
-    """
-    try:
-        from backend.models.outcome import Outcome
-
-        with get_engine().connect() as connection:
-            outcomes = connection.query(Outcome).order_by(Outcome.name).all()
-            return [{"id": str(outcome.id), "name": outcome.name} for outcome in outcomes]
-    except Exception as e:
-        logger.error(f"[GET OUTCOMES ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Could not retrieve outcomes.") from e
-
-
 @router.get("/users/me/settings", response_model=UserSettings)
 async def get_user_settings(current_user: dict = Depends(get_current_user)):
     """

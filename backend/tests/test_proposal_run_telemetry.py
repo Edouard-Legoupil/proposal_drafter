@@ -1,10 +1,17 @@
 #  Standard Library
 import uuid
+from unittest.mock import MagicMock
 
 
-def test_proposal_run_telemetry_logging(authenticated_client):
+def test_proposal_run_telemetry_logging(authenticated_client, mocker):
     """Test that proposal runs are properly logged during generation."""
     client = authenticated_client
+    proposal_crew = MagicMock()
+    proposal_crew.generate_proposal_crew.return_value = MagicMock()
+    mocker.patch("backend.api.proposals.ProposalCrew", return_value=proposal_crew)
+    mocker.patch("backend.api.proposals.handle_text_format", return_value="Generated text")
+    mocker.patch("backend.api.proposals.handle_table_format", return_value={"table": [], "notes": ""})
+    mocker.patch("backend.api.proposals.handle_number_format", return_value=1)
 
     # Create a proposal session first
     session_payload = {
@@ -29,11 +36,6 @@ def test_proposal_run_telemetry_logging(authenticated_client):
     # Trigger generation
     gen_response = client.post(f"/api/generate-proposal-sections/{session_id}")
     assert gen_response.status_code == 202
-
-    # Give it a moment to process (in real scenario, you'd have a better way to wait)
-    import time
-
-    time.sleep(2)  # Short delay for background processing
 
     # Check that runs were logged
     runs_response = client.get(f"/api/proposals/{proposal_id}/runs")

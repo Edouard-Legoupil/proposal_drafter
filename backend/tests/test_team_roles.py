@@ -1,6 +1,7 @@
 # Standard Library
 import uuid
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 # Internal Modules
 from backend.models.user import User
@@ -73,17 +74,14 @@ def test_role_inheritance_for_team_members(test_engine):
             {"user_id": user_id, "role_id": 1},
         )
 
-        # Test the SQL function for role inheritance
-        result = connection.execute(
-            text("SELECT * FROM get_user_roles_with_inheritance(:user_id)"), {"user_id": user_id}
-        )
-        roles = result.fetchall()
-
-        # Should have both direct and inherited roles
-        role_names = [role[1] for role in roles]
+        session = Session(bind=connection)
+        user = session.get(User, user_id)
+        assert user is not None
+        user.team_id = team_id
+        role_names = user.get_all_roles_with_inheritance(session)
         assert "direct_role" in role_names
         assert "team_role" in role_names
-        assert len(roles) == 2  # direct + inherited
+        assert len(role_names) == 2
 
 
 def test_user_model_role_inheritance(test_engine):
@@ -134,20 +132,10 @@ def test_user_model_role_inheritance(test_engine):
             {"user_id": user_id, "role_id": 1},
         )
 
-        # Fetch the user and test role inheritance
-        user_result = connection.execute(text("SELECT * FROM users WHERE id = :user_id"), {"user_id": user_id})
-        user_row = user_result.fetchone()
-
-        # Create User object
-        user = User()
-        user.id = user_row[0]
-        user.email = user_row[1]
-        user.password = user_row[2]
-        user.name = user_row[3]
-        user.team_id = user_row[4]
-
-        # Test role inheritance
-        all_roles = user.get_all_roles_with_inheritance(connection)
+        session = Session(bind=connection)
+        user = session.get(User, user_id)
+        assert user is not None
+        all_roles = user.get_all_roles_with_inheritance(session)
         assert "direct_role" in all_roles
         assert "team_role" in all_roles
         assert len(all_roles) == 2
@@ -223,21 +211,12 @@ def test_permission_checking_with_inherited_roles(test_engine):
             {"team_id": team_id, "role_id": 1},  # access_metrics
         )
 
-        # Create User object and test permissions
-        user_result = connection.execute(text("SELECT * FROM users WHERE id = :user_id"), {"user_id": user_id})
-        user_row = user_result.fetchone()
-
-        user = User()
-        user.id = user_row[0]
-        user.email = user_row[1]
-        user.password = user_row[2]
-        user.name = user_row[3]
-        user.team_id = user_row[4]
-
-        # Test permission checking
-        assert user.has_permission("access_metrics", connection)  # Inherited from team
-        assert not user.has_permission("access_template", connection)  # Not assigned
-        assert not user.has_permission("access_incident", connection)  # Not assigned
+        session = Session(bind=connection)
+        user = session.get(User, user_id)
+        assert user is not None
+        assert user.has_permission("access_metrics", session)
+        assert not user.has_permission("access_template", session)
+        assert not user.has_permission("access_incident", session)
 
 
 def test_admin_bypass(test_engine):
@@ -257,15 +236,9 @@ def test_admin_bypass(test_engine):
             {"user_id": user_id, "role_id": 1},
         )
 
-        # Create User object
-        user_result = connection.execute(text("SELECT * FROM users WHERE id = :user_id"), {"user_id": user_id})
-        user_row = user_result.fetchone()
-
-        user = User()
-        user.id = user_row[0]
-        user.email = user_row[1]
-        user.password = user_row[2]
-        user.name = user_row[3]
+        session = Session(bind=connection)
+        user = session.get(User, user_id)
+        assert user is not None
 
         # Test that admin has all permissions
         assert user.is_admin

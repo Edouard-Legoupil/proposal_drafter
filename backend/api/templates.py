@@ -10,7 +10,6 @@ from sqlalchemy import text
 from typing import Dict, Any
 import uuid
 import json
-import time
 import logging
 import os
 
@@ -46,10 +45,8 @@ def _run_auto_analysis(artifact_type: ArtifactType, review_id: str):
             initial_msg = "Your feedback has been received and is currently being analyzed by our AI agents. A detailed response will follow shortly."
             service.repo.update_template_comment(review_id, initial_msg, "acknowledged", response_author="system")
 
-        # 2. Wait for 30 seconds
-        time.sleep(30)
-
-        # 3. Trigger full analysis
+        # 2. Trigger full analysis. Background jobs must not hold a worker on
+        # an arbitrary delay; retry/backoff belongs in the job runner.
         with get_engine().begin() as connection:
             service = IncidentService(connection)
             service.auto_analyze_review(artifact_type, review_id)
@@ -430,16 +427,16 @@ async def add_comment(
         review_id = None
         with engine.begin() as connection:
             if is_uuid:
-                result = connection.execute(
+                review_id = str(uuid.uuid4())
+                connection.execute(
                     text(
                         """
                         INSERT INTO donor_template_comments (id, template_request_id, user_id, comment_text, section_name, rating, severity, type_of_comment)
                         VALUES (:id, :tid, :uid, :text, :section, :rating, :severity, :type)
-                        RETURNING id::text
                     """
                     ),
                     {
-                        "id": str(uuid.uuid4()),
+                        "id": review_id,
                         "tid": request_id,
                         "uid": user_id,
                         "text": req.comment_text,
@@ -449,19 +446,18 @@ async def add_comment(
                         "type": req.type_of_comment,
                     },
                 )
-                review_id = result.scalar()
             else:
                 # Store as a file-based comment using template_name
-                result = connection.execute(
+                review_id = str(uuid.uuid4())
+                connection.execute(
                     text(
                         """
                         INSERT INTO donor_template_comments (id, template_name, user_id, comment_text, section_name, rating, severity, type_of_comment)
                         VALUES (:id, :tname, :uid, :text, :section, :rating, :severity, :type)
-                        RETURNING id::text
                     """
                     ),
                     {
-                        "id": str(uuid.uuid4()),
+                        "id": review_id,
                         "tname": request_id,
                         "uid": user_id,
                         "text": req.comment_text,
@@ -471,7 +467,6 @@ async def add_comment(
                         "type": req.type_of_comment,
                     },
                 )
-                review_id = result.scalar()
 
         # Trigger analysis in background
         if review_id:

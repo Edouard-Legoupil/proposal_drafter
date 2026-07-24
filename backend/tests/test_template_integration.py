@@ -7,6 +7,13 @@ from datetime import datetime
 from backend.core.config import load_proposal_template
 
 
+def _configure_transaction(mock_conn):
+    transaction = MagicMock()
+    transaction.__aenter__ = AsyncMock(return_value=None)
+    transaction.__aexit__ = AsyncMock(return_value=False)
+    mock_conn.transaction = MagicMock(return_value=transaction)
+
+
 @pytest.fixture
 def mock_template_service():
     """Mock template service for testing"""
@@ -146,6 +153,7 @@ async def test_template_service_integration():
     # Create mock database pool
     mock_pool = MagicMock()
     mock_conn = AsyncMock()
+    _configure_transaction(mock_conn)
     mock_pool.acquire.return_value.__aenter__.return_value = mock_conn
 
     service = TemplateService(mock_pool)
@@ -207,6 +215,7 @@ async def test_template_service_integration():
     assert result["version"]["version_number"] == "1.0"
 
     # Test template retrieval
+    mock_conn.fetchrow.side_effect = None
     mock_conn.fetchrow.return_value = {
         **mock_template_row,
         "version_number": "1.0",
@@ -229,6 +238,7 @@ async def test_template_versioning():
     # Create mock database pool
     mock_pool = MagicMock()
     mock_conn = AsyncMock()
+    _configure_transaction(mock_conn)
     mock_pool.acquire.return_value.__aenter__.return_value = mock_conn
 
     service = TemplateService(mock_pool)
@@ -272,6 +282,7 @@ async def test_template_donor_mapping():
     # Create mock database pool
     mock_pool = MagicMock()
     mock_conn = AsyncMock()
+    _configure_transaction(mock_conn)
     mock_pool.acquire.return_value.__aenter__.return_value = mock_conn
 
     service = TemplateService(mock_pool)
@@ -314,6 +325,7 @@ async def test_template_audit_logging():
     # Create mock database pool
     mock_pool = MagicMock()
     mock_conn = AsyncMock()
+    _configure_transaction(mock_conn)
     mock_pool.acquire.return_value.__aenter__.return_value = mock_conn
 
     service = TemplateService(mock_pool)
@@ -343,8 +355,8 @@ async def test_template_audit_logging():
     user_id = uuid.uuid4()
     await service.update_template_metadata(template_id, update_data, user_id)
 
-    # Verify that execute was called for both update and audit log
-    assert mock_conn.execute.call_count >= 2  # Update + audit log
+    # The update uses fetchrow; execute records the audit entry.
+    assert mock_conn.execute.call_count >= 1
 
     # Check that audit log was called with correct parameters
     audit_log_calls = [call for call in mock_conn.execute.call_args_list if "template_audit_log" in str(call)]

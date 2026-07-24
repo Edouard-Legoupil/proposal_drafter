@@ -182,7 +182,7 @@ def test_secure_cookie_attributes_in_different_environments():
     prod_settings = get_cookie_settings(prod_request)
 
     assert prod_settings["secure"] is True
-    assert prod_settings["samesite"] == "none"
+    assert prod_settings["samesite"] == "lax"  # Keep sessions off cross-site requests.
 
     # Local development environment
     local_request = MockRequest("localhost:8000", "http://localhost:3000")
