@@ -29,10 +29,11 @@ describe('application route protection', () => {
     expect(screen.queryByText('Dashboard screen')).not.toBeInTheDocument()
   })
 
-  it('shows loading feedback while an authenticated screen is downloaded', () => {
+  it('shows loading feedback while an authenticated screen is downloaded', async () => {
     authState = { user: { id: 'user-1', is_admin: false }, loading: false }
     render(<MemoryRouter initialEntries={['/dashboard']}><App /></MemoryRouter>)
     expect(screen.getByRole('status', { name: /loading page/i })).toBeInTheDocument()
+    expect(await screen.findByText('Dashboard screen')).toBeInTheDocument()
   })
 
   it('allows authenticated users into ordinary application routes', async () => {
@@ -41,10 +42,10 @@ describe('application route protection', () => {
     expect(await screen.findByText('Dashboard screen')).toBeInTheDocument()
   })
 
-  it('redirects non-admin users away from access management', () => {
+  it('redirects non-admin users away from access management', async () => {
     authState = { user: { id: 'user-1', is_admin: false }, loading: false }
     render(<MemoryRouter initialEntries={['/admin/access/proposals/latest']}><App /></MemoryRouter>)
-    expect(screen.getByText('Dashboard screen')).toBeInTheDocument()
+    expect(await screen.findByText('Dashboard screen')).toBeInTheDocument()
     expect(screen.queryByText('Admin screen')).not.toBeInTheDocument()
   })
 
