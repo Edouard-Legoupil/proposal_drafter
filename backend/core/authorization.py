@@ -748,7 +748,7 @@ async def check_proposal_access(
         try:
             with get_db_connection() as connection:
                 result = connection.execute(
-                    text("SELECT id, user_id, team_id FROM proposals WHERE id = CAST(:id AS UUID)"),
+                    text("SELECT id, user_id FROM proposals WHERE id = CAST(:id AS UUID)"),
                     {"id": str(proposal_id)},
                 )
                 proposal = result.fetchone()
@@ -762,7 +762,7 @@ async def check_proposal_access(
                 return {
                     "id": proposal[0],
                     "owner_id": str(proposal[1]),
-                    "team_id": str(proposal[2]) if proposal[2] else None,
+                    "team_id": None,
                 }
         except HTTPException:
             raise
@@ -789,7 +789,7 @@ async def check_knowledge_card_access(knowledge_card_id: int, current_user: Curr
         try:
             with get_db_connection() as connection:
                 result = connection.execute(
-                    text("SELECT id, created_by, team_id FROM knowledge_cards WHERE id = :id"),
+                    text("SELECT id, created_by FROM knowledge_cards WHERE id = :id"),
                     {"id": knowledge_card_id},
                 )
                 knowledge_card = result.fetchone()
@@ -803,7 +803,7 @@ async def check_knowledge_card_access(knowledge_card_id: int, current_user: Curr
                 return {
                     "id": knowledge_card[0],
                     "created_by": str(knowledge_card[1]),
-                    "team_id": str(knowledge_card[2]) if knowledge_card[2] else None,
+                    "team_id": None,
                 }
         except HTTPException:
             raise
@@ -961,7 +961,7 @@ async def check_template_access(
         try:
             with get_db_connection() as connection:
                 result = connection.execute(
-                    text("SELECT id, created_by, team_id FROM templates WHERE id = :id"),
+                    text("SELECT id, created_by FROM templates WHERE id = :id"),
                     {"id": str(template_id)},
                 )
                 template = result.fetchone()
@@ -975,7 +975,7 @@ async def check_template_access(
                 return {
                     "id": template[0],
                     "created_by": str(template[1]),
-                    "team_id": str(template[2]) if template[2] else None,
+                    "team_id": None,
                 }
         except HTTPException:
             raise

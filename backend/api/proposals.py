@@ -2056,34 +2056,35 @@ async def submit_proposal(proposal_id: uuid.UUID, current_user: dict = Depends(g
     Submits a proposal.
     """
     user_id = current_user["user_id"]
+    proposal_id_value = str(proposal_id)
     try:
         with get_engine().begin() as connection:
-            # RBAC Fix: Check group access
-            # check_proposal_access(current_user, connection, proposal_id)
+            proposal = connection.execute(
+                text("SELECT generated_sections FROM proposals WHERE id = :id AND user_id = :user_id"),
+                {"id": proposal_id_value, "user_id": user_id},
+            ).first()
+            if proposal is None:
+                raise HTTPException(status_code=404, detail="Proposal not found.")
 
-            # Get the current sections
-            sections = (
-                connection.execute(
-                    text("SELECT generated_sections FROM proposals WHERE id = :id"),
-                    {"id": proposal_id},
-                ).scalar()
-                or {}
-            )
+            sections = proposal[0] or {}
 
             connection.execute(
                 text(
-                    "UPDATE proposals SET status = 'submitted', updated_at = CURRENT_TIMESTAMP WHERE id = :id AND user_id = :uid"
+                    "UPDATE proposals SET status = 'submitted', updated_at = CURRENT_TIMESTAMP "
+                    "WHERE id = :id AND user_id = :uid"
                 ),
-                {"id": proposal_id, "uid": user_id},
+                {"id": proposal_id_value, "uid": user_id},
             )
             # Log the status change
             connection.execute(
                 text(
                     "INSERT INTO proposal_status_history (proposal_id, status, generated_sections_snapshot) VALUES (:pid, 'submitted', :snapshot)"
                 ),
-                {"pid": proposal_id, "snapshot": json.dumps(sections)},
+                {"pid": proposal_id_value, "snapshot": json.dumps(sections)},
             )
         return {"message": "Proposal submitted."}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"[SUBMIT PROPOSAL ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to submit proposal.")
