@@ -23,3 +23,16 @@ def test_frontend_interaction_analytics_route_is_registered(client):
 
 def test_incompatible_duplicate_template_api_is_not_exposed(client):
     assert ("GET", "/api/admin/templates") not in _routes(client.app)
+
+
+def test_frontend_resource_access_routes_are_registered(client):
+    routes = _routes(client.app)
+    expected = {
+        ("GET", "/api/admin/{resource}/{resource_id}/access"),
+        ("POST", "/api/admin/{resource}/{resource_id}/access"),
+        ("DELETE", "/api/admin/{resource}/{resource_id}/access"),
+        ("POST", "/api/admin/{resource}/{resource_id}/access/test"),
+        ("POST", "/api/admin/{resource}/{resource_id}/owner"),
+        ("POST", "/api/admin/templates/{resource_id}/visibility"),
+    }
+    assert expected <= routes

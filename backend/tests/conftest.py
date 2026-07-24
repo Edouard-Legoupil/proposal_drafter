@@ -225,6 +225,54 @@ def _create_test_engine():
             connection.execute(
                 text(
                     """
+                CREATE TABLE IF NOT EXISTS resource_access_grants (
+                    id TEXT PRIMARY KEY,
+                    resource_type TEXT NOT NULL,
+                    resource_id TEXT NOT NULL,
+                    subject_type TEXT NOT NULL,
+                    subject_id TEXT NOT NULL,
+                    permissions TEXT NOT NULL,
+                    data_scope TEXT NOT NULL DEFAULT 'self',
+                    created_by TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE (resource_type, resource_id, subject_type, subject_id)
+                )
+            """
+                )
+            )
+            connection.execute(
+                text(
+                    """
+                CREATE TABLE IF NOT EXISTS resource_access_settings (
+                    resource_type TEXT NOT NULL,
+                    resource_id TEXT NOT NULL,
+                    visibility TEXT NOT NULL DEFAULT 'private',
+                    updated_by TEXT NOT NULL,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (resource_type, resource_id)
+                )
+            """
+                )
+            )
+            connection.execute(
+                text(
+                    """
+                CREATE TABLE IF NOT EXISTS resource_access_audit (
+                    id TEXT PRIMARY KEY,
+                    resource_type TEXT NOT NULL,
+                    resource_id TEXT NOT NULL,
+                    action TEXT NOT NULL,
+                    actor_id TEXT NOT NULL,
+                    details TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """
+                )
+            )
+            connection.execute(
+                text(
+                    """
                 CREATE TABLE IF NOT EXISTS artifact_runs (
                     id TEXT PRIMARY KEY,
                     artifact_type TEXT NOT NULL,
@@ -328,6 +376,25 @@ def _create_test_engine():
                     created_at DATETIME,
                     updated_at DATETIME,
                     generated_sections TEXT
+                )
+            """
+                )
+            )
+            connection.execute(
+                text(
+                    """
+                CREATE TABLE IF NOT EXISTS templates (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    filename TEXT NOT NULL UNIQUE,
+                    template_type TEXT NOT NULL,
+                    description TEXT,
+                    status TEXT DEFAULT 'draft',
+                    is_default BOOLEAN DEFAULT FALSE,
+                    created_by TEXT,
+                    updated_by TEXT,
+                    created_at DATETIME,
+                    updated_at DATETIME
                 )
             """
                 )

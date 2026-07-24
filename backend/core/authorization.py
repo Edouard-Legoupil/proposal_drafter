@@ -9,8 +9,6 @@ This module integrates with the existing security system:
 - Uses get_current_user from backend.core.security
 - Works with both sync and async database operations
 
-Standard Library
-import logging
 - Compatible with the existing JWT cookie-based authentication
 
 Usage:
@@ -42,6 +40,8 @@ Usage:
     ):
         ...
 """
+
+import json
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
@@ -117,6 +117,52 @@ def has_permission(current_user: CurrentUser, permission: str) -> bool:
 def get_db_connection():
     """Get a database connection from the existing engine."""
     return get_engine().connect()
+
+
+def _has_explicit_resource_grant(
+    object_type: str,
+    object_id: Union[str, int],
+    user_id: str,
+    required_permission: str,
+) -> bool:
+    """Check direct and active-team grants stored by the admin access API."""
+    resource_types = {
+        "proposal": "proposals",
+        "knowledge_card": "knowledge-cards",
+        "template": "templates",
+    }
+    resource_type = resource_types[object_type]
+    with get_db_connection() as connection:
+        rows = (
+            connection.execute(
+                text(
+                    "SELECT g.permissions FROM resource_access_grants g "
+                    "WHERE g.resource_type = :resource_type AND g.resource_id = :resource_id "
+                    "AND ((g.subject_type = 'user' AND g.subject_id = :user_id) "
+                    "OR (g.subject_type = 'team' AND g.subject_id IN ("
+                    "SELECT tm.team_id FROM team_members tm "
+                    "WHERE tm.user_id = :user_id AND tm.status = 'ACTIVE')))"
+                ),
+                {"resource_type": resource_type, "resource_id": str(object_id), "user_id": user_id},
+            )
+            .scalars()
+            .all()
+        )
+        for value in rows:
+            permissions = json.loads(value) if isinstance(value, str) else value
+            if required_permission in (permissions or []):
+                return True
+
+        if object_type == "template" and required_permission == "read":
+            visibility = connection.execute(
+                text(
+                    "SELECT visibility FROM resource_access_settings "
+                    "WHERE resource_type = 'templates' AND resource_id = :resource_id"
+                ),
+                {"resource_id": str(object_id)},
+            ).scalar()
+            return visibility == "organization"
+    return False
 
 
 async def get_db_connection_async():
@@ -211,6 +257,12 @@ async def verify_ownership(
                 "owner_id": str(getattr(resource, "user_id", "")),
             }
 
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database session unavailable",
+        )
+    except HTTPException:
+        raise
     except Exception as e:
         import logging
 
@@ -219,7 +271,7 @@ async def verify_ownership(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",
-        )
+        ) from e
 
 
 # =============================================================================
@@ -448,7 +500,7 @@ def require_ownership(resource_type: str) -> Callable:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Resource ID must be an integer",
-                )
+                ) from None
 
             # Verify ownership
             await verify_ownership(resource_type, resource_id, current_user)
@@ -545,7 +597,7 @@ def require_team_membership() -> Callable:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Resource ID must be an integer",
-                )
+                ) from None
 
             # Query the resource to get its team_id
             # Try multiple resource types (SEC-001: Use ORM instead of raw SQL)
@@ -626,7 +678,7 @@ def require_donor_group_membership() -> Callable:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Resource ID must be an integer",
-                )
+                ) from None
 
             # Query the resource to get its donor_group_id (SEC-001: Use ORM instead of raw SQL)
             donor_group_id = None
@@ -693,9 +745,6 @@ async def check_proposal_access(
     try:
         await check_object_access("proposal", proposal_id, current_user, "read")
 
-        # If access is granted, return basic proposal info
-        user_id = get_user_id(current_user)
-
         try:
             with get_db_connection() as connection:
                 result = connection.execute(
@@ -715,6 +764,8 @@ async def check_proposal_access(
                     "owner_id": str(proposal[1]),
                     "team_id": str(proposal[2]) if proposal[2] else None,
                 }
+        except HTTPException:
+            raise
         except Exception as e:
             import logging
 
@@ -723,7 +774,7 @@ async def check_proposal_access(
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",
-            )
+            ) from e
     except HTTPException:
         raise
 
@@ -734,9 +785,6 @@ async def check_knowledge_card_access(knowledge_card_id: int, current_user: Curr
     """
     try:
         await check_object_access("knowledge_card", knowledge_card_id, current_user, "read")
-
-        # If access is granted, return basic knowledge card info
-        user_id = get_user_id(current_user)
 
         try:
             with get_db_connection() as connection:
@@ -757,6 +805,8 @@ async def check_knowledge_card_access(knowledge_card_id: int, current_user: Curr
                     "created_by": str(knowledge_card[1]),
                     "team_id": str(knowledge_card[2]) if knowledge_card[2] else None,
                 }
+        except HTTPException:
+            raise
         except Exception as e:
             import logging
 
@@ -765,95 +815,9 @@ async def check_knowledge_card_access(knowledge_card_id: int, current_user: Curr
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",
-            )
+            ) from e
     except HTTPException:
         raise
-    """
-    Combined check for knowledge card access: ownership or shared access.
-
-    Args:
-        knowledge_card_id: ID of the knowledge card to check
-        current_user: Current user dictionary from get_current_user
-
-    Returns:
-        The knowledge card data as a dictionary
-
-    Raises:
-        HTTPException(404): If knowledge card doesn't exist
-        HTTPException(403): If user doesn't have access
-    """
-    user_id = get_user_id(current_user)
-
-    # Admin bypass
-    if is_admin(current_user):
-        try:
-            with get_db_connection() as connection:
-                result = connection.execute(
-                    text("SELECT * FROM knowledge_cards WHERE id = :id"),
-                    {"id": knowledge_card_id},
-                )
-                knowledge_card = result.fetchone()
-                if knowledge_card is None:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail="Knowledge card not found",
-                    )
-                return dict(knowledge_card)
-        except Exception:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Internal server error",
-            )
-
-    # Query the knowledge card
-    try:
-        with get_db_connection() as connection:
-            result = connection.execute(
-                text("SELECT id, created_by FROM knowledge_cards WHERE id = :id"),
-                {"id": knowledge_card_id},
-            )
-            knowledge_card = result.fetchone()
-
-            if knowledge_card is None:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Knowledge card not found",
-                )
-
-            kc_data = {"id": knowledge_card[0], "created_by": str(knowledge_card[1])}
-
-            # Check ownership (shared_with feature not implemented in current schema)
-            if kc_data["created_by"] == user_id:
-                return kc_data
-
-            # No access granted
-            import logging
-
-            logger = logging.getLogger("security.authorization")
-            logger.warning(
-                "Unauthorized knowledge card access attempt",
-                extra={
-                    "user_id": user_id,
-                    "knowledge_card_id": knowledge_card_id,
-                    "action": "knowledge_card_access_check",
-                    "result": "denied",
-                },
-            )
-
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
-
-    except HTTPException:
-        # Re-raise HTTPExceptions (404, 403, etc.)
-        raise
-    except Exception as e:
-        import logging
-
-        logger = logging.getLogger("security.authorization")
-        logger.error(f"Database error in check_knowledge_card_access: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error",
-        )
 
 
 async def check_object_access(
@@ -921,6 +885,9 @@ async def check_object_access(
             if str(owner_id) == user_id:
                 return True  # Owners have full access
 
+            if _has_explicit_resource_grant(object_type, object_id, user_id, required_permission):
+                return True
+
             # Check team membership and team-level permissions
             team_id = getattr(object_record, "team_id", None)
             if team_id:
@@ -963,6 +930,10 @@ async def check_object_access(
 
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database session unavailable",
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -973,7 +944,7 @@ async def check_object_access(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",
-        )
+        ) from e
 
 
 async def check_template_access(
@@ -986,9 +957,6 @@ async def check_template_access(
     """
     try:
         await check_object_access("template", template_id, current_user, required_permission)
-
-        # If access is granted, return basic template info
-        user_id = get_user_id(current_user)
 
         try:
             with get_db_connection() as connection:
@@ -1009,6 +977,8 @@ async def check_template_access(
                     "created_by": str(template[1]),
                     "team_id": str(template[2]) if template[2] else None,
                 }
+        except HTTPException:
+            raise
         except Exception as e:
             import logging
 
@@ -1017,7 +987,7 @@ async def check_template_access(
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",
-            )
+            ) from e
     except HTTPException:
         raise
 
@@ -1096,7 +1066,7 @@ async def check_incident_access(
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",
-            )
+            ) from e
 
     # Check if user is the creator of the incident
     try:
@@ -1245,4 +1215,4 @@ async def check_incident_access(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error",
-        )
+        ) from e
