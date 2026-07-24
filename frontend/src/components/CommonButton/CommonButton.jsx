@@ -7,6 +7,7 @@ export default function CommonButton(props) {
                 onClick={props?.onClick}
                 disabled={props?.disabled || props?.loading}
                 style={props?.style}
+                title={props?.title}
                 data-testid={props['data-testid']}
         >
                 {props?.loading ?

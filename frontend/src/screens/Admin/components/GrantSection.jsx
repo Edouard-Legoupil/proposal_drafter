@@ -3,8 +3,9 @@
  * Handles display and management of access grants
  */
 
-import React from 'react';
-import CommonButton from '../../../components/CommonButton/CommonButton';
+import React from 'react'
+import CommonButton from '../../../components/CommonButton/CommonButton'
+import SubjectPicker from './SubjectPicker'
 
 const GrantSection = ({
   grants = [],
@@ -21,16 +22,20 @@ const GrantSection = ({
   options = {},
   emptyMessage = 'No grants'
 }) => {
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (onGrant) {
-      onGrant(grantForm);
-    }
-  };
+  const subjectTypeOptions = [
+    { value: 'user', label: 'User' },
+    { value: 'team', label: 'Team' },
+    { value: 'role', label: 'Role' },
+    { value: 'donor_group', label: 'Donor Group' }
+  ]
+
+  const handleSubmit = (event) => {
+    if (onGrant) onGrant(event)
+  }
 
   return (
     <div className="grant-section">
-      <h3>Grants Management</h3>
+      <h3>Grant Access</h3>
 
       {statusMessage && <div className="status-message">{statusMessage}</div>}
 
@@ -40,9 +45,11 @@ const GrantSection = ({
         ) : (
           <ul>
             {grants.map((grant, index) => (
-              <li key={index}>
-                {grant.subjectId} - {grant.permissions.join(', ')}
-                <button onClick={() => onRevoke(grant)}>Revoke</button>
+              <li key={grant.id || index}>
+                {grant.subject_name || grant.subjectName || grant.subject_id || grant.subjectId}
+                {' — '}
+                {(grant.permissions || []).join(', ')}
+                <button type="button" onClick={() => onRevoke?.(grant.id)}>Revoke</button>
               </li>
             ))}
           </ul>
@@ -51,37 +58,39 @@ const GrantSection = ({
 
       <form onSubmit={handleSubmit} className="grant-form">
         <div>
-          <label>Subject Type:</label>
+          <label htmlFor="grant-subject-type">Subject type</label>
           <select
+            id="grant-subject-type"
             value={grantForm.subjectType}
-            onChange={(e) => setGrantForm({...grantForm, subjectType: e.target.value})}
+            onChange={(e) => setGrantForm({ ...grantForm, subjectType: e.target.value, subjectId: '' })}
           >
-            <option value="user">User</option>
-            <option value="role">Role</option>
-          </select>
-        </div>
-
-        <div>
-          <label>Subject ID:</label>
-          <select
-            value={grantForm.subjectId}
-            onChange={(e) => setGrantForm({...grantForm, subjectId: e.target.value})}
-          >
-            <option value="">Select...</option>
-            {users.map(user => (
-              <option key={user.id} value={user.id}>{user.name}</option>
+            {subjectTypeOptions.map(subjectType => (
+              <option key={subjectType.value} value={subjectType.value}>{subjectType.label}</option>
             ))}
           </select>
         </div>
 
         <div>
-          <label>Permissions:</label>
+          <label htmlFor="grant-subject">Select a user or team</label>
+          <SubjectPicker
+            className="admin-select"
+            subjectType={grantForm.subjectType}
+            value={grantForm.subjectId}
+            onChange={(subjectId) => setGrantForm({ ...grantForm, subjectId })}
+            users={users}
+            options={options}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="grant-permissions">Permissions</label>
           <select
+            id="grant-permissions"
             multiple
             value={grantForm.permissions}
             onChange={(e) => {
-              const selected = Array.from(e.target.selectedOptions, option => option.value);
-              setGrantForm({...grantForm, permissions: selected});
+              const selected = Array.from(e.target.selectedOptions, option => option.value)
+              setGrantForm({ ...grantForm, permissions: selected })
             }}
           >
             {permissionOptions.map(opt => (
@@ -92,10 +101,11 @@ const GrantSection = ({
 
         {showScope && (
           <div>
-            <label>Data Scope:</label>
+            <label htmlFor="grant-data-scope">Data scope</label>
             <select
+              id="grant-data-scope"
               value={grantForm.dataScope}
-              onChange={(e) => setGrantForm({...grantForm, dataScope: e.target.value})}
+              onChange={(e) => setGrantForm({ ...grantForm, dataScope: e.target.value })}
             >
               {dataScopeOptions.map(scope => (
                 <option key={scope} value={scope}>{scope}</option>
@@ -106,12 +116,12 @@ const GrantSection = ({
 
         <CommonButton
           type="submit"
-          label={actionLoading ? "Saving..." : "Save Grant"}
+          label={actionLoading ? 'Saving…' : 'Save Grant'}
           disabled={actionLoading}
         />
       </form>
     </div>
   );
-};
+}
 
-export default GrantSection;
+export default GrantSection

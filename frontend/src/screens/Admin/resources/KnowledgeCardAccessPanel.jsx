@@ -51,6 +51,10 @@ export default function KnowledgeCardAccessPanel({ resourceId: initialResourceId
   const [ownerCandidate, setOwnerCandidate] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
+  const { items: cards, loading: listLoading, error: listError } = useAdminResourceList('knowledge-cards')
+  const { data: access, loading, error, refresh } = useAccessData(
+    selectedId ? `/admin/knowledge-cards/${selectedId}/access` : null
+  )
   const { grantForm, setGrantForm, statusMessage: grantMsg, actionLoading: grantLoading, handleGrant, revokeGrant } =
     useGrantSection({
       endpoint: `/admin/knowledge-cards/${selectedId}/access`,
@@ -63,10 +67,6 @@ export default function KnowledgeCardAccessPanel({ resourceId: initialResourceId
       initialForm: { subjectType: 'user', subjectId: '', operation: 'GET' }
     })
 
-  const { items: cards, loading: listLoading, error: listError } = useAdminResourceList('knowledge-cards')
-  const { data: access, loading, error, refresh } = useAccessData(
-    selectedId ? `/admin/knowledge-cards/${selectedId}/access` : null
-  )
   const { users } = useAdminUsers()
   const { options } = useAdminOptions()
 
@@ -79,16 +79,6 @@ export default function KnowledgeCardAccessPanel({ resourceId: initialResourceId
 
   const grants = access?.grants || []
   const audit = access?.audit || []
-
-  const togglePermission = (key) => {
-    setGrantForm(prev => {
-      const hasIt = prev.permissions.includes(key)
-      const permissions = hasIt
-        ? prev.permissions.filter(p => p !== key)
-        : [...prev.permissions, key]
-      return { ...prev, permissions }
-    })
-  }
 
   const handleTransfer = async (e) => {
     e.preventDefault()
@@ -225,7 +215,7 @@ export default function KnowledgeCardAccessPanel({ resourceId: initialResourceId
 
       <section className="audit-panel">
         <div className="section-header">
-          <h3>Audit events</h3>
+          <h3>Audit Timeline</h3>
         </div>
         <AuditTimeline events={audit} emptyMessage="No audit events yet" />
       </section>

@@ -40,4 +40,11 @@ export default [
       ],
     },
   },
+  {
+    files: ['src/context/**/*.{js,jsx}'],
+    rules: {
+      // Context modules intentionally export providers together with consumer hooks.
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ]

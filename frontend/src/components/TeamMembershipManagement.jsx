@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTeamMembership } from '../hooks/useTeamMembership';
-import { useAuth } from '../context/AuthContext';
 import {
   Box,
   Typography,
@@ -29,7 +28,6 @@ import { Check, Close, Add, Group, PersonAdd } from '@mui/icons-material';
  * Allows team leaders and admins to manage team memberships and roles
  */
 export function TeamMembershipManagement({ team }) {
-  const { user } = useAuth();
   const {
     isLoading,
     error,
@@ -51,7 +49,9 @@ export function TeamMembershipManagement({ team }) {
   const [refreshing, setRefreshing] = useState(false);
 
   // Refresh data
-  const refreshData = async () => {
+  const refreshData = useCallback(async () => {
+    if (!team?.id) return;
+
     setRefreshing(true);
     try {
       if (canApproveMembership(team.id)) {
@@ -68,10 +68,12 @@ export function TeamMembershipManagement({ team }) {
     } finally {
       setRefreshing(false);
     }
-  };
+  }, [team?.id, canApproveMembership, canManageTeamRoles, getPendingRequests, getTeamRoles]);
 
   useEffect(() => {
-    refreshData();
+    if (team?.id) {
+      refreshData();
+    }
 
     // Load available roles (this would come from a roles API in a real app)
     setAvailableRoles([
@@ -81,7 +83,7 @@ export function TeamMembershipManagement({ team }) {
       { id: 4, name: 'access_quality_gate' },
       { id: 998, name: 'TEAM_LEADER' }
     ]);
-  }, [team.id, canApproveMembership, canManageTeamRoles]);
+  }, [team?.id, refreshData]);
 
   const handleApprove = async (userId) => {
     try {

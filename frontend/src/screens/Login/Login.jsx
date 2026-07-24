@@ -47,20 +47,6 @@ export default function Login(props) {
         const [acknowledged, setAcknowledged] = useState(false)
 
 
-        useEffect(() => {
-                async function fetchFormData() {
-                        try {
-                                // No need to fetch form data anymore
-                                // All values are assigned defaults in the backend
-                        } catch (error) {
-                                console.error("Failed to fetch form data:", error);
-                        }
-                }
-                if (props?.register) {
-                        fetchFormData();
-                }
-        }, [props?.register]);
-
         const [submitButtonText, setSubmitButtonText] = useState(props?.register ? "REGISTER" : "LOGIN")
         const [loading, setLoading] = useState(false)
         const [ssoEnabled, setSsoEnabled] = useState(false)
@@ -125,16 +111,6 @@ export default function Login(props) {
 
                 e.preventDefault()
 
-                // Assign default values for all settings
-                const settings = {
-                        geographic_coverage_type: "global",
-                        geographic_coverage_region: "",
-                        geographic_coverage_country: "",
-                        roles: [1], // Default to "proposal writer" role (ID 1)
-                        donor_groups: [],
-                        outcomes: []
-                }
-
                 const response = await fetch(`${API_BASE_URL}/signup`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -144,7 +120,7 @@ export default function Login(props) {
                                 password,
                                 security_question: securityQuestion,
                                 security_answer: securityAnswer.trim().toLowerCase(),
-                                settings
+                                settings: { geographic_coverage_type: 'global' }
                         })
                 })
 
@@ -162,7 +138,6 @@ export default function Login(props) {
                         setUsername("")
                         setEmail("")
                         setPassword("")
-                        setTeamId("")
                         setSecurityQuestion("")
                         setSecurityAnswer("")
                         setShowPassword(false)

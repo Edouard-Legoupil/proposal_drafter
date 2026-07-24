@@ -288,11 +288,11 @@ const ChatContainer = (props) => {
                     const response = await fetch(`${API_BASE_URL}/users/me/approved-settings`, {
                         credentials: 'include'
                     });
-                    
+
                     if (response.ok) {
                         const data = await response.json();
                         const approvedSettings = data.approved_settings || [];
-                        
+
                         // Apply filtering based on approved settings
                         updateFilteredFieldContexts(geographicalScopeValue, approvedSettings);
                         updateFilteredDonors(approvedSettings);
@@ -301,7 +301,7 @@ const ChatContainer = (props) => {
                     console.error("Error fetching approved settings:", error);
                 }
             };
-            
+
             // Only fetch if we have the necessary data
             if (geographicalScopeValue !== undefined) {
                 fetchApprovedSettings();
@@ -692,6 +692,9 @@ const ChatContainer = (props) => {
                 if (sessionStorage.getItem("proposal_id")) {
                         getContent();
                 }
+        // Reload only when the routed proposal changes. getContent is declared
+        // in component scope and would otherwise retrigger this effect each render.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [id]);
 
 	// getPeerReviews and getStatusHistory are imported from useProposal hook

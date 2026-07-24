@@ -22,9 +22,9 @@ import { Add, Search, Group } from '@mui/icons-material';
 /**
  * Teams Access Panel - Admin interface for managing teams and team memberships
  */
-export default function TeamsAccessPanel({ resourceId }) {
+export default function TeamsAccessPanel() {
   const { user } = useAuth();
-  const { isLoading, error, requestTeamMembership } = useTeamMembership();
+  const { error } = useTeamMembership();
   const [teams, setTeams] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);

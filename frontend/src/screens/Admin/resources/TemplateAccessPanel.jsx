@@ -5,8 +5,6 @@ import SubjectPicker from '../components/SubjectPicker'
 import ResourcePicker from '../components/ResourcePicker'
 import { useAccessData, useAdminUsers, useAdminOptions, useAdminResourceList } from '../hooks/useAccessData'
 import ErrorBanner from '../components/ErrorBanner'
-import { useGrantSection } from '../hooks/useGrantSection'
-import { useTesterSection } from '../hooks/useTesterSection'
 import TesterSection from '../components/TesterSection'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || '/api'
@@ -77,16 +75,6 @@ export default function TemplateAccessPanel({ resourceId: initialResourceId }) {
 
   const grants = access?.grants || []
   const audit = access?.audit || []
-
-  const togglePermission = (key) => {
-    setGrantForm(prev => {
-      const hasIt = prev.permissions.includes(key)
-      const permissions = hasIt
-        ? prev.permissions.filter(p => p !== key)
-        : [...prev.permissions, key]
-      return { ...prev, permissions }
-    })
-  }
 
   const handleVisibilityChange = async (value) => {
     setVisibility(value)
@@ -239,6 +227,7 @@ export default function TemplateAccessPanel({ resourceId: initialResourceId }) {
       <header>
         <h2>{template.title || `Template ${selectedId}`}</h2>
         <p><strong>Owner:</strong> {ownerLabel}</p>
+        <p>Status: {template.status || '—'}</p>
         <p>Visibility: {template.visibility || visibility}</p>
         {statusMessage && <p className="status-msg">{statusMessage}</p>}
       </header>
@@ -278,8 +267,8 @@ export default function TemplateAccessPanel({ resourceId: initialResourceId }) {
           tester={tester}
           setTester={setTester}
           testerResult={testerResult}
-          statusMessage={testMsg}
-          actionLoading={testLoading}
+          statusMessage={statusMessage}
+          actionLoading={actionLoading}
           onTest={handleTester}
           operationOptions={operationOptions}
           users={users}
@@ -289,7 +278,7 @@ export default function TemplateAccessPanel({ resourceId: initialResourceId }) {
 
       <section className="audit-panel">
         <div className="section-header">
-          <h3>Audit</h3>
+          <h3>Audit Timeline</h3>
         </div>
         <AuditTimeline events={audit} emptyMessage="No audit yet" />
       </section>

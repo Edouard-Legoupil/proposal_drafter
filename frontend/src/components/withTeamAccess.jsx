@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { hasPermission, isTeamLeaderOf, isTeamMember } from '../utils/roleUtils';
 import { CircularProgress, Box, Alert } from '@mui/material';
 
@@ -16,10 +16,11 @@ import { CircularProgress, Box, Alert } from '@mui/material';
  * @returns {React.Component} - Wrapped component with access control
  */
 export function withTeamAccess(options) {
-  return function (WrappedComponent) {
+  return function wrapWithTeamAccess(WrappedComponent) {
+    const SecuredComponent = WrappedComponent;
+
     return function WithTeamAccess(props) {
-      const { user, isLoading: authLoading } = useAuth();
-      const navigate = useNavigate();
+      const { user, loading: authLoading } = useAuth();
 
       // If still loading auth state, show loading indicator
       if (authLoading) {
@@ -32,13 +33,12 @@ export function withTeamAccess(options) {
 
       // If no user, redirect to login
       if (!user) {
-        navigate('/login', { replace: true });
-        return null;
+        return <Navigate to="/login" replace />;
       }
 
       // Admin users have access to everything
       if (user.is_admin) {
-        return <WrappedComponent {...props} />;
+        return <SecuredComponent {...props} />;
       }
 
       // Check team membership if teamId is specified
@@ -94,7 +94,7 @@ export function withTeamAccess(options) {
       }
 
       // If all checks pass, render the component
-      return <WrappedComponent {...props} />;
+      return <SecuredComponent {...props} />;
     };
   };
 }

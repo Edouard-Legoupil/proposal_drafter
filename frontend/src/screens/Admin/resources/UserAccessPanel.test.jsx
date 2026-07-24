@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../../mocks/server'
 import { MemoryRouter } from 'react-router-dom'
@@ -79,6 +79,7 @@ describe('UserAccessPanel', () => {
   ]
 
   beforeEach(() => {
+    vi.spyOn(window, 'alert').mockImplementation(() => {})
     server.use(
       http.get('/api/admin/users', () =>
         HttpResponse.json(mockUsers, { status: 200 })
@@ -121,7 +122,7 @@ describe('UserAccessPanel', () => {
     )
 
     expect(await screen.findByText(/Total Users/i)).toBeInTheDocument()
-    expect(screen.getByText(/Teams/i)).toBeInTheDocument()
+    expect(screen.getByText(/^Teams$/i)).toBeInTheDocument()
   })
 
   it('displays user list with search functionality', async () => {
@@ -134,19 +135,21 @@ describe('UserAccessPanel', () => {
     )
 
     // Wait for users to load
-    expect(await screen.findByText(/Amina Nyongo/i)).toBeInTheDocument()
-    expect(screen.getByText(/Kiran Patel/i)).toBeInTheDocument()
+    await screen.findAllByText(/Amina Nyongo/i)
+    const userTable = document.querySelector('.users-table')
+    expect(within(userTable).getByText(/Amina Nyongo/i)).toBeInTheDocument()
+    expect(within(userTable).getByText(/Kiran Patel/i)).toBeInTheDocument()
 
     // Test search functionality
     const searchInput = screen.getByPlaceholderText(/Search users by name, email or team…/i)
     fireEvent.change(searchInput, { target: { value: 'Amina' } })
 
-    expect(screen.getByText(/Amina Nyongo/i)).toBeInTheDocument()
-    expect(screen.queryByText(/Kiran Patel/i)).not.toBeInTheDocument()
+    expect(within(userTable).getByText(/Amina Nyongo/i)).toBeInTheDocument()
+    expect(within(userTable).queryByText(/Kiran Patel/i)).not.toBeInTheDocument()
 
     // Clear search
     fireEvent.change(searchInput, { target: { value: '' } })
-    expect(await screen.findByText(/Kiran Patel/i)).toBeInTheDocument()
+    expect(await within(userTable).findByText(/Kiran Patel/i)).toBeInTheDocument()
   })
 
   it('allows team creation', async () => {
@@ -211,10 +214,11 @@ describe('UserAccessPanel', () => {
       </WizardProvider>
     )
 
-    expect(await screen.findByText(/Pending Role Requests/i)).toBeInTheDocument()
-    expect(screen.getByText(/Amina Nyongo/i)).toBeInTheDocument()
-    expect(screen.getByText(/Admin/i)).toBeInTheDocument()
-    expect(screen.getByText(/Review/i)).toBeInTheDocument()
+    const heading = await screen.findByRole('heading', { name: /Pending Role Requests/i })
+    const section = heading.closest('.admin-section')
+    expect(within(section).getByText(/Amina Nyongo/i)).toBeInTheDocument()
+    expect(within(section).getByText(/Admin/i)).toBeInTheDocument()
+    expect(within(section).getByText(/Review/i)).toBeInTheDocument()
   })
 
   it('displays pending settings requests', async () => {
@@ -226,10 +230,47 @@ describe('UserAccessPanel', () => {
       </WizardProvider>
     )
 
-    expect(await screen.findByText(/Pending Settings Requests/i)).toBeInTheDocument()
-    expect(screen.getByText(/Kiran Patel/i)).toBeInTheDocument()
-    expect(screen.getByText(/donor/i)).toBeInTheDocument()
-    expect(screen.getByText(/UNICEF/i)).toBeInTheDocument()
+    const heading = await screen.findByRole('heading', { name: /Pending Settings Requests/i })
+    const section = heading.closest('.admin-section')
+    expect(within(section).getByText(/Kiran Patel/i)).toBeInTheDocument()
+    expect(within(section).getByText(/donor/i)).toBeInTheDocument()
+    expect(within(section).getByText(/UNICEF/i)).toBeInTheDocument()
+  })
+
+  it('reviews and approves a pending settings request', async () => {
+    let approvalRequest
+    server.use(
+      http.post('/api/admin/settings-requests/req-1/approve', ({ request }) => {
+        approvalRequest = request
+        return HttpResponse.json({
+          user_id: 'user-2',
+          user_name: 'Kiran Patel',
+          setting_type: 'donor_focal',
+          setting_value: 'UNICEF'
+        })
+      })
+    )
+
+    render(
+      <WizardProvider>
+        <MemoryRouter>
+          <UserAccessPanel />
+        </MemoryRouter>
+      </WizardProvider>
+    )
+
+    const heading = await screen.findByRole('heading', { name: /Pending Settings Requests/i })
+    const section = heading.closest('.admin-section')
+    fireEvent.click(within(section).getByRole('button', { name: /Review/i }))
+
+    expect(screen.getByRole('heading', { name: /Settings Request Review/i })).toBeInTheDocument()
+    expect(screen.getByText(/Kiran Patel/i, { selector: '.modal *' })).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText(/Admin Note/i), { target: { value: 'Approved for programme work' } })
+    fireEvent.click(screen.getByRole('button', { name: /Approve Request/i }))
+
+    await waitFor(() => expect(approvalRequest).toBeDefined())
+    expect(new URL(approvalRequest.url).searchParams.get('admin_note')).toBe('Approved for programme work')
+    await waitFor(() => expect(screen.queryByRole('heading', { name: /Settings Request Review/i })).not.toBeInTheDocument())
   })
 
   it('shows error message when data fetching fails', async () => {
@@ -268,6 +309,6 @@ describe('UserAccessPanel', () => {
     )
 
     expect(screen.getByText(/Loading users…/i)).toBeInTheDocument()
-    expect(await screen.findByText(/Amina Nyongo/i)).toBeInTheDocument()
+    expect((await screen.findAllByText(/Amina Nyongo/i)).length).toBeGreaterThan(0)
   })
 })

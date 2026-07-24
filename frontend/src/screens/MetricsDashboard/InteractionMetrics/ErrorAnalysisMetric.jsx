@@ -43,9 +43,9 @@ export function ErrorAnalysisMetric({ user, dateRange = '30d' }) {
         const response = await fetch(`${API_BASE_URL}/interactions/analytics/?date_range=${dateRange}`, {
           method: 'GET',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include'
         });
 
         if (!response.ok) {

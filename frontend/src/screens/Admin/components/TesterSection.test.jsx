@@ -25,7 +25,7 @@ describe('TesterSection', () => {
 
   it('calls onTest when submit is clicked', () => {
     render(<TesterSection {...props} />)
-    fireEvent.click(screen.getByRole('button', { name: /run test/i }))
+    fireEvent.submit(screen.getByRole('button', { name: /run test/i }).closest('form'))
     expect(props.onTest).toHaveBeenCalled()
   })
 })

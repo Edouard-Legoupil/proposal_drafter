@@ -103,7 +103,6 @@ export default function MetricsDashboardSimplified() {
   const [filter, setFilter] = useState('all');
   const [dateStart, setDateStart] = useState(null);
   const [dateEnd, setDateEnd] = useState(null);
-  const [expandedChart, setExpandedChart] = useState(null);
 
   const fetchMetrics = useCallback(async () => {
     setLoading(true);
@@ -213,7 +212,7 @@ export default function MetricsDashboardSimplified() {
         <Paper sx={{ p: 2, mb: 3 }}>
           <Typography variant="h6" gutterBottom>Proposal Status</Typography>
           <Bar
-            data{{
+            data={{
               labels: ['Draft', 'Review', 'Submitted', 'Approved'],
               datasets: [{
                 label: 'Proposals',

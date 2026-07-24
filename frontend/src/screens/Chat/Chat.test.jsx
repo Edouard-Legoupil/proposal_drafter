@@ -8,29 +8,58 @@ import { BrowserRouter } from 'react-router-dom'
 import { WizardProvider } from '../../context/WizardContext'
 import Chat from './Chat'
 
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || '/api'
+
+async function selectOption(label, optionName) {
+        const input = screen.getByLabelText(label)
+        await userEvent.click(input)
+        await userEvent.type(input, optionName)
+        await userEvent.click(await screen.findByRole('option', { name: optionName }))
+}
+
+async function selectFirstOption(label) {
+        const input = screen.getByLabelText(label)
+        await userEvent.click(input)
+        await userEvent.keyboard('{ArrowDown}{Enter}')
+}
+
 vi.mock('../../utils/downloadFile', () => ({
         default: vi.fn(),
 }))
 
+beforeEach(() => {
+        server.use(
+                http.get(`${API_BASE_URL}/users/me/approved-settings`, () =>
+                        HttpResponse.json({
+                                approved_settings: [{
+                                        setting_type: 'field_context_focal',
+                                        setting_value: '1',
+                                        status: 'approved'
+                                }]
+                        })
+                )
+        )
+})
+
 describe('Proposal Drafter – Form validation', () => {
         it('disables the Generate button until all required inputs are filled', async () => {
                 server.use(
-                        http.get('http://localhost:8502/api/templates', () => {
+                        http.get(`${API_BASE_URL}/templates`, () => {
                                 return HttpResponse.json({ templates: { "UNHCR": {} } })
                         }),
-                        http.get('http://localhost:8502/api/profile', () => {
+                        http.get(`${API_BASE_URL}/profile`, () => {
                                 return HttpResponse.json({ user: { "email": "test@test.com", "name": "Test User" } })
                         }),
-                        http.get('http://localhost:8502/api/donors', () => {
+                        http.get(`${API_BASE_URL}/donors`, () => {
                                 return HttpResponse.json({ donors: [{id: '1', name: 'USAID'}] });
                         }),
-                        http.get('http://localhost:8502/api/outcomes', () => {
+                        http.get(`${API_BASE_URL}/outcomes`, () => {
                                 return HttpResponse.json({ outcomes: [{id: '1', name: 'OA1-Access/Documentation'}] });
                         }),
-                        http.get('http://localhost:8502/api/field-contexts', () => {
+                        http.get(`${API_BASE_URL}/field-contexts`, () => {
                                 return HttpResponse.json({ field_contexts: [{id: '1', name: 'USA', geographic_coverage: 'One Country Operation'}] });
                         }),
-                        http.get('http://localhost:8502/api/users', () => {
+                        http.get(`${API_BASE_URL}/users`, () => {
                                 return HttpResponse.json({ users: [] });
                         })
                 )
@@ -57,28 +86,23 @@ describe('Proposal Drafter – Form validation', () => {
                 await userEvent.selectOptions(geographicalScopeInput, 'One Country Operation')
                 await waitFor(() => expect(generateButton).toBeDisabled())
 
-                const countryInput = screen.getByLabelText(/Country \/ Location\(s\)/i)
-                await userEvent.type(countryInput, 'USA{enter}')
+                await selectFirstOption(/Country \/ Location\(s\)/i)
                 await waitFor(() => expect(generateButton).toBeDisabled())
 
                 const beneficiariesProfileInput = screen.getByLabelText(/Beneficiaries Profile/i)
                 await userEvent.type(beneficiariesProfileInput, 'Students')
                 await waitFor(() => expect(generateButton).toBeDisabled())
 
-                const durationInput = screen.getByLabelText(/Duration/i)
-                await userEvent.type(durationInput, '12 months{enter}')
+                await selectOption(/Duration/i, '12 months')
                 await waitFor(() => expect(generateButton).toBeDisabled())
 
-                const budgetInput = screen.getByLabelText(/Budget Range/i)
-                await userEvent.type(budgetInput, '1M${enter}')
+                await selectOption(/Budget Range/i, '1M$')
                 await waitFor(() => expect(generateButton).toBeDisabled())
 
-                const mainOutcomeButton = screen.getByLabelText('Main Outcome')
-                await userEvent.type(mainOutcomeButton, 'OA1-Access/Documentation{enter}')
+                await selectOption('Main Outcome', 'OA1-Access/Documentation')
                 await waitFor(() => expect(generateButton).toBeDisabled())
 
-                const donorInput = screen.getByLabelText(/Targeted Donor/i)
-                await userEvent.type(donorInput, 'USAID{enter}')
+                await selectOption(/Targeted Donor/i, 'USAID')
                 await waitFor(() => expect(generateButton).toBeEnabled())
         }, 20000)
 })
@@ -86,21 +110,21 @@ describe('Proposal Drafter – Form validation', () => {
 describe('Proposal Drafter – One‑Section Generation Flow', () => {
         it('calls process_section with session and body, renders all cards', async () => {
                 server.use(
-                        http.get('http://localhost:8502/api/templates', () => HttpResponse.json({ templates: { "UNHCR": {} } })),
-                        http.get('http://localhost:8502/api/profile', () => HttpResponse.json({ user: { "email": "test@test.com", "name": "Test User" } })),
-                        http.get('http://localhost:8502/api/donors', () => {
+                        http.get(`${API_BASE_URL}/templates`, () => HttpResponse.json({ templates: { "UNHCR": {} } })),
+                        http.get(`${API_BASE_URL}/profile`, () => HttpResponse.json({ user: { "email": "test@test.com", "name": "Test User" } })),
+                        http.get(`${API_BASE_URL}/donors`, () => {
                                 return HttpResponse.json({ donors: [{id: '1', name: 'USAID'}] });
                         }),
-                        http.get('http://localhost:8502/api/outcomes', () => {
+                        http.get(`${API_BASE_URL}/outcomes`, () => {
                                 return HttpResponse.json({ outcomes: [{id: '1', name: 'OA1-Access/Documentation'}] });
                         }),
-                        http.get('http://localhost:8502/api/field-contexts', () => {
+                        http.get(`${API_BASE_URL}/field-contexts`, () => {
                                 return HttpResponse.json({ field_contexts: [{id: '1', name: 'USA', geographic_coverage: 'One Country Operation'}] });
                         }),
-                        http.get('http://localhost:8502/api/users', () => {
+                        http.get(`${API_BASE_URL}/users`, () => {
                                 return HttpResponse.json({ users: [] });
                         }),
-                        http.post('http://localhost:8502/api/create-session', () => {
+                        http.post(`${API_BASE_URL}/create-session`, () => {
                                 return HttpResponse.json({
                                         session_id: 'test-session-id',
                                         proposal_id: 'test-proposal-id',
@@ -112,10 +136,10 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                                         }
                                 })
                         }),
-                        http.post('http://localhost:8502/api/generate-proposal-sections/:session_id', async ({request}) => {
+                        http.post(`${API_BASE_URL}/generate-proposal-sections/:session_id`, async () => {
                                 return new HttpResponse(null, { status: 200 });
                         }),
-                        http.get('http://localhost:8502/api/proposals/:proposal_id/status', async ({request}) => {
+                        http.get(`${API_BASE_URL}/proposals/:proposal_id/status`, async () => {
                                 return HttpResponse.json({
                                         status: 'done',
                                         generated_sections: {
@@ -174,21 +198,21 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
 
         it('allows editing Summary content', async () => {
                 server.use(
-                        http.get('http://localhost:8502/api/templates', () => HttpResponse.json({ templates: { "UNHCR": {} } })),
-                        http.get('http://localhost:8502/api/profile', () => HttpResponse.json({ user: { "email": "test@test.com", "name": "Test User" } })),
-                        http.get('http://localhost:8502/api/donors', () => {
+                        http.get(`${API_BASE_URL}/templates`, () => HttpResponse.json({ templates: { "UNHCR": {} } })),
+                        http.get(`${API_BASE_URL}/profile`, () => HttpResponse.json({ user: { "email": "test@test.com", "name": "Test User" } })),
+                        http.get(`${API_BASE_URL}/donors`, () => {
                                 return HttpResponse.json({ donors: [{id: '1', name: 'USAID'}] });
                         }),
-                        http.get('http://localhost:8502/api/outcomes', () => {
+                        http.get(`${API_BASE_URL}/outcomes`, () => {
                                 return HttpResponse.json({ outcomes: [{id: '1', name: 'OA1-Access/Documentation'}] });
                         }),
-                        http.get('http://localhost:8502/api/field-contexts', () => {
+                        http.get(`${API_BASE_URL}/field-contexts`, () => {
                                 return HttpResponse.json({ field_contexts: [{id: '1', name: 'USA', geographic_coverage: 'One Country Operation'}] });
                         }),
-                        http.get('http://localhost:8502/api/users', () => {
+                        http.get(`${API_BASE_URL}/users`, () => {
                                 return HttpResponse.json({ users: [] });
                         }),
-                        http.post('http://localhost:8502/api/create-session', () => {
+                        http.post(`${API_BASE_URL}/create-session`, () => {
                                 return HttpResponse.json({
                                         session_id: 'test-session-id',
                                         proposal_id: 'test-proposal-id',
@@ -200,10 +224,10 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                                         }
                                 })
                         }),
-                        http.post('http://localhost:8502/api/generate-proposal-sections/:session_id', async ({request}) => {
+                        http.post(`${API_BASE_URL}/generate-proposal-sections/:session_id`, async () => {
                                 return new HttpResponse(null, { status: 200 });
                         }),
-                        http.get('http://localhost:8502/api/proposals/:proposal_id/status', async ({request}) => {
+                        http.get(`${API_BASE_URL}/proposals/:proposal_id/status`, async () => {
                                 return HttpResponse.json({
                                         status: 'done',
                                         generated_sections: {
@@ -222,7 +246,7 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                                         }
                                 })
                         }),
-                        http.post('http://localhost:8502/api/update-section-content', async ({request}) => {
+                        http.post(`${API_BASE_URL}/update-section-content`, async ({request}) => {
                                 const body = await request.json()
                                 return HttpResponse.json({ content: body.content })
                         })
@@ -283,21 +307,21 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
 
         it('hides the input form when a submitted proposal is loaded', async () => {
                 server.use(
-                        http.get('http://localhost:8502/api/templates', () => HttpResponse.json({ templates: { "UNHCR": {} } })),
-                        http.get('http://localhost:8502/api/profile', () => HttpResponse.json({ user: { "email": "test@test.com", "name": "Test User" } })),
-                        http.get('http://localhost:8502/api/donors', () => {
+                        http.get(`${API_BASE_URL}/templates`, () => HttpResponse.json({ templates: { "UNHCR": {} } })),
+                        http.get(`${API_BASE_URL}/profile`, () => HttpResponse.json({ user: { "email": "test@test.com", "name": "Test User" } })),
+                        http.get(`${API_BASE_URL}/donors`, () => {
                                 return HttpResponse.json({ donors: [{id: '1', name: 'USAID'}] });
                         }),
-                        http.get('http://localhost:8502/api/outcomes', () => {
+                        http.get(`${API_BASE_URL}/outcomes`, () => {
                                 return HttpResponse.json({ outcomes: [{id: '1', name: 'OA1-Access/Documentation'}] });
                         }),
-                        http.get('http://localhost:8502/api/field-contexts', () => {
+                        http.get(`${API_BASE_URL}/field-contexts`, () => {
                                 return HttpResponse.json({ field_contexts: [{id: '1', name: 'USA', geographic_coverage: 'One Country Operation'}] });
                         }),
-                        http.get('http://localhost:8502/api/users', () => {
+                        http.get(`${API_BASE_URL}/users`, () => {
                                 return HttpResponse.json({ users: [] });
                         }),
-                        http.get('http://localhost:8502/api/load-draft/:proposal_id', () => {
+                        http.get(`${API_BASE_URL}/load-draft/:proposal_id`, () => {
                                 return HttpResponse.json({
                                         proposal_id: 'submitted-proposal-123',
                                         session_id: 'test-session-id',
@@ -315,7 +339,7 @@ describe('Proposal Drafter – One‑Section Generation Flow', () => {
                                         }
                                 })
                         }),
-                        http.get('http://localhost:8502/api/proposals/:proposal_id/status-history', () => {
+                        http.get(`${API_BASE_URL}/proposals/:proposal_id/status-history`, () => {
                                 return HttpResponse.json({ statuses: [] });
                         })
                 )

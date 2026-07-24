@@ -1,5 +1,5 @@
 // --- MetricsDashboard: UNHCR Visual Identity Alignment ---
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { Bar, Line, Chart } from 'react-chartjs-2';
 import {

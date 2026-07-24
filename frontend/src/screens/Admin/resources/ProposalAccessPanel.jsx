@@ -52,6 +52,10 @@ export default function ProposalAccessPanel({ resourceId: initialResourceId }) {
   const [ownerCandidate, setOwnerCandidate] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
+  const { items: proposals, loading: listLoading, error: listError } = useAdminResourceList('proposals')
+  const { data: access, loading, error, refresh } = useAccessData(
+    selectedId ? `/admin/proposals/${selectedId}/access` : null
+  )
   const { grantForm, setGrantForm, statusMessage: grantMsg, actionLoading: grantLoading, handleGrant, revokeGrant } =
     useGrantSection({
       endpoint: `/admin/proposals/${selectedId}/access`,
@@ -64,10 +68,6 @@ export default function ProposalAccessPanel({ resourceId: initialResourceId }) {
       initialForm: { subjectType: 'user', subjectId: '', operation: 'GET' }
     })
 
-  const { items: proposals, loading: listLoading, error: listError } = useAdminResourceList('proposals')
-  const { data: access, loading, error, refresh } = useAccessData(
-    selectedId ? `/admin/proposals/${selectedId}/access` : null
-  )
   const { users } = useAdminUsers()
   const { options } = useAdminOptions()
 
@@ -105,16 +105,6 @@ export default function ProposalAccessPanel({ resourceId: initialResourceId }) {
     } finally {
       setActionLoading(false)
     }
-  }
-
-  const togglePermission = (key) => {
-    setGrantForm(prev => {
-      const hasIt = prev.permissions.includes(key)
-      const permissions = hasIt
-        ? prev.permissions.filter(p => p !== key)
-        : [...prev.permissions, key]
-      return { ...prev, permissions }
-    })
   }
 
   // Phase 1: Resource picker
@@ -200,50 +190,6 @@ export default function ProposalAccessPanel({ resourceId: initialResourceId }) {
           emptyMessage="No explicit grants"
         />
 
-        <form className="grant-form" onSubmit={handleGrant}>
-          <div className="form-row">
-            <label>
-              Subject type
-              <select value={grantForm.subjectType} onChange={e => setGrantForm(prev => ({ ...prev, subjectType: e.target.value, subjectId: '' }))}>
-                <option value="user">User</option>
-                <option value="team">Team</option>
-                <option value="donor_group">Donor Group</option>
-              </select>
-            </label>
-            <label>
-              {grantForm.subjectType === 'user' ? 'User' : grantForm.subjectType === 'team' ? 'Team' : 'Donor Group'}
-              <SubjectPicker
-                subjectType={grantForm.subjectType}
-                value={grantForm.subjectId}
-                onChange={val => setGrantForm(prev => ({ ...prev, subjectId: val }))}
-                users={users}
-                options={options}
-              />
-            </label>
-            <label>
-              Data scope
-              <select value={grantForm.dataScope} onChange={e => setGrantForm(prev => ({ ...prev, dataScope: e.target.value }))}>
-                <option value="self">Self</option>
-                <option value="team">Team</option>
-                <option value="organization">Organization</option>
-                <option value="global">Global</option>
-              </select>
-            </label>
-          </div>
-          <div className="form-row permissions-row">
-            {permissionOptions.map(opt => (
-              <label key={opt.key}>
-                <input
-                  type="checkbox"
-                  checked={grantForm.permissions.includes(opt.key)}
-                  onChange={() => togglePermission(opt.key)}
-                />
-                {opt.label}
-              </label>
-            ))}
-          </div>
-          <button type="submit" className="primary-button" disabled={actionLoading}>Save grant</button>
-        </form>
       </section>
 
       <section className="ownership-panel">
@@ -281,7 +227,7 @@ export default function ProposalAccessPanel({ resourceId: initialResourceId }) {
 
       <section className="audit-panel">
         <div className="section-header">
-          <h3>Recent Audit Events</h3>
+          <h3>Audit Timeline</h3>
         </div>
         <AuditTimeline events={audit.slice(0, 6)} emptyMessage="No recent audit events" />
       </section>

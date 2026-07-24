@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../../mocks/server'
 import { MemoryRouter } from 'react-router-dom'
@@ -119,9 +119,10 @@ describe('KnowledgeCardAccessPanel', () => {
     )
 
     expect(await screen.findByText(/Evacuation Plan for Sudan Crisis/i)).toBeInTheDocument()
-    expect(screen.getByText(/Amina Nyongo/i)).toBeInTheDocument()
-    expect(screen.getByText(/draft/i)).toBeInTheDocument()
-    expect(screen.getByText(/Owner/i)).toBeInTheDocument()
+    const header = document.querySelector('.knowledge-card-access > header')
+    expect(within(header).getByText(/Amina Nyongo/i)).toBeInTheDocument()
+    expect(within(header).getByText(/Status: draft/i)).toBeInTheDocument()
+    expect(within(header).getByText(/Owner:/i)).toBeInTheDocument()
   })
 
   it('shows existing grants for the knowledge card', async () => {
@@ -133,9 +134,9 @@ describe('KnowledgeCardAccessPanel', () => {
       </WizardProvider>
     )
 
-    expect(await screen.findByText(/Kiran Patel/i)).toBeInTheDocument()
-    expect(screen.getByText(/read/i)).toBeInTheDocument()
-    expect(screen.getByText(/write/i)).toBeInTheDocument()
+    await screen.findByRole('heading', { name: /Evacuation Plan for Sudan Crisis/i })
+    const grants = document.querySelector('.grants-list')
+    expect(within(grants).getByText(/Kiran Patel.*read, write/i)).toBeInTheDocument()
   })
 
   it('displays audit timeline with knowledge card history', async () => {
@@ -174,7 +175,7 @@ describe('KnowledgeCardAccessPanel', () => {
       </WizardProvider>
     )
 
-    expect(await screen.findByText(/Select a Knowledge Card/i)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /Knowledge Cards.*Select a card/i })).toBeInTheDocument()
     expect(screen.getByText(/Evacuation Plan for Sudan Crisis/i)).toBeInTheDocument()
     expect(screen.getByText(/Health Response Protocol/i)).toBeInTheDocument()
   })
@@ -206,9 +207,9 @@ describe('KnowledgeCardAccessPanel', () => {
       </WizardProvider>
     )
 
-    expect(await screen.findByText(/evacuation/i)).toBeInTheDocument()
+    expect(await screen.findByText(/^evacuation · UNHCR$/i)).toBeInTheDocument()
     expect(screen.getByText(/UNHCR/i)).toBeInTheDocument()
-    expect(screen.getByText(/protocol/i)).toBeInTheDocument()
+    expect(screen.getByText(/^protocol · Health Improved$/i)).toBeInTheDocument()
     expect(screen.getByText(/Health Improved/i)).toBeInTheDocument()
   })
 })

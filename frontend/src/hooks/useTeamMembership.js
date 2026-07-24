@@ -26,7 +26,7 @@ export function useTeamMembership() {
     setError(null);
 
     try {
-      const response = await api.post(`/teams/${teamId}/join`);
+      await api.post(`/teams/${teamId}/join`);
 
       // Update user's team membership status
       if (updateUser) {
@@ -89,7 +89,7 @@ export function useTeamMembership() {
     setError(null);
 
     try {
-      const response = await api.post(`/teams/${teamId}/approve/${userId}`);
+      await api.post(`/teams/${teamId}/approve/${userId}`);
       return true;
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to approve membership');
@@ -115,7 +115,7 @@ export function useTeamMembership() {
     setError(null);
 
     try {
-      const response = await api.post(`/teams/${teamId}/reject/${userId}`);
+      await api.post(`/teams/${teamId}/reject/${userId}`);
       return true;
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to reject membership');
@@ -166,7 +166,7 @@ export function useTeamMembership() {
     setError(null);
 
     try {
-      const response = await api.post(`/teams/${teamId}/roles`, { role_id: roleId });
+      await api.post(`/teams/${teamId}/roles`, { role_id: roleId });
       return true;
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to assign role to team');
@@ -192,7 +192,7 @@ export function useTeamMembership() {
     setError(null);
 
     try {
-      const response = await api.delete(`/teams/${teamId}/roles/${roleId}`);
+      await api.delete(`/teams/${teamId}/roles/${roleId}`);
       return true;
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to remove role from team');

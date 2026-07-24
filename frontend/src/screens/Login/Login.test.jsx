@@ -17,6 +17,14 @@ vi.mock('react-router-dom', async () => {
         }
 })
 
+vi.mock('../../hooks/useClientCompatibilityCheck', () => ({
+        useClientCompatibilityCheck: () => ({
+                showWarning: false,
+                dismissWarning: vi.fn(),
+                clientInfo: null
+        })
+}))
+
 beforeAll(async () => {
         vi.stubEnv('VITE_ENABLE_DIRECT_LOGIN', 'true')
         const module = await import('./Login')

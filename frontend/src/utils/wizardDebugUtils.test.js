@@ -108,17 +108,16 @@ describe('Wizard Debug Utilities', () => {
   });
 
   describe('WizardPerformanceMonitor', () => {
-    test('should track operation performance', () => {
+    test('should track operation performance', async () => {
       const monitor = new WizardPerformanceMonitor();
 
       monitor.startOperation('testOp');
       expect(consoleOutput.some(output => output.includes('testOp'))).toBe(true);
 
       // Small delay to simulate work
-      setTimeout(() => {
-        monitor.endOperation('testOp');
-        expect(consoleOutput.filter(output => output && output.includes('took')).length).toBeGreaterThan(0);
-      }, 10);
+      await new Promise(resolve => setTimeout(resolve, 10));
+      monitor.endOperation('testOp');
+      expect(consoleOutput.filter(output => output && output.includes('took')).length).toBeGreaterThan(0);
     });
 
     test('should return performance metrics', () => {

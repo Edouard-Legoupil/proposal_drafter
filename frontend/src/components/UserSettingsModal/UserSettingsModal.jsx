@@ -1,303 +1,176 @@
-import { useState, useEffect } from 'react';
-import Select from 'react-select';
-import './UserSettingsModal.css';
+import { useEffect, useState } from 'react'
+import Select from 'react-select'
+import './UserSettingsModal.css'
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api";
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || '/api'
+
+const EMPTY_PREFERENCES = {
+  geographic_coverage_type: null,
+  geographic_coverage_region: null,
+  geographic_coverage_country: null
+}
 
 export default function UserSettingsModal({ show, onClose }) {
-    const [options, setOptions] = useState({
-        teams: []
-    });
-    const [selectedTeams, setSelectedTeams] = useState([]);
-    const [pendingRequests, setPendingRequests] = useState({
-        teams: []
-    });
-    const [inheritedSettings, setInheritedSettings] = useState({
-        teams: []
-    });
-    const [teamMemberships, setTeamMemberships] = useState([]);
-    const [loading, setLoading] = useState(false);
+  const [teamOptions, setTeamOptions] = useState([])
+  const [selectedTeams, setSelectedTeams] = useState([])
+  const [approvedTeamIds, setApprovedTeamIds] = useState([])
+  const [pendingTeamIds, setPendingTeamIds] = useState([])
+  const [preferences, setPreferences] = useState(EMPTY_PREFERENCES)
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
-    useEffect(() => {
-        if (show) {
-            fetchInitialData();
+  useEffect(() => {
+    if (!show) return undefined
+
+    const controller = new AbortController()
+    async function fetchInitialData() {
+      setLoading(true)
+      setError('')
+      try {
+        const requestOptions = { credentials: 'include', signal: controller.signal }
+        const [settingsResponse, teamsResponse, pendingResponse] = await Promise.all([
+          fetch(`${API_BASE_URL}/users/me/settings`, requestOptions),
+          fetch(`${API_BASE_URL}/teams`, requestOptions),
+          fetch(`${API_BASE_URL}/settings/requests/pending`, requestOptions)
+        ])
+
+        if (!settingsResponse.ok || !teamsResponse.ok || !pendingResponse.ok) {
+          throw new Error('Unable to load your access settings')
         }
-    }, [show]);
 
-    const fetchInitialData = async () => {
-        setLoading(true);
-        try {
-            const [settingsRes, teamsRes, pendingRes, inheritedRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/users/me/settings`, { credentials: 'include' }),
-                fetch(`${API_BASE_URL}/teams`),
-                fetch(`${API_BASE_URL}/settings/requests/pending`, { credentials: 'include' }),
-                fetch(`${API_BASE_URL}/users/me/approved-settings`, { credentials: 'include' })
-            ]);
+        const [settings, teamsPayload, pendingPayload] = await Promise.all([
+          settingsResponse.json(),
+          teamsResponse.json(),
+          pendingResponse.json()
+        ])
+        const options = (teamsPayload.teams || []).map(team => ({
+          value: String(team.id),
+          label: team.name
+        }))
+        const approvedIds = (settings.team_memberships || []).map(String)
+        const requestedIds = (settings.requested_team_memberships || []).map(String)
+        const pendingIds = (pendingPayload.pending_requests || [])
+          .filter(request => request.setting_type === 'team_membership')
+          .map(request => String(request.setting_value))
+        const allPendingIds = [...new Set([...requestedIds, ...pendingIds])]
+        const selectedIds = new Set([...approvedIds, ...allPendingIds])
 
-            let teamsData = [];
+        setTeamOptions(options)
+        setApprovedTeamIds(approvedIds)
+        setPendingTeamIds(allPendingIds)
+        setSelectedTeams(options.filter(option => selectedIds.has(option.value)))
+        setPreferences({
+          geographic_coverage_type: settings.geographic_coverage_type ?? null,
+          geographic_coverage_region: settings.geographic_coverage_region ?? null,
+          geographic_coverage_country: settings.geographic_coverage_country ?? null
+        })
+      } catch (fetchError) {
+        if (fetchError.name !== 'AbortError') setError(fetchError.message)
+      } finally {
+        if (!controller.signal.aborted) setLoading(false)
+      }
+    }
 
+    fetchInitialData()
+    return () => controller.abort()
+  }, [show])
 
-            if (teamsRes.ok) {
-                const t = await teamsRes.json();
-                teamsData = t.teams || [];
-            }
+  const handleTeamChange = (nextTeams = []) => {
+    const lockedIds = new Set([...approvedTeamIds, ...pendingTeamIds])
+    const nextIds = new Set(nextTeams.map(team => team.value))
+    const lockedTeams = teamOptions.filter(team => lockedIds.has(team.value) && !nextIds.has(team.value))
+    setSelectedTeams([...nextTeams, ...lockedTeams])
+  }
 
-            const teamOptions = teamsData.map(t => ({ value: t.id, label: t.name }));
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    setSaving(true)
+    setError('')
+    const approvedIds = new Set(approvedTeamIds)
+    const requestedTeamIds = selectedTeams
+      .map(team => team.value)
+      .filter(teamId => !approvedIds.has(teamId))
 
-            setOptions({
-                teams: teamOptions
-            });
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/me/settings`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...preferences,
+          requested_team_memberships: requestedTeamIds
+        })
+      })
+      if (!response.ok) throw new Error('Unable to save your access settings')
+      onClose()
+    } catch (saveError) {
+      setError(saveError.message)
+    } finally {
+      setSaving(false)
+    }
+  }
 
-            // Process pending requests
-            if (pendingRes.ok) {
-                const pendingData = await pendingRes.json();
-                const pendingMap = {
-                    roles: [],
-                    donors: [],
-                    outcomes: [],
-                    field_contexts: [],
-                    teams: []
-                };
+  const teamStyles = {
+    multiValue: (styles, { data }) => ({
+      ...styles,
+      backgroundColor: pendingTeamIds.includes(data.value) ? '#ff9800' : styles.backgroundColor
+    }),
+    multiValueLabel: (styles, { data }) => ({
+      ...styles,
+      color: pendingTeamIds.includes(data.value) ? 'white' : styles.color
+    }),
+    multiValueRemove: (styles, { data }) => ({
+      ...styles,
+      display: approvedTeamIds.includes(data.value) || pendingTeamIds.includes(data.value) ? 'none' : styles.display
+    })
+  }
 
-                pendingData.pending_requests.forEach(request => {
-                    if (request.setting_type === 'team_membership') pendingMap.teams.push(request.setting_value);
-                });
+  if (!show) return null
 
-                setPendingRequests(pendingMap);
-            }
-
-            // Process inherited settings
-            if (inheritedRes.ok) {
-                const inheritedData = await inheritedRes.json();
-                const inheritedMap = {
-                    roles: [],
-                    donors: [],
-                    outcomes: [],
-                    field_contexts: [],
-                    teams: []
-                };
-
-                inheritedData.approved_settings.forEach(setting => {
-                    if (setting.source === 'inherited') {
-                        if (setting.setting_type === 'team_membership') inheritedMap.teams.push(setting.setting_value);
-                    }
-                });
-
-                setInheritedSettings(inheritedMap);
-            }
-
-            if (settingsRes.ok) {
-                const data = await settingsRes.json();
-                if (data) {
-
-                    setTeamMemberships(data.team_memberships || []);
-
-
-                    // Set selected teams, but ensure inherited teams are always included and can't be removed
-                    const directTeams = teamOptions.filter(t => allTeamIds.includes(t.value));
-                    const inheritedTeams = teamOptions.filter(t => inheritedSettings.teams.includes(t.value));
-                    const allSelectedTeams = [...directTeams, ...inheritedTeams.filter(
-                        inheritedTeam => !directTeams.some(directTeam => directTeam.value === inheritedTeam.value)
-                    )];
-                    setSelectedTeams(allSelectedTeams);
-                }
-            }
-        } catch (error) {
-            console.error("Failed to fetch initial data:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-
-        // When saving, we keep existing team_memberships as is, and anything new goes to requested_team_memberships
-        // Actually, the backend update_user_settings currently deletes and re-inserts based on what's sent.
-        // So we send the current granted team_memberships and the current requested team_memberships (anything selected that is NOT granted).
-
-
-
-        // For team memberships, we need to separate existing teams from new team requests
-        const currentTeamIds = selectedTeams.map(t => t.value);
-        const existingTeamIds = teamMemberships || []; // Teams the user already belongs to
-        const inheritedTeamIds = inheritedSettings.teams || []; // Teams inherited from team memberships
-
-        // Teams that are already approved (should be sent to update actual memberships)
-        // But exclude inherited teams since they can't be removed directly
-        const approvedTeams = currentTeamIds.filter(teamId =>
-            existingTeamIds.includes(teamId) && !inheritedTeamIds.includes(teamId)
-        );
-
-        // Teams that are new requests (should go through approval process)
-        const newTeamRequests = currentTeamIds.filter(teamId =>
-            !existingTeamIds.includes(teamId) && !inheritedTeamIds.includes(teamId)
-        );
-
-
-
-        const settings = {
-            team_memberships: approvedTeams, // Only send already approved teams to direct update
-            requested_team_memberships: newRequestedTeams
-        };
-
-        try {
-            // First update the direct settings (roles, approved teams, etc.)
-            const response = await fetch(`${API_BASE_URL}/users/me/settings`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(settings),
-                credentials: 'include'
-            });
-
-            if (!response.ok) {
-                console.error("Failed to update settings");
-                alert("Failed to update settings.");
-                return;
-            }
-
-            // The backend now handles requested settings automatically
-            if (newTeamRequests.length > 0 || newRequestedDonors.length > 0 || newRequestedOutcomes.length > 0 || newRequestedFieldContexts.length > 0) {
-                alert(`Successfully submitted your access requests. New items will appear in orange until approved by an administrator.`);
-            }
-
-            onClose();
-        } catch (error) {
-            console.error("Failed to update settings:", error);
-            alert("An error occurred while updating settings.");
-        }
-    };
-
-    const roleStyles = {
-        multiValue: (styles, { data }) => {
-            const isRequested = !grantedRoles.includes(data.value);
-            return {
-                ...styles,
-                backgroundColor: isRequested ? '#ff9800' : styles.backgroundColor,
-                color: isRequested ? 'white' : styles.color,
-            };
-        },
-        multiValueLabel: (styles, { data }) => {
-            const isRequested = !grantedRoles.includes(data.value);
-            return {
-                ...styles,
-                color: isRequested ? 'white' : styles.color,
-            };
-        },
-        multiValueRemove: (styles, { data }) => {
-            const isRequested = !grantedRoles.includes(data.value);
-            return {
-                ...styles,
-                color: isRequested ? 'white' : styles.color,
-                ':hover': {
-                    backgroundColor: isRequested ? '#e68a00' : styles[':hover']?.backgroundColor,
-                    color: isRequested ? 'white' : styles[':hover']?.color,
-                },
-            };
-        },
-    };
-
-    const pendingStyles = (settingType) => ({
-        multiValue: (styles, { data }) => {
-            const isPending = pendingRequests[settingType]?.includes(data.value);
-            const isInherited = inheritedSettings[settingType]?.includes(data.value);
-
-            return {
-                ...styles,
-                backgroundColor: isPending ? '#ff9800' : isInherited ? '#4caf50' : styles.backgroundColor,
-                color: (isPending || isInherited) ? 'white' : styles.color,
-            };
-        },
-        multiValueLabel: (styles, { data }) => {
-            const isPending = pendingRequests[settingType]?.includes(data.value);
-            const isInherited = inheritedSettings[settingType]?.includes(data.value);
-
-            return {
-                ...styles,
-                color: (isPending || isInherited) ? 'white' : styles.color,
-            };
-        },
-        multiValueRemove: (styles, { data }) => {
-            const isPending = pendingRequests[settingType]?.includes(data.value);
-            const isInherited = inheritedSettings[settingType]?.includes(data.value);
-
-            return {
-                ...styles,
-                color: (isPending || isInherited) ? 'white' : styles.color,
-                ':hover': {
-                    backgroundColor: isPending ? '#e68a00' : isInherited ? '#45a049' : styles[':hover']?.backgroundColor,
-                    color: (isPending || isInherited) ? 'white' : styles[':hover']?.color,
-                },
-                display: isInherited ? 'none' : styles.display  // Hide remove button for inherited settings
-            };
-        },
-    });
-
-    if (!show) return null;
-
-    return (
-        <div className="user-settings-overlay" onClick={onClose}>
-            <div className="user-settings-modal" onClick={e => e.stopPropagation()}>
-                <div className="modal-header">
-                    <h2>Access and Permissions Management</h2>
-                    <button className="close-x" onClick={onClose}>&times;</button>
-                </div>
-
-                {loading ? (
-                    <div className="modal-loading">Loading settings...</div>
-                ) : (
-                    <form onSubmit={handleSubmit} className="modal-form">
-                        <div className="modal-instructions">
-                            <h3>Access and Permissions Management</h3>
-                            <p>This form allows you to request membership to specific teams where access levels are defined. You can join multiple teams, and will inherit access rights and focal areas from each team. This includes:</p>
-                            <ul className="instruction-list">
-                                <li><strong>Roles:</strong> Determine what actions you can perform in the system. Requested roles appear in orange until approved.</li>
-                                <li><strong>Donor Focal:</strong> Donors that will be included by default in the proposals and knowledge cards you create.</li>
-                                <li><strong>Outcomes Focal:</strong> Outcomes that will be included by default in the proposals you create.</li>
-                                <li><strong>Field Contexts Focal:</strong> Countries/regions that will be included by default in the proposals you create.</li>
-                            </ul>
-                            <p className="approval-note">⏱ All requests require team-leader approval and will appear in orange until processed.</p>
-                        </div>
-                        <div className="form-section">
-                            <label>Team Membership</label>
-                            <Select
-                                isMulti
-                                options={options.teams}
-                                value={selectedTeams}
-                                onChange={(newTeams) => {
-                                    // Prevent removal of inherited teams
-                                    const inheritedTeamValues = inheritedSettings.teams || [];
-                                    const newTeamsWithInherited = [...newTeams];
-
-                                    // Add back any inherited teams that were removed
-                                    inheritedTeamValues.forEach(inheritedTeamId => {
-                                        if (!newTeams.some(team => team.value === inheritedTeamId)) {
-                                            const inheritedTeam = options.teams.find(team => team.value === inheritedTeamId);
-                                            if (inheritedTeam) {
-                                                newTeamsWithInherited.push(inheritedTeam);
-                                            }
-                                        }
-                                    });
-
-                                    setSelectedTeams(newTeamsWithInherited);
-                                }}
-                                className="settings-select"
-                                styles={pendingStyles('teams')}
-                                placeholder="Select teams to join..."
-                                data-testid="user-settings-teams-select"
-                            />
-
-                            <p className="field-hint">Orange items are pending team leader approval. </p>
-                        </div>
-
-
-                        <div className="modal-footer">
-                            <button type="button" className="cancel-btn" onClick={onClose}>Cancel</button>
-                            <button type="submit" className="save-btn">Save Changes</button>
-                        </div>
-                    </form>
-                )}
-            </div>
+  return (
+    <div className="user-settings-overlay" onClick={onClose}>
+      <div className="user-settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title" onClick={event => event.stopPropagation()}>
+        <div className="modal-header">
+          <h2 id="settings-title">Access and Permissions Management</h2>
+          <button type="button" className="close-x" aria-label="Close settings" onClick={onClose}>&times;</button>
         </div>
-    );
+
+        {loading ? (
+          <div className="modal-loading">Loading settings...</div>
+        ) : (
+          <form onSubmit={handleSubmit} className="modal-form">
+            <div className="modal-instructions">
+              <p>Request membership in teams whose access you need. Existing memberships cannot be changed here.</p>
+              <p className="approval-note">⏱ New requests require team-leader approval and appear in orange until processed.</p>
+            </div>
+
+            {error && <p className="status-msg" role="alert">{error}</p>}
+
+            <div className="form-section">
+              <label htmlFor="user-settings-teams">Team Membership</label>
+              <Select
+                inputId="user-settings-teams"
+                isMulti
+                options={teamOptions}
+                value={selectedTeams}
+                onChange={handleTeamChange}
+                className="settings-select"
+                styles={teamStyles}
+                placeholder="Select teams to join..."
+              />
+              <p className="field-hint">Orange items are pending team-leader approval.</p>
+            </div>
+
+            <div className="modal-footer">
+              <button type="button" className="cancel-btn" onClick={onClose}>Cancel</button>
+              <button type="submit" className="save-btn" disabled={saving}>
+                {saving ? 'Saving…' : 'Save Changes'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  )
 }

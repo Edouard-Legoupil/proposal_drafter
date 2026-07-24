@@ -18,6 +18,7 @@ const ChatControls = ({
   userPrompt,
 }) => {
   const showManageButton = Object.keys(proposal).length > 0;
+  const missingFields = generateLabel === 'Generate' ? getMissingFields(userPrompt) : [];
 
   const handleManageClick = () => {
     const missing = getMissingFields(userPrompt);
@@ -88,6 +89,7 @@ const ChatControls = ({
               : ''
           }
           data-testid="generate-button"
+          title={missingFields.length > 0 ? `Missing: ${missingFields.join(', ')}` : undefined}
         />
       </div>
     </div>

@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import Dashboard from './Dashboard'
+import { WizardProvider } from '../../context/WizardContext'
 import { server } from '../../mocks/server'
 import { http, HttpResponse } from 'msw'
 
@@ -16,6 +17,14 @@ vi.mock('react-router-dom', async () => {
 })
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
+
+const renderDashboard = () => render(
+        <WizardProvider>
+                <MemoryRouter>
+                        <Dashboard />
+                </MemoryRouter>
+        </WizardProvider>
+)
 
 describe('Dashboard Component', () => {
         beforeEach(() => {
@@ -34,11 +43,7 @@ describe('Dashboard Component', () => {
         it('renders list of drafts after fetch', async () => {
                 server.use(http.get(`${API_BASE_URL}/list-drafts`, () => HttpResponse.json({ drafts })))
                 server.use(http.get(`${API_BASE_URL}/proposals/reviews`, () => HttpResponse.json({ reviews })))
-                render(
-                        <MemoryRouter>
-                                <Dashboard />
-                        </MemoryRouter>
-                )
+                renderDashboard()
                 const proposalsPanel = await screen.findByTestId('proposals-panel')
 
                 await waitFor(() => {
@@ -50,11 +55,7 @@ describe('Dashboard Component', () => {
         it('filters drafts based on search term', async () => {
                 server.use(http.get(`${API_BASE_URL}/list-drafts`, () => HttpResponse.json({ drafts })))
                 server.use(http.get(`${API_BASE_URL}/proposals/reviews`, () => HttpResponse.json({ reviews })))
-                render(
-                        <MemoryRouter>
-                                <Dashboard />
-                        </MemoryRouter>
-                )
+                renderDashboard()
                 const proposalsPanel = await screen.findByTestId('proposals-panel')
 
                 await waitFor(() => {
@@ -77,11 +78,7 @@ describe('Dashboard Component', () => {
         it('shows "Start New Proposal" button when no drafts are returned', async () => {
                 server.use(http.get(`${API_BASE_URL}/list-drafts`, () => HttpResponse.json({ drafts: [] })))
                 server.use(http.get(`${API_BASE_URL}/proposals/reviews`, () => HttpResponse.json({ reviews })))
-                render(
-                        <MemoryRouter>
-                                <Dashboard />
-                        </MemoryRouter>
-                )
+                renderDashboard()
                 const proposalsPanel = await screen.findByTestId('proposals-panel')
 
                 await waitFor(() => {
@@ -92,11 +89,7 @@ describe('Dashboard Component', () => {
         it('navigates to /chat on "Start New Proposal" click', async () => {
                 server.use(http.get(`${API_BASE_URL}/list-drafts`, () => HttpResponse.json({ drafts: [] })))
                 server.use(http.get(`${API_BASE_URL}/proposals/reviews`, () => HttpResponse.json({ reviews })))
-                render(
-                        <MemoryRouter>
-                                <Dashboard />
-                        </MemoryRouter>
-                )
+                renderDashboard()
 
                 const proposalsPanel = await screen.findByTestId('proposals-panel')
                 const createBtn = await within(proposalsPanel).findByTestId('new-proposal-button')
@@ -110,11 +103,7 @@ describe('Dashboard Component', () => {
         it('clicking project sets sessionStorage and navigates', async () => {
                 server.use(http.get(`${API_BASE_URL}/list-drafts`, () => HttpResponse.json({ drafts })))
                 server.use(http.get(`${API_BASE_URL}/proposals/reviews`, () => HttpResponse.json({ reviews })))
-                render(
-                        <MemoryRouter>
-                                <Dashboard />
-                        </MemoryRouter>
-                )
+                renderDashboard()
 
                 const proposalsPanel = await screen.findByTestId('proposals-panel')
                 const projectItem = await within(proposalsPanel).findByText('First Project')
@@ -130,11 +119,7 @@ describe('Dashboard Component', () => {
         it('shows a "Shared" badge on accepted projects and "Draft" on others', async () => {
                 server.use(http.get(`${API_BASE_URL}/list-drafts`, () => HttpResponse.json({ drafts })))
                 server.use(http.get(`${API_BASE_URL}/proposals/reviews`, () => HttpResponse.json({ reviews })))
-                render(
-                        <MemoryRouter>
-                                <Dashboard />
-                        </MemoryRouter>
-                )
+                renderDashboard()
 
                 const proposalsPanel = await screen.findByTestId('proposals-panel')
                 // Find the container for the first project to scope the search for the badge

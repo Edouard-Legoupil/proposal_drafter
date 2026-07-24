@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../../mocks/server'
 import { MemoryRouter } from 'react-router-dom'
@@ -115,9 +115,10 @@ describe('ProposalAccessPanel', () => {
     )
 
     expect(await screen.findByText(/Shelter Proposal/i)).toBeInTheDocument()
-    expect(screen.getByText(/Amina Nyongo/i)).toBeInTheDocument()
-    expect(screen.getByText(/Draft/i)).toBeInTheDocument()
-    expect(screen.getByText(/Owner/i)).toBeInTheDocument()
+    const header = document.querySelector('.proposal-access-header')
+    expect(within(header).getByText(/Amina Nyongo/i)).toBeInTheDocument()
+    expect(within(header).getByText(/Status: Draft/i)).toBeInTheDocument()
+    expect(within(header).getByText(/Owner:/i)).toBeInTheDocument()
   })
 
   it('shows existing grants and access permissions', async () => {
@@ -129,9 +130,9 @@ describe('ProposalAccessPanel', () => {
       </WizardProvider>
     )
 
-    expect(await screen.findByText(/Kiran Patel/i)).toBeInTheDocument()
-    expect(screen.getByText(/read/i)).toBeInTheDocument()
-    expect(screen.getByText(/write/i)).toBeInTheDocument()
+    await screen.findByRole('heading', { name: /Shelter Proposal/i })
+    const grants = document.querySelector('.grants-list')
+    expect(within(grants).getByText(/Kiran Patel.*read, write/i)).toBeInTheDocument()
   })
 
   it('displays audit timeline with access history', async () => {
@@ -145,7 +146,7 @@ describe('ProposalAccessPanel', () => {
 
     expect(await screen.findByText(/Audit Timeline/i)).toBeInTheDocument()
     expect(screen.getByText(/Granted read\/write access to Kiran Patel/i)).toBeInTheDocument()
-    expect(screen.getByText(/Amina Nyongo/i)).toBeInTheDocument()
+    expect(within(document.querySelector('.audit-panel')).getByText(/Amina Nyongo/i)).toBeInTheDocument()
   })
 
   it('allows adding new grants to users', async () => {

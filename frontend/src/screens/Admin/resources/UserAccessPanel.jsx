@@ -3,7 +3,7 @@ import Select from 'react-select'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
 
-export default function UserAccessPanel({ resourceId }) {
+export default function UserAccessPanel() {
   const [users, setUsers] = useState([])
   const [options, setOptions] = useState({
     roles: [], donor_groups: [], outcomes: [], field_contexts: [], teams: [], template_requests: []
@@ -123,7 +123,7 @@ export default function UserAccessPanel({ resourceId }) {
         const data = await response.json()
         alert(data.detail || "Failed to create team.")
       }
-    } catch (err) { alert("Error creating team.") }
+    } catch { alert("Error creating team.") }
   }
 
   const handleUpdateUserTeam = async (userId, selectedOption) => {
@@ -135,7 +135,7 @@ export default function UserAccessPanel({ resourceId }) {
       if (response.ok) {
         setUsers(users.map(u => u.id === userId ? { ...u, team_name: selectedOption.label, team_id: selectedOption.value } : u))
       } else { alert("Failed to update user team.") }
-    } catch (err) { alert("Error updating user team.") }
+    } catch { alert("Error updating user team.") }
   }
 
   const handleDeleteUser = async (userId) => {
@@ -144,7 +144,7 @@ export default function UserAccessPanel({ resourceId }) {
       const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, { method: 'DELETE', credentials: 'include' })
       if (response.ok) { setUsers(users.filter(u => u.id !== userId)); setSelectedIds(prev => { const n = new Set(prev); n.delete(userId); return n }) }
       else { alert("Failed to delete user.") }
-    } catch (err) { alert("Error deleting user.") }
+    } catch { alert("Error deleting user.") }
   }
 
   const handleSettingChange = async (userId, type, selectedOptions) => {
@@ -152,14 +152,6 @@ export default function UserAccessPanel({ resourceId }) {
     if (!user) return
 
     const selectedValues = selectedOptions.map(o => o.value)
-
-    // Get current user data
-    const currentApproved = user[type] || []
-    const currentRequested = user[`${type}_requested`] || []
-
-    // Determine what's being added/removed
-    const added = selectedValues.filter(v => !currentApproved.includes(v) && !currentRequested.includes(v))
-    const removed = currentApproved.filter(v => !selectedValues.includes(v))
 
     try {
       // Prepare the updated settings for the user
@@ -417,7 +409,7 @@ export default function UserAccessPanel({ resourceId }) {
       setSelectedIds(new Set())
       setBulkAction('')
       setBulkValue(null)
-    } catch (err) { alert('Some bulk operations failed.') }
+    } catch { alert('Some bulk operations failed.') }
     finally { setBulkLoading(false) }
   }
 
@@ -869,6 +861,79 @@ export default function UserAccessPanel({ resourceId }) {
 
               {processingRequest && (
                 <div className="processing-indicator">
+                  <i className="fa-solid fa-spinner fa-spin"></i> Processing...
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSettingsRequestModal && selectedRequest && (
+        <div className="modal-overlay" role="presentation">
+          <div
+            className="modal settings-request-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="settings-request-title"
+          >
+            <button
+              className="modal-close"
+              aria-label="Close settings request review"
+              onClick={() => {
+                setShowSettingsRequestModal(false)
+                setApprovalNote('')
+              }}
+            >
+              <i className="fa-solid fa-times"></i>
+            </button>
+
+            <h3 id="settings-request-title">
+              <i className="fa-solid fa-cog"></i> Settings Request Review
+            </h3>
+
+            <div className="modal-body">
+              <div className="request-info">
+                <div className="info-row"><strong>User:</strong> {selectedRequest.user_name}</div>
+                <div className="info-row"><strong>Email:</strong> {selectedRequest.user_email}</div>
+                <div className="info-row">
+                  <strong>Setting:</strong> {selectedRequest.setting_type.replaceAll('_', ' ')}
+                </div>
+                <div className="info-row">
+                  <strong>Requested Value:</strong> {selectedRequest.display_name || selectedRequest.setting_value}
+                </div>
+              </div>
+
+              <div className="admin-note-section">
+                <label htmlFor="settings-approval-note">Admin Note (optional):</label>
+                <textarea
+                  id="settings-approval-note"
+                  value={approvalNote}
+                  onChange={event => setApprovalNote(event.target.value)}
+                  placeholder="Add a note for audit purposes..."
+                  rows={3}
+                />
+              </div>
+
+              <div className="modal-actions">
+                <button
+                  className="ghost-button"
+                  onClick={handleRejectSettingsRequest}
+                  disabled={processingRequest}
+                >
+                  <i className="fa-solid fa-times-circle"></i> Reject Request
+                </button>
+                <button
+                  className="primary-button"
+                  onClick={handleApproveSettingsRequest}
+                  disabled={processingRequest}
+                >
+                  <i className="fa-solid fa-check-circle"></i> Approve Request
+                </button>
+              </div>
+
+              {processingRequest && (
+                <div className="processing-indicator" role="status">
                   <i className="fa-solid fa-spinner fa-spin"></i> Processing...
                 </div>
               )}

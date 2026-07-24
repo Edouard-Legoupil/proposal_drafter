@@ -9,7 +9,7 @@
  * - Loading states and error handling
  */
 
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
 import {
     logWizardState,
     validateWizardData,
@@ -36,11 +36,11 @@ export const WizardProvider = ({ children }) => {
     const [page, setPage] = useState(1);
 
     // Debug utilities
-    const performanceMonitor = new WizardPerformanceMonitor();
+    const performanceMonitor = useRef(new WizardPerformanceMonitor()).current;
     const [debugMode, setDebugMode] = useState(import.meta.env.DEV);
 
     // Fetch categories from API
-    const fetchCategories = async () => {
+    const fetchCategories = async (signal) => {
         try {
             performanceMonitor.startOperation('fetchCategories');
             setLoading(true);
@@ -52,7 +52,8 @@ export const WizardProvider = ({ children }) => {
             const response = await fetch(`${API_BASE_URL}/wizard/categories`, {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' },
-                credentials: 'include'
+                credentials: 'include',
+                signal
             });
 
             if (debugMode) {
@@ -87,6 +88,7 @@ export const WizardProvider = ({ children }) => {
             }
             setError(null);
         } catch (err) {
+            if (err.name === 'AbortError') return;
             setError('Failed to fetch categories');
             console.error('❌ Error fetching categories:', err);
             // Fallback to mock data if API fails
@@ -97,12 +99,12 @@ export const WizardProvider = ({ children }) => {
             }
         } finally {
             performanceMonitor.endOperation('fetchCategories');
-            setLoading(false);
+            if (!signal?.aborted) setLoading(false);
         }
     };
 
     // Fetch Q&A items with optional filtering
-    const fetchQaItems = async (params = {}) => {
+    const fetchQaItems = async (params = {}, signal) => {
         try {
             setLoading(true);
             // Convert params to query string
@@ -112,7 +114,8 @@ export const WizardProvider = ({ children }) => {
             const response = await fetch(url, {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' },
-                credentials: 'include'
+                credentials: 'include',
+                signal
             });
 
             if (!response.ok) {
@@ -133,6 +136,7 @@ export const WizardProvider = ({ children }) => {
             }
             setError(null);
         } catch (err) {
+            if (err.name === 'AbortError') return;
             setError('Failed to fetch Q&A items');
             console.error('Error fetching Q&A items:', err);
             // Fallback to mock data if API fails
@@ -140,17 +144,18 @@ export const WizardProvider = ({ children }) => {
             setQaItems(mockData);
             console.log('Using mock QA items:', mockData);
         } finally {
-            setLoading(false);
+            if (!signal?.aborted) setLoading(false);
         }
     };
 
     // Fetch popular questions
-    const fetchPopularQuestions = async () => {
+    const fetchPopularQuestions = async (signal) => {
         try {
             const response = await fetch(`${API_BASE_URL}/wizard/popular`, {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' },
-                credentials: 'include'
+                credentials: 'include',
+                signal
             });
 
             if (response.ok) {
@@ -173,6 +178,7 @@ export const WizardProvider = ({ children }) => {
                 console.log('Using mock popular questions:', mockData);
             }
         } catch (err) {
+            if (err.name === 'AbortError') return;
             console.error('Error fetching popular questions:', err);
             // Fallback to mock data if API fails
             const mockData = getMockPopularQuestions();
@@ -272,6 +278,7 @@ export const WizardProvider = ({ children }) => {
     // Load initial data when modal opens
     useEffect(() => {
         if (isOpen) {
+            const controller = new AbortController();
             console.log('🚀 Wizard modal opened, loading data...');
             logWizardState(
                 { isOpen, categories, popularQuestions, qaItems, loading, error },
@@ -281,15 +288,20 @@ export const WizardProvider = ({ children }) => {
             performanceMonitor.startOperation('initialDataLoad');
 
             // Load data sequentially to avoid race conditions
-            fetchCategories()
-                .then(() => fetchPopularQuestions())
-                .then(() => fetchQaItems())
+            fetchCategories(controller.signal)
+                .then(() => fetchPopularQuestions(controller.signal))
+                .then(() => fetchQaItems({}, controller.signal))
                 .catch(err => console.error('❌ Error loading initial data:', err))
                 .finally(() => performanceMonitor.endOperation('initialDataLoad'));
+            return () => controller.abort();
         } else {
             console.log('🔚 Wizard modal closed, resetting state...');
             resetState();
         }
+        return undefined;
+    // This lifecycle is intentionally keyed only to modal visibility; including
+    // fetched state would restart and cancel the initial request chain.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen]);
 
     const value = {

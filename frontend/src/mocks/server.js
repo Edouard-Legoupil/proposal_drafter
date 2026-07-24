@@ -6,9 +6,6 @@ const apiPath = API_BASE_URL.replace(/https?:\/\/[^/]+/, '')
 const normalizedApiBase = apiPath.replace(/\/$/, '')
 const buildApiRegex = (path) => new RegExp(`.*${normalizedApiBase}${path}`)
 
-// Minimal mock template for load-draft endpoint
-const proposalTemplate = { sections: [] };
-
 export const server = setupServer(
         http.get(`${API_BASE_URL}/profile`, () =>
                 HttpResponse.json({
@@ -111,6 +108,16 @@ export const server = setupServer(
         http.get(`${API_BASE_URL}/teams`, () =>
                 HttpResponse.json({ teams: [] })
         ),
+
+        http.get(`${API_BASE_URL}/users/me/approved-settings`, () =>
+                HttpResponse.json({ approved_settings: [] })
+        ),
+
+        http.get(`${API_BASE_URL}/wizard/categories`, () => HttpResponse.json([])),
+        http.get(`${API_BASE_URL}/wizard/popular`, () => HttpResponse.json([])),
+        http.get(`${API_BASE_URL}/wizard/qa`, () => HttpResponse.json({ items: [] })),
+        http.post(`${API_BASE_URL}/wizard/search`, () => HttpResponse.json({ results: [] })),
+        http.post(`${API_BASE_URL}/wizard/feedback`, () => HttpResponse.json({ success: true })),
 
         http.get(buildApiRegex('/templates'), () =>
                 HttpResponse.json({ templates: { "UNHCR": { sections: [] } } })

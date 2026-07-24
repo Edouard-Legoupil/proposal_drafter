@@ -27,7 +27,7 @@ describe('GrantSection', () => {
 
   it('calls onGrant when form is submitted', () => {
     render(<GrantSection {...props} />)
-    fireEvent.click(screen.getByRole('button', { name: /save grant/i }))
+    fireEvent.submit(screen.getByRole('button', { name: /save grant/i }).closest('form'))
     expect(props.onGrant).toHaveBeenCalled()
   })
 })

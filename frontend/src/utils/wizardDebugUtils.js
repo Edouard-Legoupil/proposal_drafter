@@ -60,7 +60,7 @@ export const validateWizardData = (data, dataType) => {
 
     // Validate structure based on data type
     switch (dataType) {
-        case 'categories':
+        case 'categories': {
             const requiredCategoryFields = ['id', 'name', 'description', 'question_count'];
             for (const item of data) {
                 const missingFields = requiredCategoryFields.filter(field => !(field in item));
@@ -70,8 +70,9 @@ export const validateWizardData = (data, dataType) => {
                 }
             }
             break;
+        }
 
-        case 'popularQuestions':
+        case 'popularQuestions': {
             const requiredPopularFields = ['id', 'question', 'category', 'view_count'];
             for (const item of data) {
                 const missingFields = requiredPopularFields.filter(field => !(field in item));
@@ -81,8 +82,9 @@ export const validateWizardData = (data, dataType) => {
                 }
             }
             break;
+        }
 
-        case 'qaItems':
+        case 'qaItems': {
             const requiredQaFields = ['id', 'question', 'answer', 'category_id', 'category'];
             for (const item of data) {
                 const missingFields = requiredQaFields.filter(field => !(field in item));
@@ -92,6 +94,7 @@ export const validateWizardData = (data, dataType) => {
                 }
             }
             break;
+        }
     }
 
     console.log(`✅ Valid ${dataType} data`, data);

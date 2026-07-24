@@ -14,7 +14,7 @@ import { useWizard } from '../../context/WizardContext';
 import {
     Dialog, DialogTitle, DialogContent, DialogActions,
     Button, TextField, CircularProgress,
-    List, ListItem, ListItemText, Divider,
+    List, ListItemButton, ListItemText, Divider,
     Tabs, Tab, Box, Typography, Rating,
     Pagination, Chip, IconButton
 } from '@mui/material';
@@ -49,7 +49,8 @@ const WizardModal = () => {
     const handleSearch = () => {
         if (searchQuery.trim()) {
             searchQa(searchQuery);
-            setActiveTab(1);
+            setActiveTab(0);
+            setSelectedCategory({ id: 'search', name: 'Search Results' });
             setSelectedQaItem(null);
         }
     };
@@ -219,6 +220,14 @@ const CategoriesView = ({
     qaItems, loading, error, handleQaItemSelect,
     handlePageChange, page
 }) => {
+    if (loading && categories.length === 0) {
+        return (
+            <Box display="flex" justifyContent="center" my={4}>
+                <CircularProgress aria-label="Loading questions" />
+            </Box>
+        );
+    }
+
     return (
         <>
             {/* Categories List */}
@@ -227,9 +236,8 @@ const CategoriesView = ({
             </Typography>
             <List dense>
                 {categories.map((category) => (
-                    <ListItem
+                    <ListItemButton
                         key={category.id}
-                        button
                         onClick={() => handleCategorySelect(category)}
                         selected={selectedCategory?.id === category.id}
                         aria-label={`Select category ${category.name}`}
@@ -240,7 +248,7 @@ const CategoriesView = ({
                             secondary={category.description || `${category.question_count || 0} questions`}
                         />
                         <Chip label={category.question_count || 0} size="small" />
-                    </ListItem>
+                    </ListItemButton>
                 ))}
             </List>
 
@@ -262,22 +270,22 @@ const CategoriesView = ({
                         <>
                             <List>
                                 {qaItems.map((item) => (
-                                    <ListItem
+                                    <ListItemButton
                                         key={item.id}
-                                        button
                                         onClick={() => handleQaItemSelect(item)}
                                         aria-label={`View answer to ${item.question}`}
                                         data-testid={`qa-item-${item.id}`}
                                     >
                                         <ListItemText
                                             primary={item.question}
+                                            secondaryTypographyProps={{ component: 'div' }}
                                             secondary={
-                                                <Typography variant="body2" color="text.secondary">
+                                                <Typography component="span" variant="body2" color="text.secondary">
                                                     {item.answer.substring(0, 100)}{item.answer.length > 100 ? '...' : ''}
                                                 </Typography>
                                             }
                                         />
-                                    </ListItem>
+                                    </ListItemButton>
                                 ))}
                             </List>
 
@@ -309,25 +317,25 @@ const PopularQuestionsView = ({ popularQuestions, handleQaItemSelect }) => {
             </Typography>
             <List>
                 {popularQuestions.map((item, index) => (
-                    <ListItem
+                    <ListItemButton
                         key={item.id}
-                        button
                         onClick={() => handleQaItemSelect(item)}
                         aria-label={`View popular question ${index + 1}: ${item.question}`}
                         data-testid={`popular-qa-item-${item.id}`}
                     >
                         <ListItemText
                             primary={`${index + 1}. ${item.question}`}
+                            secondaryTypographyProps={{ component: 'div' }}
                             secondary={
                                 <>
                                     <Chip label={item.category} size="small" sx={{ mr: 1 }} />
-                                    <Typography variant="body2" color="text.secondary">
+                                    <Typography component="span" variant="body2" color="text.secondary">
                                         Viewed {item.view_count} times
                                     </Typography>
                                 </>
                             }
                         />
-                    </ListItem>
+                    </ListItemButton>
                 ))}
             </List>
         </>

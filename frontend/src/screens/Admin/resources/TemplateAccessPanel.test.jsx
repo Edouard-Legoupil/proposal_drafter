@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { server } from '../../../mocks/server'
 import { MemoryRouter } from 'react-router-dom'
@@ -129,10 +129,11 @@ describe('TemplateAccessPanel', () => {
     )
 
     expect(await screen.findByText(/Shelter Template/i)).toBeInTheDocument()
-    expect(screen.getByText(/Kiran Patel/i)).toBeInTheDocument()
-    expect(screen.getByText(/active/i)).toBeInTheDocument()
-    expect(screen.getByText(/Owner/i)).toBeInTheDocument()
-    expect(screen.getByText(/organization/i)).toBeInTheDocument()
+    const header = document.querySelector('.template-access > header')
+    expect(within(header).getByText(/Kiran Patel/i)).toBeInTheDocument()
+    expect(within(header).getByText(/Status: active/i)).toBeInTheDocument()
+    expect(within(header).getByText(/Owner:/i)).toBeInTheDocument()
+    expect(within(header).getByText(/Visibility: organization/i)).toBeInTheDocument()
   })
 
   it('shows existing grants and permissions for the template', async () => {
@@ -144,9 +145,9 @@ describe('TemplateAccessPanel', () => {
       </WizardProvider>
     )
 
-    expect(await screen.findByText(/Amina Nyongo/i)).toBeInTheDocument()
-    expect(screen.getByText(/read/i)).toBeInTheDocument()
-    expect(screen.getByText(/edit/i)).toBeInTheDocument()
+    await screen.findByRole('heading', { name: /Shelter Template/i })
+    const grants = document.querySelector('.grants-list')
+    expect(within(grants).getByText(/Amina Nyongo.*read, edit/i)).toBeInTheDocument()
   })
 
   it('displays audit timeline with template history', async () => {
@@ -220,8 +221,10 @@ describe('TemplateAccessPanel', () => {
       </WizardProvider>
     )
 
-    expect(await screen.findByText(/Visibility/i)).toBeInTheDocument()
-    expect(screen.getByText(/organization/i)).toBeInTheDocument()
+    await screen.findByRole('heading', { name: /Shelter Template/i })
+    const header = document.querySelector('.template-access > header')
+    expect(within(header).getByText(/Visibility: organization/i)).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: /Visibility mode/i })).toBeInTheDocument()
   })
 
   it('displays different template types in the list', async () => {
