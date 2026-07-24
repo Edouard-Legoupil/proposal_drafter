@@ -479,7 +479,7 @@ The following security aspects are already well-implemented and do not require r
 
 | Security Feature | Status | Evidence |
 |-----------------|--------|----------|
-| JWT Bearer Token Authentication | ✅ Secure | Implemented with refresh tokens |
+| JWT Cookie Authentication | ✅ Secure | One 8-hour JWT; refresh tokens are not implemented |
 | Azure AD OAuth 2.0 (EntraID) | ✅ Secure | SSO integration available |
 | Secure Session Cookies | ✅ Secure | HTTP-only, Secure flag |
 | Password Hashing (PBKDF2) | ✅ Secure | Werkzeug security utils |

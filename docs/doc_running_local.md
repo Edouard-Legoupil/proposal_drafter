@@ -65,7 +65,7 @@ psql postgresql://postgres:postgres@localhost:5432/proposalgen -f db/seed.sql
 The application uses environment variables for configuration. You can find a list of the required variables in `backend/.env.example`. Create a `.env` file in this directory with your own values when running locally.
 
 
-Create a `.env` file in the `backend` directory - see `.env.example` for reference:
+Create `backend/.env` from `backend/.env.example` and replace every placeholder:
 
 
 ```env
@@ -88,16 +88,20 @@ SECRET_KEY=<your-secret-key>
 
 ### Step 4: Start the backend
 
-Open a terminal to launch the first part of the application.
+Run the backend from the repository root so the `backend` package resolves correctly:
 
 ```bash
-cd backend
-python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8502 --reload
+python -m venv .venv
+source .venv/bin/activate
+pip install -r backend/requirements.txt
+set -a
+source backend/.env
+set +a
+uvicorn backend.main:app --host 0.0.0.0 --port 8502 --reload
 ```
 
-You can go to http://localhost:8502/api/health_check to verify the service is running.
+Open http://localhost:8502/health to verify the service is running. A minimal liveness endpoint is available at
+http://localhost:8502/healthz.
 
 ### Step 5: Start the frontend
 
@@ -136,15 +140,7 @@ Make sure you have Docker and Docker Compose installed.
 
 Create a `.env` file in the `root` directory - see `.env.example` for reference:
 
-Then, run the following command, that use this env in the root directory of the project:
-
-with external db
-
-```bash
-docker-compose  --env-file .env -f docker-compose-local-nob.yml up --build
-```
-
-with DB managed in docker
+Run the checked-in Compose stack, which includes PostgreSQL:
 
 ```bash
 docker-compose  --env-file .env -f docker-compose-local.yml up --build
@@ -152,7 +148,7 @@ docker-compose  --env-file .env -f docker-compose-local.yml up --build
 
 Services:
 - Frontend: http://localhost:8503
-- Backend: http://localhost:8502/api/health_check
+- Backend: http://localhost:8502/health
 - PostgreSQL: localhost:5432
 - Redis: localhost:6379
 
@@ -160,19 +156,19 @@ Services:
 
 ```bash
 sleep 10
-psql postgresql://postgres:postgres@localhost:5432/proposalgen -f database-setup.sql
+psql postgresql://postgres:postgres@localhost:5432/proposalgen -f db/database-setup.sql
 ```
 
 Congrat if you have everything working locally, you can go to the next step - getting this on the cloud:
 
-For cloud deployement, see the  `doc_cloud-deployment.md`
+For cloud deployment, see [the cloud deployment guide](doc_cloud-deployment.md).
 
-Note that you can also run all the built-in test with playwright, see the doc `pplaywright/readme.md`
+For browser tests, see [the Playwright guide](../playwright/README.md).
 
 
 ## Test
 
 ```bash
-cd frontend && npm run lint && npm run test
-cd backend  && pytest
+cd frontend && npm run lint && npm run test -- --run && npm run build
+set -a && source backend/.env && set +a && pytest backend/tests
 ```

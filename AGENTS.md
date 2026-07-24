@@ -124,7 +124,7 @@ Follow the conventional commits pattern:
 ---
 
 > [!TIP]
-> When implementing new AI features, check `backend/config/agents.yaml` and `backend/config/tasks.yaml` first, as most of the agentic logic resides there.
+> When implementing new AI features, check the workflow-specific YAML files in `backend/utils/config/` first.
 
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,

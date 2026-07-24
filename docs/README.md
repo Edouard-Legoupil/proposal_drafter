@@ -115,7 +115,7 @@ The API uses JWT (JSON Web Token) authentication:
 1. **Login**: `POST /api/login` with email and password
 2. **Receive Token**: Get JWT token in response
 3. **Use Token**: Include `Authorization: Bearer <token>` in requests
-4. **Token Expiry**: Tokens expire after 1 hour (configurable)
+4. **Token Expiry**: Tokens expire after 8 hours (currently fixed in the authentication endpoints)
 
 ### Role-Based Access Control
 

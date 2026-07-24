@@ -11,14 +11,14 @@
 
 The Proposal Drafter is a comprehensive agentic AI system designed to automate and enhance the creation of high-quality, structured project proposals for UN agencies, NGOs, and mission-driven organizations. This implementation plan covers the full-stack development approach including backend (FastAPI), frontend (React + Vite + MUI), multi-agent orchestration (CrewAI), and knowledge management (PostgreSQL with pgvector).
 
-The system is currently **PRODUCTION - Feature Complete** as of April 2025, with ongoing enhancements in Phase 5 and Phase 6.
+The system is in active development. Production deployment requires environment-specific security and operational review.
 
 ---
 
 ## Technical Context
 
 **Language/Version**: Python 3.10+ (Backend), JavaScript/JSX (Frontend)
-**Primary Dependencies**: FastAPI, CrewAI, SQLAlchemy 2.0+, PostgreSQL 15+, pgvector, Redis 7+, React 18+, Vite, Material UI (MUI) v5+
+**Primary Dependencies**: FastAPI, CrewAI, SQLAlchemy 2.0+, PostgreSQL 15+, pgvector, Redis 7+, React 19, Vite 6, Material UI (MUI) v6
 **Storage**: PostgreSQL 15+ with pgvector extension (Primary), Redis 7+ (Cache/Session)
 **Testing**: pytest (Backend Unit/Integration), Playwright (E2E), Vitest (Frontend Unit)
 **Target Platform**: Linux server (Docker), Web browsers (Chrome, Firefox, Safari, Edge)
@@ -52,20 +52,20 @@ The system is currently **PRODUCTION - Feature Complete** as of April 2025, with
 
 | Security Requirement | Status | Notes | Remediation Task |
 |----------------------|--------|-------|-----------------|
-| JWT Authentication (HS256) | ✅ PASS | Implemented with refresh tokens | - |
-| Azure AD OAuth 2.0 (EntraID) | ✅ PASS | SSO integration available | - |
-| Secure Session Cookies | ⚠️ PARTIAL | HTTP-only cookies implemented, but timeout too long | TASK-SEC-005 |
+| JWT Authentication (HS256) | ✅ PASS | One 8-hour JWT in an HttpOnly cookie; no refresh token | - |
+| Azure AD OAuth 2.0 (EntraID) | ✅ PASS | Optional SSO with state validation and an exact configured callback | - |
+| Secure Session Cookies | ✅ PASS | HttpOnly, SameSite=Lax, Secure outside local development | TASK-SEC-005 |
 | Password Hashing (PBKDF2) | ✅ PASS | Werkzeug security utils | - |
-| RBAC with 6 role types | ⚠️ PARTIAL | Implemented, but object-level auth missing | TASK-SEC-001 |
-| Pydantic Input Validation | ✅ PASS | All API requests validated | - |
-| HTTPS/TLS for all communications | ✅ PASS | Enforced in production | - |
+| RBAC and object access | ✅ PASS | Direct/inherited roles plus owner, user, and team resource grants | TASK-SEC-001 |
+| Pydantic Input Validation | ⚠️ PARTIAL | Newer contracts use Pydantic; legacy handlers still parse request dictionaries | - |
+| HTTPS/TLS for all communications | ⚠️ DEPLOYMENT | HSTS is emitted; TLS termination is an infrastructure responsibility | - |
 | Prompt Injection Prevention | ⚠️ PARTIAL | Structured prompts, but need sanitization | TASK-SEC-004 |
 | Output Validation | ✅ PASS | JSON parsing, schema validation, repair | - |
-| Secrets Management | ⚠️ PARTIAL | Environment variables used, but need production service | TASK-SEC-002 |
+| Secrets Management | ✅ PASS | Environment variables plus Azure Key Vault and Google Secret Manager adapters | TASK-SEC-002 |
 | Audit Trail | ⚠️ PARTIAL | Changes logged, but need comprehensive audit logging | TASK-SEC-008 |
-| Dependency Scanning | ✅ PASS | Comprehensive scanning with SBOM generation implemented | TASK-SEC-010 |
+| Dependency Scanning | ⚠️ PARTIAL | Safety is available, but scanning and SBOM jobs are not enforced by the main CI workflow | TASK-SEC-010 |
 
-**Security Gate Status:** 6/11 Fully Implemented, 5/11 Need Remediation
+**Security Gate Status:** Mixed. Treat the individual rows as the current status; deployment controls require a separate review.
 
 > **Action Required:** Complete all ⚠️ PARTIAL gates before production deployment.
 
@@ -85,18 +85,18 @@ The system is currently **PRODUCTION - Feature Complete** as of April 2025, with
 
 **Security Remediation Status:**
 - 10 security findings identified (reduced from 12)
-- 3 HIGH severity (CRITICAL for production)
+- 1 remaining HIGH-severity remediation item (TASK-SEC-003)
 - 5 MEDIUM severity
 - 2 LOW severity
-- 1 finding resolved (TASK-SEC-010 completed)
-- Critical findings still require implementation before production deployment
+- Object-level authorization and session hardening are implemented and tested
+- Production deployment still requires infrastructure and operational validation
 
 **Next Steps:**
 1. Review security tasks in [tasks.md](../../../.specify/memory/task.md)
-2. Prioritize Phase 1 (TASK-SEC-001, TASK-SEC-003) as production blockers
-3. Complete TASK-SEC-002 (already completed)
+2. Complete TASK-SEC-003 and review remaining partial controls
+3. Validate secrets-provider configuration in the target environment
 4. Proceed with Phase 2 security enhancements
-5. Integrate completed dependency scanning into CI/CD pipeline
+5. Integrate dependency scanning and SBOM generation into CI/CD
 6. Complete security remediation before production deployment
 
 ---
@@ -214,7 +214,7 @@ The following security tasks **MUST** be completed before production deployment:
 
 | Task ID | Title | Severity | Priority | Effort | Status |
 |---------|-------|----------|----------|--------|--------|
-| TASK-SEC-001 | Object-Level Authorization | HIGH | CRITICAL | 3-5 days | ⏳ Pending |
+| TASK-SEC-001 | Object-Level Authorization | HIGH | CRITICAL | 3-5 days | ✅ COMPLETE |
 | TASK-SEC-002 | Production-Grade Secrets Management | HIGH | CRITICAL | 2-3 days | ✅ COMPLETE |
 | TASK-SEC-003 | Standardize Secure Error Handling | HIGH | CRITICAL | 2-3 days | ⏳ Pending |
 
@@ -222,27 +222,27 @@ The following security tasks **MUST** be completed before production deployment:
 | Task ID | Title | Severity | Priority | Effort | Status |
 |---------|-------|----------|----------|--------|--------|
 | TASK-SEC-004 | LLM Prompt Injection Prevention | MEDIUM | HIGH | 2-3 days | ⏳ Pending |
-| TASK-SEC-005 | Harden Session Management | MEDIUM | HIGH | 2 days | ⏳ Pending |
+| TASK-SEC-005 | Harden Session Management | MEDIUM | HIGH | 2 days | ✅ COMPLETE |
 | TASK-SEC-006 | LLM Rate Limiting | MEDIUM | HIGH | 2 days | ⏳ Pending |
 | TASK-SEC-008 | Comprehensive Audit Logging | MEDIUM | HIGH | 3-4 days | ⏳ Pending |
 
 ### Medium Priority Security Tasks
 | Task ID | Title | Severity | Priority | Effort | Status |
 |---------|-------|----------|----------|--------|--------|
-| TASK-SEC-007 | Security HTTP Headers | MEDIUM | MEDIUM | 1 day | ⏳ Pending |
+| TASK-SEC-007 | Security HTTP Headers | MEDIUM | MEDIUM | 1 day | ✅ COMPLETE |
 
 ### Low Priority Security Tasks
 | Task ID | Title | Severity | Priority | Effort | Status |
 |---------|-------|----------|----------|--------|--------|
 | TASK-SEC-009 | Multi-Factor Authentication | LOW | LOW | 3-5 days | ⏳ Pending |
-| TASK-SEC-010 | Dependency Scanning & SBOM | LOW | LOW | 2-3 days | ⏳ Pending |
+| TASK-SEC-010 | Dependency Scanning & SBOM | LOW | LOW | 2-3 days | ⚠️ PARTIAL |
 | TASK-SEC-011 | Security-Specific Telemetry | LOW | LOW | 2 days | ⏳ Pending |
 
 ### Implementation Sequence
-1. **Phase 1 (1-2 weeks)**: TASK-SEC-001, TASK-SEC-003 (Critical blockers)
-2. **Phase 2 (1-2 weeks)**: TASK-SEC-004, TASK-SEC-005, TASK-SEC-006, TASK-SEC-007, TASK-SEC-008
+1. **Phase 1**: TASK-SEC-001 and TASK-SEC-005 are complete; TASK-SEC-003 remains.
+2. **Phase 2**: TASK-SEC-007 is complete; TASK-SEC-004, TASK-SEC-006, and TASK-SEC-008 remain.
 3. **Phase 3 (1-2 weeks)**: TASK-SEC-009, TASK-SEC-011
-4. **✅ Phase 3 Completed**: TASK-SEC-002, TASK-SEC-010 (Already implemented)
+4. **Cross-cutting**: TASK-SEC-002 is complete; TASK-SEC-010 remains partial until CI enforces it.
 
 ### Secrets Management Implementation
 
@@ -264,10 +264,9 @@ The production-grade secrets management system has been implemented with the fol
 #### 2. Pre-commit Hooks
 - **File:** `.pre-commit-config.yaml`
 - **Features:**
-  - `detect-secrets`: Scans for potential secrets in code
   - `detect-private-key`: Prevents private keys from being committed
   - `black`, `flake8`, `mypy`: Code quality enforcement
-  - `.secrets.baseline`: Baseline for known safe secrets
+  - A `detect-secrets` configuration exists but is currently commented out and is not an active gate
 
 #### 3. Secrets Rotation Script
 - **File:** `scripts/secrets-rotation.sh`

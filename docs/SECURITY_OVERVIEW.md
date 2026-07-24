@@ -1,64 +1,67 @@
-# Proposal Drafter Security Overview
+# Proposal Drafter security overview
 
-The Proposal Drafter application implements a comprehensive, enterprise-grade security framework. The solution aligns with key compliance frameworks, including [ICT Security Policy](https://unhcr365.sharepoint.com/sites/IntranetSupportServices/SitePages/ict-operations/ict-services/Main-cybersecurity/CybersecurityAdviceStandardsAndGuidelines.aspx), [ISO 27001 controls](https://www.iso.org/isoiec-27001-information-security.html), and [OWASP](https://owasp.org/www-project-top-ten/) risk mitigation strategies. It also takes into account [NIST Cybersecurity Framework](https://www.nist.gov/cyberframework)
+This document describes controls implemented in the application. Infrastructure controls such as a web application
+firewall, private networking, encryption at rest, backups, and SIEM integration remain deployment responsibilities.
 
-Its security posture is built on layered controls spanning authentication, authorization, data protection, monitoring, and incident response, ensuring a high level of protection across the entire system lifecycle.
+## Authentication and sessions
 
+The application supports local password authentication and optional Microsoft Entra ID single sign-on (SSO). Entra
+multi-factor authentication and Conditional Access depend on the tenant policy; the application does not enable them.
 
-## Authentication
+Successful local or SSO authentication creates one HS256 JWT that expires after 8 hours. The token is stored only in an
+`HttpOnly` cookie with `SameSite=Lax`; the cookie is `Secure` outside local development. The application does not issue a
+refresh token. The OAuth flow also uses a random, `HttpOnly` state cookie with a ten-minute lifetime and compares the
+returned state in constant time.
 
-At the authentication level, the application relies primarily on Single Sign-On (SSO) integrated with Microsoft Entra ID, which automatically enforces multi-factor authentication (MFA). This inherited MFA approach eliminates the need for separate configuration while leveraging enterprise-grade identity controls, including conditional access and risk-based authentication. Access is secured using JSON Web Tokens (JWTs) with short expiration times (1 hour) and refresh tokens (24 hours), stored securely in HTTP-only cookies. Token revocation is immediate in case of logout or detected security events, reducing the risk of session abuse.
+When Redis is available, the backend stores the active JWT for 8 hours and compares it on each authenticated request.
+Logout deletes that Redis record and clears the cookie. If Redis is unavailable, the application deliberately falls back
+to validating the signed JWT until it expires. Deploy Redis as a reliable service when immediate session revocation is a
+requirement.
 
-```mermaid
-graph TD
-    A[User] -->|SSO Login| B[Microsoft Entra ID]
-    B -->|MFA Challenge| C[User Device]
-    C -->|MFA Response| B
-    B -->|JWT Token| D[Proposal Drafter API]
-    D -->|Access Granted| A
-```
+Set a unique `SECRET_KEY` of at least 32 characters outside development. The application rejects the documented default
+or a short key when `APP_ENV` is not `development`.
 
-In production, the application is deployed behind standard security measures, including Cloudflare CDN and Azure Front Door.
-```mermaid
-graph TD
-    A[User] -->|HTTPS| B[Cloudflare CDN]
-    B -->|WAF| C[Azure Front Door]
-    C -->|TLS 1.3| D[Azure App Service]
-    D -->|Private Network| E[Azure PostgreSQL]
-    D -->|Private Network| F[Azure Redis]
-    D -->|Managed Identity| G[Azure Key Vault]
-    A -->|SSO| H[Microsoft Entra ID]
-    H -->|MFA| A
-    H -->|JWT| D
-```
+## Authorization
 
+Direct and team-inherited roles protect administrative, analytical, and workflow endpoints. A user is a system
+administrator only when the normalized `system admin` role is present.
 
-## Authorization & Access Control
+Object-level checks protect proposals, knowledge cards, templates, sessions, and related mutations. System administrators
+can create explicit user or team grants for proposals, knowledge cards, and templates. Those grants are persisted in
+`resource_access_grants` and consumed by runtime authorization checks. Ownership changes, grants, revocations, and
+template-visibility changes are written to `resource_access_audit`.
 
-Authorization is managed through a combination of Role-Based Access Control (RBAC) and Attribute-Based Access Control (ABAC). RBAC defines a clear hierarchy of roles—guest, user, editor, admin, and superadmin—with progressively increasing privileges across proposals, templates, users, and audit functions. ABAC enhances this by enforcing context-aware restrictions such as geographic limits, donor group visibility, and field-specific access. Together, these models ensure precise and flexible permission management aligned with the principle of least privilege.
+## Browser and API controls
 
-| Role | Proposals | Users | Templates | Admin | Audit |
-|------|-----------|-------|----------|-------|-------|
-| user | CRUD | Read | Read | - | - |
-| editor | CRUD | Read | CRUD | - | - |
-| superadmin | CRUD | CRUD | CRUD | CRUD | CRUD |
+The backend configures trusted hosts, an explicit CORS origin allowlist, credentialed requests, and these response headers:
 
+- Content Security Policy
+- Strict-Transport-Security
+- X-Content-Type-Options
+- X-Frame-Options
+- Referrer-Policy
+- Permissions-Policy
+- no-store cache directives for responses that do not define their own policy
 
+Authentication cookies are not exposed to frontend JavaScript. The frontend uses `credentials: include` and does not
+persist bearer tokens in local storage.
 
-## Data Protection
+Login, signup, password-recovery, and selected generation endpoints use application rate limits. API inputs increasingly
+use Pydantic models, while database access uses SQLAlchemy ORM or parameterized SQL. These controls reduce risk but do not
+replace threat modelling, dependency review, penetration testing, or secure infrastructure configuration.
 
-Data protection is enforced through strong encryption both in transit and at rest. Transport Layer Security ( secures all communications using modern cipher suites and perfect forward secrecy. At rest, data is encrypted using PostgreSQL-native mechanisms and managed securely through Azure Key Vault for secrets and keys. This ensures confidentiality and integrity of sensitive data throughout its lifecycle.
+## Secrets and logging
 
+Development reads secrets from ignored environment files. Production can resolve supported secrets through Azure Key
+Vault, Google Secret Manager, or injected environment variables. Never commit `.env` files.
 
-The application also incorporates robust network and API security controls. APIs are protected through rate limiting, CORS policies, CSRF protections, and strong security headers, reducing exposure to common web-based attacks.
+The application records security and administrative events in application logs, and resource-access changes in the
+database audit table. It does not automatically forward logs to a SIEM or define retention; operators must configure log
+shipping, access, alerting, and retention for their environment.
 
-The application leverages SQLAlchemy ORM (Object-Relational Mapping) to prevent SQL injection vulnerabilities. Instead of constructing raw SQL queries, all database interactions are performed through parameterized queries generated by the ORM, which automatically separates user input from executable SQL code.
+## Known operational considerations
 
-From an application security perspective, the system employs rigorous input validation, output sanitization, and secure coding practices. Technologies like FastAPI, Pydantic, React validation libraries, and tools such as DOMPurify are used to prevent injection attacks and cross-site scripting. The design emphasizes fail-secure defaults, minimal privilege usage, and safe error handling.
-
-
-## Monitoring & Logging
-
-Monitoring and logging are integral components of the security strategy. The system logs authentication events, access patterns, administrative actions, and system changes. These logs are integrated into a Security Information and Event Management (SIEM) system for real-time threat detection, anomaly analysis, and automated incident response. Retention policies ensure long-term auditability and compliance.
-
-In addition, the application includes a well-defined incident response framework with clear classification levels, response timelines, and structured procedures for detection, containment, recovery, and post-incident analysis. Privacy is embedded through “privacy by design” principles, emphasizing data minimization, user rights, and regulatory compliance.
+- Redis fallback preserves availability but weakens immediate logout and revocation semantics.
+- The JWT lifetime is fixed at 8 hours in the current authentication endpoints.
+- Entra MFA, TLS termination, encryption at rest, network isolation, and monitoring are deployment controls.
+- Apply database migrations before deploying code that depends on new access-control tables.

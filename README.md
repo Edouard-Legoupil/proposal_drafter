@@ -42,20 +42,22 @@ The application will work on older systems but some features may not function op
 
 Each agent is powered by an LLM and follows a role-specific prompt and toolset.
 
-The key configuration files are in `backend/config/agents.yaml` and `backend/config/tasks.yaml`, which define the agents' roles, prompts, and tasks.
+CrewAI roles and tasks are split by workflow under `backend/utils/config/`. For example,
+proposal generation uses `backend/utils/config/agents_proposal.yaml` and
+`backend/utils/config/tasks_proposal.yaml`.
 
 ![AI Agent Crew Description](https://raw.githubusercontent.com/edouard-legoupil/proposal_drafter/refs/heads/main/img/crew.png)
 
 ## 🛠️ Installation
 
-Refer to [doc_running_local.md](https://github.com/edouard-legoupilproposal_drafter/blob/main/doc_running_local.md)
+Refer to [the local setup guide](docs/doc_running_local.md).
 
 
 ## 🔒 Security
 
 This project prioritizes security to ensure the safe handling of sensitive information and the integrity of the proposal generation process. Our approach to security includes the following considerations:
 
-*   **Data Privacy**: As the application is designed to work from Public Data Sources, elements related to Data Protection in relation Personally Identifiable Information do not apply.
+*   **Data Privacy**: Treat account, proposal, and audit data as sensitive. Configure retention, access, and infrastructure controls for your deployment.
 *   **Secure Coding Practices**: We adhere to secure coding standards to minimize vulnerabilities. This includes practices like input validation to prevent common security flaws. A large part of the codebase has been created through [vibe coding](https://en.wikipedia.org/wiki/Vibe_coding) interactions with [Google Jules](https://jules.google.com)
 *   **Dependency Management**: We actively manage our open-source dependencies and use tools to scan for known vulnerabilities. We strive to keep all libraries up-to-date to protect against security threats.
 *   **LLM Security**: For the AI components, we are mindful of risks such as prompt injection. We design our prompts and agentic workflows to be robust against malicious inputs and to ensure the Large Language Model (LLM) behaves within its intended scope.

@@ -38,7 +38,8 @@ The backend code is organized into the following modules:
     -   `auth.py`: User authentication endpoints (signup, login, logout, etc.).
     -   `proposals.py`: Endpoints for managing the entire proposal lifecycle.
     -   `documents.py`: Endpoints for generating and downloading proposal documents.
-    -   `health.py`: Health check and debugging endpoints.
+    -   `health.py`: Liveness and dependency health endpoints.
+    -   `admin_resource_access.py`: Administrative grants, ownership, visibility, and effective-access testing.
 
 -   **`core/`**: This module contains the core components of the application.
     -   `config.py`: Application configuration, environment variable loading, and template discovery.
@@ -50,7 +51,8 @@ The backend code is organized into the following modules:
     -   `schemas.py`: Pydantic models for all API request and response data.
 
 -   **`utils/`**: This module contains utility functions.
-    -   `crew.py`: Defines the CrewAI agents and tasks for proposal generation.
+    -   `crew_proposal.py`, `crew_knowledge.py`, and `crew_reference.py`: Define the CrewAI workflows.
+    -   `config/`: YAML agent and task configuration for each CrewAI workflow.
     -   `doc_export.py`: Helper functions for creating and exporting `.docx` and `.pdf` documents.
     -   `markdown.py`: Helper functions for handling Markdown conversions.
     -   `proposal_logic.py`: Core logic for regenerating proposal sections.
@@ -117,6 +119,15 @@ This endpoint provides health check information for the application.
 -   **`GET /health`**: Checks the health of the API.
     -   **What it needs**: Nothing.
     -   **What it returns**: A status message indicating that the API is running, along with the current timestamp and memory usage.
+
+-   **`GET /healthz`**: Returns a minimal liveness response for container probes.
+
+### Administrative resource access (`/api/admin_resource_access.py`)
+
+System administrators can manage explicit user or team grants for proposals, knowledge cards, and templates through
+`/api/admin/{resource}/{resource_id}/access`. The API also supports effective-access tests, proposal and knowledge-card
+ownership transfer, template visibility, and an audit timeline. Apply
+`db/migrations/20260723_add_resource_access_management.sql` to existing databases before using these endpoints.
 
 ### Knowledge Cards (`/api/knowledge.py`)
 

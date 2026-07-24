@@ -177,7 +177,7 @@ The following security aspects remain well-implemented:
 
 | Security Feature | Status | Evidence |
 |-----------------|--------|----------|
-| JWT Bearer Token Authentication | ✅ Secure | Implemented with refresh tokens |
+| JWT Cookie Authentication | ✅ Secure | One 8-hour JWT; refresh tokens are not implemented |
 | Azure AD OAuth 2.0 (EntraID) | ✅ Secure | SSO integration available |
 | Password Hashing (PBKDF2) | ✅ Secure | Werkzeug security utils |
 | Pydantic Input Validation | ✅ Secure | All API requests validated |
