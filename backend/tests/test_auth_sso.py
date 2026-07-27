@@ -6,16 +6,16 @@ from fastapi import Request
 from backend.api.auth import _resolve_sso_redirect_uri, callback, sso_login, sso_status
 
 
-def _mock_request(*, cookies=None):
+def _mock_request(*, cookies=None, callback_url="http://localhost:8502/api/callback"):
     request = MagicMock(spec=Request)
     request.cookies = cookies or {}
     request.headers = {"host": "localhost", "origin": "http://localhost:8503"}
-    request.url_for.return_value = "http://localhost:8502/api/callback"
+    request.url_for.return_value = callback_url
     return request
 
 
 def test_explicit_redirect_uri_wins_in_development():
-    request = _mock_request()
+    request = _mock_request(callback_url="https://proposal.example/api/callback")
 
     with patch("backend.api.auth.APP_ENV", "development"), patch(
         "backend.api.auth.ENTRA_REDIRECT_URI", "https://app.example/api/callback"
@@ -26,13 +26,31 @@ def test_explicit_redirect_uri_wins_in_development():
     request.url_for.assert_not_called()
 
 
-def test_missing_redirect_uri_is_inferred_in_development():
-    request = _mock_request()
+@pytest.mark.parametrize(
+    "callback_url",
+    [
+        "http://localhost:8502/api/callback",
+        "http://127.0.0.1:8502/api/callback",
+        "http://[::1]:8502/api/callback",
+    ],
+)
+def test_missing_redirect_uri_is_inferred_for_loopback_host_in_development(callback_url):
+    request = _mock_request(callback_url=callback_url)
 
     with patch("backend.api.auth.APP_ENV", "development"), patch("backend.api.auth.ENTRA_REDIRECT_URI", None):
         redirect_uri = _resolve_sso_redirect_uri(request)
 
-    assert redirect_uri == "http://localhost:8502/api/callback"
+    assert redirect_uri == callback_url
+    request.url_for.assert_called_once_with("callback")
+
+
+def test_missing_redirect_uri_is_not_inferred_for_public_host_in_development():
+    request = _mock_request(callback_url="https://proposal.example/api/callback")
+
+    with patch("backend.api.auth.APP_ENV", "development"), patch("backend.api.auth.ENTRA_REDIRECT_URI", None):
+        redirect_uri = _resolve_sso_redirect_uri(request)
+
+    assert redirect_uri is None
     request.url_for.assert_called_once_with("callback")
 
 
@@ -48,20 +66,25 @@ def test_missing_redirect_uri_is_not_inferred_in_production():
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    ("app_env", "redirect_uri", "expected_enabled"),
+    ("app_env", "redirect_uri", "callback_url", "expected_enabled"),
     [
-        ("development", None, True),
-        ("production", None, False),
-        ("production", "https://app.example/api/callback", True),
+        ("development", None, "http://localhost:8502/api/callback", True),
+        ("development", None, "https://proposal.example/api/callback", False),
+        ("production", None, "http://localhost:8502/api/callback", False),
+        ("production", "https://app.example/api/callback", "https://proposal.example/api/callback", True),
     ],
 )
-async def test_sso_status_requires_credentials_and_an_available_redirect_uri(app_env, redirect_uri, expected_enabled):
+async def test_sso_status_requires_credentials_and_an_available_redirect_uri(
+    app_env, redirect_uri, callback_url, expected_enabled
+):
+    request = _mock_request(callback_url=callback_url)
+
     with patch("backend.api.auth.APP_ENV", app_env), patch("backend.api.auth.ENTRA_TENANT_ID", "tenant"), patch(
         "backend.api.auth.ENTRA_CLIENT_ID", "client"
     ), patch("backend.api.auth.ENTRA_CLIENT_SECRET", "secret"), patch(
         "backend.api.auth.ENTRA_REDIRECT_URI", redirect_uri
     ):
-        response = await sso_status()
+        response = await sso_status(request)
 
     assert response == {"enabled": expected_enabled}
 

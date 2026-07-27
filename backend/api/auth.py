@@ -6,6 +6,7 @@ import os
 import secrets
 import uuid
 from datetime import datetime, timedelta
+from urllib.parse import urlparse
 
 #  Third-Party Libraries
 import httpx
@@ -51,24 +52,26 @@ def _has_sso_credentials() -> bool:
     return all([ENTRA_TENANT_ID, ENTRA_CLIENT_ID, ENTRA_CLIENT_SECRET])
 
 
-def _redirect_uri_available() -> bool:
-    return bool(ENTRA_REDIRECT_URI or APP_ENV == "development")
+def _redirect_uri_available(request: Request) -> bool:
+    return _resolve_sso_redirect_uri(request) is not None
 
 
 def _resolve_sso_redirect_uri(request: Request) -> str | None:
     if ENTRA_REDIRECT_URI:
         return ENTRA_REDIRECT_URI
     if APP_ENV == "development":
-        return str(request.url_for("callback"))
+        callback_url = str(request.url_for("callback"))
+        if urlparse(callback_url).hostname in {"localhost", "127.0.0.1", "::1"}:
+            return callback_url
     return None
 
 
 @router.get("/sso-status")
-async def sso_status():
+async def sso_status(request: Request):
     """
     Returns the status of SSO.
     """
-    return {"enabled": _has_sso_credentials() and _redirect_uri_available()}
+    return {"enabled": _has_sso_credentials() and _redirect_uri_available(request)}
 
 
 def _get_msal_app():
