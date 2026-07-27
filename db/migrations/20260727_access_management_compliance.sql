@@ -227,26 +227,29 @@ CREATE TABLE IF NOT EXISTS access_settings (
 -- Refresh definitions originally installed by 20240818_add_team_settings.sql.
 -- Existing deployments must receive the same active-membership and provenance
 -- policy as a database created from the current bootstrap.
-CREATE OR REPLACE FUNCTION get_inherited_settings_for_user(user_id VARCHAR(36))
+DROP FUNCTION IF EXISTS get_inherited_settings_for_user(VARCHAR);
+DROP FUNCTION IF EXISTS apply_inherited_settings_to_user(VARCHAR);
+
+CREATE OR REPLACE FUNCTION get_inherited_settings_for_user(user_id UUID)
 RETURNS TABLE(
     setting_type VARCHAR(50),
     setting_value VARCHAR(255),
     source_type VARCHAR(20),
-    source_id VARCHAR(36)
+    source_id UUID
 ) AS $$
 BEGIN
     RETURN QUERY
     -- First get the user's teams
     WITH user_teams AS (
-        SELECT team_id FROM team_members
-        WHERE user_id = get_inherited_settings_for_user.user_id
-          AND status = 'ACTIVE'
+        SELECT tm.team_id FROM team_members tm
+        WHERE tm.user_id = get_inherited_settings_for_user.user_id
+          AND tm.status = 'ACTIVE'
     )
     -- Get team settings for those teams
     SELECT
         ts.setting_type,
         ts.setting_value,
-        'team' AS source_type,
+        CAST('team' AS VARCHAR(20)) AS source_type,
         ts.team_id AS source_id
     FROM team_settings ts
     JOIN user_teams ut ON ts.team_id = ut.team_id
@@ -255,10 +258,10 @@ BEGIN
 
     -- Also include user's direct settings for completeness
     SELECT
-        setting_type,
-        setting_value,
-        'user' AS source_type,
-        user_id AS source_id
+        usr.setting_type,
+        CAST(usr.setting_value AS VARCHAR(255)),
+        CAST('user' AS VARCHAR(20)) AS source_type,
+        usr.user_id AS source_id
     FROM user_settings_requests usr
     WHERE usr.user_id = get_inherited_settings_for_user.user_id
       AND usr.status = 'approved'
@@ -279,27 +282,27 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create function to apply inherited settings to a user
-CREATE OR REPLACE FUNCTION apply_inherited_settings_to_user(user_id VARCHAR(36))
+CREATE OR REPLACE FUNCTION apply_inherited_settings_to_user(user_id UUID)
 RETURNS VOID AS $$
 DECLARE
     team_setting RECORD;
 BEGIN
     -- Get all inherited team settings for the user
     FOR team_setting IN
-        SELECT setting_type, setting_value
+        SELECT ts.setting_type, ts.setting_value
         FROM team_settings ts
         WHERE ts.team_id IN (
-            SELECT team_id FROM team_members
-            WHERE user_id = apply_inherited_settings_to_user.user_id
-              AND status = 'ACTIVE'
+            SELECT tm.team_id FROM team_members tm
+            WHERE tm.user_id = apply_inherited_settings_to_user.user_id
+              AND tm.status = 'ACTIVE'
         )
     LOOP
         -- Check if user already has this setting
-        PERFORM 1 FROM user_settings_requests
-        WHERE user_id = apply_inherited_settings_to_user.user_id
-        AND setting_type = team_setting.setting_type
-        AND setting_value = team_setting.setting_value
-        AND status = 'approved'
+        PERFORM 1 FROM user_settings_requests usr
+        WHERE usr.user_id = apply_inherited_settings_to_user.user_id
+        AND usr.setting_type = team_setting.setting_type
+        AND usr.setting_value = team_setting.setting_value
+        AND usr.status = 'approved'
         LIMIT 1;
 
         IF NOT FOUND THEN
@@ -325,10 +328,10 @@ RETURNS TRIGGER AS $$
 BEGIN
     IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
         -- When a team setting is added or updated, apply to all team members
-        PERFORM apply_inherited_settings_to_user(user_id)
-        FROM team_members
-        WHERE team_id = NEW.team_id
-          AND status = 'ACTIVE';
+        PERFORM apply_inherited_settings_to_user(tm.user_id)
+        FROM team_members tm
+        WHERE tm.team_id = NEW.team_id
+          AND tm.status = 'ACTIVE';
     END IF;
 
     RETURN NEW;

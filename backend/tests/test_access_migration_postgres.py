@@ -76,6 +76,20 @@ def test_access_migration_is_idempotent_and_preserves_only_safe_assignments():
                 approved_at TIMESTAMPTZ,
                 UNIQUE (user_id, setting_type, setting_value)
             );
+            CREATE FUNCTION get_inherited_settings_for_user(user_id VARCHAR(36))
+            RETURNS TABLE(
+                setting_type VARCHAR(50), setting_value VARCHAR(255),
+                source_type VARCHAR(20), source_id VARCHAR(36)
+            ) LANGUAGE sql AS $$
+                SELECT NULL::VARCHAR(50), NULL::VARCHAR(255),
+                       NULL::VARCHAR(20), NULL::VARCHAR(36) WHERE FALSE
+            $$;
+            CREATE FUNCTION apply_inherited_settings_to_user(user_id VARCHAR(36))
+            RETURNS VOID LANGUAGE plpgsql AS $$
+            BEGIN
+                RETURN;
+            END;
+            $$;
             """
         )
 
@@ -174,10 +188,16 @@ def test_access_migration_is_idempotent_and_preserves_only_safe_assignments():
         cursor.execute("SELECT pg_get_functiondef('enforce_active_team_leader_membership()'::regprocedure)")
         assert "FOR UPDATE" in cursor.fetchone()[0]
 
-        cursor.execute("SELECT pg_get_functiondef('apply_inherited_settings_to_user(character varying)'::regprocedure)")
+        cursor.execute("SELECT to_regprocedure('get_inherited_settings_for_user(character varying)')")
+        assert cursor.fetchone()[0] is None
+        cursor.execute("SELECT to_regprocedure('apply_inherited_settings_to_user(character varying)')")
+        assert cursor.fetchone()[0] is None
+        cursor.execute("SELECT pg_get_functiondef('apply_inherited_settings_to_user(uuid)'::regprocedure)")
         inherited_policy = cursor.fetchone()[0]
         assert "status = 'ACTIVE'" in inherited_policy
         assert "NULL" in inherited_policy
+        cursor.execute("SELECT pg_get_function_result('get_inherited_settings_for_user(uuid)'::regprocedure)")
+        assert "source_id uuid" in cursor.fetchone()[0]
         cursor.execute("SELECT pg_get_viewdef('user_effective_settings'::regclass)")
         effective_settings_policy = cursor.fetchone()[0]
         assert "approved_by IS NOT NULL" in effective_settings_policy
@@ -199,6 +219,11 @@ def test_access_migration_is_idempotent_and_preserves_only_safe_assignments():
             (user_ids["safe"],),
         )
         assert cursor.fetchall() == [("donor_focal",)]
+        cursor.execute(
+            "SELECT setting_type, source_id FROM get_inherited_settings_for_user(%s)",
+            (user_ids["safe"],),
+        )
+        assert cursor.fetchall() == [("donor_focal", team_ids[0]), ("donor_focal", user_ids["safe"])]
         cursor.execute(
             "UPDATE team_members SET status = 'REJECTED' WHERE team_id = %s AND user_id = %s",
             (team_ids[0], user_ids["safe"]),

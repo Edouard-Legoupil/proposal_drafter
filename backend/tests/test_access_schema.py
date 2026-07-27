@@ -373,6 +373,26 @@ def test_current_access_migration_refreshes_legacy_team_settings_policy():
     assert migration.count("status = 'ACTIVE'") >= 3
 
 
+def test_current_settings_functions_use_postgresql_uuid_types():
+    root = Path(__file__).parents[2]
+    bootstrap = (root / "db/database-setup.sql").read_text()
+    migration = (root / "db/migrations/20260727_access_management_compliance.sql").read_text()
+
+    for sql in (bootstrap, migration):
+        inherited = _normalized_function_definition(sql, "get_inherited_settings_for_user")
+        apply_inherited = _normalized_function_definition(sql, "apply_inherited_settings_to_user")
+        assert "get_inherited_settings_for_user(user_id UUID)" in inherited
+        assert "source_id UUID" in inherited
+        assert "apply_inherited_settings_to_user(user_id UUID)" in apply_inherited
+        assert "user_id VARCHAR" not in inherited
+        assert "user_id VARCHAR" not in apply_inherited
+        assert "WHERE user_id =" not in inherited
+        assert "WHERE user_id =" not in apply_inherited
+
+    assert "DROP FUNCTION IF EXISTS get_inherited_settings_for_user(VARCHAR);" in migration
+    assert "DROP FUNCTION IF EXISTS apply_inherited_settings_to_user(VARCHAR);" in migration
+
+
 def test_access_settings_uniqueness_is_scoped_to_user_team_role_and_key(test_engine):
     statement = text(
         "INSERT INTO access_settings "
