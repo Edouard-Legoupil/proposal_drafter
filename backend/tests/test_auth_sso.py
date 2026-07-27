@@ -92,8 +92,8 @@ async def test_sso_login_sets_state_cookie_and_authorization_state():
 
 
 @pytest.mark.asyncio
-async def test_sso_login_requires_configured_redirect_uri():
-    with patch("backend.api.auth.ENTRA_TENANT_ID", "tenant"), patch(
+async def test_sso_login_requires_configured_redirect_uri_in_production():
+    with patch("backend.api.auth.APP_ENV", "production"), patch("backend.api.auth.ENTRA_TENANT_ID", "tenant"), patch(
         "backend.api.auth.ENTRA_CLIENT_ID", "client"
     ), patch("backend.api.auth.ENTRA_CLIENT_SECRET", "secret"), patch(
         "backend.api.auth.ENTRA_REDIRECT_URI", None
@@ -103,6 +103,30 @@ async def test_sso_login_requires_configured_redirect_uri():
         response = await sso_login(_mock_request())
 
     assert response.status_code == 503
+
+
+@pytest.mark.asyncio
+async def test_sso_login_infers_redirect_uri_in_development():
+    mock_msal_app = MagicMock()
+    mock_msal_app.get_authorization_request_url.return_value = "https://login.example/authorize"
+
+    with patch("backend.api.auth.APP_ENV", "development"), patch("backend.api.auth.ENTRA_TENANT_ID", "tenant"), patch(
+        "backend.api.auth.ENTRA_CLIENT_ID", "client"
+    ), patch("backend.api.auth.ENTRA_CLIENT_SECRET", "secret"), patch(
+        "backend.api.auth.ENTRA_REDIRECT_URI", None
+    ), patch(
+        "backend.api.auth._get_msal_app", return_value=mock_msal_app
+    ), patch(
+        "backend.api.auth.secrets.token_urlsafe", return_value="expected-state"
+    ):
+        response = await sso_login(_mock_request())
+
+    assert response.status_code == 307
+    mock_msal_app.get_authorization_request_url.assert_called_once_with(
+        scopes=["User.Read"],
+        redirect_uri="http://localhost:8502/api/callback",
+        state="expected-state",
+    )
 
 
 @pytest.mark.asyncio
@@ -136,10 +160,10 @@ async def test_sso_callback_group_mapping():
         "id_token_claims": {"sub": "123"},
     }
 
-    with patch("backend.api.auth.ENTRA_TENANT_ID", "tenant"), patch(
+    with patch("backend.api.auth.APP_ENV", "development"), patch("backend.api.auth.ENTRA_TENANT_ID", "tenant"), patch(
         "backend.api.auth.ENTRA_CLIENT_ID", "client"
     ), patch("backend.api.auth.ENTRA_CLIENT_SECRET", "secret"), patch(
-        "backend.api.auth.ENTRA_REDIRECT_URI", "https://app.example/api/callback"
+        "backend.api.auth.ENTRA_REDIRECT_URI", None
     ), patch(
         "backend.api.auth._get_msal_app", return_value=mock_msal_app
     ), patch(
@@ -176,5 +200,5 @@ async def test_sso_callback_group_mapping():
     mock_msal_app.acquire_token_by_authorization_code.assert_called_once_with(
         "mock_code",
         scopes=["User.Read"],
-        redirect_uri="https://app.example/api/callback",
+        redirect_uri="http://localhost:8502/api/callback",
     )

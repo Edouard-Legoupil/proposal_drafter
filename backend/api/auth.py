@@ -84,7 +84,8 @@ async def sso_login(request: Request):
     """
     Redirects the user to the Microsoft identity platform for authentication.
     """
-    if not all([ENTRA_TENANT_ID, ENTRA_CLIENT_ID, ENTRA_CLIENT_SECRET, ENTRA_REDIRECT_URI]):
+    redirect_uri = _resolve_sso_redirect_uri(request)
+    if not _has_sso_credentials() or not redirect_uri:
         return JSONResponse(status_code=503, content={"error": "SSO not configured"})
 
     msal_app = _get_msal_app()
@@ -92,7 +93,7 @@ async def sso_login(request: Request):
 
     auth_url = msal_app.get_authorization_request_url(
         scopes=["User.Read"],
-        redirect_uri=ENTRA_REDIRECT_URI,
+        redirect_uri=redirect_uri,
         state=oauth_state,
     )
     response = RedirectResponse(url=auth_url)
@@ -114,7 +115,8 @@ async def callback(request: Request, code: str, state: str | None = None):
     """
     Handles the response from the Microsoft identity platform.
     """
-    if not all([ENTRA_TENANT_ID, ENTRA_CLIENT_ID, ENTRA_CLIENT_SECRET, ENTRA_REDIRECT_URI]):
+    redirect_uri = _resolve_sso_redirect_uri(request)
+    if not _has_sso_credentials() or not redirect_uri:
         return JSONResponse(status_code=503, content={"error": "SSO not configured"})
 
     expected_state = request.cookies.get("oauth_state")
@@ -128,7 +130,7 @@ async def callback(request: Request, code: str, state: str | None = None):
     result = msal_app.acquire_token_by_authorization_code(
         code,
         scopes=["User.Read"],
-        redirect_uri=ENTRA_REDIRECT_URI,
+        redirect_uri=redirect_uri,
     )
 
     if "error" in result:
