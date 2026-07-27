@@ -43,17 +43,19 @@ Update `backend/.env` for local development, or set these values in the deployme
 | `ENTRA_TENANT_ID` | Your Microsoft Entra Tenant ID (found in Overview). |
 | `ENTRA_CLIENT_ID` | Your Application (client) ID (found in Overview). |
 | `ENTRA_CLIENT_SECRET` | The client secret value generated in Step 2. |
-| `ENTRA_REDIRECT_URI` | Outside development, including staging and production: required and must exactly match the registered public callback. Development: optional; when absent, the callback is inferred from the request. |
+| `APP_ENV` | Set explicitly to `development` to enable local callback inference. This setting is required for local inference. |
+| `ENTRA_REDIRECT_URI` | Outside development, including staging and production: required and must exactly match the registered public callback. With explicit `APP_ENV=development`: optional; when absent, the local callback is inferred from the request. |
 
-When `ENTRA_REDIRECT_URI` is absent in local development, the application infers
-`http://localhost:8502/api/callback` from the request. You must still register this exact local URI in Entra.
+When `ENTRA_REDIRECT_URI` is absent, local inference is enabled only if the process environment explicitly sets
+`APP_ENV=development` and the request builds a callback on `localhost` or `127.0.0.1`. For example, the application can
+infer `http://localhost:8502/api/callback`. You must still register the exact inferred local URI in Entra.
 
-Outside development, including staging and production, set `ENTRA_REDIRECT_URI` explicitly to the public callback URI
-registered in Entra. The values must match exactly.
+If `APP_ENV` is unset or has any other value, set `ENTRA_REDIRECT_URI` explicitly to the callback URI registered in
+Entra. This includes staging and production. The values must match exactly.
 
 Locally, `/api/sso-status` requires the three Entra credentials: `ENTRA_TENANT_ID`, `ENTRA_CLIENT_ID`, and
-`ENTRA_CLIENT_SECRET`. Outside development, including staging and production, it additionally requires
-`ENTRA_REDIRECT_URI`.
+`ENTRA_CLIENT_SECRET`, plus either an explicit `ENTRA_REDIRECT_URI` or explicit `APP_ENV=development` with a supported
+local callback. All other environments additionally require `ENTRA_REDIRECT_URI`.
 
 ## 5. Verify the integration
 

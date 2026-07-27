@@ -1,3 +1,4 @@
+import os
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -14,10 +15,10 @@ def _mock_request(*, cookies=None, callback_url="http://localhost:8502/api/callb
     return request
 
 
-def test_explicit_redirect_uri_wins_in_development():
+def test_explicit_redirect_uri_wins_without_app_env():
     request = _mock_request(callback_url="https://proposal.example/api/callback")
 
-    with patch("backend.api.auth.APP_ENV", "development"), patch(
+    with patch.dict(os.environ, {}, clear=True), patch(
         "backend.api.auth.ENTRA_REDIRECT_URI", "https://app.example/api/callback"
     ):
         redirect_uri = _resolve_sso_redirect_uri(request)
@@ -31,23 +32,36 @@ def test_explicit_redirect_uri_wins_in_development():
     [
         "http://localhost:8502/api/callback",
         "http://127.0.0.1:8502/api/callback",
-        "http://[::1]:8502/api/callback",
     ],
 )
 def test_missing_redirect_uri_is_inferred_for_loopback_host_in_development(callback_url):
     request = _mock_request(callback_url=callback_url)
 
-    with patch("backend.api.auth.APP_ENV", "development"), patch("backend.api.auth.ENTRA_REDIRECT_URI", None):
+    with patch.dict(os.environ, {"APP_ENV": "development"}, clear=True), patch(
+        "backend.api.auth.ENTRA_REDIRECT_URI", None
+    ):
         redirect_uri = _resolve_sso_redirect_uri(request)
 
     assert redirect_uri == callback_url
     request.url_for.assert_called_once_with("callback")
 
 
-def test_missing_redirect_uri_is_not_inferred_for_public_host_in_development():
+def test_unset_app_env_does_not_infer_spoofed_localhost_callback():
+    request = _mock_request()
+
+    with patch.dict(os.environ, {}, clear=True), patch("backend.api.auth.ENTRA_REDIRECT_URI", None):
+        redirect_uri = _resolve_sso_redirect_uri(request)
+
+    assert redirect_uri is None
+    request.url_for.assert_not_called()
+
+
+def test_public_host_is_not_inferred_with_explicit_development_app_env():
     request = _mock_request(callback_url="https://proposal.example/api/callback")
 
-    with patch("backend.api.auth.APP_ENV", "development"), patch("backend.api.auth.ENTRA_REDIRECT_URI", None):
+    with patch.dict(os.environ, {"APP_ENV": "development"}, clear=True), patch(
+        "backend.api.auth.ENTRA_REDIRECT_URI", None
+    ):
         redirect_uri = _resolve_sso_redirect_uri(request)
 
     assert redirect_uri is None
@@ -57,7 +71,9 @@ def test_missing_redirect_uri_is_not_inferred_for_public_host_in_development():
 def test_missing_redirect_uri_is_not_inferred_in_production():
     request = _mock_request()
 
-    with patch("backend.api.auth.APP_ENV", "production"), patch("backend.api.auth.ENTRA_REDIRECT_URI", None):
+    with patch.dict(os.environ, {"APP_ENV": "production"}, clear=True), patch(
+        "backend.api.auth.ENTRA_REDIRECT_URI", None
+    ):
         redirect_uri = _resolve_sso_redirect_uri(request)
 
     assert redirect_uri is None
@@ -68,18 +84,20 @@ def test_missing_redirect_uri_is_not_inferred_in_production():
 @pytest.mark.parametrize(
     ("app_env", "redirect_uri", "callback_url", "expected_enabled"),
     [
+        (None, None, "http://localhost:8502/api/callback", False),
         ("development", None, "http://localhost:8502/api/callback", True),
         ("development", None, "https://proposal.example/api/callback", False),
         ("production", None, "http://localhost:8502/api/callback", False),
-        ("production", "https://app.example/api/callback", "https://proposal.example/api/callback", True),
+        (None, "https://app.example/api/callback", "https://proposal.example/api/callback", True),
     ],
 )
 async def test_sso_status_requires_credentials_and_an_available_redirect_uri(
     app_env, redirect_uri, callback_url, expected_enabled
 ):
     request = _mock_request(callback_url=callback_url)
+    environment = {} if app_env is None else {"APP_ENV": app_env}
 
-    with patch("backend.api.auth.APP_ENV", app_env), patch("backend.api.auth.ENTRA_TENANT_ID", "tenant"), patch(
+    with patch.dict(os.environ, environment, clear=True), patch("backend.api.auth.ENTRA_TENANT_ID", "tenant"), patch(
         "backend.api.auth.ENTRA_CLIENT_ID", "client"
     ), patch("backend.api.auth.ENTRA_CLIENT_SECRET", "secret"), patch(
         "backend.api.auth.ENTRA_REDIRECT_URI", redirect_uri
@@ -115,8 +133,8 @@ async def test_sso_login_sets_state_cookie_and_authorization_state():
 
 
 @pytest.mark.asyncio
-async def test_sso_login_requires_configured_redirect_uri_in_production():
-    with patch("backend.api.auth.APP_ENV", "production"), patch("backend.api.auth.ENTRA_TENANT_ID", "tenant"), patch(
+async def test_sso_login_requires_configured_redirect_uri_without_explicit_local_mode():
+    with patch.dict(os.environ, {}, clear=True), patch("backend.api.auth.ENTRA_TENANT_ID", "tenant"), patch(
         "backend.api.auth.ENTRA_CLIENT_ID", "client"
     ), patch("backend.api.auth.ENTRA_CLIENT_SECRET", "secret"), patch(
         "backend.api.auth.ENTRA_REDIRECT_URI", None
@@ -133,9 +151,11 @@ async def test_sso_login_infers_redirect_uri_in_development():
     mock_msal_app = MagicMock()
     mock_msal_app.get_authorization_request_url.return_value = "https://login.example/authorize"
 
-    with patch("backend.api.auth.APP_ENV", "development"), patch("backend.api.auth.ENTRA_TENANT_ID", "tenant"), patch(
-        "backend.api.auth.ENTRA_CLIENT_ID", "client"
-    ), patch("backend.api.auth.ENTRA_CLIENT_SECRET", "secret"), patch(
+    with patch.dict(os.environ, {"APP_ENV": "development"}, clear=True), patch(
+        "backend.api.auth.ENTRA_TENANT_ID", "tenant"
+    ), patch("backend.api.auth.ENTRA_CLIENT_ID", "client"), patch(
+        "backend.api.auth.ENTRA_CLIENT_SECRET", "secret"
+    ), patch(
         "backend.api.auth.ENTRA_REDIRECT_URI", None
     ), patch(
         "backend.api.auth._get_msal_app", return_value=mock_msal_app
@@ -183,9 +203,11 @@ async def test_sso_callback_group_mapping():
         "id_token_claims": {"sub": "123"},
     }
 
-    with patch("backend.api.auth.APP_ENV", "development"), patch("backend.api.auth.ENTRA_TENANT_ID", "tenant"), patch(
-        "backend.api.auth.ENTRA_CLIENT_ID", "client"
-    ), patch("backend.api.auth.ENTRA_CLIENT_SECRET", "secret"), patch(
+    with patch.dict(os.environ, {"APP_ENV": "development"}, clear=True), patch(
+        "backend.api.auth.ENTRA_TENANT_ID", "tenant"
+    ), patch("backend.api.auth.ENTRA_CLIENT_ID", "client"), patch(
+        "backend.api.auth.ENTRA_CLIENT_SECRET", "secret"
+    ), patch(
         "backend.api.auth.ENTRA_REDIRECT_URI", None
     ), patch(
         "backend.api.auth._get_msal_app", return_value=mock_msal_app

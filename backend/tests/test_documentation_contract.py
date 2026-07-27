@@ -36,11 +36,19 @@ def test_security_docs_match_session_implementation():
 def test_sso_docs_explain_local_redirect_uri_inference():
     tutorial = _read("docs/sso_setup_tutorial.md")
     redirect_row = next(line for line in tutorial.splitlines() if "`ENTRA_REDIRECT_URI`" in line)
+    app_env_row = next(line for line in tutorial.splitlines() if "`APP_ENV`" in line)
     assert "production" in redirect_row.lower()
     assert "development" in redirect_row.lower()
     assert "outside development" in redirect_row.lower()
     assert "inferred" in redirect_row.lower()
+    assert "required" in app_env_row.lower()
+    assert "development" in app_env_row.lower()
     assert "http://localhost:8502/api/callback" in tutorial
+
+    for relative_path in (".env.example", "backend/.env.example"):
+        environment_example = _read(relative_path)
+        assert "APP_ENV=development" in environment_example
+        assert "required for local callback inference" in environment_example.lower()
 
 
 def test_architecture_plan_does_not_claim_unimplemented_refresh_tokens():

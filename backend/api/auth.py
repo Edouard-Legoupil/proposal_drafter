@@ -19,7 +19,6 @@ from sqlalchemy.exc import SQLAlchemyError
 
 
 #  Internal Modules
-from backend.core.config import APP_ENV
 from backend.core.db import get_engine
 from backend.core.redis import redis_client
 from backend.core.middleware import get_cookie_settings
@@ -52,6 +51,10 @@ def _has_sso_credentials() -> bool:
     return all([ENTRA_TENANT_ID, ENTRA_CLIENT_ID, ENTRA_CLIENT_SECRET])
 
 
+def _is_explicit_local_sso_mode() -> bool:
+    return os.getenv("APP_ENV", "").strip().lower() == "development"
+
+
 def _redirect_uri_available(request: Request) -> bool:
     return _resolve_sso_redirect_uri(request) is not None
 
@@ -59,9 +62,9 @@ def _redirect_uri_available(request: Request) -> bool:
 def _resolve_sso_redirect_uri(request: Request) -> str | None:
     if ENTRA_REDIRECT_URI:
         return ENTRA_REDIRECT_URI
-    if APP_ENV == "development":
+    if _is_explicit_local_sso_mode():
         callback_url = str(request.url_for("callback"))
-        if urlparse(callback_url).hostname in {"localhost", "127.0.0.1", "::1"}:
+        if urlparse(callback_url).hostname in {"localhost", "127.0.0.1"}:
             return callback_url
     return None
 
