@@ -12,7 +12,20 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- Create Teams table
 CREATE TABLE IF NOT EXISTS teams (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name TEXT UNIQUE NOT NULL
+    name TEXT UNIQUE NOT NULL,
+    description TEXT,
+    created_by UUID,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Static access-role catalogue. The numeric id/name pair remains for legacy
+-- callers; role_key is the stable authorization identifier.
+CREATE TABLE IF NOT EXISTS roles (
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL,
+    role_key TEXT UNIQUE,
+    component TEXT
 );
 
 -- Create Users table
@@ -32,12 +45,6 @@ CREATE TABLE IF NOT EXISTS users (
     requested_role_id INTEGER REFERENCES roles(id)
 );
 
--- Create Roles table
-CREATE TABLE IF NOT EXISTS roles (
-    id SERIAL PRIMARY KEY,
-    name TEXT UNIQUE NOT NULL
-);
-
 -- Create User Roles table for many-to-many relationship
 CREATE TABLE IF NOT EXISTS user_roles (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -48,6 +55,8 @@ CREATE TABLE IF NOT EXISTS user_roles (
 CREATE TABLE IF NOT EXISTS team_members (
     team_id UUID NOT NULL,
     user_id UUID NOT NULL,
+    status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('PENDING', 'ACTIVE', 'REJECTED')),
+    joined_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (team_id, user_id),
     FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -56,9 +65,39 @@ CREATE TABLE IF NOT EXISTS team_members (
 CREATE TABLE IF NOT EXISTS team_roles (
     team_id UUID NOT NULL,
     role_id INTEGER NOT NULL,
+    role_key TEXT,
     PRIMARY KEY (team_id, role_id),
+    UNIQUE (team_id, role_key),
+    CHECK (role_key IS NULL OR role_key NOT IN ('system admin', 'TEAM_LEADER')),
     FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
-    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
+    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+    FOREIGN KEY (role_key) REFERENCES roles(role_key) ON DELETE CASCADE
+);
+
+-- TEAM_LEADER is exceptional: unlike component roles, it is assigned to one
+-- active member within one team rather than inherited by every team member.
+CREATE TABLE IF NOT EXISTS team_member_roles (
+    team_id UUID NOT NULL,
+    user_id UUID NOT NULL,
+    role_key TEXT NOT NULL CHECK (role_key = 'TEAM_LEADER'),
+    assigned_by UUID NOT NULL,
+    assigned_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (team_id, user_id, role_key),
+    FOREIGN KEY (team_id, user_id) REFERENCES team_members(team_id, user_id) ON DELETE CASCADE,
+    FOREIGN KEY (role_key) REFERENCES roles(role_key),
+    FOREIGN KEY (assigned_by) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS access_settings (
+    id BIGSERIAL PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    role_key TEXT NOT NULL REFERENCES roles(role_key),
+    key TEXT NOT NULL,
+    value JSONB NOT NULL,
+    created_by UUID NOT NULL REFERENCES users(id),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id, team_id, role_key, key)
 );
 
 -- Create a function to get all roles for a user (including inherited from teams)

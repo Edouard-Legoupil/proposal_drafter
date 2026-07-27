@@ -42,8 +42,8 @@ INSERT INTO field_contexts (id, name, category, geographic_coverage) VALUES
 -- Data for Name: teams; Type: TABLE DATA; Schema: public; Owner: admin
 --
 
-INSERT INTO public.teams VALUES ('a44199b7-06b2-473d-ab80-87a419515b61', 'UNHCR');
-INSERT INTO public.teams VALUES ('91e1f13b-a25e-4b71-b850-25dfa2122b5e', 'UNICEF');
+INSERT INTO public.teams (id, name) VALUES ('a44199b7-06b2-473d-ab80-87a419515b61', 'UNHCR');
+INSERT INTO public.teams (id, name) VALUES ('91e1f13b-a25e-4b71-b850-25dfa2122b5e', 'UNICEF');
 
 
 --
@@ -53,24 +53,22 @@ INSERT INTO public.teams VALUES ('91e1f13b-a25e-4b71-b850-25dfa2122b5e', 'UNICEF
 INSERT INTO public.users VALUES ('f1b9b9b0-9b9b-4b9b-8b9b-9b9b9b9b9b9b', 'test_user@unhcr.org', 'password', 'Test User', 'a44199b7-06b2-473d-ab80-87a419515b61', NULL, false, '2024-05-13 14:00:23.014619+00', '2024-05-13 14:00:23.014619+00');
 
 
-INSERT INTO roles (name) VALUES
-  ('proposal writer'),
-  ('knowledge manager donors'),
-  ('knowledge manager outcome'),
-  ('knowledge manager field context'),
-  ('project reviewer'),
-  ('access_metrics'),
-  ('access_template'),
-  ('access_incident'),
-  ('access_quality_gate');
-
-
-INSERT INTO roles  VALUES
-
-  (7, 'access_metrics'),
-  (8, 'access_template'),
-  (9, 'access_incident'),
-  (10, 'access_quality_gate');
+INSERT INTO roles (name, role_key, component) VALUES
+  ('proposal writer', 'proposal writer', 'ProposalWorkspace'),
+  ('project reviewer', 'project reviewer', 'ReviewWorkspace'),
+  ('knowledge manager donors', 'knowledge manager donors', 'DonorKnowledgeCards'),
+  ('knowledge manager outcome', 'knowledge manager outcome', 'OutcomeKnowledgeCards'),
+  ('knowledge manager field context', 'knowledge manager field context', 'FieldContextKnowledgeCards'),
+  ('access_template', 'access_template', 'TemplateLibrary'),
+  ('access_metrics', 'access_metrics', 'MetricsDashboard'),
+  ('access_incident', 'access_incident', 'IncidentDashboard'),
+  ('access_quality_gate', 'access_quality_gate', 'QualityGate'),
+  ('ui_analysis', 'ui_analysis', 'InteractionAnalytics'),
+  ('system admin', 'system admin', NULL),
+  ('TEAM_LEADER', 'TEAM_LEADER', NULL)
+ON CONFLICT (name) DO UPDATE
+SET role_key = EXCLUDED.role_key,
+    component = EXCLUDED.component;
 --
 -- PostgreSQL database dump complete
 --

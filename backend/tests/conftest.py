@@ -55,7 +55,9 @@ def _create_test_engine():
                     """
                 CREATE TABLE IF NOT EXISTS roles (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT UNIQUE NOT NULL
+                    name TEXT UNIQUE NOT NULL,
+                    role_key TEXT UNIQUE,
+                    component TEXT
                 )
             """
                 )
@@ -64,7 +66,12 @@ def _create_test_engine():
                 text(
                     """
                 CREATE TABLE IF NOT EXISTS teams (
-                    id TEXT PRIMARY KEY, name TEXT UNIQUE NOT NULL
+                    id TEXT PRIMARY KEY,
+                    name TEXT UNIQUE NOT NULL,
+                    description TEXT,
+                    created_by TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             """
                 )
@@ -75,7 +82,9 @@ def _create_test_engine():
                 CREATE TABLE IF NOT EXISTS team_members (
                     team_id TEXT, user_id TEXT,
                     status TEXT NOT NULL DEFAULT 'ACTIVE',
+                    joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     PRIMARY KEY (team_id, user_id),
+                    CHECK (status IN ('PENDING', 'ACTIVE', 'REJECTED')),
                     FOREIGN KEY (team_id) REFERENCES teams(id),
                     FOREIGN KEY (user_id) REFERENCES users(id)
                 )
@@ -88,9 +97,51 @@ def _create_test_engine():
                 CREATE TABLE IF NOT EXISTS team_roles (
                     team_id TEXT NOT NULL,
                     role_id INTEGER NOT NULL,
+                    role_key TEXT,
                     PRIMARY KEY (team_id, role_id),
+                    UNIQUE (team_id, role_key),
+                    CHECK (role_key IS NULL OR role_key NOT IN ('system admin', 'TEAM_LEADER')),
                     FOREIGN KEY (team_id) REFERENCES teams(id),
-                    FOREIGN KEY (role_id) REFERENCES roles(id)
+                    FOREIGN KEY (role_id) REFERENCES roles(id),
+                    FOREIGN KEY (role_key) REFERENCES roles(role_key)
+                )
+            """
+                )
+            )
+            connection.execute(
+                text(
+                    """
+                CREATE TABLE IF NOT EXISTS team_member_roles (
+                    team_id TEXT NOT NULL,
+                    user_id TEXT NOT NULL,
+                    role_key TEXT NOT NULL CHECK (role_key = 'TEAM_LEADER'),
+                    assigned_by TEXT NOT NULL,
+                    assigned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (team_id, user_id, role_key),
+                    FOREIGN KEY (team_id, user_id) REFERENCES team_members(team_id, user_id),
+                    FOREIGN KEY (role_key) REFERENCES roles(role_key),
+                    FOREIGN KEY (assigned_by) REFERENCES users(id)
+                )
+            """
+                )
+            )
+            connection.execute(
+                text(
+                    """
+                CREATE TABLE IF NOT EXISTS access_settings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id TEXT NOT NULL,
+                    team_id TEXT NOT NULL,
+                    role_key TEXT NOT NULL,
+                    key TEXT NOT NULL,
+                    value TEXT NOT NULL,
+                    created_by TEXT NOT NULL,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE (user_id, team_id, role_key, key),
+                    FOREIGN KEY (user_id) REFERENCES users(id),
+                    FOREIGN KEY (team_id) REFERENCES teams(id),
+                    FOREIGN KEY (role_key) REFERENCES roles(role_key),
+                    FOREIGN KEY (created_by) REFERENCES users(id)
                 )
             """
                 )
