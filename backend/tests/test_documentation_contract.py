@@ -33,12 +33,13 @@ def test_security_docs_match_session_implementation():
     assert "Redis" in security
 
 
-def test_sso_docs_require_the_exact_configured_redirect_uri():
+def test_sso_docs_explain_local_redirect_uri_inference():
     tutorial = _read("docs/sso_setup_tutorial.md")
     redirect_row = next(line for line in tutorial.splitlines() if "`ENTRA_REDIRECT_URI`" in line)
-    assert "Required" in redirect_row
-    assert "inferred" not in redirect_row
-    assert "/api/callback" in tutorial
+    assert "production" in redirect_row.lower()
+    assert "development" in redirect_row.lower()
+    assert "inferred" in redirect_row.lower()
+    assert "http://localhost:8502/api/callback" in tutorial
 
 
 def test_architecture_plan_does_not_claim_unimplemented_refresh_tokens():
