@@ -405,11 +405,7 @@ def test_team_leader_access_control(test_engine):
 
         # Assign TEAM_LEADER directly to the leader. Team-scoped roles are
         # inherited capabilities; they do not make every member a leader.
-        connection.execute(text("INSERT INTO roles (id, name) VALUES (998, 'TEAM_LEADER')"))
-        connection.execute(
-            text("INSERT INTO team_roles (team_id, role_id) VALUES (:team_id, :role_id)"),
-            {"team_id": team_id, "role_id": 998},
-        )
+        connection.execute(text("INSERT INTO roles (id, name, role_key) VALUES (998, 'TEAM_LEADER', 'TEAM_LEADER')"))
         connection.execute(
             text("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, 998)"),
             {"user_id": leader_id},
@@ -695,9 +691,14 @@ def test_membership_status_enforcement(test_engine):
 
         # Test role inheritance with membership status
         # Add a role to the team
-        connection.execute(text("INSERT INTO roles (id, name) VALUES (100, 'test_role')"))
         connection.execute(
-            text("INSERT INTO team_roles (team_id, role_id) VALUES (:team_id, :role_id)"),
+            text(
+                "INSERT INTO roles (id, name, role_key, component) "
+                "VALUES (100, 'test_role', 'test_role', 'TestComponent')"
+            )
+        )
+        connection.execute(
+            text("INSERT INTO team_roles (team_id, role_id, role_key) " "VALUES (:team_id, :role_id, 'test_role')"),
             {"team_id": team_id, "role_id": 100},
         )
 

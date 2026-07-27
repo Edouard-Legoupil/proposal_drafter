@@ -46,10 +46,11 @@ def test_team_membership_workflow(test_engine):
             {"team_id": team_id, "user_id": team_leader_id},
         )
 
-        # Assign TEAM_LEADER role to team
+        # Assign TEAM_LEADER directly to the active leader.
+        connection.execute(text("INSERT INTO roles (id, name, role_key) VALUES (998, 'TEAM_LEADER', 'TEAM_LEADER')"))
         connection.execute(
-            text("INSERT INTO team_roles (team_id, role_id) VALUES (:team_id, :role_id)"),
-            {"team_id": team_id, "role_id": 998},  # TEAM_LEADER role
+            text("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, 998)"),
+            {"user_id": team_leader_id},
         )
 
         # Test 1: User requests to join team (creates PENDING membership)
@@ -148,11 +149,7 @@ def test_team_leader_role(test_engine):
             {"team_id": team_id, "user_id": leader_id},
         )
 
-        connection.execute(
-            text("INSERT INTO team_roles (team_id, role_id) VALUES (:team_id, :role_id)"),
-            {"team_id": team_id, "role_id": 998},  # TEAM_LEADER role
-        )
-        connection.execute(text("INSERT INTO roles (id, name) VALUES (998, 'TEAM_LEADER')"))
+        connection.execute(text("INSERT INTO roles (id, name, role_key) VALUES (998, 'TEAM_LEADER', 'TEAM_LEADER')"))
         connection.execute(
             text("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, 998)"),
             {"user_id": leader_id},
@@ -273,7 +270,13 @@ def test_role_inheritance_with_team_leader(test_engine):
     """Test role inheritance including TEAM_LEADER role"""
     with test_engine.connect() as connection:
         # Setup: Create roles
-        connection.execute(text("INSERT INTO roles (id, name) VALUES (1, 'access_metrics'), (998, 'TEAM_LEADER')"))
+        connection.execute(
+            text(
+                "INSERT INTO roles (id, name, role_key, component) VALUES "
+                "(1, 'access_metrics', 'access_metrics', 'MetricsDashboard'), "
+                "(998, 'TEAM_LEADER', 'TEAM_LEADER', NULL)"
+            )
+        )
 
         # Create team
         team_id = str(uuid.uuid4())
@@ -326,7 +329,9 @@ def test_role_inheritance_with_team_leader(test_engine):
 
         # Assign access role to the team and leader role directly to one user.
         connection.execute(
-            text("INSERT INTO team_roles (team_id, role_id) VALUES (:team_id, :role_id)"),
+            text(
+                "INSERT INTO team_roles (team_id, role_id, role_key) " "VALUES (:team_id, :role_id, 'access_metrics')"
+            ),
             {"team_id": team_id, "role_id": 1},  # access_metrics
         )
 
@@ -355,7 +360,13 @@ def test_team_role_assignment(test_engine):
     """Test assigning roles to teams"""
     with test_engine.connect() as connection:
         # Setup: Create roles
-        connection.execute(text("INSERT INTO roles (id, name) VALUES (1, 'access_metrics'), (2, 'access_template')"))
+        connection.execute(
+            text(
+                "INSERT INTO roles (id, name, role_key, component) VALUES "
+                "(1, 'access_metrics', 'access_metrics', 'MetricsDashboard'), "
+                "(2, 'access_template', 'access_template', 'TemplateLibrary')"
+            )
+        )
 
         # Create team
         team_id = str(uuid.uuid4())
@@ -366,12 +377,16 @@ def test_team_role_assignment(test_engine):
 
         # Assign roles to team
         connection.execute(
-            text("INSERT INTO team_roles (team_id, role_id) VALUES (:team_id, :role_id)"),
+            text(
+                "INSERT INTO team_roles (team_id, role_id, role_key) " "VALUES (:team_id, :role_id, 'access_metrics')"
+            ),
             {"team_id": team_id, "role_id": 1},
         )
 
         connection.execute(
-            text("INSERT INTO team_roles (team_id, role_id) VALUES (:team_id, :role_id)"),
+            text(
+                "INSERT INTO team_roles (team_id, role_id, role_key) " "VALUES (:team_id, :role_id, 'access_template')"
+            ),
             {"team_id": team_id, "role_id": 2},
         )
 

@@ -1,4 +1,5 @@
 from dataclasses import FrozenInstanceError
+from pathlib import Path
 
 import pytest
 from sqlalchemy import inspect, text
@@ -69,6 +70,7 @@ def test_team_member_roles_only_accepts_team_leader(test_engine):
         connection.execute(
             text("INSERT INTO users (id, email, password) VALUES ('admin-1', 'admin@example.org', 'secret')")
         )
+        connection.execute(text("INSERT INTO roles (name, role_key) VALUES ('TEAM_LEADER', 'TEAM_LEADER')"))
         connection.execute(text("INSERT INTO team_members (team_id, user_id) VALUES ('team-1', 'user-1')"))
         connection.execute(
             text(
@@ -105,6 +107,48 @@ def test_team_roles_rejects_non_component_special_roles(test_engine):
             )
 
 
+def test_team_roles_requires_role_key(test_engine):
+    with test_engine.connect() as connection:
+        connection.execute(text("INSERT INTO teams (id, name) VALUES ('team-1', 'Team 1')"))
+        connection.execute(
+            text(
+                "INSERT INTO roles (id, name, role_key, component) "
+                "VALUES (1, 'proposal writer', 'proposal writer', 'ProposalWorkspace')"
+            )
+        )
+
+        with pytest.raises(IntegrityError):
+            connection.execute(text("INSERT INTO team_roles (team_id, role_id) VALUES ('team-1', 1)"))
+
+
+def test_team_roles_rejects_mismatched_role_identity(test_engine):
+    with test_engine.connect() as connection:
+        connection.execute(text("INSERT INTO teams (id, name) VALUES ('team-1', 'Team 1')"))
+        connection.execute(
+            text(
+                "INSERT INTO roles (id, name, role_key, component) VALUES "
+                "(1, 'proposal writer', 'proposal writer', 'ProposalWorkspace'), "
+                "(2, 'project reviewer', 'project reviewer', 'ReviewWorkspace')"
+            )
+        )
+
+        with pytest.raises(IntegrityError):
+            connection.execute(
+                text("INSERT INTO team_roles (team_id, role_id, role_key) " "VALUES ('team-1', 1, 'project reviewer')")
+            )
+
+
+def test_sqlite_foreign_keys_are_enabled(test_engine):
+    with test_engine.connect() as connection:
+        assert connection.execute(text("PRAGMA foreign_keys")).scalar_one() == 1
+
+
+def test_migration_reports_multi_team_assignments_even_if_one_team_already_has_role():
+    migration = (Path(__file__).parents[2] / "db/migrations/20260727_access_management_compliance.sql").read_text()
+
+    assert "am.team_ids IS NULL OR cardinality(am.team_ids) <> 1 OR safe.user_id IS NULL" in migration
+
+
 def test_access_settings_uniqueness_is_scoped_to_user_team_role_and_key(test_engine):
     statement = text(
         "INSERT INTO access_settings "
@@ -113,6 +157,20 @@ def test_access_settings_uniqueness_is_scoped_to_user_team_role_and_key(test_eng
     )
 
     with test_engine.connect() as connection:
+        connection.execute(text("INSERT INTO teams (id, name) VALUES ('team-1', 'Team 1')"))
+        connection.execute(
+            text(
+                "INSERT INTO users (id, email, password) VALUES "
+                "('user-1', 'user@example.org', 'secret'), "
+                "('admin-1', 'admin@example.org', 'secret')"
+            )
+        )
+        connection.execute(
+            text(
+                "INSERT INTO roles (name, role_key, component) "
+                "VALUES ('proposal writer', 'proposal writer', 'ProposalWorkspace')"
+            )
+        )
         connection.execute(statement, {"value": "east"})
         with pytest.raises(IntegrityError):
             connection.execute(statement, {"value": "west"})

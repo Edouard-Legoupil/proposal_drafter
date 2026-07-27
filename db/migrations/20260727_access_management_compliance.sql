@@ -15,6 +15,9 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'roles_role_key_key') THEN
         ALTER TABLE roles ADD CONSTRAINT roles_role_key_key UNIQUE (role_key);
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'roles_id_role_key_key') THEN
+        ALTER TABLE roles ADD CONSTRAINT roles_id_role_key_key UNIQUE (id, role_key);
+    END IF;
 END$$;
 
 INSERT INTO roles (name, role_key, component) VALUES
@@ -80,18 +83,37 @@ ON CONFLICT (team_id, role_id) DO UPDATE SET reason = EXCLUDED.reason;
 
 DELETE FROM team_roles WHERE role_key IN ('system admin', 'TEAM_LEADER');
 
+-- A legacy role without a stable key or component cannot participate in the
+-- normalized component-role identity. Preserve a report before removing it.
+INSERT INTO legacy_team_role_ambiguities (team_id, role_id, reason)
+SELECT tr.team_id, tr.role_id,
+    CASE
+        WHEN r.role_key IS NULL THEN 'role has no normalized role_key'
+        ELSE 'role is not a static component role'
+    END
+FROM team_roles tr
+LEFT JOIN roles r ON r.id = tr.role_id
+WHERE r.role_key IS NULL OR r.component IS NULL
+ON CONFLICT (team_id, role_id) DO UPDATE SET reason = EXCLUDED.reason;
+
+DELETE FROM team_roles tr
+USING roles r
+WHERE tr.role_id = r.id AND (r.role_key IS NULL OR r.component IS NULL);
+
+ALTER TABLE team_roles ALTER COLUMN role_key SET NOT NULL;
+
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'team_roles_team_id_role_key_key') THEN
         ALTER TABLE team_roles ADD CONSTRAINT team_roles_team_id_role_key_key UNIQUE (team_id, role_key);
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'team_roles_role_key_fkey') THEN
-        ALTER TABLE team_roles ADD CONSTRAINT team_roles_role_key_fkey
-            FOREIGN KEY (role_key) REFERENCES roles(role_key) ON DELETE CASCADE;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'team_roles_role_identity_fkey') THEN
+        ALTER TABLE team_roles ADD CONSTRAINT team_roles_role_identity_fkey
+            FOREIGN KEY (role_id, role_key) REFERENCES roles(id, role_key) ON DELETE CASCADE;
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'team_roles_component_role_check') THEN
         ALTER TABLE team_roles ADD CONSTRAINT team_roles_component_role_check
-            CHECK (role_key IS NULL OR role_key NOT IN ('system admin', 'TEAM_LEADER'));
+            CHECK (role_key NOT IN ('system admin', 'TEAM_LEADER'));
     END IF;
 END$$;
 
@@ -198,7 +220,7 @@ unmappable AS (
     LEFT JOIN active_memberships am ON am.user_id = ur.user_id
     LEFT JOIN safe_assignments safe ON safe.user_id = ur.user_id AND safe.role_id = ur.role_id
     WHERE r.role_key IS DISTINCT FROM 'system admin'
-      AND safe.user_id IS NULL
+      AND (am.team_ids IS NULL OR cardinality(am.team_ids) <> 1 OR safe.user_id IS NULL)
       AND NOT (
           r.role_key = 'TEAM_LEADER'
           AND am.team_ids IS NOT NULL

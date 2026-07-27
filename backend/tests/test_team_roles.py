@@ -12,7 +12,10 @@ def test_team_role_creation_and_assignment(test_engine):
     with test_engine.connect() as connection:
         # Create a test role
 
-        connection.execute(text("INSERT INTO roles (id, name) VALUES (:id, :name)"), {"id": 1, "name": "test_role"})
+        connection.execute(
+            text("INSERT INTO roles (id, name, role_key, component) VALUES (:id, :name, :name, 'TestComponent')"),
+            {"id": 1, "name": "test_role"},
+        )
 
         # Create a test team
         team_id = str(uuid.uuid4())
@@ -22,8 +25,8 @@ def test_team_role_creation_and_assignment(test_engine):
 
         # Assign role to team
         connection.execute(
-            text("INSERT INTO team_roles (team_id, role_id) VALUES (:team_id, :role_id)"),
-            {"team_id": team_id, "role_id": 1},
+            text("INSERT INTO team_roles (team_id, role_id, role_key) " "VALUES (:team_id, :role_id, :role_key)"),
+            {"team_id": team_id, "role_id": 1, "role_key": "test_role"},
         )
 
         # Verify the assignment
@@ -41,7 +44,13 @@ def test_role_inheritance_for_team_members(test_engine):
     """Test that team members inherit roles from their teams."""
     with test_engine.connect() as connection:
         # Create roles
-        connection.execute(text("INSERT INTO roles (id, name) VALUES (1, 'direct_role'), (2, 'team_role')"))
+        connection.execute(
+            text(
+                "INSERT INTO roles (id, name, role_key, component) VALUES "
+                "(1, 'direct_role', 'direct_role', 'DirectComponent'), "
+                "(2, 'team_role', 'team_role', 'TeamComponent')"
+            )
+        )
 
         # Create team
         team_id = str(uuid.uuid4())
@@ -64,7 +73,7 @@ def test_role_inheritance_for_team_members(test_engine):
 
         # Assign role to team
         connection.execute(
-            text("INSERT INTO team_roles (team_id, role_id) VALUES (:team_id, :role_id)"),
+            text("INSERT INTO team_roles (team_id, role_id, role_key) " "VALUES (:team_id, :role_id, 'team_role')"),
             {"team_id": team_id, "role_id": 2},
         )
 
@@ -88,7 +97,13 @@ def test_user_model_role_inheritance(test_engine):
     """Test the User model's role inheritance functionality."""
     with test_engine.connect() as connection:
         # Create roles
-        connection.execute(text("INSERT INTO roles (id, name) VALUES (1, 'direct_role'), (2, 'team_role')"))
+        connection.execute(
+            text(
+                "INSERT INTO roles (id, name, role_key, component) VALUES "
+                "(1, 'direct_role', 'direct_role', 'DirectComponent'), "
+                "(2, 'team_role', 'team_role', 'TeamComponent')"
+            )
+        )
 
         # Create team
         team_id = str(uuid.uuid4())
@@ -122,7 +137,7 @@ def test_user_model_role_inheritance(test_engine):
 
         # Assign role to team
         connection.execute(
-            text("INSERT INTO team_roles (team_id, role_id) VALUES (:team_id, :role_id)"),
+            text("INSERT INTO team_roles (team_id, role_id, role_key) " "VALUES (:team_id, :role_id, 'team_role')"),
             {"team_id": team_id, "role_id": 2},
         )
 
@@ -173,7 +188,13 @@ def test_permission_checking_with_inherited_roles(test_engine):
     """Test permission checking with inherited roles."""
     with test_engine.connect() as connection:
         # Create roles
-        connection.execute(text("INSERT INTO roles (id, name) VALUES (1, 'access_metrics'), (2, 'access_template')"))
+        connection.execute(
+            text(
+                "INSERT INTO roles (id, name, role_key, component) VALUES "
+                "(1, 'access_metrics', 'access_metrics', 'MetricsDashboard'), "
+                "(2, 'access_template', 'access_template', 'TemplateLibrary')"
+            )
+        )
 
         # Create team
         team_id = str(uuid.uuid4())
@@ -207,7 +228,9 @@ def test_permission_checking_with_inherited_roles(test_engine):
 
         # Assign role to team
         connection.execute(
-            text("INSERT INTO team_roles (team_id, role_id) VALUES (:team_id, :role_id)"),
+            text(
+                "INSERT INTO team_roles (team_id, role_id, role_key) " "VALUES (:team_id, :role_id, 'access_metrics')"
+            ),
             {"team_id": team_id, "role_id": 1},  # access_metrics
         )
 

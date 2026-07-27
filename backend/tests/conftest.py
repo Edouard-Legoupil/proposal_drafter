@@ -40,6 +40,8 @@ def _create_test_engine():
         poolclass=StaticPool,
     )
     with engine.connect() as connection:
+        connection.execute(text("PRAGMA foreign_keys=ON"))
+        connection.commit()
         # Use transaction to ensure DDL is committed
         with connection.begin():
             connection.execute(text("DROP TABLE IF EXISTS knowledge_card_reviews"))
@@ -57,7 +59,8 @@ def _create_test_engine():
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT UNIQUE NOT NULL,
                     role_key TEXT UNIQUE,
-                    component TEXT
+                    component TEXT,
+                    UNIQUE (id, role_key)
                 )
             """
                 )
@@ -97,13 +100,12 @@ def _create_test_engine():
                 CREATE TABLE IF NOT EXISTS team_roles (
                     team_id TEXT NOT NULL,
                     role_id INTEGER NOT NULL,
-                    role_key TEXT,
+                    role_key TEXT NOT NULL,
                     PRIMARY KEY (team_id, role_id),
                     UNIQUE (team_id, role_key),
-                    CHECK (role_key IS NULL OR role_key NOT IN ('system admin', 'TEAM_LEADER')),
+                    CHECK (role_key NOT IN ('system admin', 'TEAM_LEADER')),
                     FOREIGN KEY (team_id) REFERENCES teams(id),
-                    FOREIGN KEY (role_id) REFERENCES roles(id),
-                    FOREIGN KEY (role_key) REFERENCES roles(role_key)
+                    FOREIGN KEY (role_id, role_key) REFERENCES roles(id, role_key)
                 )
             """
                 )
