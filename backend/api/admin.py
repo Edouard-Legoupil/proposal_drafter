@@ -1,7 +1,6 @@
 #  Standard Library
 import json
 import logging
-import uuid
 
 #  Third-Party Libraries
 from fastapi import APIRouter, Depends, HTTPException
@@ -10,7 +9,9 @@ from sqlalchemy import text
 #  Internal Modules
 from backend.core.db import get_engine
 from backend.core.security import is_system_admin
-from backend.models.schemas import CreateTeamRequest, UpdateUserTeamRequest
+from backend.models.access_management import TeamCreate
+from backend.models.schemas import UpdateUserTeamRequest
+from backend.api.access_management import create_team_record
 from backend.utils.notification_service import notification_service
 
 router = APIRouter()
@@ -23,12 +24,7 @@ async def get_admin_users(admin: dict = Depends(is_system_admin)):
     Returns a list of all users with their roles for admin management.
     """
     try:
-        from sqlalchemy.orm import Session
-
         with get_engine().connect() as connection:
-            # Create a session for ORM operations (unused but kept for potential future use)
-            _session = Session(connection)
-
             # Fetch all users with all their data in a single optimized query
             users_query = text(
                 """
@@ -40,13 +36,15 @@ async def get_admin_users(admin: dict = Depends(is_system_admin)):
                     u.requested_role_id,
                     r.name as requested_role_name,
                     -- Roles
-                    array_agg(DISTINCT jsonb_build_object('id', ur.role_id, 'name', roles.name)) FILTER (WHERE ur.role_id IS NOT NULL) as roles,
+                    array_agg(DISTINCT jsonb_build_object('id', ur.role_id, 'name', roles.name))
+                        FILTER (WHERE ur.role_id IS NOT NULL) as roles,
                     -- Donor groups
                     array_agg(DISTINCT dg.donor_group) FILTER (WHERE dg.donor_group IS NOT NULL) as donor_groups,
                     -- Outcomes
                     array_agg(DISTINCT ou.outcome_id) FILTER (WHERE ou.outcome_id IS NOT NULL) as outcomes,
                     -- Field contexts
-                    array_agg(DISTINCT fc.field_context_id) FILTER (WHERE fc.field_context_id IS NOT NULL) as field_contexts
+                    array_agg(DISTINCT fc.field_context_id)
+                        FILTER (WHERE fc.field_context_id IS NOT NULL) as field_contexts
                 FROM users u
                 LEFT JOIN teams t ON u.team_id = t.id
                 LEFT JOIN roles r ON u.requested_role_id = r.id
@@ -82,7 +80,7 @@ async def get_admin_users(admin: dict = Depends(is_system_admin)):
             return users_list
     except Exception as e:
         logger.error(f"[GET ADMIN USERS ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Could not retrieve users for admin: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Could not retrieve users for admin: {str(e)}") from e
 
 
 @router.put("/admin/users/{user_id}/settings")
@@ -148,7 +146,7 @@ async def update_admin_user_settings(user_id: str, settings: dict, admin: dict =
                     )
                 except Exception as e:
                     logger.error(f"Failed to insert roles: {e}")
-                    raise HTTPException(status_code=400, detail=f"Failed to insert roles: {str(e)}")
+                    raise HTTPException(status_code=400, detail=f"Failed to insert roles: {str(e)}") from e
 
             # Insert new donor groups
             if donor_groups:
@@ -162,7 +160,7 @@ async def update_admin_user_settings(user_id: str, settings: dict, admin: dict =
                     raise HTTPException(
                         status_code=400,
                         detail=f"Failed to insert donor groups: {str(e)}",
-                    )
+                    ) from e
 
             # Insert new outcomes
             if outcomes:
@@ -173,7 +171,7 @@ async def update_admin_user_settings(user_id: str, settings: dict, admin: dict =
                     )
                 except Exception as e:
                     logger.error(f"Failed to insert outcomes: {e}")
-                    raise HTTPException(status_code=400, detail=f"Failed to insert outcomes: {str(e)}")
+                    raise HTTPException(status_code=400, detail=f"Failed to insert outcomes: {str(e)}") from e
 
             # Insert new field contexts
             if field_contexts:
@@ -187,14 +185,14 @@ async def update_admin_user_settings(user_id: str, settings: dict, admin: dict =
                     raise HTTPException(
                         status_code=400,
                         detail=f"Failed to insert field contexts: {str(e)}",
-                    )
+                    ) from e
 
         return {"message": "User settings updated successfully."}
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"[UPDATE ADMIN USER SETTINGS ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Could not update user settings: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Could not update user settings: {str(e)}") from e
 
 
 @router.get("/admin/options")
@@ -236,69 +234,14 @@ async def get_admin_options(admin: dict = Depends(is_system_admin)):
             }
     except Exception as e:
         logger.error(f"[GET ADMIN OPTIONS ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Could not retrieve admin options.")
+        raise HTTPException(status_code=500, detail="Could not retrieve admin options.") from e
 
 
-@router.post("/admin/teams")
-async def create_team(request: CreateTeamRequest, admin: dict = Depends(is_system_admin)):
-    """
-    Creates a new team.
-    """
-    try:
-        with get_engine().begin() as connection:
-            # Check if team exists
-            existing = connection.execute(
-                text("SELECT id FROM teams WHERE lower(name) = :name"),
-                {"name": request.name.lower()},
-            ).fetchone()
-            if existing:
-                raise HTTPException(status_code=400, detail="Team with this name already exists.")
-
-            team_id = str(uuid.uuid4())
-            connection.execute(
-                text("INSERT INTO teams (id, name) VALUES (:id, :name)"),
-                {"id": team_id, "name": request.name},
-            )
-            return {
-                "message": "Team created successfully.",
-                "team": {"id": team_id, "name": request.name},
-            }
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"[CREATE TEAM ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to create team.")
-
-
-@router.post("/admin/roles")
-async def create_role(request: CreateTeamRequest, admin: dict = Depends(is_system_admin)):
-    """
-    Creates a new role.
-    """
-    try:
-        with get_engine().begin() as connection:
-            # Check if role exists
-            existing = connection.execute(
-                text("SELECT id FROM roles WHERE lower(name) = :name"),
-                {"name": request.name.lower()},
-            ).fetchone()
-            if existing:
-                raise HTTPException(status_code=400, detail="Role with this name already exists.")
-
-            role_id = str(uuid.uuid4())
-            connection.execute(
-                text("INSERT INTO roles (id, name) VALUES (:id, :name)"),
-                {"id": role_id, "name": request.name},
-            )
-            return {
-                "message": "Role created successfully.",
-                "role": {"id": role_id, "name": request.name},
-            }
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"[CREATE ROLE ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to create role.")
+@router.post("/admin/teams", status_code=201)
+async def create_team_alias(request: TeamCreate, admin: dict = Depends(is_system_admin)):
+    """Compatibility alias for the canonical team-creation operation."""
+    team = create_team_record(request, admin)
+    return {"message": "Team created successfully.", "team": team}
 
 
 @router.put("/admin/users/{user_id}/team")
@@ -332,7 +275,7 @@ async def update_user_team(user_id: str, request: UpdateUserTeamRequest, admin: 
         raise
     except Exception as e:
         logger.error(f"[UPDATE USER TEAM ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to update user team.")
+        raise HTTPException(status_code=500, detail="Failed to update user team.") from e
 
 
 @router.delete("/admin/users/{user_id}")
@@ -349,7 +292,7 @@ async def delete_user(user_id: str, admin: dict = Depends(is_system_admin)):
             if not user_check:
                 raise HTTPException(status_code=404, detail="User not found.")
 
-            # Delete associations first (though ON DELETE CASCADE might handle this, explicit is safer if not configured)
+            # Delete associations first; legacy deployments may not cascade them.
             connection.execute(
                 text("DELETE FROM user_roles WHERE user_id = :user_id"),
                 {"user_id": user_id},
@@ -375,7 +318,7 @@ async def delete_user(user_id: str, admin: dict = Depends(is_system_admin)):
         raise
     except Exception as e:
         logger.error(f"[DELETE USER ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to delete user.")
+        raise HTTPException(status_code=500, detail="Failed to delete user.") from e
 
 
 @router.get("/admin/role-requests")
@@ -414,7 +357,7 @@ async def get_admin_role_requests(admin: dict = Depends(is_system_admin)):
             return requests
     except Exception as e:
         logger.error(f"[GET ADMIN ROLE REQUESTS ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Could not retrieve role requests.")
+        raise HTTPException(status_code=500, detail="Could not retrieve role requests.") from e
 
 
 @router.post("/admin/role-requests/{user_id}/approve")
@@ -510,7 +453,7 @@ async def approve_role_request(user_id: str, admin_note: str | None = None, admi
         raise
     except Exception as e:
         logger.error(f"[APPROVE ROLE REQUEST ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Could not approve role request.")
+        raise HTTPException(status_code=500, detail="Could not approve role request.") from e
 
 
 @router.post("/admin/role-requests/{user_id}/reject")
@@ -590,7 +533,7 @@ async def reject_role_request(user_id: str, admin_note: str | None = None, admin
         raise
     except Exception as e:
         logger.error(f"[REJECT ROLE REQUEST ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Could not reject role request.")
+        raise HTTPException(status_code=500, detail="Could not reject role request.") from e
 
 
 @router.get("/admin/template-requests")
@@ -630,7 +573,7 @@ async def get_admin_template_requests(admin: dict = Depends(is_system_admin)):
             return requests
     except Exception as e:
         logger.error(f"[GET ADMIN TEMPLATE REQUESTS ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Could not retrieve template requests.")
+        raise HTTPException(status_code=500, detail="Could not retrieve template requests.") from e
 
 
 @router.get("/admin/proposals/list")
@@ -673,7 +616,7 @@ async def list_admin_proposals(admin: dict = Depends(is_system_admin)):
             ]
     except Exception as e:
         logger.error(f"[LIST ADMIN PROPOSALS ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Could not list proposals.")
+        raise HTTPException(status_code=500, detail="Could not list proposals.") from e
 
 
 @router.get("/admin/knowledge-cards/list")
@@ -729,7 +672,7 @@ async def list_admin_knowledge_cards(admin: dict = Depends(is_system_admin)):
             ]
     except Exception as e:
         logger.error(f"[LIST ADMIN KNOWLEDGE CARDS ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Could not list knowledge cards: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Could not list knowledge cards: {str(e)}") from e
 
 
 @router.get("/admin/templates/list")
@@ -776,4 +719,4 @@ async def list_admin_templates(admin: dict = Depends(is_system_admin)):
             ]
     except Exception as e:
         logger.error(f"[LIST ADMIN TEMPLATES ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Could not list templates.")
+        raise HTTPException(status_code=500, detail="Could not list templates.") from e

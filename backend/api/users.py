@@ -10,33 +10,13 @@ from sqlalchemy import text
 from backend.api.effective_settings import SYSTEM_INHERITED_SETTING_IS_EFFECTIVE
 from backend.core.db import get_engine
 from backend.core.security import get_current_user
-from backend.models.schemas import SelfServiceUserSettings, UserSettings, Role, User
+from backend.models.schemas import SelfServiceUserSettings, UserSettings, User
 
 # This router handles all endpoints related to users.
 router = APIRouter()
 
 # Configure logging
 logger = logging.getLogger(__name__)
-
-
-@router.get("/teams")
-async def get_teams(current_user: dict = Depends(get_current_user)):
-    """
-    Returns a list of all teams in the system.
-    """
-    try:
-        from sqlalchemy.orm import Session
-        from backend.models.team import Team
-
-        with get_engine().connect() as connection:
-            # Create a session for ORM operations
-            session = Session(connection)
-            teams = session.query(Team).order_by(Team.name).all()
-            teams_list = [{"id": str(team.id), "name": team.name} for team in teams]
-            return {"teams": teams_list}
-    except Exception as e:
-        logger.error(f"[GET TEAMS ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Could not retrieve teams.") from e
 
 
 @router.get("/users", response_model=List[User])
@@ -113,24 +93,6 @@ async def get_users(role: str | None = None, current_user: dict = Depends(get_cu
     except Exception as e:
         logger.error(f"[GET USERS ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Could not retrieve users.") from e
-
-
-@router.get("/roles", response_model=List[Role])
-async def get_roles():
-    """
-    Returns a list of all roles in the system.
-    """
-    try:
-        from sqlalchemy import text
-
-        with get_engine().connect() as connection:
-            # Use raw SQL instead of ORM to avoid circular import issues
-            result = connection.execute(text("SELECT id, name FROM roles ORDER BY name"))
-            roles = [{"id": row[0], "name": row[1]} for row in result]
-            return roles
-    except Exception as e:
-        logger.error(f"[GET ROLES ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Could not retrieve roles.") from e
 
 
 @router.get("/donors/groups")

@@ -5,16 +5,30 @@ def _routes(app):
 def test_frontend_team_membership_routes_are_registered(client):
     routes = _routes(client.app)
     expected = {
+        ("POST", "/api/teams"),
+        ("GET", "/api/teams"),
+        ("PATCH", "/api/teams/{team_id}"),
+        ("DELETE", "/api/teams/{team_id}"),
+        ("GET", "/api/teams/{team_id}/members"),
+        ("POST", "/api/teams/{team_id}/members/{user_id}"),
+        ("DELETE", "/api/teams/{team_id}/members/{user_id}"),
         ("POST", "/api/teams/{team_id}/join"),
         ("GET", "/api/teams/{team_id}/requests"),
         ("POST", "/api/teams/{team_id}/approve/{user_id}"),
         ("POST", "/api/teams/{team_id}/reject/{user_id}"),
+        ("PUT", "/api/teams/{team_id}/leaders/{user_id}"),
+        ("DELETE", "/api/teams/{team_id}/leaders/{user_id}"),
+        ("GET", "/api/roles"),
         ("GET", "/api/teams/{team_id}/roles"),
         ("POST", "/api/teams/{team_id}/roles"),
-        ("DELETE", "/api/teams/{team_id}/roles/{role_id}"),
+        ("DELETE", "/api/teams/{team_id}/roles/{role_key}"),
     }
 
     assert expected <= routes
+
+
+def test_runtime_role_creation_route_is_not_registered(client):
+    assert ("POST", "/api/admin/roles") not in _routes(client.app)
 
 
 def test_frontend_interaction_analytics_route_is_registered(client):

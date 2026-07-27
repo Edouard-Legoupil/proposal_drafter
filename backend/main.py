@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 
 #  Internal Modules
 from backend.api import (
+    access_management,
     admin,
     admin_resource_access,
     admin_settings_requests,
@@ -29,7 +30,6 @@ from backend.api import (
     session,
     settings_requests,
     sharepoint,
-    team_membership,
     templates,
     users,
     wizard,
@@ -138,6 +138,7 @@ app.include_router(auth.router, prefix="/api", tags=["Authentication"])
 app.include_router(session.router, prefix="/api", tags=["Session Management"])
 app.include_router(proposals.router, prefix="/api", tags=["Proposals"])
 app.include_router(documents.router, prefix="/api", tags=["Documents"])
+app.include_router(access_management.router, prefix="/api", tags=["Access Management"])
 app.include_router(users.router, prefix="/api", tags=["Users"])
 app.include_router(settings_requests.router, prefix="/api", tags=["Settings Requests"])
 app.include_router(knowledge.router, prefix="/api", tags=["Knowledge"])
@@ -146,7 +147,6 @@ app.include_router(admin.router, prefix="/api", tags=["Admin"])
 app.include_router(admin_resource_access.router, prefix="/api")
 app.include_router(admin_settings_requests.router, prefix="/api", tags=["Admin Settings Requests"])
 app.include_router(templates.router, prefix="/api/templates", tags=["Donor Templates"])
-app.include_router(team_membership.router, prefix="/api", tags=["Team Membership"])
 app.include_router(interaction_analytics.router, prefix="/api")
 app.include_router(incident.router, prefix="/api", tags=["Incidents"])
 app.include_router(qualification.router, prefix="/api", tags=["Qualification"])
