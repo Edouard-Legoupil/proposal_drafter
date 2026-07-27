@@ -97,6 +97,19 @@ def _create_test_engine():
             connection.execute(
                 text(
                     """
+                CREATE TABLE IF NOT EXISTS team_settings (
+                    team_id TEXT NOT NULL,
+                    setting_type TEXT NOT NULL,
+                    setting_value TEXT NOT NULL,
+                    UNIQUE (team_id, setting_type, setting_value),
+                    FOREIGN KEY (team_id) REFERENCES teams(id)
+                )
+            """
+                )
+            )
+            connection.execute(
+                text(
+                    """
                 CREATE TABLE IF NOT EXISTS team_roles (
                     team_id TEXT NOT NULL,
                     role_id INTEGER NOT NULL,

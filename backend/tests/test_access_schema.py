@@ -314,6 +314,24 @@ def test_bootstrap_settings_inheritance_requires_active_membership():
     assert "tm.status = 'ACTIVE'" in settings_view
 
 
+def test_bootstrap_system_inherited_settings_are_dynamically_gated():
+    bootstrap = (Path(__file__).parents[2] / "db/database-setup.sql").read_text()
+
+    inherited_function = bootstrap.split("CREATE OR REPLACE FUNCTION get_inherited_settings_for_user", 1)[1].split(
+        "CREATE OR REPLACE FUNCTION apply_inherited_settings_to_user", 1
+    )[0]
+    settings_view = bootstrap.split("CREATE OR REPLACE VIEW user_effective_settings", 1)[1].split(
+        "CREATE TABLE IF NOT EXISTS user_role_requests", 1
+    )[0]
+
+    for sql in (inherited_function, settings_view):
+        assert "approved_by" in sql
+        assert "'system'" in sql
+        assert "LOWER(TRIM" in sql
+        assert "tm.status = 'ACTIVE'" in sql
+        assert "JOIN team_settings" in sql
+
+
 def test_access_settings_uniqueness_is_scoped_to_user_team_role_and_key(test_engine):
     statement = text(
         "INSERT INTO access_settings "

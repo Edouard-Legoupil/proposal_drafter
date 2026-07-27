@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 
 #  Internal Modules
+from backend.api.effective_settings import SYSTEM_INHERITED_SETTING_IS_EFFECTIVE
 from backend.core.db import get_engine
 from backend.core.security import get_current_user
 from backend.models.schemas import SelfServiceUserSettings, UserSettings, Role, User
@@ -423,11 +424,13 @@ async def get_user_approved_settings(current_user: dict = Depends(get_current_us
             # Get approved settings from user_settings_requests
             approved_settings = connection.execute(
                 text(
-                    """
-                SELECT setting_type, setting_value, approved_at
-                FROM user_settings_requests
-                WHERE user_id = :user_id AND status = 'approved'
-                ORDER BY approved_at DESC
+                    f"""
+                SELECT usr.setting_type, usr.setting_value, usr.approved_at
+                FROM user_settings_requests usr
+                WHERE usr.user_id = :user_id
+                  AND usr.status = 'approved'
+                  AND {SYSTEM_INHERITED_SETTING_IS_EFFECTIVE}
+                ORDER BY usr.approved_at DESC
                 """
                 ),
                 {"user_id": user_id},

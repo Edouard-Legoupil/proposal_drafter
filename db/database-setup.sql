@@ -274,9 +274,22 @@ BEGIN
         setting_value,
         'user' AS source_type,
         user_id AS source_id
-    FROM user_settings_requests
-    WHERE user_id = get_inherited_settings_for_user.user_id
-    AND status = 'approved';
+    FROM user_settings_requests usr
+    WHERE usr.user_id = get_inherited_settings_for_user.user_id
+      AND usr.status = 'approved'
+      AND (
+          LOWER(TRIM(COALESCE(CAST(usr.approved_by AS TEXT), ''))) <> 'system'
+          OR EXISTS (
+              SELECT 1
+              FROM team_members tm
+              JOIN team_settings ts ON ts.team_id = tm.team_id
+              WHERE tm.user_id = usr.user_id
+                AND tm.status = 'ACTIVE'
+                AND LOWER(TRIM(ts.setting_type)) = LOWER(TRIM(usr.setting_type))
+                AND LOWER(TRIM(CAST(ts.setting_value AS TEXT))) =
+                    LOWER(TRIM(CAST(usr.setting_value AS TEXT)))
+          )
+      );
 END;
 $$ LANGUAGE plpgsql;
 
@@ -355,6 +368,19 @@ SELECT
     'direct' AS source
 FROM user_settings_requests usr
 WHERE usr.status = 'approved'
+AND (
+    LOWER(TRIM(COALESCE(CAST(usr.approved_by AS TEXT), ''))) <> 'system'
+    OR EXISTS (
+        SELECT 1
+        FROM team_members tm
+        JOIN team_settings matching_ts ON matching_ts.team_id = tm.team_id
+        WHERE tm.user_id = usr.user_id
+          AND tm.status = 'ACTIVE'
+          AND LOWER(TRIM(matching_ts.setting_type)) = LOWER(TRIM(usr.setting_type))
+          AND LOWER(TRIM(CAST(matching_ts.setting_value AS TEXT))) =
+              LOWER(TRIM(CAST(usr.setting_value AS TEXT)))
+    )
+)
 
 UNION ALL
 
@@ -372,9 +398,23 @@ WHERE tm.status = 'ACTIVE'
 AND NOT EXISTS (
     SELECT 1 FROM user_settings_requests usr
     WHERE usr.user_id = tm.user_id
-    AND usr.setting_type = ts.setting_type
-    AND usr.setting_value = ts.setting_value
+    AND LOWER(TRIM(usr.setting_type)) = LOWER(TRIM(ts.setting_type))
+    AND LOWER(TRIM(CAST(usr.setting_value AS TEXT))) =
+        LOWER(TRIM(CAST(ts.setting_value AS TEXT)))
     AND usr.status = 'approved'
+    AND (
+        LOWER(TRIM(COALESCE(CAST(usr.approved_by AS TEXT), ''))) <> 'system'
+        OR EXISTS (
+            SELECT 1
+            FROM team_members matching_tm
+            JOIN team_settings matching_ts ON matching_ts.team_id = matching_tm.team_id
+            WHERE matching_tm.user_id = usr.user_id
+              AND matching_tm.status = 'ACTIVE'
+              AND LOWER(TRIM(matching_ts.setting_type)) = LOWER(TRIM(usr.setting_type))
+              AND LOWER(TRIM(CAST(matching_ts.setting_value AS TEXT))) =
+                  LOWER(TRIM(CAST(usr.setting_value AS TEXT)))
+        )
+    )
 );
 
 

@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 
 # Internal Modules
+from backend.api.effective_settings import SYSTEM_INHERITED_SETTING_IS_EFFECTIVE
 from backend.core.db import get_engine
 from backend.core.security import get_current_user
 
@@ -19,12 +20,15 @@ async def get_available_settings(current_user: dict = Depends(get_current_user))
             # Get donors user doesn't already have
             donor_result = connection.execute(
                 text(
-                    """
+                    f"""
                 SELECT d.id, d.name
                 FROM donors d
                 WHERE d.id NOT IN (
-                    SELECT setting_value FROM user_settings_requests
-                    WHERE user_id = :user_id AND setting_type = 'donor_focal' AND status = 'approved'
+                    SELECT usr.setting_value FROM user_settings_requests usr
+                    WHERE usr.user_id = :user_id
+                      AND usr.setting_type = 'donor_focal'
+                      AND usr.status = 'approved'
+                      AND {SYSTEM_INHERITED_SETTING_IS_EFFECTIVE}
                     UNION
                     SELECT donor_id FROM user_donors WHERE user_id = :user_id
                 )
@@ -37,12 +41,15 @@ async def get_available_settings(current_user: dict = Depends(get_current_user))
             # Get outcomes user doesn't already have
             outcome_result = connection.execute(
                 text(
-                    """
+                    f"""
                 SELECT o.id, o.name
                 FROM outcomes o
                 WHERE o.id NOT IN (
-                    SELECT setting_value FROM user_settings_requests
-                    WHERE user_id = :user_id AND setting_type = 'outcome_focal' AND status = 'approved'
+                    SELECT usr.setting_value FROM user_settings_requests usr
+                    WHERE usr.user_id = :user_id
+                      AND usr.setting_type = 'outcome_focal'
+                      AND usr.status = 'approved'
+                      AND {SYSTEM_INHERITED_SETTING_IS_EFFECTIVE}
                     UNION
                     SELECT outcome_id FROM user_outcomes WHERE user_id = :user_id
                 )
@@ -55,12 +62,15 @@ async def get_available_settings(current_user: dict = Depends(get_current_user))
             # Get field contexts user doesn't already have
             field_context_result = connection.execute(
                 text(
-                    """
+                    f"""
                 SELECT fc.id, fc.name
                 FROM field_contexts fc
                 WHERE fc.id NOT IN (
-                    SELECT setting_value FROM user_settings_requests
-                    WHERE user_id = :user_id AND setting_type = 'field_context_focal' AND status = 'approved'
+                    SELECT usr.setting_value FROM user_settings_requests usr
+                    WHERE usr.user_id = :user_id
+                      AND usr.setting_type = 'field_context_focal'
+                      AND usr.status = 'approved'
+                      AND {SYSTEM_INHERITED_SETTING_IS_EFFECTIVE}
                     UNION
                     SELECT field_context_id FROM user_field_contexts WHERE user_id = :user_id
                 )
