@@ -340,6 +340,39 @@ def test_team_settings_sql_uses_uuid_safe_system_provenance():
         assert "'system' -- Mark as system-approved" not in sql
 
 
+def _normalized_function_definition(sql: str, name: str) -> str:
+    start = sql.index(f"CREATE OR REPLACE FUNCTION {name}")
+    end_marker = "$$ LANGUAGE plpgsql;"
+    end = sql.index(end_marker, start) + len(end_marker)
+    return " ".join(sql[start:end].split())
+
+
+def _normalized_effective_settings_view(sql: str) -> str:
+    start = sql.index("CREATE OR REPLACE VIEW user_effective_settings")
+    end = sql.index("\n\n--", start)
+    return " ".join(sql[start:end].split())
+
+
+def test_current_access_migration_refreshes_legacy_team_settings_policy():
+    root = Path(__file__).parents[2]
+    bootstrap = (root / "db/database-setup.sql").read_text()
+    migration = (root / "db/migrations/20260727_access_management_compliance.sql").read_text()
+
+    for function_name in (
+        "get_inherited_settings_for_user",
+        "apply_inherited_settings_to_user",
+        "handle_team_settings_inheritance",
+    ):
+        assert _normalized_function_definition(migration, function_name) == _normalized_function_definition(
+            bootstrap, function_name
+        )
+
+    assert _normalized_effective_settings_view(migration) == _normalized_effective_settings_view(bootstrap)
+    assert "approved_by IS NOT NULL" in migration
+    assert "NULL -- NULL provenance marks system-materialized inheritance" in migration
+    assert migration.count("status = 'ACTIVE'") >= 3
+
+
 def test_access_settings_uniqueness_is_scoped_to_user_team_role_and_key(test_engine):
     statement = text(
         "INSERT INTO access_settings "

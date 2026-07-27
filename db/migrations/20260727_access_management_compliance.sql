@@ -224,6 +224,178 @@ CREATE TABLE IF NOT EXISTS access_settings (
     UNIQUE (user_id, team_id, role_key, key)
 );
 
+-- Refresh definitions originally installed by 20240818_add_team_settings.sql.
+-- Existing deployments must receive the same active-membership and provenance
+-- policy as a database created from the current bootstrap.
+CREATE OR REPLACE FUNCTION get_inherited_settings_for_user(user_id VARCHAR(36))
+RETURNS TABLE(
+    setting_type VARCHAR(50),
+    setting_value VARCHAR(255),
+    source_type VARCHAR(20),
+    source_id VARCHAR(36)
+) AS $$
+BEGIN
+    RETURN QUERY
+    -- First get the user's teams
+    WITH user_teams AS (
+        SELECT team_id FROM team_members
+        WHERE user_id = get_inherited_settings_for_user.user_id
+          AND status = 'ACTIVE'
+    )
+    -- Get team settings for those teams
+    SELECT
+        ts.setting_type,
+        ts.setting_value,
+        'team' AS source_type,
+        ts.team_id AS source_id
+    FROM team_settings ts
+    JOIN user_teams ut ON ts.team_id = ut.team_id
+
+    UNION ALL
+
+    -- Also include user's direct settings for completeness
+    SELECT
+        setting_type,
+        setting_value,
+        'user' AS source_type,
+        user_id AS source_id
+    FROM user_settings_requests usr
+    WHERE usr.user_id = get_inherited_settings_for_user.user_id
+      AND usr.status = 'approved'
+      AND (
+          usr.approved_by IS NOT NULL
+          OR EXISTS (
+              SELECT 1
+              FROM team_members tm
+              JOIN team_settings ts ON ts.team_id = tm.team_id
+              WHERE tm.user_id = usr.user_id
+                AND tm.status = 'ACTIVE'
+                AND LOWER(TRIM(ts.setting_type)) = LOWER(TRIM(usr.setting_type))
+                AND LOWER(TRIM(CAST(ts.setting_value AS TEXT))) =
+                    LOWER(TRIM(CAST(usr.setting_value AS TEXT)))
+          )
+      );
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create function to apply inherited settings to a user
+CREATE OR REPLACE FUNCTION apply_inherited_settings_to_user(user_id VARCHAR(36))
+RETURNS VOID AS $$
+DECLARE
+    team_setting RECORD;
+BEGIN
+    -- Get all inherited team settings for the user
+    FOR team_setting IN
+        SELECT setting_type, setting_value
+        FROM team_settings ts
+        WHERE ts.team_id IN (
+            SELECT team_id FROM team_members
+            WHERE user_id = apply_inherited_settings_to_user.user_id
+              AND status = 'ACTIVE'
+        )
+    LOOP
+        -- Check if user already has this setting
+        PERFORM 1 FROM user_settings_requests
+        WHERE user_id = apply_inherited_settings_to_user.user_id
+        AND setting_type = team_setting.setting_type
+        AND setting_value = team_setting.setting_value
+        AND status = 'approved'
+        LIMIT 1;
+
+        IF NOT FOUND THEN
+            -- User doesn't have this setting, so grant it
+            INSERT INTO user_settings_requests (
+                user_id, setting_type, setting_value, status, approved_at, approved_by
+            ) VALUES (
+                apply_inherited_settings_to_user.user_id,
+                team_setting.setting_type,
+                team_setting.setting_value,
+                'approved',
+                CURRENT_TIMESTAMP,
+                NULL -- NULL provenance marks system-materialized inheritance
+            ) ON CONFLICT (user_id, setting_type, setting_value) DO NOTHING;
+        END IF;
+    END LOOP;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger for automatic inheritance
+CREATE OR REPLACE FUNCTION handle_team_settings_inheritance()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
+        -- When a team setting is added or updated, apply to all team members
+        PERFORM apply_inherited_settings_to_user(user_id)
+        FROM team_members
+        WHERE team_id = NEW.team_id
+          AND status = 'ACTIVE';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create view for comprehensive user settings
+CREATE OR REPLACE VIEW user_effective_settings AS
+SELECT
+    usr.user_id,
+    usr.setting_type,
+    usr.setting_value,
+    usr.status,
+    usr.requested_at,
+    usr.approved_at,
+    'direct' AS source
+FROM user_settings_requests usr
+WHERE usr.status = 'approved'
+AND (
+    usr.approved_by IS NOT NULL
+    OR EXISTS (
+        SELECT 1
+        FROM team_members tm
+        JOIN team_settings matching_ts ON matching_ts.team_id = tm.team_id
+        WHERE tm.user_id = usr.user_id
+          AND tm.status = 'ACTIVE'
+          AND LOWER(TRIM(matching_ts.setting_type)) = LOWER(TRIM(usr.setting_type))
+          AND LOWER(TRIM(CAST(matching_ts.setting_value AS TEXT))) =
+              LOWER(TRIM(CAST(usr.setting_value AS TEXT)))
+    )
+)
+
+UNION ALL
+
+SELECT
+    tm.user_id,
+    ts.setting_type,
+    ts.setting_value,
+    'approved' AS status,
+    NULL AS requested_at,
+    CURRENT_TIMESTAMP AS approved_at,
+    'inherited' AS source
+FROM team_settings ts
+JOIN team_members tm ON ts.team_id = tm.team_id
+WHERE tm.status = 'ACTIVE'
+AND NOT EXISTS (
+    SELECT 1 FROM user_settings_requests usr
+    WHERE usr.user_id = tm.user_id
+    AND LOWER(TRIM(usr.setting_type)) = LOWER(TRIM(ts.setting_type))
+    AND LOWER(TRIM(CAST(usr.setting_value AS TEXT))) =
+        LOWER(TRIM(CAST(ts.setting_value AS TEXT)))
+    AND usr.status = 'approved'
+    AND (
+        usr.approved_by IS NOT NULL
+        OR EXISTS (
+            SELECT 1
+            FROM team_members matching_tm
+            JOIN team_settings matching_ts ON matching_ts.team_id = matching_tm.team_id
+            WHERE matching_tm.user_id = usr.user_id
+              AND matching_tm.status = 'ACTIVE'
+              AND LOWER(TRIM(matching_ts.setting_type)) = LOWER(TRIM(usr.setting_type))
+              AND LOWER(TRIM(CAST(matching_ts.setting_value AS TEXT))) =
+                  LOWER(TRIM(CAST(usr.setting_value AS TEXT)))
+        )
+    )
+);
+
 -- Assignments that cannot be mapped without granting a role to additional
 -- users are quarantined here rather than retained as global authorization.
 CREATE TABLE IF NOT EXISTS legacy_access_assignment_ambiguities (

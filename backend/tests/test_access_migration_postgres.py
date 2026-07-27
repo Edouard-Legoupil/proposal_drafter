@@ -58,6 +58,24 @@ def test_access_migration_is_idempotent_and_preserves_only_safe_assignments():
                 role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
                 PRIMARY KEY (team_id, role_id)
             );
+            CREATE TABLE team_settings (
+                id SERIAL PRIMARY KEY,
+                team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+                setting_type VARCHAR(50) NOT NULL,
+                setting_value VARCHAR(255) NOT NULL,
+                UNIQUE (team_id, setting_type, setting_value)
+            );
+            CREATE TABLE user_settings_requests (
+                id SERIAL PRIMARY KEY,
+                user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                setting_type VARCHAR(50) NOT NULL,
+                setting_value TEXT NOT NULL,
+                requested_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                status VARCHAR(20) DEFAULT 'pending',
+                approved_by UUID REFERENCES users(id) ON DELETE SET NULL,
+                approved_at TIMESTAMPTZ,
+                UNIQUE (user_id, setting_type, setting_value)
+            );
             """
         )
 
@@ -155,6 +173,46 @@ def test_access_migration_is_idempotent_and_preserves_only_safe_assignments():
         assert cursor.fetchone()[0] == 1
         cursor.execute("SELECT pg_get_functiondef('enforce_active_team_leader_membership()'::regprocedure)")
         assert "FOR UPDATE" in cursor.fetchone()[0]
+
+        cursor.execute("SELECT pg_get_functiondef('apply_inherited_settings_to_user(character varying)'::regprocedure)")
+        inherited_policy = cursor.fetchone()[0]
+        assert "status = 'ACTIVE'" in inherited_policy
+        assert "NULL" in inherited_policy
+        cursor.execute("SELECT pg_get_viewdef('user_effective_settings'::regclass)")
+        effective_settings_policy = cursor.fetchone()[0]
+        assert "approved_by IS NOT NULL" in effective_settings_policy
+        assert "status = 'ACTIVE'" in effective_settings_policy
+
+        cursor.execute(
+            "INSERT INTO team_settings (team_id, setting_type, setting_value) " "VALUES (%s, 'donor_focal', 'donor-1')",
+            (team_ids[0],),
+        )
+        cursor.execute(
+            "INSERT INTO user_settings_requests "
+            "(user_id, setting_type, setting_value, status, approved_by) "
+            "VALUES (%s, 'donor_focal', 'donor-1', 'approved', NULL), "
+            "(%s, 'outcome_focal', 'outcome-1', 'approved', %s)",
+            (user_ids["safe"], user_ids["zero"], user_ids["safe"]),
+        )
+        cursor.execute(
+            "SELECT setting_type FROM user_effective_settings WHERE user_id = %s ORDER BY setting_type",
+            (user_ids["safe"],),
+        )
+        assert cursor.fetchall() == [("donor_focal",)]
+        cursor.execute(
+            "UPDATE team_members SET status = 'REJECTED' WHERE team_id = %s AND user_id = %s",
+            (team_ids[0], user_ids["safe"]),
+        )
+        cursor.execute(
+            "SELECT COUNT(*) FROM user_effective_settings WHERE user_id = %s",
+            (user_ids["safe"],),
+        )
+        assert cursor.fetchone()[0] == 0
+        cursor.execute(
+            "SELECT setting_type FROM user_effective_settings WHERE user_id = %s",
+            (user_ids["zero"],),
+        )
+        assert cursor.fetchall() == [("outcome_focal",)]
 
         with pytest.raises(dbapi_error, match="active membership"):
             cursor.execute(
