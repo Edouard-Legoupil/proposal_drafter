@@ -18,6 +18,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 
 #  Internal Modules
+from backend.core.config import APP_ENV
 from backend.core.db import get_engine
 from backend.core.redis import redis_client
 from backend.core.middleware import get_cookie_settings
@@ -46,12 +47,28 @@ def invalid_credentials_response() -> JSONResponse:
     return JSONResponse(status_code=401, content={"error": "Invalid credentials."})
 
 
+def _has_sso_credentials() -> bool:
+    return all([ENTRA_TENANT_ID, ENTRA_CLIENT_ID, ENTRA_CLIENT_SECRET])
+
+
+def _redirect_uri_available() -> bool:
+    return bool(ENTRA_REDIRECT_URI or APP_ENV == "development")
+
+
+def _resolve_sso_redirect_uri(request: Request) -> str | None:
+    if ENTRA_REDIRECT_URI:
+        return ENTRA_REDIRECT_URI
+    if APP_ENV == "development":
+        return str(request.url_for("callback"))
+    return None
+
+
 @router.get("/sso-status")
 async def sso_status():
     """
     Returns the status of SSO.
     """
-    return {"enabled": all([ENTRA_TENANT_ID, ENTRA_CLIENT_ID, ENTRA_CLIENT_SECRET, ENTRA_REDIRECT_URI])}
+    return {"enabled": _has_sso_credentials() and _redirect_uri_available()}
 
 
 def _get_msal_app():

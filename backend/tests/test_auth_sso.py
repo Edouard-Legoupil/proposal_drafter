@@ -3,14 +3,67 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi import Request
 
-from backend.api.auth import callback, sso_login
+from backend.api.auth import _resolve_sso_redirect_uri, callback, sso_login, sso_status
 
 
 def _mock_request(*, cookies=None):
     request = MagicMock(spec=Request)
     request.cookies = cookies or {}
     request.headers = {"host": "localhost", "origin": "http://localhost:8503"}
+    request.url_for.return_value = "http://localhost:8502/api/callback"
     return request
+
+
+def test_explicit_redirect_uri_wins_in_development():
+    request = _mock_request()
+
+    with patch("backend.api.auth.APP_ENV", "development"), patch(
+        "backend.api.auth.ENTRA_REDIRECT_URI", "https://app.example/api/callback"
+    ):
+        redirect_uri = _resolve_sso_redirect_uri(request)
+
+    assert redirect_uri == "https://app.example/api/callback"
+    request.url_for.assert_not_called()
+
+
+def test_missing_redirect_uri_is_inferred_in_development():
+    request = _mock_request()
+
+    with patch("backend.api.auth.APP_ENV", "development"), patch("backend.api.auth.ENTRA_REDIRECT_URI", None):
+        redirect_uri = _resolve_sso_redirect_uri(request)
+
+    assert redirect_uri == "http://localhost:8502/api/callback"
+    request.url_for.assert_called_once_with("callback")
+
+
+def test_missing_redirect_uri_is_not_inferred_in_production():
+    request = _mock_request()
+
+    with patch("backend.api.auth.APP_ENV", "production"), patch("backend.api.auth.ENTRA_REDIRECT_URI", None):
+        redirect_uri = _resolve_sso_redirect_uri(request)
+
+    assert redirect_uri is None
+    request.url_for.assert_not_called()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("app_env", "redirect_uri", "expected_enabled"),
+    [
+        ("development", None, True),
+        ("production", None, False),
+        ("production", "https://app.example/api/callback", True),
+    ],
+)
+async def test_sso_status_requires_credentials_and_an_available_redirect_uri(app_env, redirect_uri, expected_enabled):
+    with patch("backend.api.auth.APP_ENV", app_env), patch("backend.api.auth.ENTRA_TENANT_ID", "tenant"), patch(
+        "backend.api.auth.ENTRA_CLIENT_ID", "client"
+    ), patch("backend.api.auth.ENTRA_CLIENT_SECRET", "secret"), patch(
+        "backend.api.auth.ENTRA_REDIRECT_URI", redirect_uri
+    ):
+        response = await sso_status()
+
+    assert response == {"enabled": expected_enabled}
 
 
 @pytest.mark.asyncio
@@ -22,7 +75,9 @@ async def test_sso_login_sets_state_cookie_and_authorization_state():
         "backend.api.auth.ENTRA_CLIENT_ID", "client"
     ), patch("backend.api.auth.ENTRA_CLIENT_SECRET", "secret"), patch(
         "backend.api.auth.ENTRA_REDIRECT_URI", "https://app.example/api/callback"
-    ), patch("backend.api.auth._get_msal_app", return_value=mock_msal_app), patch(
+    ), patch(
+        "backend.api.auth._get_msal_app", return_value=mock_msal_app
+    ), patch(
         "backend.api.auth.secrets.token_urlsafe", return_value="expected-state"
     ):
         response = await sso_login(_mock_request())
@@ -66,9 +121,7 @@ async def test_sso_callback_rejects_invalid_state(cookie_state, query_state):
         response = await callback(_mock_request(cookies=cookies), "mock_code", state=query_state)
 
     assert response.status_code == 400
-    assert any(
-        "oauth_state=" in header for header in response.headers.getlist("set-cookie")
-    )
+    assert any("oauth_state=" in header for header in response.headers.getlist("set-cookie"))
 
 
 @pytest.mark.asyncio
@@ -87,7 +140,9 @@ async def test_sso_callback_group_mapping():
         "backend.api.auth.ENTRA_CLIENT_ID", "client"
     ), patch("backend.api.auth.ENTRA_CLIENT_SECRET", "secret"), patch(
         "backend.api.auth.ENTRA_REDIRECT_URI", "https://app.example/api/callback"
-    ), patch("backend.api.auth._get_msal_app", return_value=mock_msal_app), patch(
+    ), patch(
+        "backend.api.auth._get_msal_app", return_value=mock_msal_app
+    ), patch(
         "httpx.AsyncClient"
     ) as mock_client:
         mock_instance = mock_client.return_value.__aenter__.return_value
@@ -117,9 +172,7 @@ async def test_sso_callback_group_mapping():
 
     assert response.status_code == 307
     assert "/dashboard" in response.headers["location"]
-    assert any(
-        "oauth_state=" in header for header in response.headers.getlist("set-cookie")
-    )
+    assert any("oauth_state=" in header for header in response.headers.getlist("set-cookie"))
     mock_msal_app.acquire_token_by_authorization_code.assert_called_once_with(
         "mock_code",
         scopes=["User.Read"],
