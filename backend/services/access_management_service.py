@@ -1,4 +1,5 @@
 import json
+import uuid
 from dataclasses import dataclass
 from typing import Any
 
@@ -40,6 +41,20 @@ class AccessManagementService:
         if self._owns_connection:
             self.connection.close()
 
+    def _dialect_name(self) -> str | None:
+        dialect = getattr(self.connection, "dialect", None)
+        if dialect is None:
+            dialect = getattr(getattr(self.connection, "bind", None), "dialect", None)
+        return getattr(dialect, "name", None)
+
+    def _normalized_team_id(self, team_id: str) -> str | None:
+        if self._dialect_name() != "postgresql":
+            return str(team_id)
+        try:
+            return str(uuid.UUID(str(team_id)))
+        except (ValueError, AttributeError, TypeError):
+            return None
+
     def resolve_active_memberships(self, user_id: str) -> list[dict[str, str]]:
         rows = self.connection.execute(
             text(
@@ -61,14 +76,20 @@ class AccessManagementService:
         if requested_team_id is None:
             return memberships[0] if memberships else None
 
+        normalized_team_id = self._normalized_team_id(requested_team_id)
+        if normalized_team_id is None:
+            if is_admin:
+                return None
+            raise HTTPException(status_code=403, detail="Selected team ID is invalid.")
+
         selected = next(
-            (membership for membership in memberships if membership["id"] == str(requested_team_id)),
+            (membership for membership in memberships if membership["id"] == normalized_team_id),
             None,
         )
         if selected is None and is_admin:
             row = self.connection.execute(
                 text("SELECT id, name FROM teams WHERE id = :team_id"),
-                {"team_id": str(requested_team_id)},
+                {"team_id": normalized_team_id},
             ).first()
             return {"id": str(row[0]), "name": row[1]} if row else None
         if selected is None:
@@ -133,7 +154,7 @@ class AccessManagementService:
             if _normalized_role(str(role_key)) not in authorized_roles:
                 continue
             parsed_value = value
-            if isinstance(value, str):
+            if isinstance(value, str) and self._dialect_name() == "sqlite":
                 try:
                     parsed_value = json.loads(value)
                 except json.JSONDecodeError:

@@ -1,3 +1,6 @@
+import uuid
+from types import SimpleNamespace
+
 import jwt
 import pytest
 from fastapi import HTTPException
@@ -145,30 +148,119 @@ def test_stale_admin_team_selection_does_not_lock_out_global_admin(access_data):
     assert context.roles == set()
 
 
-def test_scoped_setting_values_accept_decoded_and_encoded_json():
+def _settings_service(dialect_name, rows):
     class Result:
         def fetchall(self):
-            return [
-                ("access metrics", "raw", "east"),
-                ("access metrics", "encoded", '"east"'),
-                ("access metrics", "array", ["east", "west"]),
-                ("access metrics", "object", {"region": "east"}),
-            ]
+            return rows
 
     class Connection:
+        dialect = SimpleNamespace(name=dialect_name)
+
         def execute(self, _statement, _parameters):
             return Result()
 
-    settings = AccessManagementService(Connection()).load_scoped_settings("user-1", "team-a", {"access metrics"})
+    return AccessManagementService(Connection())
+
+
+def test_postgres_jsonb_setting_strings_are_preserved_without_double_decoding():
+    tokens = ["east", '"east"', "true", "null", "123", '{"region":"east"}']
+    rows = [("access metrics", f"value-{index}", value) for index, value in enumerate(tokens)]
+    rows.extend(
+        [
+            ("access metrics", "array", ["east", "west"]),
+            ("access metrics", "object", {"region": "east"}),
+        ]
+    )
+
+    settings = _settings_service("postgresql", rows).load_scoped_settings("user-1", "team-a", {"access metrics"})
+
+    assert settings["access metrics"] == {
+        **{f"value-{index}": value for index, value in enumerate(tokens)},
+        "array": ["east", "west"],
+        "object": {"region": "east"},
+    }
+
+
+def test_sqlite_text_setting_values_decode_json_once():
+    rows = [
+        ("access metrics", "raw", "east"),
+        ("access metrics", "encoded", '"east"'),
+        ("access metrics", "boolean", "true"),
+        ("access metrics", "null", "null"),
+        ("access metrics", "number", "123"),
+        ("access metrics", "array", '["east","west"]'),
+        ("access metrics", "object", '{"region":"east"}'),
+    ]
+
+    settings = _settings_service("sqlite", rows).load_scoped_settings("user-1", "team-a", {"access metrics"})
 
     assert settings == {
         "access metrics": {
             "raw": "east",
             "encoded": "east",
+            "boolean": True,
+            "null": None,
+            "number": 123,
             "array": ["east", "west"],
             "object": {"region": "east"},
         }
     }
+
+
+def test_malformed_postgres_team_header_never_reaches_uuid_query_for_admin():
+    class Result:
+        def first(self):
+            return None
+
+    class Connection:
+        dialect = SimpleNamespace(name="postgresql")
+
+        def __init__(self):
+            self.calls = []
+
+        def execute(self, statement, parameters):
+            self.calls.append((statement, parameters))
+            return Result()
+
+    connection = Connection()
+
+    selected = AccessManagementService(connection).select_active_team([], "not-a-uuid", is_admin=True)
+
+    assert selected is None
+    assert connection.calls == []
+
+
+def test_malformed_postgres_team_header_is_cleanly_forbidden_for_ordinary_user():
+    connection = SimpleNamespace(dialect=SimpleNamespace(name="postgresql"))
+
+    with pytest.raises(HTTPException) as exc_info:
+        AccessManagementService(connection).select_active_team([], "not-a-uuid")
+
+    assert exc_info.value.status_code == 403
+
+
+def test_nonexistent_postgres_uuid_team_header_is_safe_for_admin():
+    class Result:
+        def first(self):
+            return None
+
+    class Connection:
+        dialect = SimpleNamespace(name="postgresql")
+
+        def __init__(self):
+            self.parameters = None
+
+        def execute(self, _statement, parameters):
+            self.parameters = parameters
+            return Result()
+
+    connection = Connection()
+    team_id = str(uuid.uuid4())
+
+    selected = AccessManagementService(connection).select_active_team([], team_id, is_admin=True)
+
+    assert selected is None
+    assert connection.parameters == {"team_id": team_id}
 
 
 def test_get_current_user_uses_requested_active_team_context(access_data, monkeypatch):

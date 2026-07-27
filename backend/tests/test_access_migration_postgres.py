@@ -3,7 +3,9 @@ import uuid
 from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
+
+from backend.services.access_management_service import AccessManagementService
 
 
 POSTGRES_URL = os.getenv("ACCESS_MIGRATION_TEST_POSTGRES_URL")
@@ -11,6 +13,40 @@ pytestmark = pytest.mark.skipif(
     not POSTGRES_URL,
     reason="ACCESS_MIGRATION_TEST_POSTGRES_URL is not configured",
 )
+
+
+def test_postgres_access_context_rejects_malformed_team_header_without_query_error():
+    schema = f"access_context_{uuid.uuid4().hex}"
+    admin_id = uuid.uuid4()
+    engine = create_engine(POSTGRES_URL)
+
+    with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as connection:
+        try:
+            connection.execute(text(f'CREATE SCHEMA "{schema}"'))
+            connection.execute(text(f'SET search_path TO "{schema}"'))
+            for statement in (
+                "CREATE TABLE roles (id SERIAL PRIMARY KEY, name TEXT, role_key TEXT)",
+                "CREATE TABLE users (id UUID PRIMARY KEY)",
+                "CREATE TABLE user_roles (user_id UUID, role_id INTEGER)",
+                "CREATE TABLE teams (id UUID PRIMARY KEY, name TEXT)",
+                "CREATE TABLE team_members (team_id UUID, user_id UUID, status TEXT)",
+                "INSERT INTO roles (name, role_key) VALUES ('system admin', 'system admin')",
+            ):
+                connection.execute(text(statement))
+            connection.execute(text("INSERT INTO users (id) VALUES (:admin_id)"), {"admin_id": admin_id})
+            connection.execute(
+                text("INSERT INTO user_roles (user_id, role_id) SELECT :admin_id, id FROM roles"),
+                {"admin_id": admin_id},
+            )
+
+            context = AccessManagementService(connection).resolve_context(str(admin_id), "not-a-uuid")
+
+            assert context.is_admin is True
+            assert context.active_team is None
+        finally:
+            connection.execute(text("SET search_path TO public"))
+            connection.execute(text(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE'))
+    engine.dispose()
 
 
 def test_access_migration_is_idempotent_and_preserves_only_safe_assignments():
