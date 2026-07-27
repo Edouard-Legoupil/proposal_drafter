@@ -98,6 +98,7 @@ def _create_test_engine():
                 text(
                     """
                 CREATE TABLE IF NOT EXISTS team_settings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
                     team_id TEXT NOT NULL,
                     setting_type TEXT NOT NULL,
                     setting_value TEXT NOT NULL,

@@ -326,10 +326,18 @@ def test_bootstrap_system_inherited_settings_are_dynamically_gated():
 
     for sql in (inherited_function, settings_view):
         assert "approved_by" in sql
-        assert "'system'" in sql
-        assert "LOWER(TRIM" in sql
+        assert "approved_by IS NOT NULL" in sql
+        assert "'system'" not in sql
         assert "tm.status = 'ACTIVE'" in sql
         assert "JOIN team_settings" in sql
+
+
+def test_team_settings_sql_uses_uuid_safe_system_provenance():
+    root = Path(__file__).parents[2]
+
+    for path in (root / "db/database-setup.sql", root / "db/migrations/20240818_add_team_settings.sql"):
+        sql = path.read_text()
+        assert "'system' -- Mark as system-approved" not in sql
 
 
 def test_access_settings_uniqueness_is_scoped_to_user_team_role_and_key(test_engine):

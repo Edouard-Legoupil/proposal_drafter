@@ -35,18 +35,18 @@ BEGIN
         SELECT team_id FROM team_members WHERE user_id = get_inherited_settings_for_user.user_id
     )
     -- Get team settings for those teams
-    SELECT 
+    SELECT
         ts.setting_type,
         ts.setting_value,
         'team' AS source_type,
         ts.team_id AS source_id
     FROM team_settings ts
     JOIN user_teams ut ON ts.team_id = ut.team_id
-    
+
     UNION ALL
-    
+
     -- Also include user's direct settings for completeness
-    SELECT 
+    SELECT
         setting_type,
         setting_value,
         'user' AS source_type,
@@ -72,13 +72,13 @@ BEGIN
         )
     LOOP
         -- Check if user already has this setting
-        PERFORM 1 FROM user_settings_requests 
+        PERFORM 1 FROM user_settings_requests
         WHERE user_id = apply_inherited_settings_to_user.user_id
         AND setting_type = team_setting.setting_type
         AND setting_value = team_setting.setting_value
         AND status = 'approved'
         LIMIT 1;
-        
+
         IF NOT FOUND THEN
             -- User doesn't have this setting, so grant it
             INSERT INTO user_settings_requests (
@@ -89,7 +89,7 @@ BEGIN
                 team_setting.setting_value,
                 'approved',
                 CURRENT_TIMESTAMP,
-                'system' -- Mark as system-approved for inherited settings
+                NULL -- NULL provenance marks system-materialized inheritance
             ) ON CONFLICT (user_id, setting_type, setting_value) DO NOTHING;
         END IF;
     END LOOP;
@@ -106,7 +106,7 @@ BEGIN
         FROM team_members
         WHERE team_id = NEW.team_id;
     END IF;
-    
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -119,7 +119,7 @@ EXECUTE FUNCTION handle_team_settings_inheritance();
 
 -- Create view for comprehensive user settings
 CREATE OR REPLACE VIEW user_effective_settings AS
-SELECT 
+SELECT
     usr.user_id,
     usr.setting_type,
     usr.setting_value,
@@ -132,7 +132,7 @@ WHERE usr.status = 'approved'
 
 UNION ALL
 
-SELECT 
+SELECT
     tm.user_id,
     ts.setting_type,
     ts.setting_value,

@@ -46,11 +46,14 @@ def test_team_membership_workflow(test_engine):
             {"team_id": team_id, "user_id": team_leader_id},
         )
 
-        # Assign TEAM_LEADER directly to the active leader.
+        # Assign TEAM_LEADER to the active member within this team.
         connection.execute(text("INSERT INTO roles (id, name, role_key) VALUES (998, 'TEAM_LEADER', 'TEAM_LEADER')"))
         connection.execute(
-            text("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, 998)"),
-            {"user_id": team_leader_id},
+            text(
+                "INSERT INTO team_member_roles (team_id, user_id, role_key, assigned_by) "
+                "VALUES (:team_id, :user_id, 'TEAM_LEADER', :user_id)"
+            ),
+            {"team_id": team_id, "user_id": team_leader_id},
         )
 
         # Test 1: User requests to join team (creates PENDING membership)
@@ -151,8 +154,11 @@ def test_team_leader_role(test_engine):
 
         connection.execute(text("INSERT INTO roles (id, name, role_key) VALUES (998, 'TEAM_LEADER', 'TEAM_LEADER')"))
         connection.execute(
-            text("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, 998)"),
-            {"user_id": leader_id},
+            text(
+                "INSERT INTO team_member_roles (team_id, user_id, role_key, assigned_by) "
+                "VALUES (:team_id, :user_id, 'TEAM_LEADER', :user_id)"
+            ),
+            {"team_id": team_id, "user_id": leader_id},
         )
 
         # Make regular member

@@ -278,7 +278,7 @@ BEGIN
     WHERE usr.user_id = get_inherited_settings_for_user.user_id
       AND usr.status = 'approved'
       AND (
-          LOWER(TRIM(COALESCE(CAST(usr.approved_by AS TEXT), ''))) <> 'system'
+          usr.approved_by IS NOT NULL
           OR EXISTS (
               SELECT 1
               FROM team_members tm
@@ -327,7 +327,7 @@ BEGIN
                 team_setting.setting_value,
                 'approved',
                 CURRENT_TIMESTAMP,
-                'system' -- Mark as system-approved for inherited settings
+                NULL -- NULL provenance marks system-materialized inheritance
             ) ON CONFLICT (user_id, setting_type, setting_value) DO NOTHING;
         END IF;
     END LOOP;
@@ -369,7 +369,7 @@ SELECT
 FROM user_settings_requests usr
 WHERE usr.status = 'approved'
 AND (
-    LOWER(TRIM(COALESCE(CAST(usr.approved_by AS TEXT), ''))) <> 'system'
+    usr.approved_by IS NOT NULL
     OR EXISTS (
         SELECT 1
         FROM team_members tm
@@ -403,7 +403,7 @@ AND NOT EXISTS (
         LOWER(TRIM(CAST(ts.setting_value AS TEXT)))
     AND usr.status = 'approved'
     AND (
-        LOWER(TRIM(COALESCE(CAST(usr.approved_by AS TEXT), ''))) <> 'system'
+        usr.approved_by IS NOT NULL
         OR EXISTS (
             SELECT 1
             FROM team_members matching_tm

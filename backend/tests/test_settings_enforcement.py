@@ -57,9 +57,10 @@ def _is_team_leader(connection, user_id, team_id):
     return bool(
         connection.execute(
             text(
-                "SELECT 1 FROM team_members tm JOIN user_roles ur ON ur.user_id = tm.user_id "
-                "JOIN roles r ON r.id = ur.role_id WHERE tm.user_id = :user_id "
-                "AND tm.team_id = :team_id AND tm.status = 'ACTIVE' AND r.name = 'TEAM_LEADER'"
+                "SELECT 1 FROM team_member_roles tmr JOIN team_members tm "
+                "ON tm.team_id = tmr.team_id AND tm.user_id = tmr.user_id "
+                "WHERE tmr.user_id = :user_id AND tmr.team_id = :team_id "
+                "AND tm.status = 'ACTIVE' AND tmr.role_key = 'TEAM_LEADER'"
             ),
             {"user_id": user_id, "team_id": team_id},
         ).scalar()
@@ -403,12 +404,14 @@ def test_team_leader_access_control(test_engine):
             {"team_id": team_id, "user_id": leader_id},
         )
 
-        # Assign TEAM_LEADER directly to the leader. Team-scoped roles are
-        # inherited capabilities; they do not make every member a leader.
+        # Assign TEAM_LEADER to this active member within this team.
         connection.execute(text("INSERT INTO roles (id, name, role_key) VALUES (998, 'TEAM_LEADER', 'TEAM_LEADER')"))
         connection.execute(
-            text("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, 998)"),
-            {"user_id": leader_id},
+            text(
+                "INSERT INTO team_member_roles (team_id, user_id, role_key, assigned_by) "
+                "VALUES (:team_id, :user_id, 'TEAM_LEADER', :user_id)"
+            ),
+            {"team_id": team_id, "user_id": leader_id},
         )
 
         # Create regular team member

@@ -19,6 +19,9 @@ def _engine():
         connection.execute(text("CREATE TABLE user_roles (user_id TEXT, role_id INTEGER)"))
         connection.execute(text("CREATE TABLE team_roles (team_id TEXT, role_id INTEGER)"))
         connection.execute(
+            text("CREATE TABLE team_member_roles (team_id TEXT, user_id TEXT, role_key TEXT, assigned_by TEXT)")
+        )
+        connection.execute(
             text(
                 """
                 CREATE TABLE team_members (
@@ -73,6 +76,39 @@ def test_team_role_does_not_promote_every_member_to_team_leader(client, monkeypa
     with engine.begin() as connection:
         connection.execute(text("INSERT INTO roles VALUES (998, 'TEAM_LEADER')"))
         connection.execute(text("INSERT INTO team_roles VALUES ('team-1', 998)"))
+        connection.execute(text("INSERT INTO team_members VALUES ('team-1', 'user-1', 'ACTIVE')"))
+
+    monkeypatch.setattr(team_membership, "get_engine", lambda: engine)
+    app.dependency_overrides[get_current_user] = lambda: {"user_id": "user-1"}
+    try:
+        response = client.get("/api/teams/team-1/requests", headers={"host": "localhost"})
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+    assert response.status_code == 403
+
+
+def test_scoped_active_team_leader_can_list_membership_requests(client, monkeypatch):
+    engine = _engine()
+    with engine.begin() as connection:
+        connection.execute(text("INSERT INTO team_members VALUES ('team-1', 'user-1', 'ACTIVE')"))
+        connection.execute(text("INSERT INTO team_member_roles VALUES ('team-1', 'user-1', 'TEAM_LEADER', 'user-1')"))
+
+    monkeypatch.setattr(team_membership, "get_engine", lambda: engine)
+    app.dependency_overrides[get_current_user] = lambda: {"user_id": "user-1"}
+    try:
+        response = client.get("/api/teams/team-1/requests", headers={"host": "localhost"})
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+    assert response.status_code == 200
+
+
+def test_direct_team_leader_role_does_not_authorize_team_actions(client, monkeypatch):
+    engine = _engine()
+    with engine.begin() as connection:
+        connection.execute(text("INSERT INTO roles VALUES (998, 'TEAM_LEADER')"))
+        connection.execute(text("INSERT INTO user_roles VALUES ('user-1', 998)"))
         connection.execute(text("INSERT INTO team_members VALUES ('team-1', 'user-1', 'ACTIVE')"))
 
     monkeypatch.setattr(team_membership, "get_engine", lambda: engine)

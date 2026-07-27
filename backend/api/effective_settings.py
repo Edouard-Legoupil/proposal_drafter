@@ -1,6 +1,6 @@
 SYSTEM_INHERITED_SETTING_IS_EFFECTIVE = """
 (
-    LOWER(TRIM(COALESCE(CAST(usr.approved_by AS TEXT), ''))) <> 'system'
+    usr.approved_by IS NOT NULL
     OR EXISTS (
         SELECT 1
         FROM team_members tm
