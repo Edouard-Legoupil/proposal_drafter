@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 # Import shared base from models package to ensure all models share the same registry
 # This fixes cross-model relationship resolution issues
 from backend.models import Base  # type: ignore[valid-type]
+from backend.services.access_management_service import AccessManagementService
 
 # Configure logger for authorization
 logger = logging.getLogger("security.authorization")
@@ -74,63 +75,34 @@ class User(Base):  # type: ignore[valid-type, misc]
     @property
     def is_admin(self) -> bool:
         """Check if user has admin privileges based on roles."""
-        return "system admin" in [ur.role.name for ur in self.user_roles if ur.role]
+        return any(
+            ur.role and ur.role.name.lower().replace("_", " ").strip() == "system admin" for ur in self.user_roles
+        )
 
     def is_team_leader(self, team_id: str, session) -> bool:
         """Check if user is a team leader of a specific team."""
-        return bool(
-            session.execute(
-                text(
-                    """
-                    SELECT 1
-                    FROM team_member_roles tmr
-                    JOIN team_members tm
-                      ON tm.team_id = tmr.team_id AND tm.user_id = tmr.user_id
-                    WHERE tmr.team_id = :team_id
-                      AND tmr.user_id = :user_id
-                      AND tmr.role_key = 'TEAM_LEADER'
-                      AND tm.status = 'ACTIVE'
-                    """
-                ),
-                {"team_id": team_id, "user_id": str(self.id)},
-            ).first()
-        )
+        return AccessManagementService(session).is_team_leader(str(self.id), team_id)
 
     @property
     def roles(self) -> List[str]:
         """Get list of role names for the user (direct roles only)."""
         return [ur.role.name for ur in self.user_roles if ur.role]
 
-    def get_all_roles_with_inheritance(self, session) -> List[str]:
-        """Get list of all role names for the user, including roles inherited from teams."""
-        direct_roles = self.roles
-
-        # Get roles inherited from teams
-        inherited_roles = []
-        if self.team_id:
-            from backend.models.team import TeamMember, TeamRole
-
-            team_roles = (
-                session.query(TeamRole)
-                .join(TeamMember, TeamMember.team_id == TeamRole.team_id)
-                .filter(
-                    TeamMember.user_id == str(self.id),
-                    TeamMember.status == "ACTIVE",
-                    TeamRole.team_id == self.team_id,
-                )
-                .all()
-            )
-            inherited_roles = [tr.role.name for tr in team_roles if tr.role]
-
-        # Combine and deduplicate
-        all_roles = list(set(direct_roles + inherited_roles))
-        return all_roles
+    def get_all_roles_with_inheritance(self, session, team_id: Optional[str] = None) -> List[str]:
+        """Get roles for one selected active team; direct ordinary roles are ignored."""
+        context = AccessManagementService(session).resolve_context(str(self.id), team_id)
+        return sorted(context.roles)
 
     # =========================================================================
     # Authorization Methods (T013-T016)
     # =========================================================================
 
-    def has_permission(self, permission: str, session: Optional[Session] = None) -> bool:
+    def has_permission(
+        self,
+        permission: str,
+        session: Optional[Session] = None,
+        team_id: Optional[str] = None,
+    ) -> bool:
         """
         Check if the user has a specific permission.
 
@@ -155,16 +127,10 @@ class User(Base):  # type: ignore[valid-type, misc]
         if self.is_admin:
             return True
 
-        # Get all roles including inherited from teams
-        if session:
-            all_roles = self.get_all_roles_with_inheritance(session)
-        else:
-            all_roles = self.roles
+        if not session:
+            return False
 
-        # Check if the permission matches any of the user's role names
-        # This is a simplified approach - in a full RBAC system, you'd have
-        # a separate permissions table and role-permission mappings
-        return permission in all_roles
+        return permission in self.get_all_roles_with_inheritance(session, team_id)
 
     def owns_resource(self, resource_type: str, resource_id: str, session: Optional[Session] = None) -> bool:
         """

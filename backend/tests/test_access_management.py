@@ -272,8 +272,8 @@ def test_object_level_access_control(test_engine):
         assert has_access(non_member_id, "read") is False
 
 
-def test_role_inheritance_with_team_leader(test_engine):
-    """Test role inheritance including TEAM_LEADER role"""
+def test_role_inheritance_keeps_team_leadership_separate(test_engine):
+    """Test component inheritance and scoped TEAM_LEADER status."""
     with test_engine.connect() as connection:
         # Setup: Create roles
         connection.execute(
@@ -333,7 +333,7 @@ def test_role_inheritance_with_team_leader(test_engine):
             {"team_id": team_id, "user_id": member_id},
         )
 
-        # Assign access role to the team and leader role directly to one user.
+        # Assign component access to the team and leadership to one active member.
         connection.execute(
             text(
                 "INSERT INTO team_roles (team_id, role_id, role_key) " "VALUES (:team_id, :role_id, 'access_metrics')"
@@ -342,8 +342,11 @@ def test_role_inheritance_with_team_leader(test_engine):
         )
 
         connection.execute(
-            text("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, :role_id)"),
-            {"user_id": leader_id, "role_id": 998},
+            text(
+                "INSERT INTO team_member_roles (team_id, user_id, role_key, assigned_by) "
+                "VALUES (:team_id, :user_id, 'TEAM_LEADER', :user_id)"
+            ),
+            {"team_id": team_id, "user_id": leader_id},
         )
 
         # Test role inheritance for leader
@@ -352,7 +355,8 @@ def test_role_inheritance_with_team_leader(test_engine):
         assert leader is not None
         role_names = leader.get_all_roles_with_inheritance(session)
         assert "access_metrics" in role_names  # Inherited from team
-        assert "TEAM_LEADER" in role_names  # Team leader role
+        assert "TEAM_LEADER" not in role_names  # Leadership is not component access
+        assert leader.is_team_leader(team_id, session)
 
         # Test role inheritance for regular member
         member = session.get(User, member_id)

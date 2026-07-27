@@ -21,6 +21,7 @@ from backend.core.config import (
 )
 from backend.core.db import get_engine
 from backend.core.redis import is_redis_available, redis_client
+from backend.services.access_management_service import AccessManagementService
 
 # Configure logging for this module.
 logger = logging.getLogger(__name__)
@@ -95,48 +96,22 @@ def get_current_user(request: Request) -> dict:
             if not is_session_token_active(user_id, token):
                 raise HTTPException(status_code=401, detail="Session is no longer active.")
 
-            # Fetch direct and inherited roles, tolerating deployments where
-            # optional access tables have not been created yet.
-            # We use nested transactions (savepoints) to ensure that if one query fails,
-            # it doesn't poison the entire connection/transaction.
-            roles = []
-            all_roles = []
-            try:
-                with connection.begin_nested():
-                    # Get direct user roles
-                    roles_query = text(
-                        "SELECT r.name FROM roles r JOIN user_roles ur ON r.id = ur.role_id WHERE ur.user_id = :user_id"
-                    )
-                    roles_result = connection.execute(roles_query, {"user_id": user_id}).fetchall()
-                    roles = [row[0] for row in roles_result] if roles_result else []
-
-                    # Get inherited roles from teams
-                    inherited_roles_query = text(
-                        """
-                        SELECT DISTINCT r.name
-                        FROM roles r
-                        JOIN team_roles tr ON r.id = tr.role_id
-                        JOIN team_members tm ON tr.team_id = tm.team_id
-                        WHERE tm.user_id = :user_id
-                          AND tm.status = 'ACTIVE'
-                        """
-                    )
-                    inherited_roles_result = connection.execute(inherited_roles_query, {"user_id": user_id}).fetchall()
-                    inherited_roles = [row[0] for row in inherited_roles_result] if inherited_roles_result else []
-
-                    # Combine and deduplicate
-                    all_roles = list(set(roles + inherited_roles))
-
-            except Exception as e:
-                logger.warning(f"Failed to fetch roles for user {user_id}: {e}")
+            requested_team_id = request.headers.get("X-Team-ID")
+            context = AccessManagementService(connection).resolve_context(user_id, requested_team_id)
+            roles = sorted(context.roles)
 
             return {
                 "user_id": user_id,
                 "name": user[1],
                 "email": user[2],
-                "roles": roles,  # Direct roles only
-                "all_roles": all_roles,  # All roles including inherited
-                "is_admin": "system admin" in all_roles,  # Check against all roles
+                "memberships": context.memberships,
+                "teams": context.memberships,
+                "active_team": context.active_team,
+                "roles": roles,
+                "all_roles": roles,
+                "team_leadership": context.team_leadership,
+                "settings": context.settings,
+                "is_admin": context.is_admin,
                 "is_sso": is_sso,
                 "requested_role_id": user[4],
             }
@@ -166,11 +141,13 @@ def is_system_admin(current_user: dict = Depends(get_current_user)):
 
 
 def require_any_role(*required_roles: str):
-    """Build a dependency that requires at least one direct or inherited role."""
+    """Build a dependency that requires a role in the active team context."""
     normalized_required = {role.lower().replace("_", " ").strip() for role in required_roles}
 
     def dependency(current_user: dict = Depends(get_current_user)) -> dict:
-        user_roles = current_user.get("all_roles", current_user.get("roles", []))
+        if current_user.get("is_admin"):
+            return current_user
+        user_roles = current_user.get("roles", [])
         normalized_user_roles = {role.lower().replace("_", " ").strip() for role in user_roles}
         if normalized_required.isdisjoint(normalized_user_roles):
             raise HTTPException(status_code=403, detail="Required role is not assigned.")
@@ -192,8 +169,9 @@ def check_user_group_access(
     - Outcome cards: needs 'knowledge manager outcome' role.
     - Field context cards: needs 'knowledge manager field context' role AND must be the owner.
     """
-    # Use all_roles to include inherited roles
-    user_roles = current_user.get("all_roles", current_user.get("roles", []))
+    if current_user.get("is_admin"):
+        return
+    user_roles = current_user.get("roles", [])
     # Donor check
     if donor_id:
         if "knowledge manager donors" not in user_roles:

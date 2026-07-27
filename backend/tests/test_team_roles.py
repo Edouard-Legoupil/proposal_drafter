@@ -95,9 +95,9 @@ def test_role_inheritance_for_team_members(test_engine):
         assert user is not None
         user.team_id = team_id
         role_names = user.get_all_roles_with_inheritance(session)
-        assert "direct_role" in role_names
+        assert "direct_role" not in role_names
         assert "team_role" in role_names
-        assert len(role_names) == 2
+        assert len(role_names) == 1
 
 
 def test_user_model_role_inheritance(test_engine):
@@ -159,9 +159,9 @@ def test_user_model_role_inheritance(test_engine):
         user = session.get(User, user_id)
         assert user is not None
         all_roles = user.get_all_roles_with_inheritance(session)
-        assert "direct_role" in all_roles
+        assert "direct_role" not in all_roles
         assert "team_role" in all_roles
-        assert len(all_roles) == 2
+        assert len(all_roles) == 1
 
 
 def test_user_model_does_not_inherit_roles_from_pending_membership(test_engine):

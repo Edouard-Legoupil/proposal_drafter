@@ -95,8 +95,8 @@ def get_user_roles(current_user: CurrentUser) -> list:
 
 
 def get_user_roles_with_inheritance(current_user: CurrentUser) -> list:
-    """Get all roles from current_user dict, including inherited roles."""
-    return current_user.get("all_roles", current_user.get("roles", []))
+    """Get roles from the selected active-team context."""
+    return current_user.get("roles", [])
 
 
 def has_permission(current_user: CurrentUser, permission: str) -> bool:
@@ -104,9 +104,7 @@ def has_permission(current_user: CurrentUser, permission: str) -> bool:
     if is_admin(current_user):
         return True
 
-    # Check both direct roles and inherited roles
-    all_roles = get_user_roles_with_inheritance(current_user)
-    return permission in all_roles
+    return permission in get_user_roles_with_inheritance(current_user)
 
 
 # =============================================================================
@@ -343,27 +341,11 @@ async def verify_team_membership(team_id: Optional[int], current_user: CurrentUs
             detail="Team ID required for team membership verification",
         )
 
+    active_team = current_user.get("active_team") or {}
+    if str(active_team.get("id")) == str(team_id):
+        return True
+
     user_id = get_user_id(current_user)
-
-    # Check team_members table
-    try:
-        with get_db_connection() as connection:
-            result = connection.execute(
-                text(
-                    "SELECT 1 FROM team_members "
-                    "WHERE team_id = :team_id AND user_id = :user_id AND status = 'ACTIVE'"
-                ),
-                {"team_id": team_id, "user_id": user_id},
-            )
-            membership = result.fetchone()
-
-            if membership is not None:
-                return True
-    except Exception as e:
-        import logging
-
-        logger = logging.getLogger("security.authorization")
-        logger.error(f"Database error in verify_team_membership: {e}")
 
     # Log the team membership denial
     import logging
