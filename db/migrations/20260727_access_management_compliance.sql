@@ -173,13 +173,16 @@ CREATE OR REPLACE FUNCTION enforce_active_team_leader_membership()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 AS $$
+DECLARE
+    membership_status TEXT;
 BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM team_members tm
-        WHERE tm.team_id = NEW.team_id
-          AND tm.user_id = NEW.user_id
-          AND tm.status = 'ACTIVE'
-    ) THEN
+    SELECT tm.status INTO membership_status
+    FROM team_members tm
+    WHERE tm.team_id = NEW.team_id
+      AND tm.user_id = NEW.user_id
+    FOR UPDATE;
+
+    IF membership_status IS DISTINCT FROM 'ACTIVE' THEN
         RAISE EXCEPTION 'TEAM_LEADER requires an active membership';
     END IF;
     RETURN NEW;

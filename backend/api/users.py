@@ -232,7 +232,9 @@ async def get_user_settings(current_user: dict = Depends(get_current_user)):
             requested_team_memberships = [row[0] for row in requested_team_memberships_result]
 
             # Get team memberships
-            team_memberships_query = text("SELECT team_id FROM team_members WHERE user_id = :user_id")
+            team_memberships_query = text(
+                "SELECT team_id FROM team_members WHERE user_id = :user_id AND status = 'ACTIVE'"
+            )
             team_memberships_result = connection.execute(team_memberships_query, {"user_id": user_id}).fetchall()
             team_memberships = [row[0] for row in team_memberships_result]
 

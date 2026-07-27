@@ -153,6 +153,8 @@ def test_access_migration_is_idempotent_and_preserves_only_safe_assignments():
             "AND conname = 'team_roles_role_identity_fkey' AND contype = 'f'"
         )
         assert cursor.fetchone()[0] == 1
+        cursor.execute("SELECT pg_get_functiondef('enforce_active_team_leader_membership()'::regprocedure)")
+        assert "FOR UPDATE" in cursor.fetchone()[0]
 
         with pytest.raises(dbapi_error, match="active membership"):
             cursor.execute(

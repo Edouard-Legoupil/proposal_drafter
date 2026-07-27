@@ -262,7 +262,10 @@ class User(Base):  # type: ignore[valid-type, misc]
         if session:
             try:
                 result = session.execute(
-                    text("SELECT 1 FROM team_members " "WHERE team_id = :team_id AND user_id = :user_id"),
+                    text(
+                        "SELECT 1 FROM team_members "
+                        "WHERE team_id = :team_id AND user_id = :user_id AND status = 'ACTIVE'"
+                    ),
                     {"team_id": team_id, "user_id": str(self.id)},
                 )
                 return result.fetchone() is not None
@@ -276,7 +279,10 @@ class User(Base):  # type: ignore[valid-type, misc]
             try:
                 with get_engine().connect() as connection:
                     result = connection.execute(
-                        text("SELECT 1 FROM team_members " "WHERE team_id = :team_id AND user_id = :user_id"),
+                        text(
+                            "SELECT 1 FROM team_members "
+                            "WHERE team_id = :team_id AND user_id = :user_id AND status = 'ACTIVE'"
+                        ),
                         {"team_id": team_id, "user_id": str(self.id)},
                     )
                     return result.fetchone() is not None
@@ -401,7 +407,7 @@ class User(Base):  # type: ignore[valid-type, misc]
         if session:
             try:
                 result = session.execute(
-                    text("SELECT team_id FROM team_members WHERE user_id = :user_id"),
+                    text("SELECT team_id FROM team_members WHERE user_id = :user_id AND status = 'ACTIVE'"),
                     {"user_id": str(self.id)},
                 )
                 return [str(row[0]) for row in result.fetchall()]
@@ -414,7 +420,7 @@ class User(Base):  # type: ignore[valid-type, misc]
             try:
                 with get_engine().connect() as connection:
                     result = connection.execute(
-                        text("SELECT team_id FROM team_members WHERE user_id = :user_id"),
+                        text("SELECT team_id FROM team_members WHERE user_id = :user_id AND status = 'ACTIVE'"),
                         {"user_id": str(self.id)},
                     )
                     return [str(row[0]) for row in result.fetchall()]

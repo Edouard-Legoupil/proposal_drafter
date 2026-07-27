@@ -289,6 +289,29 @@ def test_migration_contract_scopes_constraints_and_installs_membership_triggers(
         assert "enforce_active_team_leader_membership" in sql
         assert "remove_inactive_team_leader_assignment" in sql
         assert "tm.status = 'ACTIVE'" in sql
+        assert "FOR UPDATE" in sql
+
+
+def test_bootstrap_settings_inheritance_requires_active_membership():
+    bootstrap = (Path(__file__).parents[2] / "db/database-setup.sql").read_text()
+
+    inherited_function = bootstrap.split("CREATE OR REPLACE FUNCTION get_inherited_settings_for_user", 1)[1].split(
+        "CREATE OR REPLACE FUNCTION apply_inherited_settings_to_user", 1
+    )[0]
+    apply_function = bootstrap.split("CREATE OR REPLACE FUNCTION apply_inherited_settings_to_user", 1)[1].split(
+        "CREATE OR REPLACE FUNCTION handle_team_settings_inheritance", 1
+    )[0]
+    trigger_function = bootstrap.split("CREATE OR REPLACE FUNCTION handle_team_settings_inheritance", 1)[1].split(
+        "CREATE TRIGGER team_settings_inheritance_trigger", 1
+    )[0]
+    settings_view = bootstrap.split("CREATE OR REPLACE VIEW user_effective_settings", 1)[1].split(
+        "CREATE TABLE IF NOT EXISTS user_role_requests", 1
+    )[0]
+
+    assert "status = 'ACTIVE'" in inherited_function
+    assert "status = 'ACTIVE'" in apply_function
+    assert "status = 'ACTIVE'" in trigger_function
+    assert "tm.status = 'ACTIVE'" in settings_view
 
 
 def test_access_settings_uniqueness_is_scoped_to_user_team_role_and_key(test_engine):

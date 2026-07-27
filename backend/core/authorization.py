@@ -349,7 +349,10 @@ async def verify_team_membership(team_id: Optional[int], current_user: CurrentUs
     try:
         with get_db_connection() as connection:
             result = connection.execute(
-                text("SELECT 1 FROM team_members WHERE team_id = :team_id AND user_id = :user_id"),
+                text(
+                    "SELECT 1 FROM team_members "
+                    "WHERE team_id = :team_id AND user_id = :user_id AND status = 'ACTIVE'"
+                ),
                 {"team_id": team_id, "user_id": user_id},
             )
             membership = result.fetchone()

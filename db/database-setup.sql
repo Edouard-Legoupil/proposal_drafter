@@ -92,13 +92,16 @@ CREATE OR REPLACE FUNCTION enforce_active_team_leader_membership()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 AS $$
+DECLARE
+    membership_status TEXT;
 BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM team_members tm
-        WHERE tm.team_id = NEW.team_id
-          AND tm.user_id = NEW.user_id
-          AND tm.status = 'ACTIVE'
-    ) THEN
+    SELECT tm.status INTO membership_status
+    FROM team_members tm
+    WHERE tm.team_id = NEW.team_id
+      AND tm.user_id = NEW.user_id
+    FOR UPDATE;
+
+    IF membership_status IS DISTINCT FROM 'ACTIVE' THEN
         RAISE EXCEPTION 'TEAM_LEADER requires an active membership';
     END IF;
     RETURN NEW;
@@ -186,7 +189,7 @@ WITH all_users_with_roles AS (
     -- Get all users who have any kind of role assignment
     SELECT DISTINCT user_id FROM user_roles
     UNION
-    SELECT DISTINCT user_id FROM team_members
+    SELECT DISTINCT user_id FROM team_members WHERE status = 'ACTIVE'
     UNION
     SELECT id FROM users WHERE requested_role_id IS NOT NULL
 )
@@ -250,7 +253,9 @@ BEGIN
     RETURN QUERY
     -- First get the user's teams
     WITH user_teams AS (
-        SELECT team_id FROM team_members WHERE user_id = get_inherited_settings_for_user.user_id
+        SELECT team_id FROM team_members
+        WHERE user_id = get_inherited_settings_for_user.user_id
+          AND status = 'ACTIVE'
     )
     -- Get team settings for those teams
     SELECT
@@ -286,7 +291,9 @@ BEGIN
         SELECT setting_type, setting_value
         FROM team_settings ts
         WHERE ts.team_id IN (
-            SELECT team_id FROM team_members WHERE user_id = apply_inherited_settings_to_user.user_id
+            SELECT team_id FROM team_members
+            WHERE user_id = apply_inherited_settings_to_user.user_id
+              AND status = 'ACTIVE'
         )
     LOOP
         -- Check if user already has this setting
@@ -322,7 +329,8 @@ BEGIN
         -- When a team setting is added or updated, apply to all team members
         PERFORM apply_inherited_settings_to_user(user_id)
         FROM team_members
-        WHERE team_id = NEW.team_id;
+        WHERE team_id = NEW.team_id
+          AND status = 'ACTIVE';
     END IF;
 
     RETURN NEW;
@@ -360,7 +368,8 @@ SELECT
     'inherited' AS source
 FROM team_settings ts
 JOIN team_members tm ON ts.team_id = tm.team_id
-WHERE NOT EXISTS (
+WHERE tm.status = 'ACTIVE'
+AND NOT EXISTS (
     SELECT 1 FROM user_settings_requests usr
     WHERE usr.user_id = tm.user_id
     AND usr.setting_type = ts.setting_type

@@ -171,7 +171,10 @@ def is_team_member(user_id: str, team_id: Any, session: Optional[Session] = None
     try:
         if session:
             result = session.execute(
-                text("SELECT 1 FROM team_members WHERE team_id = :team_id AND user_id = :user_id"),
+                text(
+                    "SELECT 1 FROM team_members "
+                    "WHERE team_id = :team_id AND user_id = :user_id AND status = 'ACTIVE'"
+                ),
                 {"team_id": team_id, "user_id": user_id},
             )
         else:
@@ -179,7 +182,10 @@ def is_team_member(user_id: str, team_id: Any, session: Optional[Session] = None
 
             with get_engine().connect() as connection:
                 result = connection.execute(
-                    text("SELECT 1 FROM team_members WHERE team_id = :team_id AND user_id = :user_id"),
+                    text(
+                        "SELECT 1 FROM team_members "
+                        "WHERE team_id = :team_id AND user_id = :user_id AND status = 'ACTIVE'"
+                    ),
                     {"team_id": team_id, "user_id": user_id},
                 )
 
@@ -438,7 +444,7 @@ def get_user_team_ids(user_id: str, session: Optional[Session] = None) -> List[s
     try:
         if session:
             result = session.execute(
-                text("SELECT team_id FROM team_members WHERE user_id = :user_id"),
+                text("SELECT team_id FROM team_members WHERE user_id = :user_id AND status = 'ACTIVE'"),
                 {"user_id": user_id},
             )
         else:
@@ -446,7 +452,7 @@ def get_user_team_ids(user_id: str, session: Optional[Session] = None) -> List[s
 
             with get_engine().connect() as connection:
                 result = connection.execute(
-                    text("SELECT team_id FROM team_members WHERE user_id = :user_id"),
+                    text("SELECT team_id FROM team_members WHERE user_id = :user_id AND status = 'ACTIVE'"),
                     {"user_id": user_id},
                 )
 

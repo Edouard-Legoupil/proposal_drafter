@@ -78,9 +78,10 @@ async def get_available_settings(current_user: dict = Depends(get_current_user))
                 FROM teams t
                 WHERE t.id NOT IN (
                     SELECT setting_value FROM user_settings_requests
-                    WHERE user_id = :user_id AND setting_type = 'team_membership' AND status = 'approved'
+                    WHERE user_id = :user_id AND setting_type = 'team_membership' AND status = 'pending'
                     UNION
-                    SELECT team_id FROM team_members WHERE user_id = :user_id
+                    SELECT team_id FROM team_members
+                    WHERE user_id = :user_id AND status = 'ACTIVE'
                 )
                 ORDER BY t.name
                 """
@@ -146,7 +147,10 @@ async def request_setting(request_data: dict, current_user: dict = Depends(get_c
                 ).fetchone()
             elif setting_type == "team_membership":
                 exists = connection.execute(
-                    text("SELECT 1 FROM team_members WHERE user_id = :user_id AND team_id = :team_id"),
+                    text(
+                        "SELECT 1 FROM team_members "
+                        "WHERE user_id = :user_id AND team_id = :team_id AND status = 'ACTIVE'"
+                    ),
                     {"user_id": current_user["user_id"], "team_id": setting_value},
                 ).fetchone()
 
