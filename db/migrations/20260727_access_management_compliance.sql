@@ -12,10 +12,20 @@ ALTER TABLE roles ADD COLUMN IF NOT EXISTS component TEXT;
 
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'roles_role_key_key') THEN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'roles_role_key_key'
+          AND conrelid = 'roles'::regclass
+          AND contype = 'u'
+    ) THEN
         ALTER TABLE roles ADD CONSTRAINT roles_role_key_key UNIQUE (role_key);
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'roles_id_role_key_key') THEN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'roles_id_role_key_key'
+          AND conrelid = 'roles'::regclass
+          AND contype = 'u'
+    ) THEN
         ALTER TABLE roles ADD CONSTRAINT roles_id_role_key_key UNIQUE (id, role_key);
     END IF;
 END$$;
@@ -56,7 +66,12 @@ ALTER TABLE team_members ALTER COLUMN status SET NOT NULL;
 
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'team_members_status_check') THEN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'team_members_status_check'
+          AND conrelid = 'team_members'::regclass
+          AND contype = 'c'
+    ) THEN
         ALTER TABLE team_members
             ADD CONSTRAINT team_members_status_check
             CHECK (status IN ('PENDING', 'ACTIVE', 'REJECTED'));
@@ -104,14 +119,29 @@ ALTER TABLE team_roles ALTER COLUMN role_key SET NOT NULL;
 
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'team_roles_team_id_role_key_key') THEN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'team_roles_team_id_role_key_key'
+          AND conrelid = 'team_roles'::regclass
+          AND contype = 'u'
+    ) THEN
         ALTER TABLE team_roles ADD CONSTRAINT team_roles_team_id_role_key_key UNIQUE (team_id, role_key);
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'team_roles_role_identity_fkey') THEN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'team_roles_role_identity_fkey'
+          AND conrelid = 'team_roles'::regclass
+          AND contype = 'f'
+    ) THEN
         ALTER TABLE team_roles ADD CONSTRAINT team_roles_role_identity_fkey
             FOREIGN KEY (role_id, role_key) REFERENCES roles(id, role_key) ON DELETE CASCADE;
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'team_roles_component_role_check') THEN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'team_roles_component_role_check'
+          AND conrelid = 'team_roles'::regclass
+          AND contype = 'c'
+    ) THEN
         ALTER TABLE team_roles ADD CONSTRAINT team_roles_component_role_check
             CHECK (role_key NOT IN ('system admin', 'TEAM_LEADER'));
     END IF;
@@ -128,6 +158,56 @@ CREATE TABLE IF NOT EXISTS team_member_roles (
     FOREIGN KEY (role_key) REFERENCES roles(role_key),
     FOREIGN KEY (assigned_by) REFERENCES users(id)
 );
+
+-- Remove any invalid rows left by a partial or earlier migration before the
+-- active-membership trigger is installed.
+DELETE FROM team_member_roles tmr
+WHERE NOT EXISTS (
+    SELECT 1 FROM team_members tm
+    WHERE tm.team_id = tmr.team_id
+      AND tm.user_id = tmr.user_id
+      AND tm.status = 'ACTIVE'
+);
+
+CREATE OR REPLACE FUNCTION enforce_active_team_leader_membership()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM team_members tm
+        WHERE tm.team_id = NEW.team_id
+          AND tm.user_id = NEW.user_id
+          AND tm.status = 'ACTIVE'
+    ) THEN
+        RAISE EXCEPTION 'TEAM_LEADER requires an active membership';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS enforce_active_team_leader_membership ON team_member_roles;
+CREATE TRIGGER enforce_active_team_leader_membership
+BEFORE INSERT OR UPDATE ON team_member_roles
+FOR EACH ROW EXECUTE FUNCTION enforce_active_team_leader_membership();
+
+CREATE OR REPLACE FUNCTION remove_inactive_team_leader_assignment()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NEW.status IS DISTINCT FROM 'ACTIVE' THEN
+        DELETE FROM team_member_roles
+        WHERE team_id = NEW.team_id AND user_id = NEW.user_id;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS remove_inactive_team_leader_assignment ON team_members;
+CREATE TRIGGER remove_inactive_team_leader_assignment
+AFTER UPDATE OF status ON team_members
+FOR EACH ROW EXECUTE FUNCTION remove_inactive_team_leader_assignment();
 
 CREATE TABLE IF NOT EXISTS access_settings (
     id BIGSERIAL PRIMARY KEY,

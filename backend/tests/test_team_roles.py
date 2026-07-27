@@ -20,7 +20,8 @@ def test_team_role_creation_and_assignment(test_engine):
         # Create a test team
         team_id = str(uuid.uuid4())
         connection.execute(
-            text("INSERT INTO teams (id, name) VALUES (:id, :name)"), {"id": team_id, "name": "Test Team"}
+            text("INSERT INTO teams (id, name) VALUES (:id, :name)"),
+            {"id": team_id, "name": "Test Team"},
         )
 
         # Assign role to team
@@ -55,14 +56,20 @@ def test_role_inheritance_for_team_members(test_engine):
         # Create team
         team_id = str(uuid.uuid4())
         connection.execute(
-            text("INSERT INTO teams (id, name) VALUES (:id, :name)"), {"id": team_id, "name": "Test Team"}
+            text("INSERT INTO teams (id, name) VALUES (:id, :name)"),
+            {"id": team_id, "name": "Test Team"},
         )
 
         # Create user
         user_id = str(uuid.uuid4())
         connection.execute(
             text("INSERT INTO users (id, email, password, name) VALUES (:id, :email, :password, :name)"),
-            {"id": user_id, "email": "test@example.com", "password": "password", "name": "Test User"},
+            {
+                "id": user_id,
+                "email": "test@example.com",
+                "password": "password",
+                "name": "Test User",
+            },
         )
 
         # Add user to team
@@ -108,7 +115,8 @@ def test_user_model_role_inheritance(test_engine):
         # Create team
         team_id = str(uuid.uuid4())
         connection.execute(
-            text("INSERT INTO teams (id, name) VALUES (:id, :name)"), {"id": team_id, "name": "Test Team"}
+            text("INSERT INTO teams (id, name) VALUES (:id, :name)"),
+            {"id": team_id, "name": "Test Team"},
         )
 
         # Create user with team
@@ -156,6 +164,34 @@ def test_user_model_role_inheritance(test_engine):
         assert len(all_roles) == 2
 
 
+def test_user_model_does_not_inherit_roles_from_pending_membership(test_engine):
+    with test_engine.connect() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO roles (id, name, role_key, component) "
+                "VALUES (1, 'team_role', 'team_role', 'TeamComponent')"
+            )
+        )
+        connection.execute(text("INSERT INTO teams (id, name) VALUES ('team-1', 'Test Team')"))
+        connection.execute(
+            text(
+                "INSERT INTO users (id, email, password, team_id) "
+                "VALUES ('user-1', 'test@example.org', 'secret', 'team-1')"
+            )
+        )
+        connection.execute(
+            text("INSERT INTO team_members (team_id, user_id, status) " "VALUES ('team-1', 'user-1', 'PENDING')")
+        )
+        connection.execute(
+            text("INSERT INTO team_roles (team_id, role_id, role_key) " "VALUES ('team-1', 1, 'team_role')")
+        )
+
+        user = Session(bind=connection).get(User, "user-1")
+
+        assert user is not None
+        assert "team_role" not in user.get_all_roles_with_inheritance(Session(bind=connection))
+
+
 def test_new_access_roles(test_engine):
     """Test the new access control roles."""
     with test_engine.connect() as connection:
@@ -169,7 +205,8 @@ def test_new_access_roles(test_engine):
 
         for role_id, role_name in access_roles:
             connection.execute(
-                text("INSERT INTO roles (id, name) VALUES (:id, :name)"), {"id": role_id, "name": role_name}
+                text("INSERT INTO roles (id, name) VALUES (:id, :name)"),
+                {"id": role_id, "name": role_name},
             )
 
         # Verify roles were created
@@ -199,7 +236,8 @@ def test_permission_checking_with_inherited_roles(test_engine):
         # Create team
         team_id = str(uuid.uuid4())
         connection.execute(
-            text("INSERT INTO teams (id, name) VALUES (:id, :name)"), {"id": team_id, "name": "Metrics Team"}
+            text("INSERT INTO teams (id, name) VALUES (:id, :name)"),
+            {"id": team_id, "name": "Metrics Team"},
         )
 
         # Create user
@@ -252,7 +290,12 @@ def test_admin_bypass(test_engine):
         user_id = str(uuid.uuid4())
         connection.execute(
             text("INSERT INTO users (id, email, password, name) VALUES (:id, :email, :password, :name)"),
-            {"id": user_id, "email": "admin@example.com", "password": "password", "name": "Admin User"},
+            {
+                "id": user_id,
+                "email": "admin@example.com",
+                "password": "password",
+                "name": "Admin User",
+            },
         )
         connection.execute(
             text("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, :role_id)"),

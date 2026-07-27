@@ -120,10 +120,57 @@ def _create_test_engine():
                     assigned_by TEXT NOT NULL,
                     assigned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     PRIMARY KEY (team_id, user_id, role_key),
-                    FOREIGN KEY (team_id, user_id) REFERENCES team_members(team_id, user_id),
+                    FOREIGN KEY (team_id, user_id) REFERENCES team_members(team_id, user_id) ON DELETE CASCADE,
                     FOREIGN KEY (role_key) REFERENCES roles(role_key),
                     FOREIGN KEY (assigned_by) REFERENCES users(id)
                 )
+            """
+                )
+            )
+            connection.execute(
+                text(
+                    """
+                CREATE TRIGGER IF NOT EXISTS enforce_active_team_leader_membership_insert
+                BEFORE INSERT ON team_member_roles
+                WHEN NOT EXISTS (
+                    SELECT 1 FROM team_members tm
+                    WHERE tm.team_id = NEW.team_id
+                      AND tm.user_id = NEW.user_id
+                      AND tm.status = 'ACTIVE'
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'TEAM_LEADER requires an active membership');
+                END
+            """
+                )
+            )
+            connection.execute(
+                text(
+                    """
+                CREATE TRIGGER IF NOT EXISTS enforce_active_team_leader_membership_update
+                BEFORE UPDATE ON team_member_roles
+                WHEN NOT EXISTS (
+                    SELECT 1 FROM team_members tm
+                    WHERE tm.team_id = NEW.team_id
+                      AND tm.user_id = NEW.user_id
+                      AND tm.status = 'ACTIVE'
+                )
+                BEGIN
+                    SELECT RAISE(ABORT, 'TEAM_LEADER requires an active membership');
+                END
+            """
+                )
+            )
+            connection.execute(
+                text(
+                    """
+                CREATE TRIGGER IF NOT EXISTS remove_inactive_team_leader_assignment
+                AFTER UPDATE OF status ON team_members
+                WHEN NEW.status <> 'ACTIVE'
+                BEGIN
+                    DELETE FROM team_member_roles
+                    WHERE team_id = NEW.team_id AND user_id = NEW.user_id;
+                END
             """
                 )
             )
@@ -136,7 +183,7 @@ def _create_test_engine():
                     team_id TEXT NOT NULL,
                     role_key TEXT NOT NULL,
                     key TEXT NOT NULL,
-                    value TEXT NOT NULL,
+                    value TEXT NOT NULL CHECK (json_valid(value)),
                     created_by TEXT NOT NULL,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     UNIQUE (user_id, team_id, role_key, key),

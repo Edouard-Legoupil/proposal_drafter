@@ -109,9 +109,18 @@ class User(Base):  # type: ignore[valid-type, misc]
         # Get roles inherited from teams
         inherited_roles = []
         if self.team_id:
-            from backend.models.team import TeamRole
+            from backend.models.team import TeamMember, TeamRole
 
-            team_roles = session.query(TeamRole).filter_by(team_id=self.team_id).all()
+            team_roles = (
+                session.query(TeamRole)
+                .join(TeamMember, TeamMember.team_id == TeamRole.team_id)
+                .filter(
+                    TeamMember.user_id == str(self.id),
+                    TeamMember.status == "ACTIVE",
+                    TeamRole.team_id == self.team_id,
+                )
+                .all()
+            )
             inherited_roles = [tr.role.name for tr in team_roles if tr.role]
 
         # Combine and deduplicate

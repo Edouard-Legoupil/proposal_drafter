@@ -88,6 +88,46 @@ CREATE TABLE IF NOT EXISTS team_member_roles (
     FOREIGN KEY (assigned_by) REFERENCES users(id)
 );
 
+CREATE OR REPLACE FUNCTION enforce_active_team_leader_membership()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM team_members tm
+        WHERE tm.team_id = NEW.team_id
+          AND tm.user_id = NEW.user_id
+          AND tm.status = 'ACTIVE'
+    ) THEN
+        RAISE EXCEPTION 'TEAM_LEADER requires an active membership';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS enforce_active_team_leader_membership ON team_member_roles;
+CREATE TRIGGER enforce_active_team_leader_membership
+BEFORE INSERT OR UPDATE ON team_member_roles
+FOR EACH ROW EXECUTE FUNCTION enforce_active_team_leader_membership();
+
+CREATE OR REPLACE FUNCTION remove_inactive_team_leader_assignment()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NEW.status IS DISTINCT FROM 'ACTIVE' THEN
+        DELETE FROM team_member_roles
+        WHERE team_id = NEW.team_id AND user_id = NEW.user_id;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS remove_inactive_team_leader_assignment ON team_members;
+CREATE TRIGGER remove_inactive_team_leader_assignment
+AFTER UPDATE OF status ON team_members
+FOR EACH ROW EXECUTE FUNCTION remove_inactive_team_leader_assignment();
+
 CREATE TABLE IF NOT EXISTS access_settings (
     id BIGSERIAL PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -125,6 +165,7 @@ AS $$
     JOIN team_members tm ON tr.team_id = tm.team_id
     JOIN roles r ON tr.role_id = r.id
     WHERE tm.user_id = user_id_param::UUID
+      AND tm.status = 'ACTIVE'
 
     UNION ALL
 

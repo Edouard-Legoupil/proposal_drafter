@@ -118,6 +118,7 @@ def get_current_user(request: Request) -> dict:
                         JOIN team_roles tr ON r.id = tr.role_id
                         JOIN team_members tm ON tr.team_id = tm.team_id
                         WHERE tm.user_id = :user_id
+                          AND tm.status = 'ACTIVE'
                         """
                     )
                     inherited_roles_result = connection.execute(inherited_roles_query, {"user_id": user_id}).fetchall()

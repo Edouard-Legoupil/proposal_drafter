@@ -39,11 +39,24 @@ def test_sqlite_access_schema_has_normalized_columns(test_engine):
     inspector = inspect(test_engine)
 
     expected_columns = {
-        "teams": {"id", "name", "description", "created_by", "created_at", "updated_at"},
+        "teams": {
+            "id",
+            "name",
+            "description",
+            "created_by",
+            "created_at",
+            "updated_at",
+        },
         "team_members": {"team_id", "user_id", "status", "joined_at"},
         "roles": {"id", "name", "role_key", "component"},
         "team_roles": {"team_id", "role_key"},
-        "team_member_roles": {"team_id", "user_id", "role_key", "assigned_by", "assigned_at"},
+        "team_member_roles": {
+            "team_id",
+            "user_id",
+            "role_key",
+            "assigned_by",
+            "assigned_at",
+        },
         "access_settings": {
             "id",
             "user_id",
@@ -86,6 +99,122 @@ def test_team_member_roles_only_accepts_team_leader(test_engine):
                     "VALUES ('team-1', 'user-1', 'proposal writer', 'admin-1')"
                 )
             )
+
+
+def test_team_leader_assignment_requires_active_membership(test_engine):
+    with test_engine.begin() as connection:
+        connection.execute(text("INSERT INTO teams (id, name) VALUES ('team-1', 'Team 1')"))
+        connection.execute(
+            text(
+                "INSERT INTO users (id, email, password) VALUES "
+                "('user-1', 'user@example.org', 'secret'), "
+                "('admin-1', 'admin@example.org', 'secret')"
+            )
+        )
+        connection.execute(text("INSERT INTO roles (name, role_key) VALUES ('TEAM_LEADER', 'TEAM_LEADER')"))
+        connection.execute(
+            text("INSERT INTO team_members (team_id, user_id, status) " "VALUES ('team-1', 'user-1', 'PENDING')")
+        )
+
+        with pytest.raises(IntegrityError):
+            connection.execute(
+                text(
+                    "INSERT INTO team_member_roles (team_id, user_id, role_key, assigned_by) "
+                    "VALUES ('team-1', 'user-1', 'TEAM_LEADER', 'admin-1')"
+                )
+            )
+
+
+def test_team_leader_assignment_cannot_move_to_inactive_membership(test_engine):
+    with test_engine.begin() as connection:
+        connection.execute(text("INSERT INTO teams (id, name) VALUES ('team-1', 'Team 1')"))
+        connection.execute(
+            text(
+                "INSERT INTO users (id, email, password) VALUES "
+                "('active-1', 'active@example.org', 'secret'), "
+                "('pending-1', 'pending@example.org', 'secret'), "
+                "('admin-1', 'admin@example.org', 'secret')"
+            )
+        )
+        connection.execute(text("INSERT INTO roles (name, role_key) VALUES ('TEAM_LEADER', 'TEAM_LEADER')"))
+        connection.execute(
+            text(
+                "INSERT INTO team_members (team_id, user_id, status) VALUES "
+                "('team-1', 'active-1', 'ACTIVE'), "
+                "('team-1', 'pending-1', 'PENDING')"
+            )
+        )
+        connection.execute(
+            text(
+                "INSERT INTO team_member_roles (team_id, user_id, role_key, assigned_by) "
+                "VALUES ('team-1', 'active-1', 'TEAM_LEADER', 'admin-1')"
+            )
+        )
+
+        with pytest.raises(IntegrityError):
+            connection.execute(
+                text(
+                    "UPDATE team_member_roles SET user_id = 'pending-1' "
+                    "WHERE team_id = 'team-1' AND user_id = 'active-1'"
+                )
+            )
+
+
+def test_inactive_membership_removes_team_leader_assignment(test_engine):
+    with test_engine.begin() as connection:
+        connection.execute(text("INSERT INTO teams (id, name) VALUES ('team-1', 'Team 1')"))
+        connection.execute(
+            text(
+                "INSERT INTO users (id, email, password) VALUES "
+                "('user-1', 'user@example.org', 'secret'), "
+                "('admin-1', 'admin@example.org', 'secret')"
+            )
+        )
+        connection.execute(text("INSERT INTO roles (name, role_key) VALUES ('TEAM_LEADER', 'TEAM_LEADER')"))
+        connection.execute(
+            text("INSERT INTO team_members (team_id, user_id, status) " "VALUES ('team-1', 'user-1', 'ACTIVE')")
+        )
+        connection.execute(
+            text(
+                "INSERT INTO team_member_roles (team_id, user_id, role_key, assigned_by) "
+                "VALUES ('team-1', 'user-1', 'TEAM_LEADER', 'admin-1')"
+            )
+        )
+
+        connection.execute(
+            text("UPDATE team_members SET status = 'REJECTED' " "WHERE team_id = 'team-1' AND user_id = 'user-1'")
+        )
+
+        assignment_count = connection.execute(
+            text("SELECT COUNT(*) FROM team_member_roles " "WHERE team_id = 'team-1' AND user_id = 'user-1'")
+        ).scalar_one()
+        assert assignment_count == 0
+
+
+def test_deleted_membership_removes_team_leader_assignment(test_engine):
+    with test_engine.begin() as connection:
+        connection.execute(text("INSERT INTO teams (id, name) VALUES ('team-1', 'Team 1')"))
+        connection.execute(
+            text(
+                "INSERT INTO users (id, email, password) VALUES "
+                "('user-1', 'user@example.org', 'secret'), "
+                "('admin-1', 'admin@example.org', 'secret')"
+            )
+        )
+        connection.execute(text("INSERT INTO roles (name, role_key) VALUES ('TEAM_LEADER', 'TEAM_LEADER')"))
+        connection.execute(
+            text("INSERT INTO team_members (team_id, user_id, status) " "VALUES ('team-1', 'user-1', 'ACTIVE')")
+        )
+        connection.execute(
+            text(
+                "INSERT INTO team_member_roles (team_id, user_id, role_key, assigned_by) "
+                "VALUES ('team-1', 'user-1', 'TEAM_LEADER', 'admin-1')"
+            )
+        )
+
+        connection.execute(text("DELETE FROM team_members WHERE team_id = 'team-1' AND user_id = 'user-1'"))
+
+        assert connection.execute(text("SELECT COUNT(*) FROM team_member_roles")).scalar_one() == 0
 
 
 def test_team_members_rejects_unknown_status(test_engine):
@@ -149,6 +278,19 @@ def test_migration_reports_multi_team_assignments_even_if_one_team_already_has_r
     assert "am.team_ids IS NULL OR cardinality(am.team_ids) <> 1 OR safe.user_id IS NULL" in migration
 
 
+def test_migration_contract_scopes_constraints_and_installs_membership_triggers():
+    root = Path(__file__).parents[2]
+    migration = (root / "db/migrations/20260727_access_management_compliance.sql").read_text()
+    bootstrap = (root / "db/database-setup.sql").read_text()
+
+    assert "SELECT 1 FROM pg_constraint WHERE conname" not in migration
+    assert migration.count("conrelid =") >= 6
+    for sql in (migration, bootstrap):
+        assert "enforce_active_team_leader_membership" in sql
+        assert "remove_inactive_team_leader_assignment" in sql
+        assert "tm.status = 'ACTIVE'" in sql
+
+
 def test_access_settings_uniqueness_is_scoped_to_user_team_role_and_key(test_engine):
     statement = text(
         "INSERT INTO access_settings "
@@ -171,6 +313,33 @@ def test_access_settings_uniqueness_is_scoped_to_user_team_role_and_key(test_eng
                 "VALUES ('proposal writer', 'proposal writer', 'ProposalWorkspace')"
             )
         )
-        connection.execute(statement, {"value": "east"})
+        connection.execute(statement, {"value": '"east"'})
         with pytest.raises(IntegrityError):
-            connection.execute(statement, {"value": "west"})
+            connection.execute(statement, {"value": '"west"'})
+
+
+def test_access_settings_requires_json_value(test_engine):
+    with test_engine.begin() as connection:
+        connection.execute(text("INSERT INTO teams (id, name) VALUES ('team-1', 'Team 1')"))
+        connection.execute(
+            text(
+                "INSERT INTO users (id, email, password) VALUES "
+                "('user-1', 'user@example.org', 'secret'), "
+                "('admin-1', 'admin@example.org', 'secret')"
+            )
+        )
+        connection.execute(
+            text(
+                "INSERT INTO roles (name, role_key, component) "
+                "VALUES ('proposal writer', 'proposal writer', 'ProposalWorkspace')"
+            )
+        )
+
+        with pytest.raises(IntegrityError):
+            connection.execute(
+                text(
+                    "INSERT INTO access_settings "
+                    "(user_id, team_id, role_key, key, value, created_by) VALUES "
+                    "('user-1', 'team-1', 'proposal writer', 'region', 'not-json', 'admin-1')"
+                )
+            )
