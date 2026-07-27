@@ -1931,13 +1931,8 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
                 )
 
             with get_engine().connect() as conn:
-                is_admin = any(
-                    role
-                    in [
-                        "system admin",
-                        "project reviewer",
-                    ]
-                    for role in current_user.get("roles", [])
+                has_privileged_access = current_user.get("is_admin", False) or (
+                    "project reviewer" in current_user.get("roles", [])
                 )
 
                 draft_query = text(
@@ -1953,7 +1948,7 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
 
                 draft = conn.execute(
                     draft_query,
-                    {"id": proposal_id, "uid": user_id, "is_admin": is_admin},
+                    {"id": proposal_id, "uid": user_id, "is_admin": has_privileged_access},
                 ).fetchone()
                 if not draft:
                     raise HTTPException(status_code=404, detail="Draft not found.")
@@ -3144,14 +3139,7 @@ async def get_peer_reviews(proposal_id: uuid.UUID, current_user: dict = Depends(
             ).scalar()
 
             # Check if user is admin or project reviewer (can view all feedback)
-            is_admin = any(
-                role
-                in [
-                    "system admin",
-                    "project reviewer",
-                ]
-                for role in user_roles
-            )
+            is_admin = current_user.get("is_admin", False)
             is_project_reviewer = "project reviewer" in user_roles
 
             # Allow access if: owner, reviewer, admin, or project reviewer
