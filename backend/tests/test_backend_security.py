@@ -119,6 +119,74 @@ def global_admin(client):
     app.dependency_overrides.pop(get_current_user, None)
 
 
+@pytest.fixture
+def team_a_reviewer(client):
+    app.dependency_overrides[get_current_user] = lambda: {
+        "user_id": "reviewer-1",
+        "name": "Reviewer",
+        "email": "reviewer@example.org",
+        "roles": ["project reviewer"],
+        "all_roles": ["project reviewer"],
+        "active_team": {"id": "team-a", "name": "Team A"},
+        "is_admin": False,
+    }
+    yield client
+    app.dependency_overrides.pop(get_current_user, None)
+
+
+def _proposal_for_team(db_session, team_id):
+    proposal_id = str(uuid.uuid4())
+    db_session.execute(text("INSERT INTO teams (id, name) VALUES ('team-a', 'Team A'), ('team-b', 'Team B')"))
+    db_session.execute(
+        text(
+            "INSERT INTO users (id, email, name, password) VALUES "
+            "('reviewer-1', 'reviewer@example.org', 'Reviewer', 'secret'), "
+            "('owner-1', 'owner@example.org', 'Owner', 'secret')"
+        )
+    )
+    db_session.execute(
+        text(
+            "INSERT INTO proposals "
+            "(id, user_id, team_id, form_data, project_description, status, template_name) "
+            "VALUES (:proposal_id, 'owner-1', :team_id, '{}', 'Description', 'draft', "
+            "'proposal_template_unhcr.json')"
+        ),
+        {"proposal_id": proposal_id, "team_id": team_id},
+    )
+    db_session.commit()
+    return proposal_id
+
+
+@pytest.mark.parametrize(
+    ("path", "denied_status"),
+    [
+        ("/api/load-draft/{proposal_id}", 404),
+        ("/api/proposals/{proposal_id}/peer-reviews", 403),
+    ],
+)
+def test_project_reviewer_cannot_access_known_cross_team_proposal(team_a_reviewer, db_session, path, denied_status):
+    proposal_id = _proposal_for_team(db_session, "team-b")
+
+    response = team_a_reviewer.get(path.format(proposal_id=proposal_id))
+
+    assert response.status_code == denied_status
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/api/load-draft/{proposal_id}",
+        "/api/proposals/{proposal_id}/peer-reviews",
+    ],
+)
+def test_project_reviewer_can_access_same_team_proposal(team_a_reviewer, db_session, path):
+    proposal_id = _proposal_for_team(db_session, "team-a")
+
+    response = team_a_reviewer.get(path.format(proposal_id=proposal_id))
+
+    assert response.status_code == 200
+
+
 def test_global_admin_can_delete_another_users_knowledge_comment(global_admin, db_session):
     card_id = str(uuid.uuid4())
     comment_id = str(uuid.uuid4())

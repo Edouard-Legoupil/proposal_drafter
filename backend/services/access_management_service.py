@@ -56,6 +56,7 @@ class AccessManagementService:
         self,
         memberships: list[dict[str, str]],
         requested_team_id: str | None,
+        is_admin: bool = False,
     ) -> dict[str, str] | None:
         if requested_team_id is None:
             return memberships[0] if memberships else None
@@ -64,6 +65,12 @@ class AccessManagementService:
             (membership for membership in memberships if membership["id"] == str(requested_team_id)),
             None,
         )
+        if selected is None and is_admin:
+            row = self.connection.execute(
+                text("SELECT id, name FROM teams WHERE id = :team_id"),
+                {"team_id": str(requested_team_id)},
+            ).first()
+            return {"id": str(row[0]), "name": row[1]} if row else None
         if selected is None:
             raise HTTPException(status_code=403, detail="Selected team is not an active membership.")
         return selected
@@ -125,7 +132,12 @@ class AccessManagementService:
         for role_key, key, value in rows:
             if _normalized_role(str(role_key)) not in authorized_roles:
                 continue
-            parsed_value = json.loads(value) if isinstance(value, str) else value
+            parsed_value = value
+            if isinstance(value, str):
+                try:
+                    parsed_value = json.loads(value)
+                except json.JSONDecodeError:
+                    parsed_value = value
             settings.setdefault(str(role_key), {})[str(key)] = parsed_value
         return settings
 
@@ -140,10 +152,14 @@ class AccessManagementService:
         return any(_normalized_role(str(role_key or name)) == "system admin" for name, role_key in direct_roles)
 
     def resolve_context(self, user_id: str, requested_team_id: str | None = None) -> AccessContext:
+        is_admin = self.is_system_admin(str(user_id))
         memberships = self.resolve_active_memberships(user_id)
-        active_team = self.select_active_team(memberships, requested_team_id)
+        active_team = self.select_active_team(memberships, requested_team_id, is_admin)
         active_team_id = active_team["id"] if active_team else None
-        roles, role_keys = self.get_team_roles(active_team_id)
+        active_membership_ids = {membership["id"] for membership in memberships}
+        roles, role_keys = (
+            self.get_team_roles(active_team_id) if active_team_id in active_membership_ids else (set(), set())
+        )
         return AccessContext(
             user_id=str(user_id),
             memberships=memberships,
@@ -152,7 +168,7 @@ class AccessManagementService:
             role_keys=role_keys,
             team_leadership=self.is_team_leader(str(user_id), active_team_id),
             settings=self.load_scoped_settings(str(user_id), active_team_id, role_keys),
-            is_admin=self.is_system_admin(str(user_id)),
+            is_admin=is_admin,
         )
 
     @staticmethod

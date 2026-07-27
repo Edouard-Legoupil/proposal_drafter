@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS team_members (
     FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+CREATE INDEX IF NOT EXISTS idx_team_members_user_status_team ON team_members(user_id, status, team_id);
 -- Create team_roles table for assigning roles to teams
 CREATE TABLE IF NOT EXISTS team_roles (
     team_id UUID NOT NULL,

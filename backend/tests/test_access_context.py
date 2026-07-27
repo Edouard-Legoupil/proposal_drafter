@@ -126,6 +126,51 @@ def test_direct_system_admin_is_global_but_does_not_restore_direct_ordinary_role
     assert context.roles == set()
 
 
+def test_global_admin_can_select_existing_nonmember_team_without_inheriting_roles(access_data):
+    with _service(access_data) as service:
+        context = service.resolve_context("admin-1", "team-a")
+
+    assert context.is_admin is True
+    assert context.active_team == {"id": "team-a", "name": "Team A"}
+    assert context.roles == set()
+    assert context.settings == {}
+
+
+def test_stale_admin_team_selection_does_not_lock_out_global_admin(access_data):
+    with _service(access_data) as service:
+        context = service.resolve_context("admin-1", "missing-team")
+
+    assert context.is_admin is True
+    assert context.active_team is None
+    assert context.roles == set()
+
+
+def test_scoped_setting_values_accept_decoded_and_encoded_json():
+    class Result:
+        def fetchall(self):
+            return [
+                ("access metrics", "raw", "east"),
+                ("access metrics", "encoded", '"east"'),
+                ("access metrics", "array", ["east", "west"]),
+                ("access metrics", "object", {"region": "east"}),
+            ]
+
+    class Connection:
+        def execute(self, _statement, _parameters):
+            return Result()
+
+    settings = AccessManagementService(Connection()).load_scoped_settings("user-1", "team-a", {"access metrics"})
+
+    assert settings == {
+        "access metrics": {
+            "raw": "east",
+            "encoded": "east",
+            "array": ["east", "west"],
+            "object": {"region": "east"},
+        }
+    }
+
+
 def test_get_current_user_uses_requested_active_team_context(access_data, monkeypatch):
     token = jwt.encode({"email": "user@example.org"}, str(security.SECRET_KEY), algorithm="HS256")
     request = Request(

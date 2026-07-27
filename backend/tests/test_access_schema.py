@@ -74,6 +74,19 @@ def test_sqlite_access_schema_has_normalized_columns(test_engine):
         assert columns <= actual, f"{table_name} is missing {columns - actual}"
 
 
+def test_postgres_access_schema_has_user_first_active_membership_index():
+    root = Path(__file__).parents[2]
+    expected = (
+        "CREATE INDEX IF NOT EXISTS idx_team_members_user_status_team " "ON team_members(user_id, status, team_id)"
+    )
+
+    for path in (
+        root / "db/database-setup.sql",
+        root / "db/migrations/20260727_access_management_compliance.sql",
+    ):
+        assert expected in path.read_text()
+
+
 def test_team_member_roles_only_accepts_team_leader(test_engine):
     with test_engine.begin() as connection:
         connection.execute(text("INSERT INTO teams (id, name) VALUES ('team-1', 'Team 1')"))

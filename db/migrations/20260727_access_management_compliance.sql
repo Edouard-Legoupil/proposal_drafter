@@ -63,6 +63,7 @@ UPDATE team_members SET status = UPPER(COALESCE(status, 'ACTIVE'));
 UPDATE team_members SET status = 'REJECTED' WHERE status NOT IN ('PENDING', 'ACTIVE', 'REJECTED');
 ALTER TABLE team_members ALTER COLUMN status SET DEFAULT 'ACTIVE';
 ALTER TABLE team_members ALTER COLUMN status SET NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_team_members_user_status_team ON team_members(user_id, status, team_id);
 
 DO $$
 BEGIN

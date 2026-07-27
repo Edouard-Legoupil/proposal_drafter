@@ -1931,9 +1931,9 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
                 )
 
             with get_engine().connect() as conn:
-                has_privileged_access = current_user.get("is_admin", False) or (
-                    "project reviewer" in current_user.get("roles", [])
-                )
+                is_admin = current_user.get("is_admin", False)
+                active_team_id = (current_user.get("active_team") or {}).get("id")
+                is_project_reviewer = "project reviewer" in current_user.get("roles", [])
 
                 draft_query = text(
                     """
@@ -1942,13 +1942,24 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
                         p.is_accepted, p.created_at, p.updated_at, p.status, p.contribution_id
                     FROM proposals p
                     LEFT JOIN proposal_peer_reviews pr ON p.id = pr.proposal_id AND pr.reviewer_id = :uid
-                    WHERE p.id = :id AND (p.user_id = :uid OR :is_admin OR pr.reviewer_id = :uid)
+                    WHERE p.id = :id AND (
+                        p.user_id = :uid
+                        OR :is_admin
+                        OR pr.reviewer_id = :uid
+                        OR (:is_project_reviewer AND p.team_id = :active_team_id)
+                    )
                 """
                 )
 
                 draft = conn.execute(
                     draft_query,
-                    {"id": proposal_id, "uid": user_id, "is_admin": has_privileged_access},
+                    {
+                        "id": proposal_id,
+                        "uid": user_id,
+                        "is_admin": is_admin,
+                        "is_project_reviewer": is_project_reviewer,
+                        "active_team_id": active_team_id,
+                    },
                 ).fetchone()
                 if not draft:
                     raise HTTPException(status_code=404, detail="Draft not found.")
@@ -3124,13 +3135,18 @@ async def get_peer_reviews(proposal_id: uuid.UUID, current_user: dict = Depends(
     try:
         with get_engine().connect() as connection:
             # Verify the user has access to the proposal (owner, reviewer, admin, or project reviewer)
-            proposal_owner = connection.execute(
-                text("SELECT user_id FROM proposals WHERE id = :id"),
-                {"id": str(proposal_id)},
-            ).scalar()
+            proposal = (
+                connection.execute(
+                    text("SELECT user_id, team_id FROM proposals WHERE id = :id"),
+                    {"id": str(proposal_id)},
+                )
+                .mappings()
+                .first()
+            )
 
-            if not proposal_owner:
+            if not proposal:
                 raise HTTPException(status_code=404, detail="Proposal not found.")
+            proposal_owner = proposal["user_id"]
 
             # Check if user is a reviewer for this proposal
             is_reviewer = connection.execute(
@@ -3140,7 +3156,12 @@ async def get_peer_reviews(proposal_id: uuid.UUID, current_user: dict = Depends(
 
             # Check if user is admin or project reviewer (can view all feedback)
             is_admin = current_user.get("is_admin", False)
-            is_project_reviewer = "project reviewer" in user_roles
+            active_team_id = (current_user.get("active_team") or {}).get("id")
+            is_project_reviewer = (
+                "project reviewer" in user_roles
+                and active_team_id is not None
+                and str(proposal["team_id"]) == str(active_team_id)
+            )
 
             # Allow access if: owner, reviewer, admin, or project reviewer
             if str(proposal_owner) != str(user_id) and not is_reviewer:
