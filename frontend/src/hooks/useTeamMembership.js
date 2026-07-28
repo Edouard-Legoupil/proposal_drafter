@@ -73,6 +73,31 @@ export function useTeamMembership() {
     }
   }, [user]);
 
+  const getMembers = useCallback(async (teamId) => {
+    const response = await api.get(`/teams/${teamId}/members`);
+    return response.data.members || [];
+  }, []);
+
+  const removeMember = useCallback(async (teamId, userId) => {
+    await api.delete(`/teams/${teamId}/members/${userId}`);
+    return true;
+  }, []);
+
+  const assignLeader = useCallback(async (teamId, userId) => {
+    await api.put(`/teams/${teamId}/leaders/${userId}`);
+    return true;
+  }, []);
+
+  const removeLeader = useCallback(async (teamId, userId) => {
+    await api.delete(`/teams/${teamId}/leaders/${userId}`);
+    return true;
+  }, []);
+
+  const getAvailableRoles = useCallback(async () => {
+    const response = await api.get('/roles');
+    return response.data.roles || [];
+  }, []);
+
   /**
    * Approve a team membership request
    * @param {string} teamId - ID of the team
@@ -156,7 +181,7 @@ export function useTeamMembership() {
    * @param {number} roleId - ID of the role to assign
    * @returns {Promise<boolean>} - True if assignment was successful
    */
-  const assignRoleToTeam = useCallback(async (teamId, roleId) => {
+  const assignRoleToTeam = useCallback(async (teamId, roleKey) => {
     if (!user?.is_admin) {
       setError('Only administrators can assign roles to teams');
       return false;
@@ -166,7 +191,7 @@ export function useTeamMembership() {
     setError(null);
 
     try {
-      await api.post(`/teams/${teamId}/roles`, { role_id: roleId });
+      await api.post(`/teams/${teamId}/roles`, { role_key: roleKey });
       return true;
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to assign role to team');
@@ -182,7 +207,7 @@ export function useTeamMembership() {
    * @param {number} roleId - ID of the role to remove
    * @returns {Promise<boolean>} - True if removal was successful
    */
-  const removeRoleFromTeam = useCallback(async (teamId, roleId) => {
+  const removeRoleFromTeam = useCallback(async (teamId, roleKey) => {
     if (!user?.is_admin) {
       setError('Only administrators can remove roles from teams');
       return false;
@@ -192,7 +217,7 @@ export function useTeamMembership() {
     setError(null);
 
     try {
-      await api.delete(`/teams/${teamId}/roles/${roleId}`);
+      await api.delete(`/teams/${teamId}/roles/${roleKey}`);
       return true;
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to remove role from team');
@@ -212,7 +237,7 @@ export function useTeamMembership() {
     if (user.is_admin) return true;
 
     // Check if user is team leader of this team
-    return user.team_leadership?.includes(teamId) || false;
+    return Boolean(user.team_leadership && user.active_team?.id === teamId);
   }, [user]);
 
   /**
@@ -220,12 +245,8 @@ export function useTeamMembership() {
    * @param {string} teamId - ID of the team
    * @returns {boolean} - True if user can manage team roles
    */
-  const canManageTeamRoles = useCallback((teamId) => {
-    if (!user) return false;
-    if (user.is_admin) return true;
-
-    // Check if user is team leader of this team
-    return user.team_leadership?.includes(teamId) || false;
+  const canManageTeamRoles = useCallback(() => {
+    return Boolean(user?.is_admin);
   }, [user]);
 
   return {
@@ -233,6 +254,11 @@ export function useTeamMembership() {
     error,
     requestTeamMembership,
     getPendingRequests,
+    getMembers,
+    removeMember,
+    assignLeader,
+    removeLeader,
+    getAvailableRoles,
     approveMembership,
     rejectMembership,
     getTeamRoles,
