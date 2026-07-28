@@ -16,8 +16,8 @@ import os
 from backend.core.db import engine, get_engine
 from backend.core.security import get_current_user
 from backend.core.authorization import (
+    check_object_access,
     check_template_access,
-    require_ownership,
 )
 from backend.core.dependencies import get_db_session
 from backend.core.config import (
@@ -589,7 +589,7 @@ async def get_template(
             # T055 & T056: Check authorization using check_template_access
             # This handles ownership, organization membership, and public access
             try:
-                await check_template_access(int(template_id), current_user, required_permission="read")
+                await check_template_access(template_id, current_user, required_permission="read")
             except HTTPException as auth_exc:
                 # Re-raise authorization exceptions
                 raise auth_exc
@@ -618,7 +618,6 @@ async def get_template(
 
 
 @router.put("/{template_id}")
-@require_ownership("template")
 async def update_template(
     template_id: str,
     template_data: Dict[str, Any] = Body(...),
@@ -633,6 +632,7 @@ async def update_template(
     T058 [US3]: Add logging for template access attempts
     """
     try:
+        await check_object_access("template", template_id, current_user, "edit")
         # Log the access attempt (T058)
         logger.info(
             "Template update attempt",
@@ -663,23 +663,7 @@ async def update_template(
                 )
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
 
-            # T052: Verify ownership
-            owner_id = str(template[1])
             user_id = current_user.get("user_id")
-
-            if owner_id != user_id:
-                # Log the authorization denial (T058)
-                logger.warning(
-                    "Unauthorized template update attempt",
-                    extra={
-                        "user_id": user_id,
-                        "template_id": template_id,
-                        "template_owner": owner_id,
-                        "action": "template_put",
-                        "result": "denied",
-                    },
-                )
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
             # Update the template
             with engine.begin() as conn:
@@ -724,7 +708,6 @@ async def update_template(
 
 
 @router.delete("/{template_id}")
-@require_ownership("template")
 async def delete_template(
     template_id: str,
     current_user: dict = Depends(get_current_user),
@@ -738,6 +721,7 @@ async def delete_template(
     T058 [US3]: Add logging for template access attempts
     """
     try:
+        await check_object_access("template", template_id, current_user, "delete")
         # Log the access attempt (T058)
         logger.info(
             "Template delete attempt",
@@ -768,23 +752,7 @@ async def delete_template(
                 )
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
 
-            # T053: Verify ownership
-            owner_id = str(template[1])
             user_id = current_user.get("user_id")
-
-            if owner_id != user_id:
-                # Log the authorization denial (T058)
-                logger.warning(
-                    "Unauthorized template delete attempt",
-                    extra={
-                        "user_id": user_id,
-                        "template_id": template_id,
-                        "template_owner": owner_id,
-                        "action": "template_delete",
-                        "result": "denied",
-                    },
-                )
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
             # Delete the template
             with engine.begin() as conn:
@@ -814,7 +782,6 @@ async def delete_template(
 
 
 @router.patch("/{template_id}")
-@require_ownership("template")
 async def patch_template(
     template_id: str,
     template_data: Dict[str, Any] = Body(...),
@@ -829,6 +796,7 @@ async def patch_template(
     T058 [US3]: Add logging for template access attempts
     """
     try:
+        await check_object_access("template", template_id, current_user, "edit")
         # Log the access attempt (T058)
         logger.info(
             "Template patch attempt",
@@ -859,23 +827,7 @@ async def patch_template(
                 )
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
 
-            # T054: Verify ownership
-            owner_id = str(template[1])
             user_id = current_user.get("user_id")
-
-            if owner_id != user_id:
-                # Log the authorization denial (T058)
-                logger.warning(
-                    "Unauthorized template patch attempt",
-                    extra={
-                        "user_id": user_id,
-                        "template_id": template_id,
-                        "template_owner": owner_id,
-                        "action": "template_patch",
-                        "result": "denied",
-                    },
-                )
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
             # Update the template with partial data using ORM (SEC-001: SQL Injection fix)
             from backend.models.template_models import Template

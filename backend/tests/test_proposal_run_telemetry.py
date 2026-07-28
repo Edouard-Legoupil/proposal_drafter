@@ -1,11 +1,38 @@
 #  Standard Library
 import uuid
 from unittest.mock import MagicMock
+from sqlalchemy import text
+
+from backend.core.security import get_current_user
+from backend.main import app
 
 
-def test_proposal_run_telemetry_logging(authenticated_client, mocker):
+def test_proposal_run_telemetry_logging(authenticated_client, db_session, mocker):
     """Test that proposal runs are properly logged during generation."""
     client = authenticated_client
+    user_id = db_session.execute(text("SELECT id FROM users WHERE email = 'test@example.com'")).scalar_one()
+    db_session.execute(text("INSERT INTO teams (id, name) VALUES ('team-1', 'Team One')"))
+    db_session.execute(
+        text(
+            "INSERT INTO roles (id, name, role_key, component) "
+            "VALUES (1, 'proposal writer', 'proposal writer', 'ProposalWorkspace')"
+        )
+    )
+    db_session.execute(
+        text("INSERT INTO team_members (team_id, user_id, status) VALUES ('team-1', :user_id, 'ACTIVE')"),
+        {"user_id": user_id},
+    )
+    db_session.execute(
+        text("INSERT INTO team_roles (team_id, role_id, role_key) " "VALUES ('team-1', 1, 'proposal writer')")
+    )
+    app.dependency_overrides[get_current_user] = lambda: {
+        "user_id": user_id,
+        "email": "test@example.com",
+        "name": "Test User",
+        "roles": ["proposal writer"],
+        "active_team": {"id": "team-1", "name": "Team One"},
+        "is_admin": False,
+    }
     proposal_crew = MagicMock()
     proposal_crew.generate_proposal_crew.return_value = MagicMock()
     mocker.patch("backend.api.proposals.ProposalCrew", return_value=proposal_crew)

@@ -48,6 +48,7 @@ class KnowledgeCard(Base):  # type: ignore[valid-type, misc]
     donor_id = Column(UUID(as_uuid=True), nullable=True)
     outcome_id = Column(UUID(as_uuid=True), nullable=True)
     field_context_id = Column(UUID(as_uuid=True), nullable=True)
+    team_id = Column(UUID(as_uuid=True), nullable=True)
     created_by = Column(UUID(as_uuid=True), nullable=False)
     updated_by = Column(UUID(as_uuid=True), nullable=False)
     created_at = Column(DateTime, server_default=func.now())
@@ -63,12 +64,6 @@ class KnowledgeCard(Base):  # type: ignore[valid-type, misc]
     def owner_id(self) -> Optional[str]:
         """Get the owner ID (aliases created_by for compatibility)."""
         return str(self.created_by) if self.created_by else None
-
-    @property
-    def team_id(self) -> Optional[str]:
-        """Get the team ID associated with this knowledge card."""
-        # Not in current schema - placeholder
-        return None
 
     @property
     def donor_group_id(self) -> Optional[str]:

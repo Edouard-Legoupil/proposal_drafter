@@ -21,19 +21,28 @@ RESOURCE_CONFIG = {
     "templates": {"table": "templates", "owner": "created_by", "label": "template"},
 }
 PERMISSIONS = {
-    "proposals": {"read", "write", "patch", "delete", "manage"},
-    "knowledge-cards": {"read", "write", "patch", "delete"},
-    "templates": {"read", "edit", "delete", "manage"},
+    "proposals": {"read", "edit", "delete"},
+    "knowledge-cards": {"read", "edit", "delete"},
+    "templates": {"read", "edit", "delete"},
 }
 OPERATIONS = {
-    "proposals": {"GET": "read", "PUT": "write", "PATCH": "patch", "DELETE": "delete"},
-    "knowledge-cards": {"GET": "read", "PUT": "write", "PATCH": "patch", "DELETE": "delete"},
-    "templates": {"view": "read", "edit": "edit", "delete": "delete", "share": "manage"},
+    "proposals": {"GET": "read", "PUT": "edit", "PATCH": "edit", "DELETE": "delete"},
+    "knowledge-cards": {"GET": "read", "PUT": "edit", "PATCH": "edit", "DELETE": "delete"},
+    "templates": {"view": "read", "edit": "edit", "delete": "delete"},
+}
+RESOURCE_ROLES = {
+    "proposals": {"proposal writer", "project reviewer"},
+    "knowledge-cards": {
+        "knowledge manager donors",
+        "knowledge manager outcome",
+        "knowledge manager field context",
+    },
+    "templates": {"access_template"},
 }
 
 
 class GrantRequest(BaseModel):
-    subject_type: Literal["user", "team"] = "user"
+    subject_type: Literal["team"] = "team"
     subject_id: uuid.UUID
     permissions: list[str] = Field(min_length=1)
     data_scope: Literal["self", "team", "organization", "global"] = "self"
@@ -43,7 +52,7 @@ class GrantRequest(BaseModel):
     def accept_frontend_casing(cls, values: Any):
         if isinstance(values, dict):
             values = dict(values)
-            values.setdefault("subject_type", values.get("subjectType"))
+            values.setdefault("subject_type", values.get("subjectType", "team"))
             values.setdefault("subject_id", values.get("subjectId"))
             values.setdefault("data_scope", values.get("dataScope", "self"))
         return values
@@ -54,7 +63,7 @@ class RevokeRequest(BaseModel):
 
 
 class AccessTestRequest(BaseModel):
-    subject_type: Literal["user", "team"] = "user"
+    subject_type: Literal["team"] = "team"
     subject_id: uuid.UUID
     operation: str = Field(min_length=1)
 
@@ -63,7 +72,7 @@ class AccessTestRequest(BaseModel):
     def accept_frontend_casing(cls, values: Any):
         if isinstance(values, dict):
             values = dict(values)
-            values.setdefault("subject_type", values.get("subjectType"))
+            values.setdefault("subject_type", values.get("subjectType", "team"))
             values.setdefault("subject_id", values.get("subjectId"))
         return values
 
@@ -242,14 +251,11 @@ def grant_resource_access(
     grant_id = str(uuid.uuid4())
     with get_engine().begin() as connection:
         _resource(connection, resource, resource_id)
-        subject_table = "users" if request.subject_type == "user" else "teams"
         if (
-            connection.execute(
-                text(f"SELECT id FROM {subject_table} WHERE id = :id"), {"id": str(request.subject_id)}
-            ).first()
+            connection.execute(text("SELECT id FROM teams WHERE id = :id"), {"id": str(request.subject_id)}).first()
             is None
         ):
-            raise HTTPException(status_code=404, detail=f"{request.subject_type.title()} not found")
+            raise HTTPException(status_code=404, detail="Team not found")
         existing = connection.execute(
             text(
                 "SELECT id FROM resource_access_grants WHERE resource_type = :resource_type "
@@ -326,56 +332,28 @@ def revoke_resource_access(
 
 
 def _effective_access(connection, resource: str, resource_id: str, request: AccessTestRequest):
-    row = _resource(connection, resource, resource_id)
+    _resource(connection, resource, resource_id)
     permission = OPERATIONS.get(resource, {}).get(request.operation)
     if permission is None:
         raise HTTPException(status_code=422, detail="Unsupported operation")
-    subject_id = str(request.subject_id)
-    if request.subject_type == "user" and str(row["owner_id"]) == subject_id:
-        return True, permission, "owner"
+    team_id = str(request.subject_id)
+    team_roles = set(
+        connection.execute(
+            text("SELECT role_key FROM team_roles WHERE team_id = :team_id"), {"team_id": team_id}
+        ).scalars()
+    )
+    if team_roles.isdisjoint(RESOURCE_ROLES[resource]):
+        return False, permission, "missing_component_role"
 
-    subjects = [(request.subject_type, subject_id)]
-    if request.subject_type == "user":
-        teams = (
-            connection.execute(
-                text("SELECT team_id FROM team_members WHERE user_id = :user_id AND status = 'ACTIVE'"),
-                {"user_id": subject_id},
-            )
-            .scalars()
-            .all()
-        )
-        subjects.extend(("team", str(team_id)) for team_id in teams)
-
-    for subject_type, candidate_id in subjects:
-        grants = (
-            connection.execute(
-                text(
-                    "SELECT permissions FROM resource_access_grants WHERE resource_type = :resource_type "
-                    "AND resource_id = :resource_id AND subject_type = :subject_type AND subject_id = :subject_id"
-                ),
-                {
-                    "resource_type": resource,
-                    "resource_id": resource_id,
-                    "subject_type": subject_type,
-                    "subject_id": candidate_id,
-                },
-            )
-            .scalars()
-            .all()
-        )
-        if any(permission in _decode_json(value, []) for value in grants):
-            return True, permission, f"{subject_type}_grant"
-
-    if resource == "templates" and permission == "read":
-        visibility = connection.execute(
-            text(
-                "SELECT visibility FROM resource_access_settings "
-                "WHERE resource_type = 'templates' AND resource_id = :resource_id"
-            ),
-            {"resource_id": resource_id},
-        ).scalar()
-        if visibility == "organization":
-            return True, permission, "organization_visibility"
+    grants = connection.execute(
+        text(
+            "SELECT permissions FROM resource_access_grants WHERE resource_type = :resource_type "
+            "AND resource_id = :resource_id AND subject_type = 'team' AND subject_id = :team_id"
+        ),
+        {"resource_type": resource, "resource_id": resource_id, "team_id": team_id},
+    ).scalars()
+    if any(permission in _decode_json(value, []) for value in grants):
+        return True, permission, "team_grant"
     return False, permission, "no_matching_grant"
 
 

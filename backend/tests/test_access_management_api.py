@@ -168,7 +168,7 @@ def test_runtime_role_creation_is_absent(client):
 
     response = client.post("/api/admin/roles", json={"name": "runtime role"})
 
-    assert response.status_code == 404
+    assert response.status_code == 405
 
 
 def _seed_teams(test_engine):

@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Any
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -31,3 +31,11 @@ class TeamRoleAssignment(BaseModel):
         if (self.role_key is None) == (self.role_id is None):
             raise ValueError("Exactly one of role_key or role_id is required")
         return self
+
+
+class AccessSettingUpsert(BaseModel):
+    user_id: str = Field(min_length=1, max_length=200)
+    team_id: str = Field(min_length=1, max_length=200)
+    role_key: str = Field(min_length=1, max_length=200)
+    key: str = Field(min_length=1, max_length=200)
+    value: Any

@@ -97,6 +97,16 @@ def get_current_user(request: Request) -> dict:
                 raise HTTPException(status_code=401, detail="Session is no longer active.")
 
             requested_team_id = request.headers.get("X-Team-ID")
+            if requested_team_id is None:
+                try:
+                    persisted_team_id = redis_client.get(f"active_team:{user_id}")
+                except RedisError as exc:
+                    logger.warning("Could not load active-team session for user %s: %s", user_id, exc)
+                    persisted_team_id = None
+                if isinstance(persisted_team_id, bytes):
+                    persisted_team_id = persisted_team_id.decode("utf-8")
+                if isinstance(persisted_team_id, str) and persisted_team_id:
+                    requested_team_id = persisted_team_id
             context = AccessManagementService(connection).resolve_context(user_id, requested_team_id)
             roles = sorted(context.roles)
 
@@ -108,6 +118,7 @@ def get_current_user(request: Request) -> dict:
                 "teams": context.memberships,
                 "active_team": context.active_team,
                 "roles": roles,
+                "role_keys": sorted(context.role_keys),
                 "all_roles": roles,
                 "team_leadership": context.team_leadership,
                 "settings": context.settings,

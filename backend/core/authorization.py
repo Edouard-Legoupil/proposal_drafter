@@ -58,7 +58,6 @@ from backend.core.dependencies import get_db_session
 from backend.models.proposal import Proposal
 from backend.models.knowledge_card import KnowledgeCard
 from backend.models.template import Template
-from backend.models.team import TeamMember
 
 
 # Type for current user - dict from existing system
@@ -117,49 +116,92 @@ def get_db_connection():
     return get_engine().connect()
 
 
-def _has_explicit_resource_grant(
+OBJECT_ACCESS_CONFIG = {
+    "proposal": {
+        "table": "proposals",
+        "resource_type": "proposals",
+        "roles": {"proposal writer", "project reviewer"},
+    },
+    "knowledge_card": {
+        "table": "knowledge_cards",
+        "resource_type": "knowledge-cards",
+        "roles": {
+            "knowledge manager donors",
+            "knowledge manager outcome",
+            "knowledge manager field context",
+        },
+    },
+    "template": {
+        "table": "templates",
+        "resource_type": "templates",
+        "roles": {"access_template"},
+    },
+}
+
+
+def _canonical_object_permission(permission: str) -> str:
+    return "edit" if permission in {"write", "patch", "manage"} else permission
+
+
+def _has_team_object_access(
     object_type: str,
     object_id: Union[str, int],
-    user_id: str,
+    current_user: CurrentUser,
     required_permission: str,
 ) -> bool:
-    """Check direct and active-team grants stored by the admin access API."""
-    resource_types = {
-        "proposal": "proposals",
-        "knowledge_card": "knowledge-cards",
-        "template": "templates",
-    }
-    resource_type = resource_types[object_type]
-    with get_db_connection() as connection:
-        rows = (
-            connection.execute(
-                text(
-                    "SELECT g.permissions FROM resource_access_grants g "
-                    "WHERE g.resource_type = :resource_type AND g.resource_id = :resource_id "
-                    "AND ((g.subject_type = 'user' AND g.subject_id = :user_id) "
-                    "OR (g.subject_type = 'team' AND g.subject_id IN ("
-                    "SELECT tm.team_id FROM team_members tm "
-                    "WHERE tm.user_id = :user_id AND tm.status = 'ACTIVE')))"
-                ),
-                {"resource_type": resource_type, "resource_id": str(object_id), "user_id": user_id},
-            )
-            .scalars()
-            .all()
-        )
-        for value in rows:
-            permissions = json.loads(value) if isinstance(value, str) else value
-            if required_permission in (permissions or []):
-                return True
+    """Apply membership, component-role, and explicit team-grant gates."""
+    config = OBJECT_ACCESS_CONFIG.get(object_type)
+    if config is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown object type: {object_type}")
 
-        if object_type == "template" and required_permission == "read":
-            visibility = connection.execute(
-                text(
-                    "SELECT visibility FROM resource_access_settings "
-                    "WHERE resource_type = 'templates' AND resource_id = :resource_id"
-                ),
-                {"resource_id": str(object_id)},
-            ).scalar()
-            return visibility == "organization"
+    user_id = get_user_id(current_user)
+    active_team = current_user.get("active_team") or {}
+    team_id = active_team.get("id")
+    if team_id is None:
+        return False
+
+    with get_db_connection() as connection:
+        resource_exists = connection.execute(
+            text(f"SELECT 1 FROM {config['table']} WHERE id = :resource_id"),
+            {"resource_id": str(object_id)},
+        ).first()
+        if not resource_exists:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"{object_type.replace('_', ' ').title()} not found",
+            )
+
+        membership = connection.execute(
+            text("SELECT 1 FROM team_members WHERE user_id = :user_id " "AND team_id = :team_id AND status = 'ACTIVE'"),
+            {"user_id": user_id, "team_id": str(team_id)},
+        ).first()
+        if not membership:
+            return False
+
+        role_rows = connection.execute(
+            text("SELECT role_key FROM team_roles WHERE team_id = :team_id"),
+            {"team_id": str(team_id)},
+        ).scalars()
+        if set(role_rows).isdisjoint(config["roles"]):
+            return False
+
+        permissions = connection.execute(
+            text(
+                "SELECT permissions FROM resource_access_grants "
+                "WHERE resource_type = :resource_type AND resource_id = :resource_id "
+                "AND subject_type = 'team' AND subject_id = :team_id"
+            ),
+            {
+                "resource_type": config["resource_type"],
+                "resource_id": str(object_id),
+                "team_id": str(team_id),
+            },
+        ).scalars()
+        required = _canonical_object_permission(required_permission)
+        for value in permissions:
+            decoded = json.loads(value) if isinstance(value, str) else value
+            if required in (decoded or []):
+                return True
     return False
 
 
@@ -733,7 +775,7 @@ async def check_proposal_access(
         try:
             with get_db_connection() as connection:
                 result = connection.execute(
-                    text("SELECT id, user_id FROM proposals WHERE id = CAST(:id AS UUID)"),
+                    text("SELECT id, user_id, team_id FROM proposals WHERE id = :id"),
                     {"id": str(proposal_id)},
                 )
                 proposal = result.fetchone()
@@ -747,7 +789,7 @@ async def check_proposal_access(
                 return {
                     "id": proposal[0],
                     "owner_id": str(proposal[1]),
-                    "team_id": None,
+                    "team_id": str(proposal[2]) if proposal[2] else None,
                 }
         except HTTPException:
             raise
@@ -764,7 +806,7 @@ async def check_proposal_access(
         raise
 
 
-async def check_knowledge_card_access(knowledge_card_id: int, current_user: CurrentUser) -> Dict[str, Any]:
+async def check_knowledge_card_access(knowledge_card_id: Union[str, int], current_user: CurrentUser) -> Dict[str, Any]:
     """
     Check knowledge card access using object-level access control.
     """
@@ -774,8 +816,8 @@ async def check_knowledge_card_access(knowledge_card_id: int, current_user: Curr
         try:
             with get_db_connection() as connection:
                 result = connection.execute(
-                    text("SELECT id, created_by FROM knowledge_cards WHERE id = :id"),
-                    {"id": knowledge_card_id},
+                    text("SELECT id, created_by, team_id FROM knowledge_cards WHERE id = :id"),
+                    {"id": str(knowledge_card_id)},
                 )
                 knowledge_card = result.fetchone()
 
@@ -788,7 +830,7 @@ async def check_knowledge_card_access(knowledge_card_id: int, current_user: Curr
                 return {
                     "id": knowledge_card[0],
                     "created_by": str(knowledge_card[1]),
-                    "team_id": None,
+                    "team_id": str(knowledge_card[2]) if knowledge_card[2] else None,
                 }
         except HTTPException:
             raise
@@ -812,14 +854,7 @@ async def check_object_access(
     required_permission: str = "read",
 ) -> bool:
     """
-    Check object-level access control for proposals, knowledge cards, and templates.
-
-    This function implements the object-level access control specified in the access management spec.
-    It checks:
-    1. Admin users have full access
-    2. Owners have full access
-    3. Team members have access based on team permissions
-    4. Specific access rules defined in the object's access_rules field
+    Check the strict team membership, component role, and object grant gates.
 
     Args:
         object_type: Type of object ('proposal', 'knowledge_card', 'template')
@@ -834,102 +869,11 @@ async def check_object_access(
         HTTPException(404): If object doesn't exist
         HTTPException(403): If user doesn't have access
     """
-    user_id = get_user_id(current_user)
-
-    # Admin bypass
     if is_admin(current_user):
         return True
-
-    # Map object types to models
-    model_map = {
-        "proposal": Proposal,
-        "knowledge_card": KnowledgeCard,
-        "template": Template,
-    }
-
-    model = model_map.get(object_type)
-    if model is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unknown object type: {object_type}",
-        )
-
-    try:
-        async for session in get_db_session():
-            # Get the object
-            object_record = await session.get(model, str(object_id))
-
-            if object_record is None:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"{object_type.replace('_', ' ').title()} not found",
-                )
-
-            # Check ownership
-            owner_id = getattr(object_record, "user_id", None) or getattr(object_record, "created_by", None)
-            if str(owner_id) == user_id:
-                return True  # Owners have full access
-
-            if _has_explicit_resource_grant(object_type, object_id, user_id, required_permission):
-                return True
-
-            # Check team membership and team-level permissions
-            team_id = getattr(object_record, "team_id", None)
-            if team_id:
-                # Check if user is active team member
-                is_team_member = await TeamMember.is_active_member(session, str(team_id), user_id)
-
-                if is_team_member:
-                    # Check access_rules for specific permissions
-                    access_rules = getattr(object_record, "access_rules", [])
-
-                    if not access_rules or access_rules == []:
-                        # Default: team members have read access
-                        if required_permission == "read":
-                            return True
-                    else:
-                        # Check if team has the required permission in access_rules
-                        for rule in access_rules:
-                            if rule.get("team_id") == str(team_id):
-                                permissions = rule.get("permissions", [])
-                                if required_permission in permissions:
-                                    return True
-
-            # Additional checks could go here (donor group membership, etc.)
-
-            # No access granted
-            import logging
-
-            logger = logging.getLogger("security.authorization")
-            logger.warning(
-                f"Unauthorized {object_type} access attempt",
-                extra={
-                    "user_id": user_id,
-                    "object_type": object_type,
-                    "object_id": object_id,
-                    "required_permission": required_permission,
-                    "action": f"{object_type}_access_check",
-                    "result": "denied",
-                },
-            )
-
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
-
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database session unavailable",
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        import logging
-
-        logger = logging.getLogger("security.authorization")
-        logger.error(f"Database error in check_object_access: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error",
-        ) from e
+    if _has_team_object_access(object_type, object_id, current_user, required_permission):
+        return True
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
 
 async def check_template_access(
@@ -946,7 +890,7 @@ async def check_template_access(
         try:
             with get_db_connection() as connection:
                 result = connection.execute(
-                    text("SELECT id, created_by FROM templates WHERE id = :id"),
+                    text("SELECT id, created_by, team_id FROM templates WHERE id = :id"),
                     {"id": str(template_id)},
                 )
                 template = result.fetchone()
@@ -960,7 +904,7 @@ async def check_template_access(
                 return {
                     "id": template[0],
                     "created_by": str(template[1]),
-                    "team_id": None,
+                    "team_id": str(template[2]) if template[2] else None,
                 }
         except HTTPException:
             raise

@@ -225,6 +225,35 @@ CREATE TABLE IF NOT EXISTS access_settings (
     UNIQUE (user_id, team_id, role_key, key)
 );
 
+-- Every protected object records the team context in which it was created.
+ALTER TABLE proposals ADD COLUMN IF NOT EXISTS team_id UUID REFERENCES teams(id) ON DELETE RESTRICT;
+ALTER TABLE knowledge_cards ADD COLUMN IF NOT EXISTS team_id UUID REFERENCES teams(id) ON DELETE RESTRICT;
+ALTER TABLE templates ADD COLUMN IF NOT EXISTS team_id UUID REFERENCES teams(id) ON DELETE RESTRICT;
+
+-- Direct-user object grants are incompatible with the strict three-gate policy.
+CREATE TABLE IF NOT EXISTS legacy_resource_grant_ambiguities (
+    grant_id UUID PRIMARY KEY,
+    resource_type TEXT NOT NULL,
+    resource_id UUID NOT NULL,
+    subject_id UUID NOT NULL,
+    permissions JSONB NOT NULL,
+    reason TEXT NOT NULL,
+    recorded_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO legacy_resource_grant_ambiguities
+    (grant_id, resource_type, resource_id, subject_id, permissions, reason)
+SELECT id, resource_type, resource_id, subject_id, permissions,
+       'direct user object grants cannot be mapped safely to one team'
+FROM resource_access_grants
+WHERE subject_type <> 'team'
+ON CONFLICT (grant_id) DO NOTHING;
+
+DELETE FROM resource_access_grants WHERE subject_type <> 'team';
+ALTER TABLE resource_access_grants DROP CONSTRAINT IF EXISTS resource_access_grants_subject_type_check;
+ALTER TABLE resource_access_grants
+    ADD CONSTRAINT resource_access_grants_subject_type_check CHECK (subject_type = 'team');
+
 -- Refresh definitions originally installed by 20240818_add_team_settings.sql.
 -- Existing deployments must receive the same active-membership and provenance
 -- policy as a database created from the current bootstrap.

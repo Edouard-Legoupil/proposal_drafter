@@ -18,7 +18,7 @@ from fastapi import (  # noqa: B008
     File,
     BackgroundTasks,
 )
-from sqlalchemy import text
+from sqlalchemy import JSON, bindparam, text
 from sqlalchemy.exc import SQLAlchemyError
 from slugify import slugify  # type: ignore[import-untyped]
 
@@ -26,8 +26,8 @@ from slugify import slugify  # type: ignore[import-untyped]
 # Note: B008 (function calls in argument defaults) is disabled for FastAPI Depends()
 # as this is a standard FastAPI pattern for dependency injection
 from backend.core.authorization import (
+    check_object_access,
     check_proposal_access,
-    require_ownership,
 )
 from backend.core.db import get_engine
 from backend.core.redis import redis_client
@@ -355,6 +355,9 @@ async def create_session(request: CreateSessionRequest, current_user: dict = Dep
     6.  Return the new session_id and proposal_id to the client.
     """
     user_id = current_user["user_id"]
+    active_team_id = (current_user.get("active_team") or {}).get("id")
+    if active_team_id is None:
+        raise HTTPException(status_code=403, detail="An active team is required.")
     proposal_id = uuid.uuid4()
     session_id = str(uuid.uuid4())
 
@@ -388,16 +391,31 @@ async def create_session(request: CreateSessionRequest, current_user: dict = Dep
             connection.execute(
                 text(
                     """
-                    INSERT INTO proposals (id, user_id, created_by, updated_by, form_data, project_description, template_name, generated_sections)
-                    VALUES (:id, :uid, :uid, :uid, :form, :desc, :template, '{}')
+                    INSERT INTO proposals (id, user_id, team_id, created_by, updated_by, form_data, project_description, template_name, generated_sections)
+                    VALUES (:id, :uid, :team_id, :uid, :uid, :form, :desc, :template, '{}')
                 """
                 ),
                 {
                     "id": str(proposal_id),
                     "uid": user_id,
+                    "team_id": active_team_id,
                     "form": json.dumps(request.form_data),
                     "desc": request.project_description,
                     "template": template_name,
+                },
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO resource_access_grants "
+                    "(id, resource_type, resource_id, subject_type, subject_id, permissions, data_scope, created_by) "
+                    "VALUES (:id, 'proposals', :resource_id, 'team', :team_id, :permissions, 'team', :created_by)"
+                ).bindparams(bindparam("permissions", type_=JSON)),
+                {
+                    "id": str(uuid.uuid4()),
+                    "resource_id": str(proposal_id),
+                    "team_id": active_team_id,
+                    "permissions": ["read", "edit", "delete"],
+                    "created_by": user_id,
                 },
             )
 
@@ -1520,8 +1538,13 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
     Saves a new draft or updates an existing one in the database.
     """
     user_id = current_user["user_id"]
+    active_team_id = (current_user.get("active_team") or {}).get("id")
+    if active_team_id is None:
+        raise HTTPException(status_code=403, detail="An active team is required.")
     # If proposal_id is not provided in the request, generate a new one.
     proposal_id = request.proposal_id or uuid.uuid4()
+    if request.proposal_id is not None:
+        await check_object_access("proposal", str(proposal_id), current_user, "edit")
 
     try:
         with get_engine().begin() as connection:
@@ -1565,17 +1588,32 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
                 connection.execute(
                     text(
                         """
-                        INSERT INTO proposals (id, user_id, created_by, updated_by, form_data, project_description, generated_sections, template_name)
-                        VALUES (:id, :uid, :uid, :uid, :form, :desc, :sections, :template_name)
+                        INSERT INTO proposals (id, user_id, team_id, created_by, updated_by, form_data, project_description, generated_sections, template_name)
+                        VALUES (:id, :uid, :team_id, :uid, :uid, :form, :desc, :sections, :template_name)
                     """
                     ),
                     {
                         "id": proposal_id,
                         "uid": user_id,
+                        "team_id": active_team_id,
                         "form": json.dumps(request.form_data),
                         "desc": request.project_description,
                         "sections": json.dumps(sections_to_save),
                         "template_name": request.template_name,
+                    },
+                )
+                connection.execute(
+                    text(
+                        "INSERT INTO resource_access_grants "
+                        "(id, resource_type, resource_id, subject_type, subject_id, permissions, data_scope, created_by) "
+                        "VALUES (:id, 'proposals', :resource_id, 'team', :team_id, :permissions, 'team', :created_by)"
+                    ).bindparams(bindparam("permissions", type_=JSON)),
+                    {
+                        "id": str(uuid.uuid4()),
+                        "resource_id": str(proposal_id),
+                        "team_id": active_team_id,
+                        "permissions": ["read", "edit", "delete"],
+                        "created_by": user_id,
                     },
                 )
                 message = "Draft created successfully"
@@ -1705,7 +1743,7 @@ async def list_drafts(status: Optional[str] = None, current_user: dict = Depends
     If status is 'deleted', lists only deleted proposals.
     Otherwise, lists non-deleted proposals.
     """
-    if "proposal writer" not in current_user.get("roles", []):
+    if not current_user.get("is_admin") and "proposal writer" not in current_user.get("roles", []):
         return {"message": "User is not a proposal writer.", "drafts": []}
 
     logger.info(f"Attempting to list drafts for user: {current_user['user_id']}")
@@ -1748,8 +1786,19 @@ async def list_drafts(status: Optional[str] = None, current_user: dict = Depends
                     proposal_outcomes po ON p.id = po.proposal_id
                 LEFT JOIN
                     outcomes o ON po.outcome_id = o.id
-                WHERE
-                    p.user_id = :uid
+                WHERE (
+                    :is_admin
+                    OR (
+                        EXISTS (SELECT 1 FROM team_members tm WHERE tm.user_id = :uid
+                            AND tm.team_id = :active_team_id AND tm.status = 'ACTIVE')
+                        AND EXISTS (SELECT 1 FROM team_roles tr WHERE tr.team_id = :active_team_id
+                            AND tr.role_key IN ('proposal writer', 'project reviewer'))
+                        AND EXISTS (SELECT 1 FROM resource_access_grants rag
+                            WHERE rag.resource_type = 'proposals' AND rag.resource_id = p.id
+                            AND rag.subject_type = 'team' AND rag.subject_id = :active_team_id
+                            AND CAST(rag.permissions AS TEXT) LIKE '%"read"%')
+                    )
+                )
             """
 
             if status == "deleted":
@@ -1765,7 +1814,14 @@ async def list_drafts(status: Optional[str] = None, current_user: dict = Depends
             """
 
             query = text(query_str)
-            result = connection.execute(query, {"uid": user_id})
+            result = connection.execute(
+                query,
+                {
+                    "uid": user_id,
+                    "active_team_id": (current_user.get("active_team") or {}).get("id"),
+                    "is_admin": current_user.get("is_admin", False),
+                },
+            )
             rows = result.mappings().fetchall()  # Use .mappings() to get dict-like rows
             logger.info(f"Found {len(rows)} drafts in database")
 
@@ -1836,7 +1892,7 @@ async def list_all_proposals(current_user: dict = Depends(get_current_user)):
                 JOIN
                     users u ON p.user_id = u.id
                 JOIN
-                    teams t ON u.team_id = t.id
+                    teams t ON p.team_id = t.id
                 LEFT JOIN
                     proposal_donors pd ON p.id = pd.proposal_id
                 LEFT JOIN
@@ -1849,8 +1905,19 @@ async def list_all_proposals(current_user: dict = Depends(get_current_user)):
                     proposal_outcomes po ON p.id = po.proposal_id
                 LEFT JOIN
                     outcomes o ON po.outcome_id = o.id
-                WHERE
-                    p.user_id != :uid AND p.status != 'deleted'
+                WHERE p.status != 'deleted' AND (
+                    :is_admin
+                    OR (
+                        EXISTS (SELECT 1 FROM team_members tm WHERE tm.user_id = :uid
+                            AND tm.team_id = :active_team_id AND tm.status = 'ACTIVE')
+                        AND EXISTS (SELECT 1 FROM team_roles tr WHERE tr.team_id = :active_team_id
+                            AND tr.role_key IN ('proposal writer', 'project reviewer'))
+                        AND EXISTS (SELECT 1 FROM resource_access_grants rag
+                            WHERE rag.resource_type = 'proposals' AND rag.resource_id = p.id
+                            AND rag.subject_type = 'team' AND rag.subject_id = :active_team_id
+                            AND CAST(rag.permissions AS TEXT) LIKE '%"read"%')
+                    )
+                )
                 GROUP BY
                     p.id, t.name, t.id, u.name
                 ORDER BY
@@ -1858,7 +1925,14 @@ async def list_all_proposals(current_user: dict = Depends(get_current_user)):
             """
             )
 
-            result = connection.execute(query, {"uid": user_id})
+            result = connection.execute(
+                query,
+                {
+                    "uid": user_id,
+                    "active_team_id": (current_user.get("active_team") or {}).get("id"),
+                    "is_admin": current_user.get("is_admin", False),
+                },
+            )
             rows = result.mappings().fetchall()
 
             for row in rows:
@@ -1930,24 +2004,16 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
                     detail=f"Invalid proposal ID format: '{proposal_id}'.",
                 )
 
-            with get_engine().connect() as conn:
-                is_admin = current_user.get("is_admin", False)
-                active_team_id = (current_user.get("active_team") or {}).get("id")
-                is_project_reviewer = "project reviewer" in current_user.get("roles", [])
+            await check_object_access("proposal", proposal_id, current_user, "read")
 
+            with get_engine().connect() as conn:
                 draft_query = text(
                     """
                     SELECT DISTINCT
                         p.template_name, p.form_data, p.generated_sections, p.project_description,
                         p.is_accepted, p.created_at, p.updated_at, p.status, p.contribution_id
                     FROM proposals p
-                    LEFT JOIN proposal_peer_reviews pr ON p.id = pr.proposal_id AND pr.reviewer_id = :uid
-                    WHERE p.id = :id AND (
-                        p.user_id = :uid
-                        OR :is_admin
-                        OR pr.reviewer_id = :uid
-                        OR (:is_project_reviewer AND p.team_id = :active_team_id)
-                    )
+                    WHERE p.id = :id
                 """
                 )
 
@@ -1955,10 +2021,6 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
                     draft_query,
                     {
                         "id": proposal_id,
-                        "uid": user_id,
-                        "is_admin": is_admin,
-                        "is_project_reviewer": is_project_reviewer,
-                        "active_team_id": active_team_id,
                     },
                 ).fetchone()
                 if not draft:
@@ -1978,13 +2040,28 @@ async def load_draft(proposal_id: str, current_user: dict = Depends(get_current_
                         LEFT JOIN donors d ON kc.donor_id = d.id
                         LEFT JOIN outcomes o ON kc.outcome_id = o.id
                         LEFT JOIN field_contexts fc ON kc.field_context_id = fc.id
-                        WHERE
+                        WHERE (
                             kc.donor_id IN (SELECT donor_id FROM proposal_donors WHERE proposal_id = :pid) OR
                             kc.outcome_id IN (SELECT outcome_id FROM proposal_outcomes WHERE proposal_id = :pid) OR
                             kc.field_context_id IN (SELECT field_context_id FROM proposal_field_contexts WHERE proposal_id = :pid)
+                        ) AND (
+                            :is_admin OR (
+                                EXISTS (SELECT 1 FROM team_roles tr WHERE tr.team_id = :active_team_id
+                                    AND tr.role_key IN ('knowledge manager donors', 'knowledge manager outcome',
+                                        'knowledge manager field context'))
+                                AND EXISTS (SELECT 1 FROM resource_access_grants rag
+                                    WHERE rag.resource_type = 'knowledge-cards' AND rag.resource_id = kc.id
+                                    AND rag.subject_type = 'team' AND rag.subject_id = :active_team_id
+                                    AND CAST(rag.permissions AS TEXT) LIKE '%"read"%')
+                            )
+                        )
                     """
                         ),
-                        {"pid": proposal_id},
+                        {
+                            "pid": proposal_id,
+                            "is_admin": current_user.get("is_admin", False),
+                            "active_team_id": (current_user.get("active_team") or {}).get("id"),
+                        },
                     )
                     .mappings()
                     .fetchall()
@@ -3569,7 +3646,6 @@ async def get_proposal(
 
 
 @router.put("/api/proposals/{proposal_id}")
-@require_ownership("proposal")
 async def update_proposal(
     proposal_id: str,
     request: Dict[str, Any],
@@ -3581,6 +3657,7 @@ async def update_proposal(
     Authorization (T026): Only the owner can update a proposal.
     Uses @require_ownership decorator factory.
     """
+    await check_object_access("proposal", proposal_id, current_user, "edit")
     import logging
 
     auth_logger = logging.getLogger("security.authorization")
@@ -3602,7 +3679,6 @@ async def update_proposal(
 
 
 @router.delete("/api/proposals/{proposal_id}")
-@require_ownership("proposal")
 async def delete_proposal_endpoint(
     proposal_id: str,
     current_user: dict = Depends(get_current_user),
@@ -3613,6 +3689,7 @@ async def delete_proposal_endpoint(
     Authorization (T027): Only the owner can delete a proposal.
     Uses @require_ownership decorator factory.
     """
+    await check_object_access("proposal", proposal_id, current_user, "delete")
     import logging
 
     auth_logger = logging.getLogger("security.authorization")
@@ -3641,13 +3718,14 @@ async def delete_proposal_endpoint(
                 raise HTTPException(status_code=404, detail="Proposal not found")
 
         return {"message": f"Proposal '{proposal_id}' marked as deleted."}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"[DELETE PROPOSAL ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to delete proposal.")
 
 
 @router.patch("/api/proposals/{proposal_id}")
-@require_ownership("proposal")
 async def patch_proposal(
     proposal_id: str,
     request: Dict[str, Any],
@@ -3659,6 +3737,7 @@ async def patch_proposal(
     Authorization (T028): Only the owner can modify a proposal.
     Uses @require_ownership decorator factory.
     """
+    await check_object_access("proposal", proposal_id, current_user, "edit")
     import logging
 
     auth_logger = logging.getLogger("security.authorization")

@@ -55,6 +55,7 @@ class Template(Base):  # type: ignore[valid-type, misc]
     description = Column(Text, nullable=True)
     status = Column(String, default="draft")  # Store as string, not enum for simplicity
     is_default = Column(Boolean, default=False)
+    team_id = Column(UUID(as_uuid=True), nullable=True)
     created_by = Column(UUID(as_uuid=True), nullable=False)
     updated_by = Column(UUID(as_uuid=True), nullable=False)
     created_at = Column(DateTime, server_default=func.now())
@@ -66,12 +67,6 @@ class Template(Base):  # type: ignore[valid-type, misc]
     def owner_id(self) -> Optional[str]:
         """Get the owner ID (aliases created_by for compatibility)."""
         return str(self.created_by) if self.created_by else None
-
-    @property
-    def team_id(self) -> Optional[str]:
-        """Get the team ID associated with this template."""
-        # Not in current schema - placeholder
-        return None
 
     @property
     def organization_id(self) -> Optional[str]:

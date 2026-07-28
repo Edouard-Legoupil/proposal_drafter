@@ -265,6 +265,10 @@ class UpdateUserTeamRequest(BaseModel):
     team_id: uuid.UUID
 
 
+class ActiveTeamSelection(BaseModel):
+    team_id: str = Field(min_length=1, max_length=200)
+
+
 class DonorTemplateRequestCreate(BaseModel):
     name: str
     donor_id: Optional[uuid.UUID] = None

@@ -51,9 +51,13 @@ def test_submit_updates_an_owned_proposal(authenticated_client, db_session):
     assert status == "submitted"
 
 
-def test_authorization_queries_only_select_columns_in_the_production_schema():
+def test_authorization_queries_use_team_columns_installed_by_access_migration():
     root = Path(__file__).resolve().parents[2]
     authorization = (root / "backend/core/authorization.py").read_text(encoding="utf-8")
-    assert "SELECT id, user_id, team_id FROM proposals" not in authorization
-    assert "SELECT id, created_by, team_id FROM knowledge_cards" not in authorization
-    assert "SELECT id, created_by, team_id FROM templates" not in authorization
+    migration = (root / "db/migrations/20260727_access_management_compliance.sql").read_text(encoding="utf-8")
+    assert "SELECT id, user_id, team_id FROM proposals" in authorization
+    assert "SELECT id, created_by, team_id FROM knowledge_cards" in authorization
+    assert "SELECT id, created_by, team_id FROM templates" in authorization
+    assert "ALTER TABLE proposals ADD COLUMN IF NOT EXISTS team_id" in migration
+    assert "ALTER TABLE knowledge_cards ADD COLUMN IF NOT EXISTS team_id" in migration
+    assert "ALTER TABLE templates ADD COLUMN IF NOT EXISTS team_id" in migration

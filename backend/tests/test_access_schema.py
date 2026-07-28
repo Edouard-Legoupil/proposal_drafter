@@ -458,3 +458,13 @@ def test_access_settings_requires_json_value(test_engine):
                     "('user-1', 'team-1', 'proposal writer', 'region', 'not-json', 'admin-1')"
                 )
             )
+
+
+def test_migration_reports_direct_user_object_grants_before_removal():
+    root = Path(__file__).parents[2]
+    migration = (root / "db/migrations/20260727_access_management_compliance.sql").read_text()
+
+    report_position = migration.index("legacy_resource_grant_ambiguities")
+    delete_position = migration.index("DELETE FROM resource_access_grants WHERE subject_type <> 'team'")
+    assert report_position < delete_position
+    assert "INSERT INTO legacy_resource_grant_ambiguities" in migration

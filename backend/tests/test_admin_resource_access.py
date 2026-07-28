@@ -3,7 +3,6 @@ import uuid
 import pytest
 from sqlalchemy import text
 
-from backend.core.authorization import _has_explicit_resource_grant
 from backend.core.security import get_current_user
 from backend.main import app
 
@@ -42,26 +41,38 @@ def _insert_proposal(connection, owner_id):
     return proposal_id
 
 
-def test_admin_can_manage_and_test_proposal_grants(admin_client, db_session):
+def test_admin_can_manage_and_test_team_proposal_grants(admin_client, db_session):
     client, admin_id = admin_client
     _insert_user(db_session, user_id=admin_id, email="admin@example.com", name="Admin")
     owner_id = _insert_user(db_session, email="owner@example.com", name="Owner")
-    subject_id = _insert_user(db_session, email="reader@example.com", name="Reader")
+    team_id = str(uuid.uuid4())
+    db_session.execute(
+        text("INSERT INTO teams (id, name, created_by) VALUES (:id, 'Review Team', :admin_id)"),
+        {"id": team_id, "admin_id": admin_id},
+    )
+    db_session.execute(
+        text(
+            "INSERT INTO roles (id, name, role_key, component) "
+            "VALUES (1, 'proposal writer', 'proposal writer', 'ProposalWorkspace')"
+        )
+    )
+    db_session.execute(
+        text("INSERT INTO team_roles (team_id, role_id, role_key) " "VALUES (:team_id, 1, 'proposal writer')"),
+        {"team_id": team_id},
+    )
     proposal_id = _insert_proposal(db_session, owner_id)
 
     grant = client.post(
         f"/api/admin/proposals/{proposal_id}/access",
         json={
-            "subjectType": "user",
-            "subjectId": subject_id,
+            "subjectType": "team",
+            "subjectId": team_id,
             "permissions": ["read"],
-            "dataScope": "self",
+            "dataScope": "team",
         },
     )
     assert grant.status_code == 201, grant.text
     grant_id = grant.json()["grant"]["id"]
-    assert _has_explicit_resource_grant("proposal", proposal_id, subject_id, "read") is True
-    assert _has_explicit_resource_grant("proposal", proposal_id, subject_id, "delete") is False
 
     access = client.get(f"/api/admin/proposals/{proposal_id}/access")
     assert access.status_code == 200, access.text
@@ -70,7 +81,7 @@ def test_admin_can_manage_and_test_proposal_grants(admin_client, db_session):
 
     result = client.post(
         f"/api/admin/proposals/{proposal_id}/access/test",
-        json={"subjectType": "user", "subjectId": subject_id, "operation": "GET"},
+        json={"subjectType": "team", "subjectId": team_id, "operation": "GET"},
     )
     assert result.status_code == 200, result.text
     assert result.json()["allowed"] is True
@@ -84,7 +95,7 @@ def test_admin_can_manage_and_test_proposal_grants(admin_client, db_session):
 
     denied = client.post(
         f"/api/admin/proposals/{proposal_id}/access/test",
-        json={"subjectType": "user", "subjectId": subject_id, "operation": "GET"},
+        json={"subjectType": "team", "subjectId": team_id, "operation": "GET"},
     )
     assert denied.status_code == 200, denied.text
     assert denied.json()["allowed"] is False
@@ -110,21 +121,29 @@ def test_grant_rejects_unknown_permissions(admin_client, db_session):
     client, admin_id = admin_client
     _insert_user(db_session, user_id=admin_id, email="admin@example.com", name="Admin")
     owner_id = _insert_user(db_session, email="owner@example.com", name="Owner")
-    subject_id = _insert_user(db_session, email="reader@example.com", name="Reader")
+    team_id = str(uuid.uuid4())
+    db_session.execute(
+        text("INSERT INTO teams (id, name, created_by) VALUES (:id, 'Team', :admin_id)"),
+        {"id": team_id, "admin_id": admin_id},
+    )
     proposal_id = _insert_proposal(db_session, owner_id)
 
     response = client.post(
         f"/api/admin/proposals/{proposal_id}/access",
-        json={"subjectType": "user", "subjectId": subject_id, "permissions": ["superuser"]},
+        json={"subjectType": "team", "subjectId": team_id, "permissions": ["superuser"]},
     )
     assert response.status_code == 422
 
 
-def test_template_visibility_changes_effective_read_access(admin_client, db_session):
+def test_template_visibility_does_not_replace_explicit_team_access(admin_client, db_session):
     client, admin_id = admin_client
     _insert_user(db_session, user_id=admin_id, email="admin@example.com", name="Admin")
     owner_id = _insert_user(db_session, email="owner@example.com", name="Owner")
-    subject_id = _insert_user(db_session, email="reader@example.com", name="Reader")
+    team_id = str(uuid.uuid4())
+    db_session.execute(
+        text("INSERT INTO teams (id, name, created_by) VALUES (:id, 'Team', :admin_id)"),
+        {"id": team_id, "admin_id": admin_id},
+    )
     template_id = str(uuid.uuid4())
     db_session.execute(
         text(
@@ -142,18 +161,33 @@ def test_template_visibility_changes_effective_read_access(admin_client, db_sess
 
     result = client.post(
         f"/api/admin/templates/{template_id}/access/test",
-        json={"subject_type": "user", "subject_id": subject_id, "operation": "view"},
+        json={"subject_type": "team", "subject_id": team_id, "operation": "view"},
     )
     assert result.status_code == 200, result.text
     assert result.json() == {
-        "allowed": True,
+        "allowed": False,
         "permission": "read",
-        "reason": "organization_visibility",
+        "reason": "missing_component_role",
     }
 
     access = client.get(f"/api/admin/templates/{template_id}/access")
     assert access.status_code == 200, access.text
     assert access.json()["template"]["visibility"] == "organization"
+
+
+def test_direct_user_object_grants_are_rejected(admin_client, db_session):
+    client, admin_id = admin_client
+    _insert_user(db_session, user_id=admin_id, email="admin@example.com", name="Admin")
+    owner_id = _insert_user(db_session, email="owner@example.com", name="Owner")
+    subject_id = _insert_user(db_session, email="reader@example.com", name="Reader")
+    proposal_id = _insert_proposal(db_session, owner_id)
+
+    response = client.post(
+        f"/api/admin/proposals/{proposal_id}/access",
+        json={"subjectType": "user", "subjectId": subject_id, "permissions": ["read"]},
+    )
+
+    assert response.status_code == 422
 
 
 def test_resource_access_management_requires_system_admin(authenticated_client):

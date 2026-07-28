@@ -48,6 +48,7 @@ class Proposal(Base):  # type: ignore[valid-type, misc]
     is_accepted = Column(Boolean, default=False)
     status = Column(String, default="draft")
     contribution_id = Column(String, nullable=True)
+    team_id = Column(UUID(as_uuid=True), nullable=True)
     created_by = Column(UUID(as_uuid=True), nullable=False)
     updated_by = Column(UUID(as_uuid=True), nullable=False)
     created_at = Column(DateTime, server_default=func.now())
@@ -63,19 +64,6 @@ class Proposal(Base):  # type: ignore[valid-type, misc]
     def owner_id(self) -> Optional[str]:
         """Get the owner ID (aliases user_id for compatibility)."""
         return str(self.user_id) if self.user_id else None
-
-    @property
-    def team_id(self) -> Optional[str]:
-        """
-        Get the team ID associated with this proposal.
-
-        Note: The proposals table doesn't have a team_id column in the schema.
-        This is a placeholder that would need to be populated based on the user's team
-        or through a separate mapping table.
-        """
-        # This would need to be implemented based on actual schema
-        # For now, return None as it's not in the current schema
-        return None
 
     @property
     def donor_group_id(self) -> Optional[str]:

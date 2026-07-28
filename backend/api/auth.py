@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 import httpx
 import msal
 from redis.exceptions import RedisError  # type: ignore[import-untyped]
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
@@ -35,7 +35,8 @@ from backend.core.security import (
 )
 from backend.core.rate_limiter import check_api_rate_limit
 from backend.core.error_handlers import get_error_handler
-from backend.models.schemas import SignupPreferences
+from backend.models.schemas import ActiveTeamSelection, SignupPreferences
+from backend.services.access_management_service import AccessManagementService
 
 # This router handles all authentication-related endpoints, including user
 # registration, login, logout, profile management, and password recovery.
@@ -479,6 +480,7 @@ async def profile(current_user: dict = Depends(get_current_user)):
                 "teams": current_user.get("teams", current_user.get("memberships", [])),
                 "active_team": current_user.get("active_team"),
                 "roles": current_user.get("roles", []),
+                "role_keys": current_user.get("role_keys", current_user.get("roles", [])),
                 "team_leadership": current_user.get("team_leadership", False),
                 "settings": current_user.get("settings", {}),
                 "is_admin": current_user.get("is_admin", False),
@@ -493,6 +495,37 @@ async def profile(current_user: dict = Depends(get_current_user)):
             "llm_unavailable", details=f"Profile fetch failed: {str(e)}"
         )
         raise security_error from e
+
+
+@router.put("/profile/active-team")
+async def switch_active_team(
+    selection: ActiveTeamSelection,
+    current_user: dict = Depends(get_current_user),
+):
+    user_id = str(current_user["user_id"])
+    with get_engine().connect() as connection:
+        membership = connection.execute(
+            text("SELECT 1 FROM team_members WHERE user_id = :user_id " "AND team_id = :team_id AND status = 'ACTIVE'"),
+            {"user_id": user_id, "team_id": selection.team_id},
+        ).first()
+        if not membership:
+            raise HTTPException(status_code=403, detail="Selected team is not an active membership.")
+        context = AccessManagementService(connection).resolve_context(user_id, selection.team_id)
+
+    try:
+        redis_client.setex(f"active_team:{user_id}", 28800, selection.team_id)
+    except RedisError as exc:
+        logging.error("Failed to persist active team for user %s: %s", user_id, exc)
+        raise HTTPException(status_code=503, detail="Unable to persist active team selection.") from exc
+
+    return {
+        "active_team": context.active_team,
+        "memberships": context.memberships,
+        "roles": sorted(context.roles),
+        "role_keys": sorted(context.role_keys),
+        "team_leadership": context.team_leadership,
+        "settings": context.settings,
+    }
 
 
 @router.post("/request-role")

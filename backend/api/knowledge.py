@@ -15,7 +15,7 @@ from fastapi import (
     Query,
 )
 from fastapi.responses import StreamingResponse
-from sqlalchemy import text
+from sqlalchemy import JSON, bindparam, text
 from sqlalchemy.engine import Engine
 from slugify import slugify
 from PyPDF2 import PdfReader
@@ -26,6 +26,7 @@ from datetime import datetime, timedelta
 from backend.core.db import get_engine
 from backend.core.redis import redis_client
 from backend.core.security import get_current_user, check_user_group_access
+from backend.core.authorization import check_object_access
 
 
 # Local DictStorage definition for fallback
@@ -239,6 +240,9 @@ async def create_knowledge_card(card: KnowledgeCardIn, current_user: dict = Depe
     """
     card_id = uuid.uuid4()
     user_id = current_user["user_id"]
+    active_team_id = (current_user.get("active_team") or {}).get("id")
+    if active_team_id is None and not current_user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="An active team is required.")
 
     # Ensure that only one of the foreign keys is provided.
     foreign_keys = [card.donor_id, card.outcome_id, card.field_context_id]
@@ -266,8 +270,8 @@ async def create_knowledge_card(card: KnowledgeCardIn, current_user: dict = Depe
             connection.execute(
                 text(
                     """
-                    INSERT INTO knowledge_cards (id, summary, template_name, status, donor_id, outcome_id, field_context_id, created_by, updated_by, created_at, updated_at)
-                    VALUES (:id, :summary, :template_name, 'draft', :donor_id, :outcome_id, :field_context_id, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    INSERT INTO knowledge_cards (id, summary, template_name, status, donor_id, outcome_id, field_context_id, team_id, created_by, updated_by, created_at, updated_at)
+                    VALUES (:id, :summary, :template_name, 'draft', :donor_id, :outcome_id, :field_context_id, :team_id, :user_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 """
                 ),
                 {
@@ -277,7 +281,22 @@ async def create_knowledge_card(card: KnowledgeCardIn, current_user: dict = Depe
                     "donor_id": card.donor_id,
                     "outcome_id": card.outcome_id,
                     "field_context_id": card.field_context_id,
+                    "team_id": active_team_id,
                     "user_id": user_id,
+                },
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO resource_access_grants "
+                    "(id, resource_type, resource_id, subject_type, subject_id, permissions, data_scope, created_by) "
+                    "VALUES (:id, 'knowledge-cards', :resource_id, 'team', :team_id, :permissions, 'team', :created_by)"
+                ).bindparams(bindparam("permissions", type_=JSON)),
+                {
+                    "id": str(uuid.uuid4()),
+                    "resource_id": str(card_id),
+                    "team_id": active_team_id,
+                    "permissions": ["read", "edit", "delete"],
+                    "created_by": user_id,
                 },
             )
             if card.references:
@@ -349,6 +368,13 @@ async def get_knowledge_cards(
     """
     Fetches knowledge cards from the database, with optional filtering.
     """
+    knowledge_roles = {
+        "knowledge manager donors",
+        "knowledge manager outcome",
+        "knowledge manager field context",
+    }
+    if not current_user.get("is_admin") and knowledge_roles.isdisjoint(current_user.get("roles", [])):
+        return {"knowledge_cards": []}
     try:
         with get_engine().connect() as connection:
             base_query = """
@@ -382,7 +408,24 @@ async def get_knowledge_cards(
             """
 
             filters = []
+            access_filter = None
             params = {}
+            if not current_user.get("is_admin"):
+                active_team_id = (current_user.get("active_team") or {}).get("id")
+                if active_team_id is None:
+                    return {"knowledge_cards": []}
+                access_filter = (
+                    "EXISTS (SELECT 1 FROM team_members tm WHERE tm.user_id = :access_user_id "
+                    "AND tm.team_id = :access_team_id AND tm.status = 'ACTIVE') "
+                    "AND EXISTS (SELECT 1 FROM team_roles tr WHERE tr.team_id = :access_team_id "
+                    "AND tr.role_key IN ('knowledge manager donors', 'knowledge manager outcome', "
+                    "'knowledge manager field context')) "
+                    "AND EXISTS (SELECT 1 FROM resource_access_grants rag "
+                    "WHERE rag.resource_type = 'knowledge-cards' AND rag.resource_id = kc.id "
+                    "AND rag.subject_type = 'team' AND rag.subject_id = :access_team_id "
+                    "AND CAST(rag.permissions AS TEXT) LIKE '%\"read\"%')"
+                )
+                params.update({"access_user_id": current_user["user_id"], "access_team_id": active_team_id})
             if donor_id:
                 filters.append("kc.donor_id = :donor_id")
                 params["donor_id"] = donor_id
@@ -393,8 +436,13 @@ async def get_knowledge_cards(
                 filters.append("kc.field_context_id = :field_context_id")
                 params["field_context_id"] = str(field_context_id)
 
+            where_parts = []
+            if access_filter:
+                where_parts.append(access_filter)
             if filters:
-                base_query += " WHERE " + " OR ".join(filters)
+                where_parts.append("(" + " OR ".join(filters) + ")")
+            if where_parts:
+                base_query += " WHERE " + " AND ".join(where_parts)
 
             base_query += " ORDER BY kc.updated_at DESC"
 
@@ -487,6 +535,7 @@ async def get_knowledge_card(card_id: uuid.UUID, current_user: dict = Depends(ge
     """
     Fetches a single knowledge card by its ID.
     """
+    await check_object_access("knowledge_card", str(card_id), current_user, "read")
     try:
         with get_engine().connect() as connection:
             query = text(
@@ -637,6 +686,7 @@ async def update_knowledge_card(
     """
     Updates an existing knowledge card.
     """
+    await check_object_access("knowledge_card", str(card_id), current_user, "edit")
     user_id = current_user["user_id"]
     # Check that only one of the foreign keys is provided.
     if sum(1 for v in [card.donor_id, card.outcome_id, card.field_context_id] if v is not None) > 1:
@@ -968,6 +1018,7 @@ async def delete_knowledge_card(card_id: uuid.UUID, current_user: dict = Depends
     """
     Deletes a knowledge card and its associations.
     """
+    await check_object_access("knowledge_card", str(card_id), current_user, "delete")
     try:
         with get_engine().begin() as connection:
             # First, check if the card exists and get permissions
@@ -1833,13 +1884,6 @@ async def generate_and_download_document(
         else:
             card_dict["generated_sections"] = {}
 
-        form_data = {
-            "Title": card_dict.get("donor_name")
-            or card_dict.get("outcome_name")
-            or card_dict.get("field_context_name"),
-            "Summary": card_dict.get("summary"),
-        }
-
         # Load the template to get the correct section order and list.
         if not card_dict.get("template_name"):
             # Fallback to a default if no template is stored with the proposal.
@@ -2121,7 +2165,6 @@ async def get_all_knowledge_card_reviews(card_id: uuid.UUID, current_user: dict 
     """
     Fetches all reviews for a given knowledge card.
     """
-    user_id = current_user["user_id"]
     try:
         with get_engine().connect() as connection:
             query = text(

@@ -2,14 +2,14 @@ import json
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import inspect, text
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from sqlalchemy import JSON, bindparam, inspect, text
 from sqlalchemy.exc import IntegrityError
 
 from backend.core.db import get_engine
 from backend.core.access_roles import ROLE_REGISTRY
 from backend.core.security import get_current_user
-from backend.models.access_management import TeamCreate, TeamRoleAssignment, TeamUpdate
+from backend.models.access_management import AccessSettingUpsert, TeamCreate, TeamRoleAssignment, TeamUpdate
 
 
 router = APIRouter()
@@ -48,6 +48,23 @@ def _audit(connection, actor_id: str, action: str, resource_type: str, resource_
             "details": json.dumps(details or {}),
         },
     )
+
+
+def _setting_payload(row) -> dict[str, Any]:
+    value = row[5]
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except json.JSONDecodeError:
+            pass
+    return {
+        "id": row[0],
+        "user_id": str(row[1]),
+        "team_id": str(row[2]),
+        "role_key": row[3],
+        "key": row[4],
+        "value": value,
+    }
 
 
 def create_team_record(request: TeamCreate, current_user: dict[str, Any]) -> dict[str, Any]:
@@ -553,4 +570,122 @@ async def remove_team_role(team_id: str, role_key: str, current_user: dict = Dep
             "team_role",
             f"{team_id}:{resolved_role_key}",
         )
+    return None
+
+
+@router.get("/settings")
+async def list_access_settings(
+    user_id: str | None = Query(default=None),
+    team_id: str | None = Query(default=None),
+    role_key: str | None = Query(default=None),
+    current_user: dict = Depends(get_current_user),
+):
+    if current_user.get("is_admin"):
+        selected_user_id = user_id
+        selected_team_id = team_id
+        authorized_roles: set[str] | None = None
+    else:
+        if user_id is not None or team_id is not None or role_key is not None:
+            raise HTTPException(status_code=403, detail="Only administrators may query another access scope.")
+        active_team = current_user.get("active_team") or {}
+        selected_user_id = str(current_user["user_id"])
+        selected_team_id = active_team.get("id")
+        if selected_team_id is None:
+            return {"settings": []}
+        authorized_roles = {str(value) for value in (current_user.get("role_keys") or current_user.get("roles") or [])}
+
+    conditions = []
+    parameters: dict[str, Any] = {}
+    if selected_user_id is not None:
+        conditions.append("user_id = :user_id")
+        parameters["user_id"] = selected_user_id
+    if selected_team_id is not None:
+        conditions.append("team_id = :team_id")
+        parameters["team_id"] = selected_team_id
+    if role_key is not None:
+        conditions.append("role_key = :role_key")
+        parameters["role_key"] = role_key
+    where_clause = f" WHERE {' AND '.join(conditions)}" if conditions else ""
+
+    with get_engine().connect() as connection:
+        rows = connection.execute(
+            text(
+                "SELECT id, user_id, team_id, role_key, key, value FROM access_settings"
+                f"{where_clause} ORDER BY role_key, key, id"
+            ),
+            parameters,
+        ).fetchall()
+    if authorized_roles is not None:
+        rows = [row for row in rows if str(row[3]) in authorized_roles]
+    return {"settings": [_setting_payload(row) for row in rows]}
+
+
+@router.post("/settings", status_code=status.HTTP_201_CREATED)
+async def upsert_access_setting(
+    request: AccessSettingUpsert,
+    response: Response,
+    current_user: dict = Depends(get_current_user),
+):
+    _require_admin(current_user)
+    actor_id = str(current_user["user_id"])
+    with get_engine().begin() as connection:
+        membership = connection.execute(
+            text("SELECT 1 FROM team_members WHERE user_id = :user_id " "AND team_id = :team_id AND status = 'ACTIVE'"),
+            {"user_id": request.user_id, "team_id": request.team_id},
+        ).first()
+        if not membership:
+            raise HTTPException(status_code=422, detail="User must be an active member of the selected team.")
+
+        assigned_role = connection.execute(
+            text("SELECT 1 FROM team_roles WHERE team_id = :team_id AND role_key = :role_key"),
+            {"team_id": request.team_id, "role_key": request.role_key},
+        ).first()
+        if not assigned_role:
+            raise HTTPException(status_code=422, detail="Role must be assigned to the selected team.")
+
+        existing_id = connection.execute(
+            text(
+                "SELECT id FROM access_settings WHERE user_id = :user_id AND team_id = :team_id "
+                "AND role_key = :role_key AND key = :key"
+            ),
+            request.model_dump(exclude={"value"}),
+        ).scalar()
+        value_statement = bindparam("value", type_=JSON)
+        parameters = request.model_dump()
+        parameters["created_by"] = actor_id
+        if existing_id is None:
+            insert_statement = text(
+                "INSERT INTO access_settings "
+                "(user_id, team_id, role_key, key, value, created_by) "
+                "VALUES (:user_id, :team_id, :role_key, :key, :value, :created_by) RETURNING id"
+            ).bindparams(value_statement)
+            setting_id = connection.execute(insert_statement, parameters).scalar_one()
+            action = "access_setting.created"
+        else:
+            update_statement = text(
+                "UPDATE access_settings SET value = :value, created_by = :created_by, "
+                "updated_at = CURRENT_TIMESTAMP WHERE id = :id"
+            ).bindparams(value_statement)
+            connection.execute(
+                update_statement,
+                {"value": request.value, "created_by": actor_id, "id": existing_id},
+            )
+            setting_id = existing_id
+            response.status_code = status.HTTP_200_OK
+            action = "access_setting.updated"
+        _audit(connection, actor_id, action, "access_setting", str(setting_id))
+
+    return {"id": setting_id, **request.model_dump()}
+
+
+@router.delete("/settings/{setting_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_access_setting(setting_id: int, current_user: dict = Depends(get_current_user)):
+    _require_admin(current_user)
+    actor_id = str(current_user["user_id"])
+    with get_engine().begin() as connection:
+        existing = connection.execute(text("SELECT 1 FROM access_settings WHERE id = :id"), {"id": setting_id}).first()
+        if not existing:
+            raise HTTPException(status_code=404, detail="Access setting not found.")
+        connection.execute(text("DELETE FROM access_settings WHERE id = :id"), {"id": setting_id})
+        _audit(connection, actor_id, "access_setting.deleted", "access_setting", str(setting_id))
     return None

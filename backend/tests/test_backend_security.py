@@ -146,12 +146,32 @@ def _proposal_for_team(db_session, team_id):
     )
     db_session.execute(
         text(
+            "INSERT INTO roles (id, name, role_key, component) "
+            "VALUES (1, 'project reviewer', 'project reviewer', 'ReviewWorkspace')"
+        )
+    )
+    db_session.execute(
+        text("INSERT INTO team_members (team_id, user_id, status) VALUES ('team-a', 'reviewer-1', 'ACTIVE')")
+    )
+    db_session.execute(
+        text("INSERT INTO team_roles (team_id, role_id, role_key) " "VALUES ('team-a', 1, 'project reviewer')")
+    )
+    db_session.execute(
+        text(
             "INSERT INTO proposals "
             "(id, user_id, team_id, form_data, project_description, status, template_name) "
             "VALUES (:proposal_id, 'owner-1', :team_id, '{}', 'Description', 'draft', "
             "'proposal_template_unhcr.json')"
         ),
         {"proposal_id": proposal_id, "team_id": team_id},
+    )
+    db_session.execute(
+        text(
+            "INSERT INTO resource_access_grants "
+            "(id, resource_type, resource_id, subject_type, subject_id, permissions, data_scope, created_by) "
+            "VALUES (:id, 'proposals', :proposal_id, 'team', :team_id, '[\"read\"]', 'team', 'owner-1')"
+        ),
+        {"id": str(uuid.uuid4()), "proposal_id": proposal_id, "team_id": team_id},
     )
     db_session.commit()
     return proposal_id
@@ -160,7 +180,7 @@ def _proposal_for_team(db_session, team_id):
 @pytest.mark.parametrize(
     ("path", "denied_status"),
     [
-        ("/api/load-draft/{proposal_id}", 404),
+        ("/api/load-draft/{proposal_id}", 403),
         ("/api/proposals/{proposal_id}/peer-reviews", 403),
     ],
 )
