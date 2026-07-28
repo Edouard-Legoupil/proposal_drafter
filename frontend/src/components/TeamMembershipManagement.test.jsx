@@ -23,6 +23,10 @@ describe('TeamMembershipManagement', () => {
       getMembers: vi.fn().mockResolvedValue([
         { user_id: 'user-1', name: 'Amina', email: 'amina@example.com', is_leader: false }
       ]),
+      getAvailableUsers: vi.fn().mockResolvedValue([
+        { id: 'user-3', name: 'Leila', email: 'leila@example.com' }
+      ]),
+      addMember: vi.fn().mockResolvedValue(true),
       getPendingRequests: vi.fn().mockResolvedValue([
         { user_id: 'user-2', user_name: 'Kiran', user_email: 'kiran@example.com' }
       ]),
@@ -86,5 +90,16 @@ describe('TeamMembershipManagement', () => {
 
     await user.click(screen.getByRole('button', { name: /assign Template access/i }))
     expect(membership.assignRoleToTeam).toHaveBeenCalledWith('team-1', 'access_template')
+  })
+
+  it('adds a selected user through the canonical membership API', async () => {
+    const user = userEvent.setup()
+    render(<TeamMembershipManagement team={{ id: 'team-1', name: 'Shelter' }} />)
+
+    const picker = await screen.findByRole('combobox', { name: /user to add/i })
+    await user.selectOptions(picker, 'user-3')
+    await user.click(screen.getByRole('button', { name: /add member/i }))
+
+    expect(membership.addMember).toHaveBeenCalledWith('team-1', 'user-3')
   })
 })

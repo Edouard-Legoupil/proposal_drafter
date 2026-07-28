@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 
-const permissions = ['read', 'edit', 'delete']
+const permissions = ['access', 'read', 'edit', 'delete']
 
 export default function PermissionsMatrix({ rows = [] }) {
   const [search, setSearch] = useState('')

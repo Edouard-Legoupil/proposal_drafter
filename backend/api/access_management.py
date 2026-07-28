@@ -146,6 +146,13 @@ def _protected_team_resources(connection, team_id: str) -> list[str]:
         ).scalar()
         if count:
             protected.append("proposals")
+    if inspect(connection).has_table("knowledge_cards"):
+        count = connection.execute(
+            text("SELECT COUNT(*) FROM knowledge_cards WHERE team_id = :team_id"),
+            {"team_id": team_id},
+        ).scalar()
+        if count:
+            protected.append("knowledge cards")
     if inspect(connection).has_table("template_registry"):
         count = connection.execute(
             text("SELECT COUNT(*) FROM template_registry WHERE owning_team_id = :team_id"),

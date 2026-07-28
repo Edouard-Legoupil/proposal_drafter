@@ -70,6 +70,27 @@ The backend code is organized into the following modules:
 
 ## API Endpoints
 
+### Access-management authorization model
+
+Ordinary access is resolved for one active team. A user receives a component
+role only when they have an `ACTIVE` membership in that team and the role is
+assigned to the team. Direct ordinary entries in `user_roles` are ignored;
+only `SYSTEM_ADMIN` remains a global bypass. `TEAM_LEADER` is assigned to an
+individual active member and applies only to that team.
+
+Clients read the resolved context from `GET /api/profile` and switch it with
+`PUT /api/profile/active-team` using `{"team_id": "..."}`. The response
+contains `active_team`, active `memberships`, team `roles`/`role_keys`, scoped
+`settings`, and the active-team `team_leadership` flag. Requests may also send
+`X-Team-ID`; the backend validates it against active membership.
+
+Settings are keyed by `(user_id, team_id, role_key, key)` and are loaded only
+after the role gate. Proposal, knowledge-card, and template access additionally
+requires an explicit team grant containing `read`, `edit`, or `delete`.
+Ownership and direct user grants do not bypass these gates. Apply
+`db/migrations/20260727_access_management_compliance.sql` before deployment;
+ambiguous legacy assignments are reported rather than widened.
+
 This section provides a detailed, non-technical overview of the API endpoints available in the backend.
 
 ### Authentication (`/api/auth.py`)

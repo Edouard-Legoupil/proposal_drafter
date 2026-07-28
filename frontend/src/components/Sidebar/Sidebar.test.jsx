@@ -24,6 +24,7 @@ describe('Sidebar active-team access', () => {
 
     expect(screen.getByText('Donor Templates')).toBeInTheDocument()
     expect(screen.queryByText('Metrics')).not.toBeInTheDocument()
+    expect(screen.queryByText('Knowledge Cards')).not.toBeInTheDocument()
   })
 
   it('does not fetch or render teams outside the profile context', () => {

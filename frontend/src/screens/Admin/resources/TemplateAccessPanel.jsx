@@ -54,7 +54,7 @@ export default function TemplateAccessPanel({ resourceId: initialResourceId }) {
   const [statusMessage, setStatusMessage] = useState('')
   const [visibility, setVisibility] = useState('private')
   const [grantForm, setGrantForm] = useState({ subjectType: 'team', subjectId: '', permissions: ['read'] })
-  const [tester, setTester] = useState({ subjectType: 'user', subjectId: '', operation: 'view' })
+  const [tester, setTester] = useState({ subjectType: 'team', subjectId: '', operation: 'view' })
   const [testerResult, setTesterResult] = useState(null)
   const [actionLoading, setActionLoading] = useState(false)
 
@@ -247,7 +247,7 @@ export default function TemplateAccessPanel({ resourceId: initialResourceId }) {
         <GrantSection
           grants={grants}
           permissionOptions={permissionOptions}
-          showScope
+          showScope={false}
           grantForm={grantForm}
           setGrantForm={setGrantForm}
           statusMessage={statusMessage}
@@ -272,6 +272,7 @@ export default function TemplateAccessPanel({ resourceId: initialResourceId }) {
           operationOptions={operationOptions}
           users={users}
           options={options}
+          subjectTypeOptions={['team']}
         />
       </section>
 

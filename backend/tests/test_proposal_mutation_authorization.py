@@ -1,7 +1,10 @@
 import uuid
 from pathlib import Path
 
+from sqlalchemy import JSON, bindparam
 from sqlalchemy import text
+
+from backend.core.security import get_current_user
 
 
 def _insert_user(connection, *, email: str) -> str:
@@ -26,13 +29,53 @@ def _insert_proposal(connection, owner_id: str) -> str:
     return proposal_id
 
 
+def _grant_proposal_access(authenticated_client, connection, proposal_id: str, owner_id: str) -> None:
+    team_id = str(uuid.uuid4())
+    grant_id = str(uuid.uuid4())
+    connection.execute(text("INSERT INTO teams (id, name) VALUES (:id, 'Proposal Team')"), {"id": team_id})
+    connection.execute(
+        text("INSERT INTO team_members (team_id, user_id, status) VALUES (:team, :user, 'ACTIVE')"),
+        {"team": team_id, "user": owner_id},
+    )
+    connection.execute(
+        text(
+            "INSERT INTO roles (id, name, role_key, component) "
+            "VALUES (991, 'proposal writer', 'proposal writer', 'ProposalWorkspace')"
+        )
+    )
+    connection.execute(
+        text("INSERT INTO team_roles (team_id, role_id, role_key) VALUES (:team, 991, 'proposal writer')"),
+        {"team": team_id},
+    )
+    connection.execute(
+        text("UPDATE proposals SET team_id = :team WHERE id = :proposal"),
+        {"team": team_id, "proposal": proposal_id},
+    )
+    statement = text(
+        "INSERT INTO resource_access_grants "
+        "(id, resource_type, resource_id, subject_type, subject_id, permissions, created_by) "
+        "VALUES (:id, 'proposals', :proposal, 'team', :team, :permissions, :user)"
+    ).bindparams(bindparam("permissions", type_=JSON))
+    connection.execute(
+        statement,
+        {"id": grant_id, "proposal": proposal_id, "team": team_id, "permissions": ["read", "edit"], "user": owner_id},
+    )
+    current = authenticated_client.app.dependency_overrides[get_current_user]()
+    authenticated_client.app.dependency_overrides[get_current_user] = lambda: {
+        **current,
+        "active_team": {"id": team_id, "name": "Proposal Team"},
+        "roles": ["proposal writer"],
+        "settings": {},
+    }
+
+
 def test_submit_does_not_mutate_a_foreign_proposal(authenticated_client, db_session):
     foreign_owner = _insert_user(db_session, email="foreign-owner@example.com")
     proposal_id = _insert_proposal(db_session, foreign_owner)
 
     response = authenticated_client.post(f"/api/proposals/{proposal_id}/submit")
 
-    assert response.status_code == 404
+    assert response.status_code == 403
     history_count = db_session.execute(
         text("SELECT COUNT(*) FROM proposal_status_history WHERE proposal_id = :proposal_id"),
         {"proposal_id": proposal_id},
@@ -43,6 +86,8 @@ def test_submit_does_not_mutate_a_foreign_proposal(authenticated_client, db_sess
 def test_submit_updates_an_owned_proposal(authenticated_client, db_session):
     owner_id = db_session.execute(text("SELECT id FROM users WHERE email = 'test@example.com'")).scalar_one()
     proposal_id = _insert_proposal(db_session, owner_id)
+    _grant_proposal_access(authenticated_client, db_session, proposal_id, owner_id)
+    db_session.commit()
 
     response = authenticated_client.post(f"/api/proposals/{proposal_id}/submit")
 

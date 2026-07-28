@@ -88,21 +88,15 @@ async def update_admin_user_settings(user_id: str, settings: dict, admin: dict =
     """
     Updates all settings for a specific user.
     """
+    if settings.get("role_ids"):
+        raise HTTPException(
+            status_code=410,
+            detail="Direct user-role assignment is unsupported; assign a role through team membership.",
+        )
     try:
-        role_ids = settings.get("role_ids", [])
         donor_groups = settings.get("donor_groups", [])
         outcomes = settings.get("outcomes", [])
         field_contexts = settings.get("field_contexts", [])
-
-        # Convert string IDs to integers for role_ids and validate
-        role_ids = []
-        for rid in settings.get("role_ids", []):
-            if isinstance(rid, str) and rid.isdigit():
-                role_ids.append(int(rid))
-            elif isinstance(rid, int):
-                role_ids.append(rid)
-            else:
-                logger.warning(f"Invalid role ID type: {type(rid)} - {rid}")
 
         with get_engine().begin() as connection:
             # Verify user exists
@@ -114,10 +108,6 @@ async def update_admin_user_settings(user_id: str, settings: dict, admin: dict =
                 raise HTTPException(status_code=404, detail=f"User {user_id} not found.")
 
             # Clear all existing associations
-            connection.execute(
-                text("DELETE FROM user_roles WHERE user_id = :user_id"),
-                {"user_id": user_id},
-            )
             connection.execute(
                 text("DELETE FROM user_donor_groups WHERE user_id = :user_id"),
                 {"user_id": user_id},
@@ -136,17 +126,6 @@ async def update_admin_user_settings(user_id: str, settings: dict, admin: dict =
                 text("UPDATE users SET requested_role_id = NULL WHERE id = :user_id"),
                 {"user_id": user_id},
             )
-
-            # Insert new roles
-            if role_ids:
-                try:
-                    connection.execute(
-                        text("INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, :role_id)"),
-                        [{"user_id": user_id, "role_id": rid} for rid in role_ids],
-                    )
-                except Exception as e:
-                    logger.error(f"Failed to insert roles: {e}")
-                    raise HTTPException(status_code=400, detail=f"Failed to insert roles: {str(e)}") from e
 
             # Insert new donor groups
             if donor_groups:
@@ -363,97 +342,12 @@ async def get_admin_role_requests(admin: dict = Depends(is_system_admin)):
 @router.post("/admin/role-requests/{user_id}/approve")
 async def approve_role_request(user_id: str, admin_note: str | None = None, admin: dict = Depends(is_system_admin)):
     """
-    Approve a role request and assign the requested role to the user.
+    Legacy direct user-role approvals are intentionally unsupported.
     """
-    try:
-        with get_engine().begin() as connection:
-            # Get the user's requested role
-            user_query = text(
-                """
-                SELECT id, requested_role_id, name, email
-                FROM users
-                WHERE id = :user_id AND requested_role_id IS NOT NULL
-            """
-            )
-            user = connection.execute(user_query, {"user_id": user_id}).fetchone()
-
-            if not user:
-                raise HTTPException(status_code=404, detail="User not found or no pending role request")
-
-            requested_role_id = user[1]
-            user_name = user[2]
-            user_email = user[3]
-
-            # Assign the requested role to the user
-            connection.execute(
-                text(
-                    """
-                    INSERT INTO user_roles (user_id, role_id)
-                    VALUES (:user_id, :role_id)
-                    ON CONFLICT (user_id, role_id) DO NOTHING
-                """
-                ),
-                {"user_id": user_id, "role_id": requested_role_id},
-            )
-
-            # Clear the pending request
-            connection.execute(
-                text("UPDATE users SET requested_role_id = NULL WHERE id = :user_id"),
-                {"user_id": user_id},
-            )
-
-            # Log the approval
-            connection.execute(
-                text(
-                    """
-                    INSERT INTO audit_logs
-                    (event_type, resource_type, resource_id, details, user_id)
-                    VALUES (:event_type, :resource_type, :resource_id, :details, :user_id)
-                """
-                ),
-                {
-                    "event_type": "role_request.approved",
-                    "resource_type": "user",
-                    "resource_id": user_id,
-                    "details": json.dumps(
-                        {
-                            "requested_role_id": str(requested_role_id),
-                            "admin_note": admin_note,
-                            "approved_by": admin.get("user_id"),
-                        }
-                    ),
-                    "user_id": admin.get("user_id"),
-                },
-            )
-
-            # Get the role name for notification
-            role_name_query = text("SELECT name FROM roles WHERE id = :role_id")
-            role_result = connection.execute(role_name_query, {"role_id": requested_role_id}).fetchone()
-            role_name = role_result[0] if role_result else "Unknown Role"
-
-            # Send notification to user
-            notification_service.send_role_request_approval_notification(
-                user_id=user_id,
-                user_name=user_name,
-                user_email=user_email,
-                role_name=role_name,
-                admin_note=admin_note,
-                approved_by=admin.get("user_id"),
-            )
-
-            return {
-                "message": "Role request approved successfully",
-                "user_id": user_id,
-                "user_name": user_name,
-                "user_email": user_email,
-                "role_id": str(requested_role_id),
-                "notification": "User notified of approval",
-            }
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"[APPROVE ROLE REQUEST ERROR] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Could not approve role request.") from e
+    raise HTTPException(
+        status_code=410,
+        detail="Direct user-role assignment is unsupported; add the user to a team with the required role.",
+    )
 
 
 @router.post("/admin/role-requests/{user_id}/reject")

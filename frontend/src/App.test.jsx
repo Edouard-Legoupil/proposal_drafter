@@ -30,27 +30,27 @@ describe('application route protection', () => {
   })
 
   it('shows loading feedback while an authenticated screen is downloaded', async () => {
-    authState = { user: { id: 'user-1', is_admin: false }, loading: false }
+    authState = { user: { id: 'user-1', is_admin: false }, roles: ['proposal writer'], loading: false }
     render(<MemoryRouter initialEntries={['/dashboard']}><App /></MemoryRouter>)
     expect(screen.getByRole('status', { name: /loading page/i })).toBeInTheDocument()
     expect(await screen.findByText('Dashboard screen')).toBeInTheDocument()
   })
 
   it('allows authenticated users into ordinary application routes', async () => {
-    authState = { user: { id: 'user-1', is_admin: false }, loading: false }
+    authState = { user: { id: 'user-1', is_admin: false }, roles: ['proposal writer'], loading: false }
     render(<MemoryRouter initialEntries={['/dashboard']}><App /></MemoryRouter>)
     expect(await screen.findByText('Dashboard screen')).toBeInTheDocument()
   })
 
   it('redirects non-admin users away from access management', async () => {
-    authState = { user: { id: 'user-1', is_admin: false }, loading: false }
+    authState = { user: { id: 'user-1', is_admin: false }, roles: ['proposal writer'], loading: false }
     render(<MemoryRouter initialEntries={['/admin/access/proposals/latest']}><App /></MemoryRouter>)
     expect(await screen.findByText('Dashboard screen')).toBeInTheDocument()
     expect(screen.queryByText('Admin screen')).not.toBeInTheDocument()
   })
 
   it('denies component routes when the active team lacks the required role', async () => {
-    authState = { user: { id: 'user-1', is_admin: false }, roles: [], loading: false }
+    authState = { user: { id: 'user-1', is_admin: false }, roles: ['proposal writer'], loading: false }
     render(<MemoryRouter initialEntries={['/quality-gate']}><App /></MemoryRouter>)
     expect(await screen.findByText('Dashboard screen')).toBeInTheDocument()
     expect(screen.queryByText('Quality gate screen')).not.toBeInTheDocument()
@@ -61,5 +61,23 @@ describe('application route protection', () => {
     render(<MemoryRouter initialEntries={['/dashboard']}><App /></MemoryRouter>)
     expect(screen.getByText(/checking session/i)).toBeInTheDocument()
     expect(screen.queryByText('Login screen')).not.toBeInTheDocument()
+  })
+
+  it('denies proposal and knowledge routes without their active-team roles', async () => {
+    authState = { user: { id: 'user-1', is_admin: false }, roles: ['access_template'], loading: false }
+    const { unmount } = render(<MemoryRouter initialEntries={['/chat']}><App /></MemoryRouter>)
+    expect(await screen.findByText('Dashboard screen')).toBeInTheDocument()
+    expect(screen.queryByText('Chat screen')).not.toBeInTheDocument()
+    unmount()
+
+    render(<MemoryRouter initialEntries={['/knowledge-card/new']}><App /></MemoryRouter>)
+    expect(await screen.findByText('Dashboard screen')).toBeInTheDocument()
+    expect(screen.queryByText('Knowledge card screen')).not.toBeInTheDocument()
+  })
+
+  it('allows a knowledge manager into knowledge routes', async () => {
+    authState = { user: { id: 'user-1', is_admin: false }, roles: ['knowledge manager donors'], loading: false }
+    render(<MemoryRouter initialEntries={['/knowledge-card/new']}><App /></MemoryRouter>)
+    expect(await screen.findByText('Knowledge card screen')).toBeInTheDocument()
   })
 })

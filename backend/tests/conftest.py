@@ -726,6 +726,7 @@ def authenticated_client(client, db_session):
                 "knowledge manager field context",
                 "proposal writer",
                 "project reviewer",
+                "access_template",
             ],
         }
 

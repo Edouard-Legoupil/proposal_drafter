@@ -21,6 +21,31 @@ The API is served at the `/api` prefix. All endpoints are relative to this base 
 
 ## API Endpoints by Category
 
+### Team-scoped access management
+
+All routes require an authenticated cookie. `SYSTEM_ADMIN` is the only global
+role; all other component access is derived from the selected team.
+
+- `GET /api/profile` returns `memberships`, `active_team`, `roles`,
+  `role_keys`, `team_leadership`, and effective `settings`.
+- `PUT /api/profile/active-team` accepts `{"team_id": "team-id"}` and rejects
+  missing, pending, rejected, or unknown memberships.
+- `GET|POST /api/teams`, `PATCH|DELETE /api/teams/{team_id}` manage teams.
+- Member, join-request, approval/rejection, and leader routes are under
+  `/api/teams/{team_id}`. Leaders may decide requests only for their active
+  team; only administrators assign leaders or component roles.
+- `GET /api/roles` returns the immutable role/component registry.
+- `GET|POST /api/settings` and `DELETE /api/settings/{setting_id}` manage
+  `(user, team, role, key, value)` settings. Writes validate active membership
+  and the team's role assignment.
+- Administrative object grants accept only `subject_type: "team"` and only
+  `read`, `edit`, and `delete` permissions.
+
+For non-administrators, an object request succeeds only when all three gates
+pass: active membership, required active-team component role, and explicit
+permission for that team. Frontend visibility is advisory; every route repeats
+the checks on the backend.
+
 The API is organized into logical categories using FastAPI routers:
 
 ### 1. Authentication Endpoints

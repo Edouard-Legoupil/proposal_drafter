@@ -14,7 +14,7 @@ import logging
 import os
 
 from backend.core.db import engine, get_engine
-from backend.core.security import get_current_user
+from backend.core.security import get_current_user, require_any_role
 from backend.core.authorization import (
     check_object_access,
     check_template_access,
@@ -57,7 +57,7 @@ def _run_auto_analysis(artifact_type: ArtifactType, review_id: str):
         )
 
 
-@router.get("/published/{template_name}")
+@router.get("/published/{template_name}", dependencies=[Depends(require_any_role("access_template"))])
 async def get_published_template(
     template_name: str,
     current_user: dict = Depends(get_current_user),
@@ -116,7 +116,7 @@ async def get_published_template(
         raise HTTPException(status_code=500, detail="Failed to load template content.")
 
 
-@router.get("/{template_name}/sections")
+@router.get("/{template_name}/sections", dependencies=[Depends(require_any_role("access_template"))])
 async def get_template_sections(template_name: str, current_user: dict = Depends(get_current_user)):
     """
     Returns the list of sections for a given template.
@@ -148,7 +148,7 @@ def _parse_json(data):
         return data
 
 
-@router.get("/")
+@router.get("/", dependencies=[Depends(require_any_role("access_template"))])
 async def list_templates(current_user: dict = Depends(get_current_user), engine=Depends(get_engine)):
     """
     Returns all published templates from files and current requests from DB.
@@ -226,7 +226,7 @@ async def list_templates(current_user: dict = Depends(get_current_user), engine=
         raise HTTPException(status_code=500, detail="Failed to list templates.")
 
 
-@router.post("/request")
+@router.post("/request", dependencies=[Depends(require_any_role("access_template"))])
 async def create_template_request(
     request: DonorTemplateRequestCreate,
     current_user: dict = Depends(get_current_user),
@@ -285,7 +285,7 @@ async def create_template_request(
         raise HTTPException(status_code=500, detail="Failed to submit template request.")
 
 
-@router.get("/request/{request_id}")
+@router.get("/request/{request_id}", dependencies=[Depends(require_any_role("access_template"))])
 async def get_template_request(
     request_id: str,
     current_user: dict = Depends(get_current_user),
@@ -372,7 +372,7 @@ async def get_template_request(
         raise HTTPException(status_code=500, detail="Failed to fetch template request.")
 
 
-@router.put("/request/{request_id}/status")
+@router.put("/request/{request_id}/status", dependencies=[Depends(require_any_role("access_template"))])
 async def update_request_status(
     request_id: str,
     req: DonorTemplateStatusUpdate,
@@ -403,7 +403,7 @@ async def update_request_status(
         raise HTTPException(status_code=500, detail="Failed to update status.")
 
 
-@router.post("/request/{request_id}/comment")
+@router.post("/request/{request_id}/comment", dependencies=[Depends(require_any_role("access_template"))])
 async def add_comment(
     request_id: str,
     req: DonorTemplateCommentCreate,
@@ -477,7 +477,7 @@ async def add_comment(
         raise HTTPException(status_code=500, detail="Failed to add comment.")
 
 
-@router.post("/templates/request/{request_id}/reply")
+@router.post("/templates/request/{request_id}/reply", dependencies=[Depends(require_any_role("access_template"))])
 async def reply_to_template_feedback(
     request_id: str,
     request: AuthorResponseRequest,

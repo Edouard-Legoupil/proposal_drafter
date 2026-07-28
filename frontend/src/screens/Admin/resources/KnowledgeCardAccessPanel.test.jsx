@@ -167,6 +167,22 @@ describe('KnowledgeCardAccessPanel', () => {
     expect(screen.getByDisplayValue('Team')).toHaveAttribute('readonly')
   })
 
+  it('tests effective access only for teams', async () => {
+    render(
+      <WizardProvider>
+        <MemoryRouter>
+          <KnowledgeCardAccessPanel resourceId="kc-1" />
+        </MemoryRouter>
+      </WizardProvider>
+    )
+
+    await screen.findByRole('heading', { name: 'Tester' })
+    const tester = document.querySelector('.tester-panel')
+    const subjectType = within(tester).getByRole('combobox', { name: /Subject type/i })
+    expect(subjectType).toHaveValue('team')
+    expect(within(subjectType).getAllByRole('option')).toHaveLength(1)
+  })
+
   it('shows knowledge card list when no specific card is selected', async () => {
     render(
       <WizardProvider>

@@ -515,8 +515,7 @@ async def switch_active_team(
     try:
         redis_client.setex(f"active_team:{user_id}", 28800, selection.team_id)
     except RedisError as exc:
-        logging.error("Failed to persist active team for user %s: %s", user_id, exc)
-        raise HTTPException(status_code=503, detail="Unable to persist active team selection.") from exc
+        logging.warning("Failed to persist active team for user %s: %s", user_id, exc)
 
     return {
         "active_team": context.active_team,
@@ -575,6 +574,7 @@ async def logout(current_user: dict = Depends(get_current_user)):
     user_id = current_user["user_id"]
     try:
         redis_client.delete(f"user_session:{user_id}")
+        redis_client.delete(f"active_team:{user_id}")
         logging.info(f"[LOGOUT] Removed session for user_id: {user_id}")
     except Exception as e:
         logging.error(f"[LOGOUT ERROR] Failed to remove Redis session for user_id {user_id}: {e}")

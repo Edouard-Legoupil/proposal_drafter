@@ -95,7 +95,7 @@ def test_get_proposal_run_details(authenticated_client):
 
     # This should return 404 since the run doesn't exist
     response = client.get(f"/api/proposal-runs/{fake_run_id}")
-    assert response.status_code == 500  # Will fail because run doesn't exist
+    assert response.status_code == 404
 
 
 def test_get_user_runs(authenticated_client):

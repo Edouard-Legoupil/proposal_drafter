@@ -78,6 +78,16 @@ export function useTeamMembership() {
     return response.data.members || [];
   }, []);
 
+  const getAvailableUsers = useCallback(async () => {
+    const response = await api.get('/admin/users');
+    return response.data || [];
+  }, []);
+
+  const addMember = useCallback(async (teamId, userId) => {
+    await api.post(`/teams/${teamId}/members/${userId}`);
+    return true;
+  }, []);
+
   const removeMember = useCallback(async (teamId, userId) => {
     await api.delete(`/teams/${teamId}/members/${userId}`);
     return true;
@@ -255,6 +265,8 @@ export function useTeamMembership() {
     requestTeamMembership,
     getPendingRequests,
     getMembers,
+    getAvailableUsers,
+    addMember,
     removeMember,
     assignLeader,
     removeLeader,

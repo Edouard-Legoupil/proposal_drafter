@@ -80,7 +80,7 @@ const Sidebar = ({ isOpen }) => {
                     </NavLink>
                 )}
 
-                <div className="Sidebar_folder">
+                {roles.some((role) => ['knowledge manager donors', 'knowledge manager outcome', 'knowledge manager field context'].includes(role)) && <div className="Sidebar_folder">
                     <div className="Sidebar_folderHeader" onClick={() => toggleFolder('knowledge')} data-testid="sidebar-knowledge-folder">
                         <i className={`fa-solid ${expandedFolders.knowledge ? 'fa-folder-open' : 'fa-folder'}`}></i>
                         <span>Knowledge Cards</span>
@@ -102,7 +102,7 @@ const Sidebar = ({ isOpen }) => {
                             </NavLink>
                         </div>
                     )}
-                </div>
+                </div>}
 
                 {/* Donor Templates - Protected by RBAC */}
                 {canAccess('access_template') && (

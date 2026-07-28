@@ -10,6 +10,17 @@ import Chat from './Chat'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || '/api'
 
+vi.mock('../../context/AuthContext', () => ({
+        useAuth: () => ({
+                user: { id: 'user-1', name: 'Test User', email: 'test@test.com', is_admin: false },
+                loading: false,
+                roles: ['proposal writer'],
+                memberships: [],
+                activeTeam: null,
+                switchTeam: vi.fn(),
+        }),
+}))
+
 async function selectOption(label, optionName) {
         const input = screen.getByLabelText(label)
         await userEvent.click(input)

@@ -227,6 +227,11 @@ async def update_user_settings(settings: SelfServiceUserSettings, current_user: 
     """
     Updates the current user's settings.
     """
+    if settings.requested_roles:
+        raise HTTPException(
+            status_code=410,
+            detail="Direct role requests are unsupported; request membership in the appropriate team.",
+        )
     user_id = current_user["user_id"]
     try:
         with get_engine().connect() as connection:
@@ -250,21 +255,6 @@ async def update_user_settings(settings: SelfServiceUserSettings, current_user: 
                         "user_id": user_id,
                     },
                 )
-
-                # Approved roles and access memberships are never modified by
-                # this self-service endpoint. Only requests enter the approval
-                # workflow.
-                if settings.requested_roles:
-                    for role_id in settings.requested_roles:
-                        exists = connection.execute(
-                            text("SELECT 1 FROM user_role_requests WHERE user_id = :user_id AND role_id = :role_id"),
-                            {"user_id": user_id, "role_id": role_id},
-                        ).fetchone()
-                        if not exists:
-                            connection.execute(
-                                text("INSERT INTO user_role_requests (user_id, role_id) VALUES (:user_id, :role_id)"),
-                                {"user_id": user_id, "role_id": role_id},
-                            )
 
                 # Insert requested settings into user_settings_requests table (like requested_roles)
                 if settings.requested_donor_ids:

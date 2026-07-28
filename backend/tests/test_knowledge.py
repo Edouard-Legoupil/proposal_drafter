@@ -5,8 +5,53 @@ import io
 from unittest.mock import patch, MagicMock, AsyncMock
 from slugify import slugify  # type: ignore[import-untyped]
 from fastapi.testclient import TestClient
-from sqlalchemy import text
+from sqlalchemy import JSON, bindparam, text
 from backend.core.security import get_current_user
+
+
+def _grant_knowledge_access(authenticated_client, connection, card_id: str, user_id: str) -> None:
+    team_id = str(uuid.uuid4())
+    connection.execute(text("INSERT INTO teams (id, name) VALUES (:id, 'Knowledge Team')"), {"id": team_id})
+    connection.execute(
+        text("INSERT INTO team_members (team_id, user_id, status) VALUES (:team, :user, 'ACTIVE')"),
+        {"team": team_id, "user": user_id},
+    )
+    connection.execute(
+        text(
+            "INSERT INTO roles (id, name, role_key, component) VALUES "
+            "(992, 'knowledge manager donors', 'knowledge manager donors', 'KnowledgeCard')"
+        )
+    )
+    connection.execute(
+        text("INSERT INTO team_roles (team_id, role_id, role_key) " "VALUES (:team, 992, 'knowledge manager donors')"),
+        {"team": team_id},
+    )
+    connection.execute(
+        text("UPDATE knowledge_cards SET team_id = :team WHERE id = :card"),
+        {"team": team_id, "card": card_id},
+    )
+    statement = text(
+        "INSERT INTO resource_access_grants "
+        "(id, resource_type, resource_id, subject_type, subject_id, permissions, created_by) "
+        "VALUES (:id, 'knowledge-cards', :card, 'team', :team, :permissions, :user)"
+    ).bindparams(bindparam("permissions", type_=JSON))
+    connection.execute(
+        statement,
+        {
+            "id": str(uuid.uuid4()),
+            "card": card_id,
+            "team": team_id,
+            "permissions": ["read", "edit"],
+            "user": user_id,
+        },
+    )
+    current = authenticated_client.app.dependency_overrides[get_current_user]()
+    authenticated_client.app.dependency_overrides[get_current_user] = lambda: {
+        **current,
+        "active_team": {"id": team_id, "name": "Knowledge Team"},
+        "roles": ["knowledge manager donors"],
+        "settings": {},
+    }
 
 
 def test_create_and_update_knowledge_card_saves_content_to_file(authenticated_client: TestClient, db_session):
@@ -27,6 +72,7 @@ def test_create_and_update_knowledge_card_saves_content_to_file(authenticated_cl
         ),
         {"id": card_id, "summary": card_summary, "user_id": user_id},
     )
+    _grant_knowledge_access(authenticated_client, db_session, card_id, user_id)
 
     # 2. Generate content for the card
     generated_sections = {
@@ -116,6 +162,7 @@ def test_upload_pdf_reference_success(
         ),
         {"id": reference_id, "card_id": card_id, "user_id": user_id},
     )
+    _grant_knowledge_access(authenticated_client, db_session, card_id, user_id)
     db_session.commit()
 
     # 3. Create a dummy in-memory file to upload
@@ -180,6 +227,7 @@ def test_identify_references_keeps_existing_links(authenticated_client: TestClie
         ),
         {"card_id": card_id, "reference_id": reference_id},
     )
+    _grant_knowledge_access(authenticated_client, db_session, card_id, user_id)
     db_session.commit()
 
     mock_result = MagicMock()

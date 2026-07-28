@@ -185,6 +185,24 @@ Process:
 - Least privilege
 - Clear separation: Roles vs Settings
 
+### Implemented authorization contract
+
+- The current team is explicit session context and can be changed only to an
+  active membership. Switching replaces the role and setting context; roles
+  from multiple teams are never unioned.
+- Static component roles are assigned to teams by `role_key`. Runtime role
+  creation and direct ordinary user-role assignment are unsupported.
+- `SYSTEM_ADMIN` is the sole global bypass. `TEAM_LEADER` is member-scoped and
+  permits request decisions only in the assigned active team.
+- Settings use the full `(user_id, team_id, role_key, key)` scope and load only
+  after component-role authorization.
+- Object grants are team-only and use the normalized permissions `read`,
+  `edit`, and `delete`. Ownership alone and legacy direct-user grants do not
+  grant ordinary access.
+- Existing installations migrate with
+  `db/migrations/20260727_access_management_compliance.sql`; ambiguous legacy
+  assignments are recorded in a migration report instead of broadening access.
+
 ---
 
 

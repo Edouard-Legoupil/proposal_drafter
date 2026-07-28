@@ -4,6 +4,10 @@ from unittest.mock import MagicMock
 
 def test_process_section(authenticated_client, mocker):
     client = authenticated_client
+    mocker.patch(
+        "backend.api.proposals.check_object_access",
+        new=mocker.AsyncMock(return_value=True),
+    )
 
     # Mock the crew kickoff method
     mock_result = MagicMock()
@@ -47,6 +51,10 @@ def test_process_section(authenticated_client, mocker):
 
 
 def test_process_section_rejects_finalized_proposal(authenticated_client, mocker):
+    mocker.patch(
+        "backend.api.proposals.check_object_access",
+        new=mocker.AsyncMock(return_value=True),
+    )
     mocker.patch(
         "backend.api.proposals.redis_client.get",
         return_value='{"proposal_template": {"sections": [{"section_name": "Summary"}]}}',

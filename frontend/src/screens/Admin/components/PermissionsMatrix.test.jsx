@@ -11,6 +11,7 @@ describe('PermissionsMatrix', () => {
 
   it('renders accessible read edit and delete status cells', () => {
     render(<PermissionsMatrix rows={rows} />)
+    expect(screen.getByRole('columnheader', { name: 'Access' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Read' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Edit' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Delete' })).toBeInTheDocument()

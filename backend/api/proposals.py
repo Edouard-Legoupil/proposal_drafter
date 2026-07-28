@@ -96,6 +96,22 @@ FALLBACK_GENERATION_MESSAGE = (
 )
 
 
+async def _filter_authorized_proposals(items: list[dict], current_user: dict) -> list[dict]:
+    if current_user.get("is_admin"):
+        return items
+    authorized = []
+    for item in items:
+        proposal_id = item.get("proposal_id") or item.get("id")
+        try:
+            await check_object_access("proposal", str(proposal_id), current_user, "read")
+        except HTTPException as exc:
+            if exc.status_code == 403:
+                continue
+            raise
+        authorized.append(item)
+    return authorized
+
+
 def _run_auto_analysis(artifact_type: ArtifactType, review_id: str):
     try:
         with get_engine().begin() as connection:
@@ -299,7 +315,7 @@ async def get_review_analysis(review_id: str, current_user: dict = Depends(get_c
         raise HTTPException(status_code=500, detail="Could not fetch analysis.")
 
 
-@router.get("/templates")
+@router.get("/templates", dependencies=[Depends(require_any_role("proposal writer"))])
 async def get_templates(current_user: dict = Depends(get_current_user)):
     """
     Returns a dictionary mapping donor names to template filenames.
@@ -320,7 +336,7 @@ async def get_templates(current_user: dict = Depends(get_current_user)):
         )
 
 
-@router.get("/templates/{template_name}")
+@router.get("/templates/{template_name}", dependencies=[Depends(require_any_role("proposal writer"))])
 async def get_template(template_name: str, current_user: dict = Depends(get_current_user)):
     """
     Loads and returns the content of a specific template file.
@@ -339,7 +355,7 @@ async def get_template(template_name: str, current_user: dict = Depends(get_curr
         )
 
 
-@router.post("/create-session")
+@router.post("/create-session", dependencies=[Depends(require_any_role("proposal writer"))])
 async def create_session(request: CreateSessionRequest, current_user: dict = Depends(get_current_user)):
     """
     Creates a new proposal session and a corresponding draft in the database.
@@ -878,6 +894,7 @@ async def generate_proposal_sections(
 
     if not proposal_id:
         raise HTTPException(status_code=400, detail="Proposal ID not found in session.")
+    await check_object_access("proposal", proposal_id, current_user, "edit")
 
     background_tasks.add_task(generate_all_sections_background, session_id, proposal_id, user_id)
 
@@ -896,6 +913,7 @@ async def process_section(
     """
     logger.info(f"Processing section {request.section} for proposal {request.proposal_id}")
     logger.info(f"Type of proposal_id: {type(request.proposal_id)}")
+    await check_object_access("proposal", str(request.proposal_id), current_user, "edit")
 
     session_data_str = redis_client.get(session_id)
     if not session_data_str:
@@ -1051,6 +1069,7 @@ async def regenerate_section(
     Manually regenerates a section using concise user input.
     """
     user_id = current_user["user_id"]
+    await check_object_access("proposal", proposal_id, current_user, "edit")
 
     # Initialize artifact run logging for regeneration
     run_id = None
@@ -1205,6 +1224,7 @@ async def regenerate_full_proposal(
     This creates a new background task to regenerate all sections with the additional context.
     """
     user_id = current_user["user_id"]
+    await check_object_access("proposal", request.proposal_id, current_user, "edit")
 
     # Initialize artifact run logging for full regeneration
     from backend.utils.proposal_run_logger import (
@@ -1482,12 +1502,14 @@ async def update_section_content(request: UpdateSectionRequest, current_user: di
     This is used for saving manually edited content without invoking the AI.
     """
     user_id = current_user["user_id"]
+    proposal_id = str(request.proposal_id)
+    await check_object_access("proposal", proposal_id, current_user, "edit")
     try:
         with get_engine().begin() as conn:
             # First, verify the proposal belongs to the user and is not finalized.
             proposal_info = conn.execute(
                 text("SELECT is_accepted FROM proposals WHERE id = :id AND user_id = :uid"),
-                {"id": request.proposal_id, "uid": user_id},
+                {"id": proposal_id, "uid": user_id},
             ).fetchone()
 
             if not proposal_info:
@@ -1514,7 +1536,7 @@ async def update_section_content(request: UpdateSectionRequest, current_user: di
                 {
                     "section": request.section,
                     "content": request.content,
-                    "id": request.proposal_id,
+                    "id": proposal_id,
                 },
             )
         return {"message": f"Section '{request.section}' updated successfully."}
@@ -1532,7 +1554,7 @@ async def update_section_content(request: UpdateSectionRequest, current_user: di
         )
 
 
-@router.post("/save-draft")
+@router.post("/save-draft", dependencies=[Depends(require_any_role("proposal writer"))])
 async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get_current_user)):
     """
     Saves a new draft or updates an existing one in the database.
@@ -1631,7 +1653,7 @@ async def save_draft(request: SaveDraftRequest, current_user: dict = Depends(get
         )
 
 
-@router.get("/proposals/reviews")
+@router.get("/proposals/reviews", dependencies=[Depends(require_any_role("project reviewer"))])
 async def get_proposals_for_review(current_user: dict = Depends(get_current_user)):
     """
     Lists all proposals assigned to the current user for review, both pending and completed.
@@ -1727,6 +1749,7 @@ async def get_proposals_for_review(current_user: dict = Depends(get_current_user
                         ),
                     }
                 )
+        review_list = await _filter_authorized_proposals(review_list, current_user)
         return {
             "message": "Proposals for review fetched successfully.",
             "reviews": review_list,
@@ -1736,7 +1759,7 @@ async def get_proposals_for_review(current_user: dict = Depends(get_current_user
         raise HTTPException(status_code=500, detail="Failed to fetch proposals for review.")
 
 
-@router.get("/list-drafts")
+@router.get("/list-drafts", dependencies=[Depends(require_any_role("proposal writer"))])
 async def list_drafts(status: Optional[str] = None, current_user: dict = Depends(get_current_user)):
     """
     Lists all drafts for the current user, including sample templates.
@@ -1847,6 +1870,7 @@ async def list_drafts(status: Optional[str] = None, current_user: dict = Depends
                     }
                 )
 
+        draft_list = await _filter_authorized_proposals(draft_list, current_user)
         logger.info(f"Total drafts (samples + user): {len(draft_list)}")
         return {"message": "Drafts fetched successfully.", "drafts": draft_list}
 
@@ -1859,7 +1883,7 @@ async def list_drafts(status: Optional[str] = None, current_user: dict = Depends
         raise HTTPException(status_code=500, detail="Failed to fetch drafts")
 
 
-@router.get("/list-all-proposals")
+@router.get("/list-all-proposals", dependencies=[Depends(require_any_role("project reviewer"))])
 async def list_all_proposals(current_user: dict = Depends(get_current_user)):
     """
     Lists all proposals in the system for the 'Other Proposals' view,
@@ -1958,6 +1982,7 @@ async def list_all_proposals(current_user: dict = Depends(get_current_user)):
                     }
                 )
 
+        proposal_list = await _filter_authorized_proposals(proposal_list, current_user)
         return {
             "message": "All proposals fetched successfully.",
             "proposals": proposal_list,
@@ -2140,6 +2165,7 @@ async def submit_proposal(proposal_id: uuid.UUID, current_user: dict = Depends(g
     """
     user_id = current_user["user_id"]
     proposal_id_value = str(proposal_id)
+    await check_object_access("proposal", proposal_id_value, current_user, "edit")
     try:
         with get_engine().begin() as connection:
             proposal = connection.execute(
@@ -2183,6 +2209,7 @@ async def save_contribution_id(
     Saves the contribution ID for a submitted proposal.
     """
     user_id = current_user["user_id"]
+    await check_object_access("proposal", str(proposal_id), current_user, "edit")
     try:
         with get_engine().begin() as connection:
             # Verify the user owns the proposal and it is in 'submitted' state
@@ -2227,6 +2254,7 @@ async def upload_submitted_pdf(
     Uploads a PDF for a submitted proposal, parses its content, and updates the proposal sections.
     """
     user_id = current_user["user_id"]
+    await check_object_access("proposal", str(proposal_id), current_user, "edit")
 
     if not file.filename or not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Invalid file type. Only PDFs are allowed.")
@@ -2345,6 +2373,7 @@ async def save_draft_review(
     Saves a draft of a peer review for a proposal.
     """
     user_id = current_user["user_id"]
+    await check_object_access("proposal", str(proposal_id), current_user, "read")
     try:
         with get_engine().begin() as connection:
             # Check if the user is assigned to review this proposal
@@ -2410,6 +2439,7 @@ async def submit_review(
     Submits a peer review for a proposal, with comments for each section.
     """
     user_id = current_user["user_id"]
+    await check_object_access("proposal", str(proposal_id), current_user, "read")
     try:
         with get_engine().begin() as connection:
             # Check if the user is assigned to review this proposal
@@ -2524,6 +2554,7 @@ async def submit_for_review(
     Submits a proposal for peer review.
     """
     user_id = current_user["user_id"]
+    await check_object_access("proposal", str(proposal_id), current_user, "edit")
     try:
         with get_engine().begin() as connection:
             # Check if the proposal exists and belongs to the user
@@ -2614,6 +2645,7 @@ async def update_proposal_status(
     Updates the status of a proposal.
     """
     user_id = current_user["user_id"]
+    await check_object_access("proposal", str(proposal_id), current_user, "edit")
     new_status = request.status
     # Add validation for allowed statuses if needed
     allowed_statuses = ["draft", "in_review", "pre_submission", "submitted"]
@@ -2678,6 +2710,7 @@ async def get_proposal_status(proposal_id: uuid.UUID, current_user: dict = Depen
     Gets the current status and generated sections of a proposal.
     """
     user_id = current_user["user_id"]
+    await check_object_access("proposal", str(proposal_id), current_user, "read")
     try:
         with get_engine().connect() as connection:
             result = connection.execute(
@@ -2729,6 +2762,7 @@ async def get_proposal_for_review(proposal_id: uuid.UUID, current_user: dict = D
     Assignment in proposal_peer_reviews is only for deadline tracking and folder organization.
     """
     user_id = current_user["user_id"]
+    await check_object_access("proposal", str(proposal_id), current_user, "read")
     user_roles = current_user.get("roles", [])
 
     # Check if user has project reviewer role
@@ -2980,6 +3014,7 @@ async def delete_draft(proposal_id: uuid.UUID, current_user: dict = Depends(get_
     Deletes a draft proposal from the database.
     """
     user_id = current_user["user_id"]
+    await check_object_access("proposal", str(proposal_id), current_user, "delete")
     try:
         with get_engine().begin() as connection:
             # RBAC Fix: Check group access before deletion
@@ -3004,6 +3039,7 @@ async def restore_proposal(proposal_id: uuid.UUID, current_user: dict = Depends(
     Restores a 'deleted' proposal by setting its status back to 'draft'.
     """
     user_id = current_user["user_id"]
+    await check_object_access("proposal", str(proposal_id), current_user, "edit")
     try:
         with get_engine().begin() as connection:
             # RBAC Fix: Check group access before restoration
@@ -3031,6 +3067,7 @@ async def delete_proposal(proposal_id: uuid.UUID, current_user: dict = Depends(g
     Marks a proposal as 'deleted' but does not remove it from the database.
     """
     user_id = current_user["user_id"]
+    await check_object_access("proposal", str(proposal_id), current_user, "delete")
     try:
         with get_engine().begin() as connection:
             # RBAC Fix: Check group access before marking as deleted
@@ -3062,6 +3099,7 @@ async def transfer_ownership(
     Transfers ownership of a proposal to another user.
     """
     user_id = current_user["user_id"]
+    await check_object_access("proposal", str(proposal_id), current_user, "edit")
     new_owner_id = request.new_owner_id
 
     try:
@@ -3105,6 +3143,7 @@ async def revert_to_status(proposal_id: uuid.UUID, status: str, current_user: di
     Reverts a proposal to a previous status and its corresponding content.
     """
     user_id = current_user["user_id"]
+    await check_object_access("proposal", str(proposal_id), current_user, "edit")
     try:
         with get_engine().begin() as connection:
             # RBAC Fix: Check group access before revert
@@ -3160,6 +3199,7 @@ async def get_status_history(proposal_id: uuid.UUID, current_user: dict = Depend
     Gets the list of available statuses for a proposal from its history.
     """
     user_id = current_user["user_id"]
+    await check_object_access("proposal", str(proposal_id), current_user, "read")
     try:
         with get_engine().connect() as connection:
             # Verify the user has access to the proposal (owner or reviewer)
@@ -3208,6 +3248,7 @@ async def get_peer_reviews(proposal_id: uuid.UUID, current_user: dict = Depends(
     Fetches all peer reviews for a given proposal.
     """
     user_id = current_user["user_id"]
+    await check_object_access("proposal", str(proposal_id), current_user, "read")
     user_roles = current_user.get("roles", [])
     try:
         with get_engine().connect() as connection:
@@ -3315,6 +3356,7 @@ async def add_proposal_comment(
     Add or update an individual draft comment for a proposal section for the current user.
     """
     user_id = current_user["user_id"]
+    await check_object_access("proposal", str(proposal_id), current_user, "read")
     try:
         with get_engine().begin() as connection:
             # We now allow multiple comments per section for the same user
@@ -3357,6 +3399,7 @@ async def delete_proposal_comment(
     Delete (mark as removed) a comment for a proposal section.
     """
     user_id = current_user["user_id"]
+    await check_object_access("proposal", str(proposal_id), current_user, "read")
     try:
         with get_engine().begin() as connection:
             # Check if the comment exists and belongs to the current user
@@ -3404,10 +3447,8 @@ async def save_author_response(
     """
     Saves the author's response to a peer review.
     """
-    user_id = current_user["user_id"]
     try:
         with get_engine().begin() as connection:
-            # Verify that the user is the author of the proposal
             proposal_id = connection.execute(
                 text("SELECT proposal_id FROM proposal_peer_reviews WHERE id = :rid"),
                 {"rid": str(review_id)},
@@ -3416,16 +3457,7 @@ async def save_author_response(
             if not proposal_id:
                 raise HTTPException(status_code=404, detail="Review not found.")
 
-            proposal_owner = connection.execute(
-                text("SELECT user_id FROM proposals WHERE id = :pid"),
-                {"pid": str(proposal_id)},
-            ).scalar()
-
-            if not proposal_owner or str(proposal_owner) != str(user_id):
-                raise HTTPException(
-                    status_code=403,
-                    detail="You do not have permission to respond to this review.",
-                )
+            await check_object_access("proposal", str(proposal_id), current_user, "edit")
 
             # Update the author_response and status
             connection.execute(
@@ -3457,21 +3489,9 @@ async def reply_to_feedback(
     """
     Saves a reply to a peer review feedback.
     """
-    user_id = current_user["user_id"]
+    await check_object_access("proposal", str(proposal_id), current_user, "edit")
     try:
         with get_engine().begin() as connection:
-            # Verify that the user is the author of the proposal
-            proposal_owner = connection.execute(
-                text("SELECT user_id FROM proposals WHERE id = :pid"),
-                {"pid": str(proposal_id)},
-            ).scalar()
-
-            if not proposal_owner or str(proposal_owner) != str(user_id):
-                raise HTTPException(
-                    status_code=403,
-                    detail="You do not have permission to reply to this feedback.",
-                )
-
             # Update the author_response and status
             connection.execute(
                 text(
@@ -3498,11 +3518,28 @@ async def reply_to_feedback(
 # ============================================================================
 
 
+async def _filter_authorized_proposal_runs(runs: list[dict], current_user: dict) -> list[dict]:
+    if current_user.get("is_admin"):
+        return runs
+    authorized_runs = []
+    for run in runs:
+        if run.get("artifact_type") != "proposal" or not run.get("artifact_id"):
+            continue
+        try:
+            await check_object_access("proposal", str(run["artifact_id"]), current_user, "read")
+            authorized_runs.append(run)
+        except HTTPException as access_error:
+            if access_error.status_code not in (403, 404):
+                raise
+    return authorized_runs
+
+
 @router.get("/proposals/{proposal_id}/runs")
 async def get_proposal_runs(proposal_id: uuid.UUID, current_user: dict = Depends(get_current_user)):
     """
     Get all telemetry runs for a specific proposal.
     """
+    await check_object_access("proposal", str(proposal_id), current_user, "read")
     try:
         runs = proposal_run_logger.get_runs_by_artifact("proposal", str(proposal_id))
         return {"message": "Proposal runs fetched successfully", "runs": runs}
@@ -3518,10 +3555,17 @@ async def get_proposal_run_details(run_id: str, current_user: dict = Depends(get
     """
     try:
         run_details = proposal_run_logger.get_run_details(run_id)
+        if run_details.get("artifact_type") != "proposal" or not run_details.get("artifact_id"):
+            raise HTTPException(status_code=404, detail="Proposal run not found.")
+        await check_object_access("proposal", str(run_details["artifact_id"]), current_user, "read")
         return {
             "message": "Proposal run details fetched successfully",
             "run": run_details,
         }
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail="Proposal run not found.") from e
     except Exception as e:
         logger.error(f"[GET PROPOSAL RUN DETAILS ERROR] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch proposal run details.")
@@ -3532,9 +3576,11 @@ async def get_user_runs(user_id: str, limit: int = 100, current_user: dict = Dep
     """
     Get recent proposal runs for a specific user.
     """
-    # Add RBAC check here if needed
+    if not current_user.get("is_admin") and str(current_user.get("user_id")) != str(user_id):
+        raise HTTPException(status_code=403, detail="You can only view your own proposal runs.")
     try:
         runs = proposal_run_logger.get_runs_by_user(user_id, limit)
+        runs = await _filter_authorized_proposal_runs(runs, current_user)
         return {"message": "User runs fetched successfully", "runs": runs}
     except Exception as e:
         logger.error(f"[GET USER RUNS ERROR] {e}", exc_info=True)
@@ -3558,6 +3604,7 @@ async def get_all_runs(
             end_date=datetime.utcnow(),
             limit=limit,
         )
+        runs = await _filter_authorized_proposal_runs(runs, current_user)
         return {"message": "All runs fetched successfully", "runs": runs}
     except Exception as e:
         logger.error(f"[GET ALL RUNS ERROR] {e}", exc_info=True)
@@ -3571,6 +3618,7 @@ async def get_runs_by_agent(agent_name: str, limit: int = 100, current_user: dic
     """
     try:
         runs = proposal_run_logger.get_runs_by_agent(agent_name, limit)
+        runs = await _filter_authorized_proposal_runs(runs, current_user)
         return {"message": "Agent runs fetched successfully", "runs": runs}
     except Exception as e:
         logger.error(f"[GET RUNS BY AGENT ERROR] {e}", exc_info=True)

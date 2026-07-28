@@ -57,13 +57,13 @@ export default function ProposalAccessPanel({ resourceId: initialResourceId }) {
   const { grantForm, setGrantForm, statusMessage: grantMsg, actionLoading: grantLoading, handleGrant, revokeGrant } =
     useGrantSection({
       endpoint: `/admin/proposals/${selectedId}/access`,
-      initialForm: { subjectType: 'team', subjectId: '', permissions: ['read'], dataScope: 'self' },
+      initialForm: { subjectType: 'team', subjectId: '', permissions: ['read'], dataScope: 'team' },
       refresh
     })
   const { tester, setTester, testerResult, statusMessage: testMsg, actionLoading: testLoading, handleTester } =
     useTesterSection({
       endpoint: `/admin/proposals/${selectedId}/access/test`,
-      initialForm: { subjectType: 'user', subjectId: '', operation: 'GET' }
+      initialForm: { subjectType: 'team', subjectId: '', operation: 'GET' }
     })
 
   const { users } = useAdminUsers()
@@ -175,8 +175,7 @@ export default function ProposalAccessPanel({ resourceId: initialResourceId }) {
         <GrantSection
           grants={grants}
           permissionOptions={permissionOptions}
-          showScope
-          dataScopeOptions={['self','team','organization','global']}
+          showScope={false}
           grantForm={grantForm}
           setGrantForm={setGrantForm}
           statusMessage={grantMsg}
@@ -220,6 +219,7 @@ export default function ProposalAccessPanel({ resourceId: initialResourceId }) {
           operationOptions={operationOptions}
           users={users}
           options={options}
+          subjectTypeOptions={['team']}
         />
       </section>
 

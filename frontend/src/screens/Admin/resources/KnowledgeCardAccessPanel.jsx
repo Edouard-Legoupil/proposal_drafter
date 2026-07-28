@@ -63,7 +63,7 @@ export default function KnowledgeCardAccessPanel({ resourceId: initialResourceId
   const { tester, setTester, testerResult, statusMessage: testMsg, actionLoading: testLoading, handleTester } =
     useTesterSection({
       endpoint: `/admin/knowledge-cards/${selectedId}/access/test`,
-      initialForm: { subjectType: 'user', subjectId: '', operation: 'GET' }
+      initialForm: { subjectType: 'team', subjectId: '', operation: 'GET' }
     })
 
   const { users } = useAdminUsers()
@@ -208,7 +208,7 @@ export default function KnowledgeCardAccessPanel({ resourceId: initialResourceId
           operationOptions={operationOptions}
           users={users}
           options={options}
-          subjectTypeOptions={['user', 'team']}
+          subjectTypeOptions={['team']}
         />
       </div>
 

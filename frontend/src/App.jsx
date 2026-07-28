@@ -28,11 +28,23 @@ function RequireAdmin() {
 }
 
 function RequireRole({ role }) {
+	return <RequireAnyRole roles={[role]} />
+}
+
+function RequireAnyRole({ roles: requiredRoles }) {
         const { user, roles = [], loading } = useAuth()
         if (loading) return <div role="status">Checking session…</div>
         if (!user) return <Navigate to="/login" replace />
-        return user.is_admin || roles.includes(role) ? <Outlet /> : <Navigate to="/dashboard" replace />
+        return user.is_admin || requiredRoles.some((role) => roles.includes(role))
+                ? <Outlet />
+                : <Navigate to="/dashboard" replace />
 }
+
+const knowledgeRoles = ['knowledge manager donors', 'knowledge manager outcome', 'knowledge manager field context']
+const dashboardRoles = [
+        'proposal writer', 'project reviewer', 'access_template', 'access_metrics', 'access_incident',
+        'access_quality_gate', 'ui_analysis', ...knowledgeRoles
+]
 
 export default function App()
 {
@@ -46,15 +58,21 @@ export default function App()
                         <Route path="/register" element={<Login register />} />
                         <Route path="/forgotpassword" element={<Login forgotPassword/>} />
                         <Route element={<RequireUser />}>
+				<Route element={<RequireAnyRole roles={dashboardRoles} />}>
                                 <Route path="/dashboard" element={<Dashboard/>} />
                                 <Route path="/dashboard/:folder" element={<Dashboard/>} />
                                 <Route path="/dashboard/:folder/:subfolder" element={<Dashboard/>} />
                                 <Route path="/dashboard/:folder/:subfolder/:filter" element={<Dashboard/>} />
+				</Route>
+				<Route element={<RequireRole role="proposal writer" />}>
                                 <Route path="/chat" element={<Chat/>} />
                                 <Route path="/chat/:id" element={<Chat/>} />
+				</Route>
+				<Route element={<RequireAnyRole roles={knowledgeRoles} />}>
                                 <Route path="/knowledge-card/new" element={<KnowledgeCard />} />
                                 <Route path="/knowledge-card/:id" element={<KnowledgeCard />} />
                                 <Route path="/review/knowledge-card/:id" element={<KnowledgeCard />} />
+				</Route>
 				<Route element={<RequireRole role="access_template" />}>
 					<Route path="/donor-templates/new" element={<DonorTemplateRequest />} />
 					<Route path="/donor-templates/:id" element={<DonorTemplateDetail />} />

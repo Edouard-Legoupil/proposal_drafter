@@ -47,7 +47,7 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from functools import wraps
 from typing import Callable, Optional, Any, TypeVar, Dict, Union
-from sqlalchemy import text
+from sqlalchemy import bindparam, text
 
 # Import existing security functions
 from backend.core.security import get_current_user as _get_current_user_from_security
@@ -116,31 +116,110 @@ def get_db_connection():
     return get_engine().connect()
 
 
-OBJECT_ACCESS_CONFIG = {
+OBJECT_ACCESS_CONFIG: dict[str, dict[str, Any]] = {
     "proposal": {
         "table": "proposals",
         "resource_type": "proposals",
-        "roles": {"proposal writer", "project reviewer"},
+        "roles": {
+            "read": {"proposal writer", "project reviewer"},
+            "edit": {"proposal writer"},
+            "delete": {"proposal writer"},
+        },
+        "setting_queries": {
+            "donor": "SELECT 1 FROM proposal_donors WHERE proposal_id = :resource_id AND donor_id IN :values",
+            "outcome": "SELECT 1 FROM proposal_outcomes WHERE proposal_id = :resource_id AND outcome_id IN :values",
+            "field_context": (
+                "SELECT 1 FROM proposal_field_contexts "
+                "WHERE proposal_id = :resource_id AND field_context_id IN :values"
+            ),
+        },
     },
     "knowledge_card": {
         "table": "knowledge_cards",
         "resource_type": "knowledge-cards",
         "roles": {
-            "knowledge manager donors",
-            "knowledge manager outcome",
-            "knowledge manager field context",
+            permission: {
+                "knowledge manager donors",
+                "knowledge manager outcome",
+                "knowledge manager field context",
+            }
+            for permission in ("read", "edit", "delete")
+        },
+        "setting_queries": {
+            "donor": "SELECT 1 FROM knowledge_cards WHERE id = :resource_id AND donor_id IN :values",
+            "outcome": "SELECT 1 FROM knowledge_cards WHERE id = :resource_id AND outcome_id IN :values",
+            "field_context": ("SELECT 1 FROM knowledge_cards WHERE id = :resource_id AND field_context_id IN :values"),
         },
     },
     "template": {
         "table": "templates",
         "resource_type": "templates",
-        "roles": {"access_template"},
+        "roles": {permission: {"access_template"} for permission in ("read", "edit", "delete")},
+        "setting_queries": {
+            "donor": "SELECT 1 FROM template_donors WHERE template_id = :resource_id AND donor_id IN :values",
+        },
     },
 }
 
 
 def _canonical_object_permission(permission: str) -> str:
     return "edit" if permission in {"write", "patch", "manage"} else permission
+
+
+def _setting_dimension(key: str) -> str | None:
+    normalized = key.lower().replace("-", "_").strip()
+    aliases = {
+        "donor": "donor",
+        "donors": "donor",
+        "donor_id": "donor",
+        "donor_ids": "donor",
+        "donor_group": "donor",
+        "outcome": "outcome",
+        "outcomes": "outcome",
+        "outcome_id": "outcome",
+        "outcome_ids": "outcome",
+        "field_context": "field_context",
+        "field_contexts": "field_context",
+        "field_context_id": "field_context",
+        "field_context_ids": "field_context",
+    }
+    return aliases.get(normalized)
+
+
+def _as_setting_values(value: Any) -> list[str]:
+    if isinstance(value, str):
+        try:
+            decoded = json.loads(value)
+        except json.JSONDecodeError:
+            decoded = value
+    else:
+        decoded = value
+    values = decoded if isinstance(decoded, (list, tuple, set)) else [decoded]
+    return [str(item) for item in values if item not in (None, "")]
+
+
+def _matches_scoped_settings(connection, config: dict[str, Any], object_id: Union[str, int], current_user: CurrentUser):
+    settings = current_user.get("settings") or {}
+    filters: dict[str, set[str]] = {}
+    for role_settings in settings.values():
+        if not isinstance(role_settings, dict):
+            continue
+        for key, value in role_settings.items():
+            dimension = _setting_dimension(str(key))
+            if dimension is not None:
+                filters.setdefault(dimension, set()).update(_as_setting_values(value))
+
+    for dimension, values in filters.items():
+        query = config.get("setting_queries", {}).get(dimension)
+        if not query or not values:
+            continue
+        statement = text(query).bindparams(bindparam("values", expanding=True))
+        if not connection.execute(
+            statement,
+            {"resource_id": str(object_id), "values": sorted(values)},
+        ).first():
+            return False
+    return True
 
 
 def _has_team_object_access(
@@ -178,11 +257,15 @@ def _has_team_object_access(
         if not membership:
             return False
 
-        role_rows = connection.execute(
-            text("SELECT role_key FROM team_roles WHERE team_id = :team_id"),
-            {"team_id": str(team_id)},
-        ).scalars()
-        if set(role_rows).isdisjoint(config["roles"]):
+        role_rows = set(
+            connection.execute(
+                text("SELECT role_key FROM team_roles WHERE team_id = :team_id"),
+                {"team_id": str(team_id)},
+            ).scalars()
+        )
+        required = _canonical_object_permission(required_permission)
+        required_roles = config["roles"].get(required, set())
+        if not required_roles or role_rows.isdisjoint(required_roles):
             return False
 
         permissions = connection.execute(
@@ -197,10 +280,9 @@ def _has_team_object_access(
                 "team_id": str(team_id),
             },
         ).scalars()
-        required = _canonical_object_permission(required_permission)
         for value in permissions:
             decoded = json.loads(value) if isinstance(value, str) else value
-            if required in (decoded or []):
+            if required in (decoded or []) and _matches_scoped_settings(connection, config, object_id, current_user):
                 return True
     return False
 

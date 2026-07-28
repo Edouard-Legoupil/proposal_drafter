@@ -8,6 +8,17 @@ import { server } from '../../mocks/server'
 import { http, HttpResponse } from 'msw'
 
 const mockNavigate = vi.fn()
+vi.mock('../../context/AuthContext', () => ({
+        useAuth: () => ({
+                user: { id: 'user-1', name: 'Test User', email: 'test@test.com', is_admin: false },
+                loading: false,
+                roles: ['proposal writer'],
+                memberships: [],
+                activeTeam: null,
+                switchTeam: vi.fn(),
+        }),
+}))
+
 vi.mock('react-router-dom', async () => {
         const actual = await vi.importActual('react-router-dom')
         return {

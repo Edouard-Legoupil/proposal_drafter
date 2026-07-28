@@ -7,6 +7,10 @@ from sqlalchemy import text
 
 def test_process_section_fallback(authenticated_client, mocker, test_engine):
     client = authenticated_client
+    mocker.patch(
+        "backend.api.proposals.check_object_access",
+        new=mocker.AsyncMock(return_value=True),
+    )
 
     # Prepare IDs
     proposal_id = str(uuid.uuid4())

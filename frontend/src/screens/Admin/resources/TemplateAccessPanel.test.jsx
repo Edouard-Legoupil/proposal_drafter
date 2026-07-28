@@ -178,6 +178,22 @@ describe('TemplateAccessPanel', () => {
     expect(screen.getByDisplayValue('Team')).toHaveAttribute('readonly')
   })
 
+  it('tests effective access only for teams', async () => {
+    render(
+      <WizardProvider>
+        <MemoryRouter>
+          <TemplateAccessPanel resourceId="tpl-1" />
+        </MemoryRouter>
+      </WizardProvider>
+    )
+
+    await screen.findByRole('heading', { name: 'Tester' })
+    const tester = document.querySelector('.tester-panel')
+    const subjectType = within(tester).getByRole('combobox', { name: /Subject type/i })
+    expect(subjectType).toHaveValue('team')
+    expect(within(subjectType).getAllByRole('option')).toHaveLength(1)
+  })
+
   it('shows template list with types and status when no specific template is selected', async () => {
     render(
       <WizardProvider>

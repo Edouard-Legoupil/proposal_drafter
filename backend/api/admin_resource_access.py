@@ -45,7 +45,7 @@ class GrantRequest(BaseModel):
     subject_type: Literal["team"] = "team"
     subject_id: uuid.UUID
     permissions: list[str] = Field(min_length=1)
-    data_scope: Literal["self", "team", "organization", "global"] = "self"
+    data_scope: Literal["team"] = "team"
 
     @model_validator(mode="before")
     @classmethod
@@ -54,7 +54,7 @@ class GrantRequest(BaseModel):
             values = dict(values)
             values.setdefault("subject_type", values.get("subjectType", "team"))
             values.setdefault("subject_id", values.get("subjectId"))
-            values.setdefault("data_scope", values.get("dataScope", "self"))
+            values["data_scope"] = "team"
         return values
 
 

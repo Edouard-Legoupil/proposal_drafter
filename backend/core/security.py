@@ -96,7 +96,8 @@ def get_current_user(request: Request) -> dict:
             if not is_session_token_active(user_id, token):
                 raise HTTPException(status_code=401, detail="Session is no longer active.")
 
-            requested_team_id = request.headers.get("X-Team-ID")
+            header_team_id = request.headers.get("X-Team-ID")
+            requested_team_id = header_team_id
             if requested_team_id is None:
                 try:
                     persisted_team_id = redis_client.get(f"active_team:{user_id}")
@@ -107,7 +108,18 @@ def get_current_user(request: Request) -> dict:
                     persisted_team_id = persisted_team_id.decode("utf-8")
                 if isinstance(persisted_team_id, str) and persisted_team_id:
                     requested_team_id = persisted_team_id
-            context = AccessManagementService(connection).resolve_context(user_id, requested_team_id)
+            service = AccessManagementService(connection)
+            try:
+                context = service.resolve_context(user_id, requested_team_id)
+            except HTTPException:
+                if header_team_id is not None or requested_team_id is None:
+                    raise
+                logger.warning("Discarding stale active-team session for user %s", user_id)
+                context = service.resolve_context(user_id, None)
+                try:
+                    redis_client.delete(f"active_team:{user_id}")
+                except RedisError as exc:
+                    logger.warning("Could not clear stale active-team session for user %s: %s", user_id, exc)
             roles = sorted(context.roles)
 
             return {

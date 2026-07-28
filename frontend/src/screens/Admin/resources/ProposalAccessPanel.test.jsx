@@ -167,6 +167,22 @@ describe('ProposalAccessPanel', () => {
     expect(screen.getByDisplayValue('Team')).toHaveAttribute('readonly')
   })
 
+  it('tests effective access only for teams', async () => {
+    render(
+      <WizardProvider>
+        <MemoryRouter>
+          <ProposalAccessPanel resourceId="abc123" />
+        </MemoryRouter>
+      </WizardProvider>
+    )
+
+    await screen.findByText(/Effective Access Tester/i)
+    const tester = document.querySelector('.tester-panel')
+    const subjectType = within(tester).getByRole('combobox', { name: /Subject type/i })
+    expect(subjectType).toHaveValue('team')
+    expect(within(subjectType).getAllByRole('option')).toHaveLength(1)
+  })
+
   it('shows error when proposal access data fails to load', async () => {
     server.use(
       http.get('/api/admin/proposals/abc123/access', () =>

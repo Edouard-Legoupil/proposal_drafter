@@ -6,6 +6,10 @@ from unittest.mock import MagicMock
 @pytest.mark.asyncio
 async def test_regenerate_section(authenticated_client, mocker):
     client = authenticated_client
+    mocker.patch(
+        "backend.api.proposals.check_object_access",
+        new=mocker.AsyncMock(return_value=True),
+    )
 
     # We patch the `regenerate_section_logic` function directly to isolate the test
     mocker.patch(

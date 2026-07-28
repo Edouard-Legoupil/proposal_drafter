@@ -25,7 +25,7 @@ from datetime import datetime, timedelta
 
 from backend.core.db import get_engine
 from backend.core.redis import redis_client
-from backend.core.security import get_current_user, check_user_group_access
+from backend.core.security import get_current_user, check_user_group_access, require_any_role
 from backend.core.authorization import check_object_access
 
 
@@ -132,6 +132,39 @@ def authorize_knowledge_manager(current_user: dict = Depends(get_current_user)):
             status_code=403,
             detail="You do not have permission to perform this action. This action is restricted to users with a 'Knowledge Manager' role.",
         )
+
+
+async def _check_reference_card_access(reference_id: uuid.UUID, current_user: dict, permission: str) -> str:
+    with get_engine().connect() as connection:
+        card_ids = (
+            connection.execute(
+                text(
+                    "SELECT knowledge_card_id FROM knowledge_card_to_references WHERE reference_id = :reference_id "
+                    "UNION SELECT knowledge_card_id FROM knowledge_card_references "
+                    "WHERE id = :reference_id AND knowledge_card_id IS NOT NULL"
+                ),
+                {"reference_id": str(reference_id)},
+            )
+            .scalars()
+            .all()
+        )
+    if not card_ids:
+        raise HTTPException(status_code=404, detail="Knowledge card reference not found.")
+    for card_id in card_ids:
+        await check_object_access("knowledge_card", str(card_id), current_user, permission)
+    return str(card_ids[0])
+
+
+async def _check_review_card_access(review_id: uuid.UUID, current_user: dict, permission: str) -> str:
+    with get_engine().connect() as connection:
+        card_id = connection.execute(
+            text("SELECT knowledge_card_id FROM knowledge_card_reviews WHERE id = :review_id"),
+            {"review_id": str(review_id)},
+        ).scalar()
+    if card_id is None:
+        raise HTTPException(status_code=404, detail="Knowledge card review not found.")
+    await check_object_access("knowledge_card", str(card_id), current_user, permission)
+    return str(card_id)
 
 
 def _save_knowledge_card_content_to_file(connection, card_id: uuid.UUID, generated_sections: dict):
@@ -358,7 +391,18 @@ async def create_knowledge_card(card: KnowledgeCardIn, current_user: dict = Depe
         raise HTTPException(status_code=500, detail="Failed to create knowledge card.")
 
 
-@router.get("/knowledge-cards")
+@router.get(
+    "/knowledge-cards",
+    dependencies=[
+        Depends(
+            require_any_role(
+                "knowledge manager donors",
+                "knowledge manager outcome",
+                "knowledge manager field context",
+            )
+        )
+    ],
+)
 async def get_knowledge_cards(
     donor_id: Optional[uuid.UUID] = None,
     outcome_id: Optional[List[uuid.UUID]] = Query(None),
@@ -467,6 +511,17 @@ async def get_knowledge_cards(
                         card["generated_sections"] = {}
                 else:
                     card["generated_sections"] = {}
+            if not current_user.get("is_admin"):
+                authorized_cards = []
+                for card in cards:
+                    try:
+                        await check_object_access("knowledge_card", str(card["id"]), current_user, "read")
+                    except HTTPException as exc:
+                        if exc.status_code == 403:
+                            continue
+                        raise
+                    authorized_cards.append(card)
+                cards = authorized_cards
             return {"knowledge_cards": cards}
     except Exception as e:
         logger.error(f"[GET KNOWLEDGE CARDS ERROR] {e}", exc_info=True)
@@ -478,6 +533,7 @@ async def get_knowledge_card_history(card_id: uuid.UUID, current_user: dict = De
     """
     Fetches the history of a knowledge card.
     """
+    await check_object_access("knowledge_card", str(card_id), current_user, "read")
     try:
         with get_engine().connect() as connection:
             # Add user permission check ??
@@ -616,6 +672,7 @@ async def update_knowledge_card_section(
     """
     Updates a specific section of a knowledge card.
     """
+    await check_object_access("knowledge_card", str(card_id), current_user, "edit")
     try:
         with engine.begin() as connection:
             # Add user permission check
@@ -843,6 +900,7 @@ async def create_knowledge_card_reference(
     Creates a new reference or links an existing one to a knowledge card.
     """
     user_id = current_user["user_id"]
+    await check_object_access("knowledge_card", str(card_id), current_user, "edit")
     try:
         with get_engine().begin() as connection:
             # Validate card exists
@@ -928,6 +986,7 @@ async def update_knowledge_card_reference(
     Updates an existing reference for a knowledge card.
     """
     user_id = current_user["user_id"]
+    await _check_reference_card_access(reference_id, current_user, "edit")
     try:
         with get_engine().begin() as connection:
             # Validate reference exists and user has permission
@@ -1064,6 +1123,7 @@ async def delete_knowledge_card_reference_by_id(
     """
     Deletes a reference and its associations.
     """
+    await _check_reference_card_access(reference_id, current_user, "edit")
     try:
         with get_engine().begin() as connection:
             # Validate the reference exists
@@ -1181,6 +1241,7 @@ async def upload_pdf_reference(
     """
     Uploads a PDF for a reference, extracts text, and stores embeddings.
     """
+    await _check_reference_card_access(reference_id, current_user, "edit")
     if file.content_type != "application/pdf":
         raise HTTPException(status_code=400, detail="File must be a PDF.")
 
@@ -1389,6 +1450,7 @@ async def ingest_knowledge_card_references(
     """
     Starts the ingestion of selected or all references for a knowledge card in the background.
     """
+    await check_object_access("knowledge_card", str(card_id), current_user, "edit")
     with get_engine().connect() as connection:
         card_check = connection.execute(
             text("SELECT id, donor_id, outcome_id FROM knowledge_cards WHERE id = :card_id"),
@@ -1436,6 +1498,7 @@ async def reingest_knowledge_card_reference(
     """
     Starts the ingestion of a single reference for a knowledge card in the background, with force_scrape=True.
     """
+    await check_object_access("knowledge_card", str(card_id), current_user, "edit")
     #  Validate card and reference exist
     with get_engine().connect() as connection:
         ref_check = connection.execute(
@@ -1488,6 +1551,7 @@ async def generate_knowledge_card_content(
     """
     Starts the generation of content for a knowledge card in the background.
     """
+    await check_object_access("knowledge_card", str(card_id), current_user, "edit")
     #  Validate card exists and user has permission
     with get_engine().connect() as connection:
         card_check = connection.execute(
@@ -1518,6 +1582,7 @@ async def get_knowledge_card_status(card_id: uuid.UUID, current_user: dict = Dep
     """
     Streams the status of a knowledge card generation task using SSE.
     """
+    await check_object_access("knowledge_card", str(card_id), current_user, "read")
     # Validate card exists and user has permission
     with get_engine().connect() as connection:
         card_check = connection.execute(
@@ -1593,6 +1658,7 @@ async def get_knowledge_card_ingest_status(card_id: uuid.UUID, current_user: dic
     """
     Streams the status of a knowledge card reference ingestion task using SSE.
     """
+    await check_object_access("knowledge_card", str(card_id), current_user, "read")
     #  Validate card exists and user has permission
     with get_engine().connect() as connection:
         card_check = connection.execute(
@@ -1680,6 +1746,7 @@ async def identify_references(
     Identifies references for a knowledge card based on its title, summary, and linked element,
     and stores them in the database.
     """
+    await check_object_access("knowledge_card", str(card_id), current_user, "edit")
     #  Validate card exists and user has permission
     with get_engine().connect() as connection:
         card_check = connection.execute(
@@ -1822,6 +1889,7 @@ async def generate_and_download_document(
     It fetches the completed proposal from the database, assembles the document,
     and returns it as a file download.
     """
+    await check_object_access("knowledge_card", str(card_id), current_user, "read")
     try:
         # Fetch the proposal data from the database.
         with get_engine().connect() as connection:
@@ -1959,6 +2027,7 @@ async def get_knowledge_card_for_review(card_id: uuid.UUID, current_user: dict =
     Fetches a knowledge card and its existing reviews for a reviewer.
     """
     user_id = current_user["user_id"]
+    await check_object_access("knowledge_card", str(card_id), current_user, "read")
     try:
         with get_engine().connect() as connection:
             # Fetch the card data
@@ -2029,6 +2098,7 @@ async def submit_knowledge_card_review(
     Submits a finalized review for a knowledge card.
     """
     user_id = current_user["user_id"]
+    await check_object_access("knowledge_card", str(card_id), current_user, "read")
     try:
         with get_engine().begin() as connection:
             # For bulk submission, we now prefer to append or update instead of total deletion
@@ -2077,6 +2147,7 @@ async def save_knowledge_card_draft_review(
     Saves a draft review for a knowledge card.
     """
     user_id = current_user["user_id"]
+    await check_object_access("knowledge_card", str(card_id), current_user, "read")
     try:
         with get_engine().begin() as connection:
             # We no longer delete existing comments to allow multiple ones
@@ -2117,6 +2188,7 @@ async def save_knowledge_card_author_response(
     Saves the author's response to a knowledge card review comment.
     """
     user_id = current_user["user_id"]
+    await _check_review_card_access(review_id, current_user, "edit")
     try:
         with get_engine().begin() as connection:
             # Verify that the user is the author of the knowledge card
@@ -2165,6 +2237,7 @@ async def get_all_knowledge_card_reviews(card_id: uuid.UUID, current_user: dict 
     """
     Fetches all reviews for a given knowledge card.
     """
+    await check_object_access("knowledge_card", str(card_id), current_user, "read")
     try:
         with get_engine().connect() as connection:
             query = text(
@@ -2231,6 +2304,7 @@ async def add_knowledge_card_comment(
     Add or update an individual comment on a knowledge card section.
     """
     user_id = current_user["user_id"]
+    await check_object_access("knowledge_card", str(card_id), current_user, "read")
     try:
         with engine.begin() as connection:
             # Upsert logic based on UNIQUE(knowledge_card_id, reviewer_id, section_name)
@@ -2275,6 +2349,7 @@ async def delete_knowledge_card_comment(
     Remove an individual comment from a knowledge card.
     """
     user_id = current_user["user_id"]
+    await check_object_access("knowledge_card", str(card_id), current_user, "read")
     is_admin = current_user.get("is_admin", False)
 
     try:

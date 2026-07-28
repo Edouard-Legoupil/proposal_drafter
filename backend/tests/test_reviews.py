@@ -15,14 +15,19 @@ def mock_get_engine(test_engine):
     backend.core.db.engine = old_engine
 
 
-def test_proposal_review_with_rating(authenticated_client: TestClient, db_session):
+def test_proposal_review_with_rating(authenticated_client: TestClient, db_session, mocker):
+    mocker.patch(
+        "backend.api.proposals.check_object_access",
+        new=mocker.AsyncMock(return_value=True),
+    )
     user_id = authenticated_client.app.dependency_overrides[get_current_user]().get("user_id")
     proposal_id = str(uuid.uuid4())
 
     # Setup proposal
     db_session.execute(
         text(
-            "INSERT INTO proposals (id, user_id, form_data, project_description, status) VALUES (:id, :uid, '{}', 'desc', 'in_review')"
+            "INSERT INTO proposals (id, user_id, form_data, project_description, status) "
+            "VALUES (:id, :uid, '{}', 'desc', 'in_review')"
         ),
         {"id": proposal_id, "uid": user_id},
     )
@@ -61,7 +66,11 @@ def test_proposal_review_with_rating(authenticated_client: TestClient, db_sessio
     assert result[1] == "Good"
 
 
-def test_knowledge_card_review(authenticated_client: TestClient, db_session):
+def test_knowledge_card_review(authenticated_client: TestClient, db_session, mocker):
+    mocker.patch(
+        "backend.api.knowledge.check_object_access",
+        new=mocker.AsyncMock(return_value=True),
+    )
     authenticated_client.app.dependency_overrides[get_current_user]().get("user_id")
     card_id = str(uuid.uuid4())
     other_user_id = str(uuid.uuid4())

@@ -1,4 +1,5 @@
 import pytest
+from redis.exceptions import RedisError  # type: ignore[import-untyped]
 from sqlalchemy import text
 
 from backend.core.redis import redis_client
@@ -84,6 +85,17 @@ def test_switching_active_team_replaces_scoped_roles_and_persists_selection(clie
     assert response.json()["roles"] == ["access_template"]
     assert "access_metrics" not in response.json()["roles"]
     assert redis_client.get("active_team:user-1") == "team-2"
+
+
+def test_switching_active_team_succeeds_when_redis_is_unavailable(client, test_engine, monkeypatch):
+    _seed_team_context(test_engine)
+    _authenticate()
+    monkeypatch.setattr(redis_client, "setex", lambda *_args, **_kwargs: (_ for _ in ()).throw(RedisError("down")))
+
+    response = client.put("/api/profile/active-team", json={"team_id": "team-2"})
+
+    assert response.status_code == 200
+    assert response.json()["active_team"] == {"id": "team-2", "name": "Team Two"}
 
 
 @pytest.mark.parametrize("team_id", ["team-3", "missing-team"])
