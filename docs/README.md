@@ -53,11 +53,24 @@ The API documentation is organized into several formats to suit different needs:
 
 **Best For**: Security reviews, CISO approval, compliance audits
 
+### 5. Access Management Administrator Guide
+
+**File**: `admin_access_user_journeys.md`
+
+**Features**:
+- Frontend journey for creating teams and adding members
+- Team role allocation and role descriptions
+- Scoped settings and object-level grants
+- Verification, revocation, and troubleshooting steps
+
+**Best For**: System administrators configuring user access
+
 ## Documentation Structure
 
 ```
 docs/
 ├── README.md                    # This file
+├── admin_access_user_journeys.md # Administrator frontend guide
 ├── api_reference.md             # Practical API usage guide
 ├── OPENAPI_DOCUMENTATION.md     # Complete OpenAPI documentation
 ├── openapi-spec.json            # OpenAPI 3.0.0 specification
@@ -119,10 +132,12 @@ The API uses JWT (JSON Web Token) authentication:
 
 ### Role-Based Access Control
 
-- **user**: Basic access to proposals and documents
-- **editor**: Can create and edit proposals
-- **admin**: Full access including user management
-- **superadmin**: System-level access
+- **System administrator**: Global access and access-management administration
+- **Team leader**: Membership approvals for one active team
+- **Team component roles**: Frontend access inherited by active team members
+- **Object grants**: Team permissions for individual proposals, knowledge cards, and templates
+
+See `admin_access_user_journeys.md` for the complete frontend workflow and role list.
 
 ## Using the Documentation
 
@@ -132,6 +147,12 @@ The API uses JWT (JSON Web Token) authentication:
 2. Use Swagger UI (`/docs`) for interactive testing
 3. Refer to `OPENAPI_DOCUMENTATION.md` for detailed endpoint specs
 4. Check `SECURITY_OVERVIEW.md` for security implementation details
+
+### For System Administrators
+
+1. Open `admin_access_user_journeys.md`
+2. Follow the team, membership, role, setting, and object-grant workflow
+3. Verify the result with the frontend access tester
 
 ### For API Integration
 

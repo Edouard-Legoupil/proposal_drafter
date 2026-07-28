@@ -1,5 +1,8 @@
 # Access Management System Specification
 
+For the administrator workflow in the frontend, see
+[Administrator Guide: Access Management](admin_access_user_journeys.md).
+
 ## 1. Overview
 
 The system implements multi-dimensional access control based on:
