@@ -153,7 +153,7 @@ describe('KnowledgeCardAccessPanel', () => {
     expect(screen.getByText(/Granted read\/write access to Kiran Patel/i)).toBeInTheDocument()
   })
 
-  it('allows granting access to other users', async () => {
+  it('allows granting access only to teams', async () => {
     render(
       <WizardProvider>
         <MemoryRouter>
@@ -163,7 +163,8 @@ describe('KnowledgeCardAccessPanel', () => {
     )
 
     expect(await screen.findByText(/Grant Access/i)).toBeInTheDocument()
-    expect(screen.getByText(/Select a user or team/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/Select a team/i).length).toBeGreaterThan(0)
+    expect(screen.getByDisplayValue('Team')).toHaveAttribute('readonly')
   })
 
   it('shows knowledge card list when no specific card is selected', async () => {

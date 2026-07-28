@@ -12,7 +12,7 @@ const GrantSection = ({
   permissionOptions = [],
   showScope = true,
   dataScopeOptions = [],
-  grantForm = { subjectType: 'user', subjectId: '', permissions: [], dataScope: 'self' },
+  grantForm = { subjectType: 'team', subjectId: '', permissions: [], dataScope: 'self' },
   setGrantForm,
   statusMessage = '',
   actionLoading = false,
@@ -22,13 +22,6 @@ const GrantSection = ({
   options = {},
   emptyMessage = 'No grants'
 }) => {
-  const subjectTypeOptions = [
-    { value: 'user', label: 'User' },
-    { value: 'team', label: 'Team' },
-    { value: 'role', label: 'Role' },
-    { value: 'donor_group', label: 'Donor Group' }
-  ]
-
   const handleSubmit = (event) => {
     if (onGrant) onGrant(event)
   }
@@ -59,22 +52,14 @@ const GrantSection = ({
       <form onSubmit={handleSubmit} className="grant-form">
         <div>
           <label htmlFor="grant-subject-type">Subject type</label>
-          <select
-            id="grant-subject-type"
-            value={grantForm.subjectType}
-            onChange={(e) => setGrantForm({ ...grantForm, subjectType: e.target.value, subjectId: '' })}
-          >
-            {subjectTypeOptions.map(subjectType => (
-              <option key={subjectType.value} value={subjectType.value}>{subjectType.label}</option>
-            ))}
-          </select>
+          <input id="grant-subject-type" value="Team" readOnly />
         </div>
 
         <div>
-          <label htmlFor="grant-subject">Select a user or team</label>
+          <label htmlFor="grant-subject">Select a team</label>
           <SubjectPicker
             className="admin-select"
-            subjectType={grantForm.subjectType}
+            subjectType="team"
             value={grantForm.subjectId}
             onChange={(subjectId) => setGrantForm({ ...grantForm, subjectId })}
             users={users}

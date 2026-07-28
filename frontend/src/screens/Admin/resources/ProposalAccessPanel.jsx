@@ -13,10 +13,8 @@ const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || '/api'
 
 const permissionOptions = [
   { key: 'read', label: 'Read' },
-  { key: 'write', label: 'Write' },
-  { key: 'patch', label: 'Patch' },
+  { key: 'edit', label: 'Edit' },
   { key: 'delete', label: 'Delete' },
-  { key: 'manage', label: 'Manage Access' }
 ]
 
 const operationOptions = [
@@ -59,7 +57,7 @@ export default function ProposalAccessPanel({ resourceId: initialResourceId }) {
   const { grantForm, setGrantForm, statusMessage: grantMsg, actionLoading: grantLoading, handleGrant, revokeGrant } =
     useGrantSection({
       endpoint: `/admin/proposals/${selectedId}/access`,
-      initialForm: { subjectType: 'user', subjectId: '', permissions: ['read'], dataScope: 'self' },
+      initialForm: { subjectType: 'team', subjectId: '', permissions: ['read'], dataScope: 'self' },
       refresh
     })
   const { tester, setTester, testerResult, statusMessage: testMsg, actionLoading: testLoading, handleTester } =

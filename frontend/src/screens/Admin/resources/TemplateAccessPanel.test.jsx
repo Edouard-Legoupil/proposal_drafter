@@ -164,7 +164,7 @@ describe('TemplateAccessPanel', () => {
     expect(screen.getByText(/Granted read\/edit access to Amina Nyongo/i)).toBeInTheDocument()
   })
 
-  it('allows granting access to users and teams', async () => {
+  it('allows granting access only to teams', async () => {
     render(
       <WizardProvider>
         <MemoryRouter>
@@ -174,7 +174,8 @@ describe('TemplateAccessPanel', () => {
     )
 
     expect(await screen.findByText(/Grant Access/i)).toBeInTheDocument()
-    expect(screen.getByText(/Select a user or team/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/Select a team/i).length).toBeGreaterThan(0)
+    expect(screen.getByDisplayValue('Team')).toHaveAttribute('readonly')
   })
 
   it('shows template list with types and status when no specific template is selected', async () => {

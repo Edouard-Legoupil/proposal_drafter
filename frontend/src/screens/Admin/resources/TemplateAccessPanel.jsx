@@ -19,7 +19,6 @@ const permissionOptions = [
   { key: 'read', label: 'Read/Use' },
   { key: 'edit', label: 'Edit' },
   { key: 'delete', label: 'Delete' },
-  { key: 'manage', label: 'Manage Access' }
 ]
 
 const operationOptions = [
@@ -54,7 +53,7 @@ export default function TemplateAccessPanel({ resourceId: initialResourceId }) {
   const [selectedId, setSelectedId] = useState(initialResourceId !== 'latest' ? initialResourceId : null)
   const [statusMessage, setStatusMessage] = useState('')
   const [visibility, setVisibility] = useState('private')
-  const [grantForm, setGrantForm] = useState({ subjectType: 'user', subjectId: '', permissions: ['read'] })
+  const [grantForm, setGrantForm] = useState({ subjectType: 'team', subjectId: '', permissions: ['read'] })
   const [tester, setTester] = useState({ subjectType: 'user', subjectId: '', operation: 'view' })
   const [testerResult, setTesterResult] = useState(null)
   const [actionLoading, setActionLoading] = useState(false)

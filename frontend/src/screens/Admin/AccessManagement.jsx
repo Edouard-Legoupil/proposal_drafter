@@ -6,19 +6,25 @@ import ProposalAccessPanel from './resources/ProposalAccessPanel'
 import KnowledgeCardAccessPanel from './resources/KnowledgeCardAccessPanel'
 import TemplateAccessPanel from './resources/TemplateAccessPanel'
 import TeamsAccessPanel from './resources/TeamsAccessPanel'
+import AccessOverviewPanel from './resources/AccessOverviewPanel'
+import SettingsAccessPanel from './resources/SettingsAccessPanel'
 import Base from '../../components/Base/Base'
 
 const resourcePanels = {
+  overview: AccessOverviewPanel,
   'user-access': UserAccessPanel,
   teams: TeamsAccessPanel,
+  settings: SettingsAccessPanel,
   proposals: ProposalAccessPanel,
   'knowledge-cards': KnowledgeCardAccessPanel,
   templates: TemplateAccessPanel
 }
 
 const navItems = [
+  { key: 'overview', label: 'Overview' },
   { key: 'user-access', label: 'User Access' },
   { key: 'teams', label: 'Teams' },
+  { key: 'settings', label: 'Settings' },
   { key: 'proposals', label: 'Proposals' },
   { key: 'knowledge-cards', label: 'Knowledge Cards' },
   { key: 'templates', label: 'Templates' }

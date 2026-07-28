@@ -149,7 +149,7 @@ describe('ProposalAccessPanel', () => {
     expect(within(document.querySelector('.audit-panel')).getByText(/Amina Nyongo/i)).toBeInTheDocument()
   })
 
-  it('allows adding new grants to users', async () => {
+  it('allows adding new grants only to teams', async () => {
     render(
       <WizardProvider>
         <MemoryRouter>
@@ -163,7 +163,8 @@ describe('ProposalAccessPanel', () => {
 
     // Check for grant section
     expect(screen.getByText(/Grant Access/i)).toBeInTheDocument()
-    expect(screen.getByText(/Select a user or team/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/Select a team/i).length).toBeGreaterThan(0)
+    expect(screen.getByDisplayValue('Team')).toHaveAttribute('readonly')
   })
 
   it('shows error when proposal access data fails to load', async () => {
