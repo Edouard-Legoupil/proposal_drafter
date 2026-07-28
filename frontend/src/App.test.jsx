@@ -49,6 +49,13 @@ describe('application route protection', () => {
     expect(screen.queryByText('Admin screen')).not.toBeInTheDocument()
   })
 
+  it('denies component routes when the active team lacks the required role', async () => {
+    authState = { user: { id: 'user-1', is_admin: false }, roles: [], loading: false }
+    render(<MemoryRouter initialEntries={['/quality-gate']}><App /></MemoryRouter>)
+    expect(await screen.findByText('Dashboard screen')).toBeInTheDocument()
+    expect(screen.queryByText('Quality gate screen')).not.toBeInTheDocument()
+  })
+
   it('waits for profile loading before rendering a protected route', () => {
     authState = { user: null, loading: true }
     render(<MemoryRouter initialEntries={['/dashboard']}><App /></MemoryRouter>)

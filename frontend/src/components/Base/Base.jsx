@@ -1,12 +1,14 @@
 import './Base.css'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import OSSFooter from '../OSSFooter/OSSFooter'
 import UserSettingsModal from '../UserSettingsModal/UserSettingsModal'
 import Sidebar from '../Sidebar/Sidebar'
 import WizardButton from '../../components/Wizard/WizardButton'
+import TeamSwitcher from '../TeamSwitcher'
+import { useAuth } from '../../context/AuthContext'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api"
 
@@ -18,13 +20,7 @@ import settings_icon from "../../assets/images/dashboard-category.svg"
 export default function Base(props) {
         const navigate = useNavigate()
 
-        const [userDetails, setUserDetails] = useState({
-                "name": "",
-                "email": "",
-                "is_admin": false,
-                "requested_role_id": null
-        })
-        const [userRoles, setUserRoles] = useState([])
+	const { user: userDetails, loading } = useAuth()
         const [sidebarOpen, setSidebarOpen] = useState(true)
     const [showSettingsModal, setShowSettingsModal] = useState(false)
 
@@ -32,37 +28,12 @@ export default function Base(props) {
                 navigate("/dashboard")
         }
 
-        useEffect(() => {
-                async function getProfile() {
-                        const response = await fetch(`${API_BASE_URL}/profile`, {
-                                method: 'GET',
-                                headers: { 'Content-Type': 'application/json' },
-                                credentials: 'include'
-                        })
-
-                        if (response.ok) {
-                                const data = await response.json()
-                                setUserDetails({
-                                        name: data.user.name,
-                                        email: data.user.email,
-                                        is_admin: data.user.is_admin,
-                                        requested_role_id: data.user.requested_role_id
-                                })
-                                setUserRoles(data.user.roles || [])
-                        }
-                        else if (response.status === 401) {
-                                sessionStorage.setItem("session_expired", "Session expired. Please login again.")
-                                navigate("/login")
-                        }
-                        else
-                                navigate("/login")
-                }
-
-                getProfile()
-        }, [navigate])
+	useEffect(() => {
+		if (!loading && !userDetails) navigate('/login')
+	}, [loading, navigate, userDetails])
 
         async function handleLogoutClick() {
-                if (userDetails.is_sso) {
+		if (userDetails?.is_sso) {
                         window.location.href = `${API_BASE_URL}/sso-logout`
                         return
                 }
@@ -93,13 +64,14 @@ export default function Base(props) {
                         </span>
 
                         <div className="Header_rightGroup">
-                                <WizardButton />
+				<TeamSwitcher />
+				<WizardButton />
                                 <button className='User' popoverTarget='ID_Chat_logoutPopover' data-testid="user-menu-button">
-                                        <div className="Displaypicture">{userDetails.name && userDetails.name.split('')[0].toUpperCase()}</div>
+					<div className="Displaypicture">{userDetails?.name && userDetails.name.split('')[0].toUpperCase()}</div>
 
                                         <div className='Identity'>
-                                                <div className='Identity-name'>{userDetails.name}</div>
-                                                <div className='Identity-email'>{userDetails.email}</div>
+						<div className='Identity-name'>{userDetails?.name}</div>
+						<div className='Identity-email'>{userDetails?.email}</div>
                                         </div>
 
                                         <img className="Chat_header_downarrow" src={downarrow} alt="My Rafiki" />
@@ -111,7 +83,7 @@ export default function Base(props) {
                                                 <i className="fa-solid fa-gear" style={{ marginRight: '8px' }}></i>
                                                 Settings
                                         </div>
-                                         {userDetails.is_admin && (
+				 {userDetails?.is_admin && (
                                                  <div onClick={() => navigate('/admin/access/user-access/latest')} data-testid="admin-button">
                                                          <img src={settings_icon} style={{ filter: 'hue-rotate(90deg)' }} />
                                                          Admin
@@ -122,12 +94,12 @@ export default function Base(props) {
                                                 Logout
                                         </div>
                                 </div>
-                                {userDetails.requested_role_id ? (
+				{userDetails?.requested_role_id ? (
                                         <div className="Header_pendingRequest">
                                                 Waiting for approval
                                         </div>
                                 ) : (
-                                        !userDetails.is_admin && userRoles.length <= 1 && userRoles[0] === 'proposal writer' && (
+					!userDetails?.is_admin && userDetails?.roles?.length <= 1 && userDetails?.roles?.[0] === 'proposal writer' && (
                                                 <button className="Header_requestButton" onClick={() => setShowSettingsModal(true)} data-testid="request-elevated-access-button">
                                                         Request Elevated Access
                                                 </button>
@@ -137,7 +109,7 @@ export default function Base(props) {
                 </header>
 
                 <div className='Base_content'>
-                        <Sidebar userRoles={userRoles} isOpen={sidebarOpen} />
+			<Sidebar isOpen={sidebarOpen} />
                         <main className='Main'>
                                 {props?.children}
                         </main>

@@ -14,6 +14,24 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
+  const applyAccessContext = useCallback((profileUser, accessContext = profileUser) => {
+    const memberships = (accessContext?.memberships || profileUser?.memberships || [])
+      .filter((membership) => !membership.status || membership.status === 'ACTIVE')
+    const roles = accessContext?.roles || accessContext?.role_keys || []
+    const nextUser = profileUser
+      ? {
+          ...profileUser,
+          memberships,
+          active_team: accessContext?.active_team || null,
+          roles,
+          role_keys: accessContext?.role_keys || roles,
+          team_leadership: Boolean(accessContext?.team_leadership),
+          settings: accessContext?.settings || {}
+        }
+      : null
+    setUser(nextUser)
+  }, [])
+
   useEffect(() => {
     let active = true
 
@@ -29,7 +47,7 @@ export function AuthProvider({ children }) {
 
         const data = await response.json()
         if (active) {
-          setUser(data.user || null)
+          applyAccessContext(data.user || null)
         }
       } catch {
         if (active) {
@@ -46,15 +64,54 @@ export function AuthProvider({ children }) {
     return () => {
       active = false
     }
-  }, [])
+  }, [applyAccessContext])
 
   const updateUser = useCallback((nextUser) => {
-    setUser(nextUser)
+    applyAccessContext(nextUser)
+  }, [applyAccessContext])
+
+  const switchTeam = useCallback(async (teamId) => {
+    const response = await fetch(`${API_BASE_URL}/profile/active-team`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ team_id: teamId })
+    })
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      throw new Error(data.detail || 'Unable to switch team')
+    }
+    const context = await response.json()
+    setUser((currentUser) => {
+      if (!currentUser) return currentUser
+      const memberships = (context.memberships || currentUser.memberships || [])
+        .filter((membership) => !membership.status || membership.status === 'ACTIVE')
+      const roles = context.roles || context.role_keys || []
+      return {
+        ...currentUser,
+        memberships,
+        active_team: context.active_team,
+        roles,
+        role_keys: context.role_keys || roles,
+        team_leadership: Boolean(context.team_leadership),
+        settings: context.settings || {}
+      }
+    })
+    return context
   }, [])
 
   const value = useMemo(
-    () => ({ user, loading, updateUser }),
-    [user, loading, updateUser]
+    () => ({
+      user,
+      loading,
+      updateUser,
+      activeTeam: user?.active_team || null,
+      memberships: user?.memberships || [],
+      roles: user?.roles || [],
+      settings: user?.settings || {},
+      switchTeam
+    }),
+    [user, loading, updateUser, switchTeam]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

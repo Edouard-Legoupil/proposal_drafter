@@ -27,6 +27,13 @@ function RequireAdmin() {
         return user.is_admin ? <Outlet /> : <Navigate to="/dashboard" replace />
 }
 
+function RequireRole({ role }) {
+        const { user, roles = [], loading } = useAuth()
+        if (loading) return <div role="status">Checking session…</div>
+        if (!user) return <Navigate to="/login" replace />
+        return user.is_admin || roles.includes(role) ? <Outlet /> : <Navigate to="/dashboard" replace />
+}
+
 export default function App()
 {
         const { user, loading } = useAuth()
@@ -48,9 +55,13 @@ export default function App()
                                 <Route path="/knowledge-card/new" element={<KnowledgeCard />} />
                                 <Route path="/knowledge-card/:id" element={<KnowledgeCard />} />
                                 <Route path="/review/knowledge-card/:id" element={<KnowledgeCard />} />
-                                <Route path="/donor-templates/new" element={<DonorTemplateRequest />} />
-                                <Route path="/donor-templates/:id" element={<DonorTemplateDetail />} />
-                                <Route path="/quality-gate" element={<QualityGate />} />
+				<Route element={<RequireRole role="access_template" />}>
+					<Route path="/donor-templates/new" element={<DonorTemplateRequest />} />
+					<Route path="/donor-templates/:id" element={<DonorTemplateDetail />} />
+				</Route>
+				<Route element={<RequireRole role="access_quality_gate" />}>
+					<Route path="/quality-gate" element={<QualityGate />} />
+				</Route>
                         </Route>
                         <Route element={<RequireAdmin />}>
                                 <Route path="/admin/access/:resourceType/:resourceId" element={<AccessManagement />} />

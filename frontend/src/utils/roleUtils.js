@@ -13,8 +13,7 @@ export function hasPermission(user, permission) {
   // Admin users have all permissions
   if (user?.is_admin) return true;
 
-  // Check all roles (including inherited)
-  return user?.all_roles?.includes(permission) || false;
+  return user?.roles?.includes(permission) || false;
 }
 
 /**
@@ -27,7 +26,7 @@ export function hasAnyPermission(user, permissions) {
   if (user?.is_admin) return true;
 
   return permissions.some(permission =>
-    user?.all_roles?.includes(permission)
+    user?.roles?.includes(permission)
   );
 }
 
@@ -38,7 +37,7 @@ export function hasAnyPermission(user, permissions) {
  */
 export function isTeamLeader(user) {
   if (user?.is_admin) return true;
-  return user?.is_team_leader || false;
+  return Boolean(user?.team_leadership && user?.active_team);
 }
 
 /**
@@ -49,7 +48,7 @@ export function isTeamLeader(user) {
  */
 export function isTeamLeaderOf(user, teamId) {
   if (user?.is_admin) return true;
-  return user?.team_leadership?.includes(teamId) || false;
+  return Boolean(user?.team_leadership && user?.active_team?.id === teamId);
 }
 
 /**
@@ -60,7 +59,9 @@ export function isTeamLeaderOf(user, teamId) {
  */
 export function isTeamMember(user, teamId) {
   if (user?.is_admin) return true;
-  return user?.teams?.includes(teamId) || false;
+  return user?.active_team?.id === teamId && user?.memberships?.some(
+    (membership) => membership.id === teamId && (!membership.status || membership.status === 'ACTIVE')
+  ) || false;
 }
 
 /**
@@ -71,7 +72,8 @@ export function isTeamMember(user, teamId) {
  */
 export function getMembershipStatus(user, teamId) {
   if (user?.is_admin) return 'ACTIVE';
-  return user?.team_membership_status?.[teamId] || 'NOT_MEMBER';
+  const membership = user?.memberships?.find((item) => item.id === teamId);
+  return membership ? (membership.status || 'ACTIVE') : 'NOT_MEMBER';
 }
 
 /**
@@ -87,25 +89,14 @@ export function hasObjectAccess(user, objectInfo, requiredPermission = 'read') {
   // If no object info, deny access
   if (!objectInfo) return false;
 
-  // Check if user is owner
-  if (user?.id === objectInfo.owner_id) return true;
-
-  // Check if user is team member with appropriate permissions
+  // Access requires an explicit grant for the active team. Ownership is not a bypass.
   if (objectInfo.team_id && isTeamMember(user, objectInfo.team_id)) {
-    // If no specific access rules, team members have read access by default
-    if (!objectInfo.access_rules || objectInfo.access_rules.length === 0) {
-      return requiredPermission === 'read';
-    }
-
-    // Check access rules for specific permissions
-    const teamRule = objectInfo.access_rules.find(rule => rule.team_id === objectInfo.team_id);
+    const teamRule = objectInfo.access_rules?.find(rule => rule.team_id === objectInfo.team_id);
     if (teamRule) {
       const permissions = teamRule.permissions || [];
-      return permissions.includes(requiredPermission);
+      const normalizedPermission = requiredPermission === 'write' ? 'edit' : requiredPermission;
+      return permissions.includes(normalizedPermission);
     }
-
-    // If team has no specific rule but user is member, allow read access
-    return requiredPermission === 'read';
   }
 
   return false;
@@ -128,9 +119,8 @@ export function canApproveMembership(user, teamId) {
  * @param {string} teamId - Team ID to check
  * @returns {boolean} - True if user can manage team roles
  */
-export function canManageTeamRoles(user, teamId) {
-  if (user?.is_admin) return true;
-  return isTeamLeaderOf(user, teamId);
+export function canManageTeamRoles(user) {
+  return Boolean(user?.is_admin);
 }
 
 /**
@@ -182,10 +172,9 @@ export function getAccessibleTeams(user) {
   if (user?.is_admin) return user.all_teams || [];
 
   // Return teams where user has ACTIVE membership
-  return user?.teams?.filter(teamId => {
-    const status = getMembershipStatus(user, teamId);
-    return status === 'ACTIVE';
-  }) || [];
+  return user?.memberships
+    ?.filter((membership) => !membership.status || membership.status === 'ACTIVE')
+    .map((membership) => membership.id) || [];
 }
 
 /**

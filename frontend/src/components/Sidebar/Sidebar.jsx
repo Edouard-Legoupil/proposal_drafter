@@ -1,18 +1,11 @@
-import React, { useState, useEffect, useContext } from 'react';
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import './Sidebar.css';
 import { hasPermission } from '../../utils/roleUtils';
+import { useAuth } from '../../context/AuthContext';
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api";
-
-// Create a simple auth context for demonstration
-const AuthContext = React.createContext({
-  user: null,
-  setUser: () => {}
-});
-
-const Sidebar = ({ userRoles, isOpen }) => {
-    const { user } = useContext(AuthContext);
+const Sidebar = ({ isOpen }) => {
+    const { user, roles, memberships } = useAuth();
     const [expandedFolders, setExpandedFolders] = useState({
         proposals: true,
         knowledge: true,
@@ -20,26 +13,8 @@ const Sidebar = ({ userRoles, isOpen }) => {
         otherProposals: false
     });
 
-    const [teams, setTeams] = useState([]);
+    const teams = memberships;
     const [expandedTeams, setExpandedTeams] = useState({});
-
-    useEffect(() => {
-        const fetchTeams = async () => {
-            try {
-                const response = await fetch(`${API_BASE_URL}/teams`);
-                const data = await response.json();
-                if (data.teams) {
-                    setTeams(data.teams);
-                }
-            } catch (error) {
-                console.error('Error fetching teams:', error);
-            }
-        };
-
-        if (isOpen) {
-            fetchTeams();
-        }
-    }, [isOpen]);
 
     const toggleFolder = (folder) => {
         setExpandedFolders(prev => ({
@@ -60,13 +35,13 @@ const Sidebar = ({ userRoles, isOpen }) => {
     // Helper function to check permissions with RBAC
     const canAccess = (permission) => {
         if (!user) return false;
-        return hasPermission(user, permission);
+        return hasPermission({ ...user, roles }, permission);
     };
 
     return (
         <aside className="Sidebar" data-testid="sidebar">
             <nav className="Sidebar_nav">
-                {userRoles.includes('proposal writer') && (
+                {roles.includes('proposal writer') && (
                     <div className="Sidebar_folder">
                         <div className="Sidebar_folderHeader" onClick={() => toggleFolder('proposals')} data-testid="sidebar-proposals-folder">
                             <i className={`fa-solid ${expandedFolders.proposals ? 'fa-folder-open' : 'fa-folder'}`}></i>
@@ -98,7 +73,7 @@ const Sidebar = ({ userRoles, isOpen }) => {
                     </div>
                 )}
 
-                {userRoles.includes('project reviewer') && (
+                {roles.includes('project reviewer') && (
                     <NavLink to="/dashboard/reviews" className="Sidebar_folderHeader Sidebar_link_header" data-testid="sidebar-link-reviews">
                         <i className="fa-solid fa-clipboard-check"></i>
                         <span>For Review</span>
@@ -169,7 +144,7 @@ const Sidebar = ({ userRoles, isOpen }) => {
                     </NavLink>
                 )}
 
-                {userRoles.includes('project reviewer') && (
+                {roles.includes('project reviewer') && (
                     <div className="Sidebar_folder">
                         <div className="Sidebar_folderHeader" onClick={() => toggleFolder('otherProposals')} data-testid="sidebar-other-proposals-folder">
                             <i className={`fa-solid ${expandedFolders.otherProposals ? 'fa-folder-open' : 'fa-folder'}`}></i>
@@ -219,5 +194,3 @@ const Sidebar = ({ userRoles, isOpen }) => {
 };
 
 export default Sidebar;
-
-export { AuthContext };
