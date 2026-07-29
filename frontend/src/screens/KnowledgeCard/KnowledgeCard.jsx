@@ -15,6 +15,7 @@ import UploadReferenceModal from '../../components/UploadReferenceModal/UploadRe
 import { setupSse } from '../../utils/sse';
 import SectionReview from '../../components/SectionReview/SectionReview';
 import word_icon from '../../assets/images/word.svg';
+import { openSafeExternalUrl } from '../../utils/safeExternalNavigation';
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "/api";
 
@@ -1123,7 +1124,9 @@ export default function KnowledgeCard() {
                 if (data.success && data.url) {
                     setSharepointStatus('uploaded');
                     setSharepointLink(data);
-                    window.open(data.url, '_blank');
+                    if (!openSafeExternalUrl(data.url)) {
+                        throw new Error("SharePoint returned an invalid document URL");
+                    }
                     setAlertModalMessage("Document opened in Word Online");
                     setIsAlertModalOpen(true);
                 } else {
@@ -1171,7 +1174,12 @@ export default function KnowledgeCard() {
                 // Use cached link
                 setSharepointStatus('uploaded');
                 setSharepointLink(linkStatus);
-                window.open(linkStatus.url, '_blank');
+                if (!openSafeExternalUrl(linkStatus.url)) {
+                    setSharepointStatus('failed');
+                    setAlertModalMessage("SharePoint returned an invalid document URL");
+                    setIsAlertModalOpen(true);
+                    return;
+                }
                 setAlertModalMessage("Document opened in Word Online (cached)");
                 setIsAlertModalOpen(true);
                 return;
@@ -1216,7 +1224,9 @@ export default function KnowledgeCard() {
                     setSharepointStatus('uploaded');
                     setSharepointLink(data);
                     // Open the document in Word Online in a new tab
-                    window.open(data.url, '_blank');
+                    if (!openSafeExternalUrl(data.url)) {
+                        throw new Error("SharePoint returned an invalid document URL");
+                    }
                     setAlertModalMessage(data.from_cache ? "Document opened in Word Online (cached)" : "Document opened in Word Online");
                     setIsAlertModalOpen(true);
                 } else {

@@ -10,7 +10,7 @@ from urllib.parse import ParseResult, parse_qs, urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
-from PyPDF2 import PdfReader
+from pypdf import PdfReader
 
 from backend.core.config import SCRAPER_ALLOWED_SCHEMES
 

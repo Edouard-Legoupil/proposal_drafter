@@ -10,3 +10,11 @@ async def test_health_check():
         response = await ac.get("/health")
     assert response.status_code == 200
     assert response.json()["status"] == "لْحَمْدُ لِلَّٰهِ -- API is running"
+
+
+@pytest.mark.asyncio
+async def test_detailed_circuit_breaker_health_requires_authentication():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://localhost") as ac:
+        response = await ac.get("/health/circuit-breaker")
+
+    assert response.status_code == 401

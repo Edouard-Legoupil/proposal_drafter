@@ -1,5 +1,5 @@
 # Environment variable management - loads .env files into environment variables
-python-dotenv
+python-dotenv>=1.2.2
 
 # ASGI web framework for building high-performance APIs with Python
 fastapi>=0.109.0  # SEC-005: Updated for security and bug fixes
@@ -22,10 +22,10 @@ crewai[azure-ai-inference]
 pydantic[email]
 
 # Unified interface to call various LLM APIs (OpenAI, Anthropic, etc.) with consistent formatting
-litellm==1.75.0
+litellm>=1.84.0
 
-# Official Python library for OpenAI API (limited to versions below 1.99.9)
-openai<1.99.9
+# Official Python library for OpenAI API
+openai>=1.109.1,<3
 
 # Library for reading and writing Microsoft Word (.docx) files
 python-docx
@@ -40,13 +40,21 @@ markdown-it-py[linkify,plugins]
 mdit-py-plugins>=0.3.5
 
 # Framework for developing applications powered by language models
-langchain
+langchain>=1.3.9
 
 # LangChain integration for OpenAI models
-langchain-openai
+langchain-openai>=1.1.14
 
 # Third-party integrations for LangChain (community-supported components)
-langchain-community
+langchain-community>=0.4.1
+
+# Security floors for transitive AI/orchestration dependencies
+langchain-core>=1.2.22
+langchain-text-splitters>=1.1.2
+click>=8.3.3
+json-repair>=0.60.1
+mcp>=1.28.1,<2
+uv>=0.11.15
 
 # SQL toolkit and Object Relational Mapper (ORM) for Python
 sqlalchemy>=2.0.23  # SEC-005: Updated to fix CVE-2023-3787
@@ -120,14 +128,13 @@ google-search-results
 
 # Web scraping
 beautifulsoup4
-requests
+requests>=2.33.0
 
 # Vector embeddings
 pgvector
 
 # PDF processing
 pypdf
-PyPDF2
 pdfplumber
 
 # Slugify for clean filenames

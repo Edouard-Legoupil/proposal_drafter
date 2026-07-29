@@ -253,7 +253,7 @@ class SharePointConnector:
             return True
         except Exception as e:
             self.logger.error(f"Authentication failed: {e}")
-            raise RuntimeError(f"Failed to connect to SharePoint: {e}")
+            raise RuntimeError(f"Failed to connect to SharePoint: {e}") from e
 
     def disconnect(self):
         """Clean up connection resources."""
@@ -363,7 +363,7 @@ class SharePointConnector:
             raise RuntimeError("Received empty site ID from SharePoint")
         return self.site_id
 
-    def get_drive_id(self) -> str | None:
+    def get_drive_id(self) -> str:
         """
         Get the document library (drive) ID for the SharePoint site.
 
@@ -390,8 +390,9 @@ class SharePointConnector:
         if response.status_code == 200:
             drive = response.json()
             self.logger.info(f"Using default library: {drive['name']}")
-            self.drive_id = drive["id"]
-            return self.drive_id
+            drive_id = str(drive["id"])
+            self.drive_id = drive_id
+            return drive_id
 
         # List all libraries if default not found
         url = f"{GRAPH_BASE}/sites/{site_id}/drives"
@@ -408,17 +409,19 @@ class SharePointConnector:
                 "documents",
                 "shareddocuments",
             ]:
-                self.drive_id = drive["id"]
+                drive_id = str(drive["id"])
+                self.drive_id = drive_id
                 self.logger.info(f"Found library by name: {drive['name']}")
-                return self.drive_id
+                return drive_id
 
         # Use first available if none matched
         if drives:
             self.logger.warning(
                 f"Using first available library: {drives[0]['name']}. " f"Consider setting SHAREPOINT_LIBRARY_NAME."
             )
-            self.drive_id = drives[0]["id"]
-            return self.drive_id
+            drive_id = str(drives[0]["id"])
+            self.drive_id = drive_id
+            return drive_id
 
         raise RuntimeError("No document libraries found on the SharePoint site")
 
@@ -444,9 +447,7 @@ class SharePointConnector:
         self.ensure_connected()
         drive_id = self.get_drive_id()
 
-        target_path = folder_path if folder_path is not None else self.config.folder_path
-        if target_path is None:
-            target_path = "/"
+        target_path: str = folder_path or self.config.folder_path or "/"
 
         self.logger.info(f"Listing files in: {target_path}")
 
@@ -477,7 +478,7 @@ class SharePointConnector:
         self.ensure_connected()
         drive_id = self.get_drive_id()
 
-        target_path = folder_path if folder_path is not None else self.config.folder_path
+        target_path: str = folder_path or self.config.folder_path or "/"
 
         # Ensure content is bytes
         if isinstance(content, str):
@@ -515,7 +516,7 @@ class SharePointConnector:
         self.ensure_connected()
         drive_id = self.get_drive_id()
 
-        target_path = folder_path if folder_path is not None else self.config.folder_path
+        target_path: str = folder_path or self.config.folder_path or "/"
 
         # Build the URL for the file
         path_parts = [p for p in [target_path, file_name] if p]
@@ -548,7 +549,7 @@ class SharePointConnector:
         self.ensure_connected()
         drive_id = self.get_drive_id()
 
-        target_path = folder_path if folder_path is not None else self.config.folder_path
+        target_path: str = folder_path or self.config.folder_path or "/"
 
         # Build the URL for the file
         path_parts = [p for p in [target_path, file_name] if p]
@@ -860,7 +861,7 @@ class SharePointConnector:
             doc = Document(io.BytesIO(docx_bytes))
             return [para.text for para in doc.paragraphs]
         except Exception as e:
-            raise ValueError(f"Failed to parse DOCX file: {e}")
+            raise ValueError(f"Failed to parse DOCX file: {e}") from e
 
     @staticmethod
     def extract_tracked_changes(docx_bytes: bytes) -> List[Dict[str, str]]:
@@ -957,7 +958,7 @@ class SharePointConnector:
                 if text:
                     comments.append(
                         {
-                            "id": comment.get(f"{{{NS['w']}}}id"),
+                            "id": comment.get(f"{{{NS['w']}}}id") or "",
                             "author": comment.get(f"{{{NS['w']}}}author", "Unknown"),
                             "date": comment.get(f"{{{NS['w']}}}date", ""),
                             "text": text,
@@ -1157,7 +1158,9 @@ class SharePointConnector:
                 return
 
             # Skip if unchanged
-            if hashlib.md5(old_bytes).hexdigest() == hashlib.md5(new_bytes).hexdigest():
+            old_digest = hashlib.md5(old_bytes, usedforsecurity=False).hexdigest()
+            new_digest = hashlib.md5(new_bytes, usedforsecurity=False).hexdigest()
+            if old_digest == new_digest:
                 self.logger.info("File unchanged since last snapshot. Nothing to report.")
                 self.save_snapshot(new_bytes, today)
                 return

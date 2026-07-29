@@ -1,10 +1,11 @@
 #  Third-Party Libraries
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from datetime import datetime
 import psutil
 
 #  Internal Modules
 from backend.core.error_handlers import get_error_handler
+from backend.core.security import require_any_role
 
 # This module provides health check and debugging endpoints.
 # These are useful for monitoring the application's status and for troubleshooting.
@@ -39,7 +40,9 @@ def warmup():
 
 
 @router.get("/health/circuit-breaker")
-def circuit_breaker_status():
+def circuit_breaker_status(
+    _current_user: dict = Depends(require_any_role("system admin")),  # noqa: B008
+):
     """
     Get the current status of the LLM circuit breaker.
 

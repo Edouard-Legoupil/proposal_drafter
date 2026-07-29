@@ -8,6 +8,7 @@ import pytest
 import json
 import tempfile
 import os
+from pathlib import Path
 from unittest.mock import patch, MagicMock
 from backend.core.dependency_scanner import (
     DependencyScanner,
@@ -32,6 +33,16 @@ def test_dependency_scanner_initialization(dependency_scanner):
     assert hasattr(dependency_scanner, "vulnerability_db")
     assert isinstance(dependency_scanner.dependencies, list)
     assert isinstance(dependency_scanner.vulnerability_db, dict)
+
+
+def test_ci_enforces_backend_and_frontend_security_scans():
+    workflow = Path(".github/workflows/main_dev_propalgen2.yml").read_text(encoding="utf-8")
+
+    assert "pip-audit" in workflow
+    assert "--ignore-vuln PYSEC-2026-311" in workflow
+    assert "bandit" in workflow
+    assert "npm audit" in workflow
+    assert "npm ci" in workflow
 
 
 def test_dependency_creation():

@@ -4,6 +4,7 @@ import os
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
+from urllib.parse import unquote
 
 #  Third-Party Libraries
 import uvicorn
@@ -62,6 +63,24 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 # This is the main application file. It brings together all the different
 # parts of the application: API routers, middleware, and event handlers.
+
+
+def resolve_frontend_file(frontend_root: Path, requested_path: str) -> Path | None:
+    """Resolve a frontend file without allowing traversal or symlink escape."""
+    decoded_path = requested_path
+    for _ in range(2):
+        next_value = unquote(decoded_path)
+        if next_value == decoded_path:
+            break
+        decoded_path = next_value
+
+    root = frontend_root.resolve()
+    candidate = (root / decoded_path.lstrip("/")).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError:
+        return None
+    return candidate if candidate.is_file() else None
 
 
 # --- Lifespan Management ---
@@ -212,8 +231,8 @@ if os.path.isdir(frontend_path):
             return {"detail": "API route not found"}
 
         # Check if the request is for a static file that exists
-        possible_file = os.path.join(frontend_path, full_path)
-        if os.path.isfile(possible_file):
+        possible_file = resolve_frontend_file(Path(frontend_path), full_path)
+        if possible_file is not None:
             return FileResponse(possible_file)
 
         # Check for common static file extensions

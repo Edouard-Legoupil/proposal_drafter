@@ -18,7 +18,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import JSON, bindparam, text
 from sqlalchemy.engine import Engine
 from slugify import slugify
-from PyPDF2 import PdfReader
+from pypdf import PdfReader
 from pydantic import BaseModel, field_validator
 from typing import List, Optional
 from datetime import datetime, timedelta

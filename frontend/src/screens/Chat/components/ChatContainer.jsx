@@ -32,6 +32,7 @@ import { toKebabCase } from '../utils';
 import { useFormData } from '../hooks/useFormData';
 import { useChatApi } from '../hooks/useChatApi';
 import { useProposal } from '../hooks/useProposal';
+import { openSafeExternalUrl } from '../../../utils/safeExternalNavigation';
 
 const ChatContainer = (props) => {
         // Initialize custom hooks
@@ -932,7 +933,9 @@ const ChatContainer = (props) => {
                                 if (data.success && data.url) {
                                         setSharepointStatus('uploaded');
                                         setSharepointLink(data);
-                                        window.open(data.url, '_blank');
+                                        if (!openSafeExternalUrl(data.url)) {
+                                                throw new Error("SharePoint returned an invalid document URL");
+                                        }
                                         setNotif({ open: true, message: "Document opened in Word Online", severity: 'success' });
                                 } else {
                                         throw new Error(data.message || "Failed to get SharePoint URL");
@@ -977,7 +980,11 @@ const ChatContainer = (props) => {
                                 // Use cached link
                                 setSharepointStatus('uploaded');
                                 setSharepointLink(linkStatus);
-                                window.open(linkStatus.url, '_blank');
+                                if (!openSafeExternalUrl(linkStatus.url)) {
+                                        setSharepointStatus('failed');
+                                        setNotif({ open: true, message: "SharePoint returned an invalid document URL", severity: 'error' });
+                                        return;
+                                }
                                 setNotif({ open: true, message: "Document opened in Word Online (cached)", severity: 'success' });
                                 return;
                         }
@@ -1019,7 +1026,9 @@ const ChatContainer = (props) => {
                                         setSharepointStatus('uploaded');
                                         setSharepointLink(data);
                                         // Open the document in Word Online in a new tab
-                                        window.open(data.url, '_blank');
+                                        if (!openSafeExternalUrl(data.url)) {
+                                                throw new Error("SharePoint returned an invalid document URL");
+                                        }
                                         setNotif({ open: true, message: data.from_cache ? "Document opened in Word Online (cached)" : "Document opened in Word Online", severity: 'success' });
                                 } else {
                                         throw new Error(data.message || "Failed to get SharePoint URL");

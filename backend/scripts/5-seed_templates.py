@@ -94,7 +94,7 @@ class TemplateSynchronizer:
         """Calculate MD5 checksum of a file for change detection"""
         try:
             with open(filepath, "rb") as f:
-                return hashlib.md5(f.read()).hexdigest()
+                return hashlib.md5(f.read(), usedforsecurity=False).hexdigest()
         except Exception as e:
             self.log(f"Error calculating checksum for {filepath}: {e}", "error")
             return None
@@ -110,7 +110,7 @@ class TemplateSynchronizer:
             self.log(f"Templates directory not found: {templates_dir}", "error")
             return []
 
-        for root, dirs, files in os.walk(templates_dir):
+        for root, _dirs, files in os.walk(templates_dir):
             for file in files:
                 if file.endswith(".json"):
                     filepath = os.path.join(root, file)

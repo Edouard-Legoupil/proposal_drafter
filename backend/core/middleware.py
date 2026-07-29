@@ -73,8 +73,10 @@ def setup_security_middleware(app):
         # Permissions-Policy - control browser features
         response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=(), payment=()"
 
-        # Cache-Control - prevent caching of sensitive responses
-        if not response.headers.get("Cache-Control"):
+        # Cache immutable build assets while preventing caching of API and SPA responses.
+        if request.url.path.startswith("/assets/") and response.status_code == 200:
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        elif not response.headers.get("Cache-Control"):
             response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, proxy-revalidate"
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
