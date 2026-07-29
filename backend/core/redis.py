@@ -1,31 +1,39 @@
-#  Third-Party Libraries
-import redis  # type: ignore[import-untyped]
 import asyncio
+import logging
+import os
+import time
+from typing import Any
 
-# --- Redis Client Initialization ---
+import redis  # type: ignore[import-untyped]
+from redis.exceptions import RedisError  # type: ignore[import-untyped]
 
 # This module is responsible for setting up the connection to Redis.
 # It includes a fallback mechanism to an in-memory dictionary for local
 # development or when Redis is unavailable.
 
-from typing import Any
-
+logger = logging.getLogger(__name__)
 redis_available = False
+
+
+def create_redis_client(redis_url: str) -> Any:
+    """Create a Redis client from the deployment-provided connection URL."""
+    return redis.Redis.from_url(redis_url, decode_responses=True)
+
 
 try:
     # Attempt to connect to the Redis server.
     # `decode_responses=True` ensures that data read from Redis is automatically
     # decoded from bytes to UTF-8 strings.
-    redis_client: Any = redis.Redis(host="redis", port=6379, db=0, decode_responses=True)
+    redis_client: Any = create_redis_client(os.getenv("REDIS_URL", "redis://redis:6379/0"))
 
     # `ping()` checks if the connection to Redis is alive.
     redis_client.ping()
     redis_available = True
-    print("Successfully connected to Redis")
+    logger.info("Successfully connected to Redis")
 
-except redis.ConnectionError:
+except RedisError:
     # If Redis is not available, print a warning and use a fallback storage.
-    print("Warning: Could not connect to Redis. Using in-memory storage as fallback.")
+    logger.warning("Could not connect to Redis. Using local in-memory storage fallback.")
 
     class DictStorage:
         """
@@ -36,22 +44,30 @@ except redis.ConnectionError:
 
         def __init__(self):
             self.storage = {}
+            self.expires_at = {}
 
         def setex(self, key, ttl, value):
-            """Sets a key with a Time-To-Live (TTL), although the TTL is ignored in this mock."""
+            """Set a key with a time-to-live."""
             self.storage[key] = value
+            self.expires_at[key] = time.monotonic() + ttl
 
         def set(self, key, value):
             """Sets a key-value pair."""
             self.storage[key] = value
+            self.expires_at.pop(key, None)
 
         def get(self, key):
             """Gets a value by key."""
+            expires_at = self.expires_at.get(key)
+            if expires_at is not None and expires_at <= time.monotonic():
+                self.delete(key)
+                return None
             return self.storage.get(key)
 
         def delete(self, key):
             """Deletes a key."""
             self.storage.pop(key, None)
+            self.expires_at.pop(key, None)
 
         def publish(self, channel, message):
             """Mock publish method. Does nothing in DictStorage."""

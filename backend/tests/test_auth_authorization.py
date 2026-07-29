@@ -82,3 +82,12 @@ def test_signup_ignores_client_supplied_roles(client, monkeypatch):
         )
 
     assert assigned_roles == ["proposal writer"]
+
+
+def test_signup_is_not_available_when_local_authentication_is_disabled(client, monkeypatch):
+    monkeypatch.setattr(auth, "local_authentication_enabled", lambda: False)
+
+    response = client.post("/api/signup", headers={"host": "localhost"}, json={})
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Not found."}

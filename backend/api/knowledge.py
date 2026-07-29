@@ -37,7 +37,7 @@ class DictStorage:
 from backend.core.config import load_proposal_template
 from backend.utils.crew_reference import ReferenceIdentificationCrew
 from backend.utils.crew_knowledge import ContentGenerationCrew
-from backend.utils.scraper import scrape_url
+from backend.utils.scraper import UnsafeUrlError, scrape_url, validate_remote_url_syntax
 from backend.utils.embedding_utils import process_and_store_text
 import io
 from backend.utils.doc_export import create_word_from_knowledge_card
@@ -80,6 +80,15 @@ class KnowledgeCardReferenceIn(BaseModel):
     url: str
     reference_type: str
     summary: Optional[str] = None
+
+    @field_validator("url")
+    @classmethod
+    def validate_reference_url(cls, value: str) -> str:
+        try:
+            validate_remote_url_syntax(value)
+        except UnsafeUrlError as exc:
+            raise ValueError(str(exc)) from exc
+        return value
 
 
 class IdentifyReferencesIn(BaseModel):

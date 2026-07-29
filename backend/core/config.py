@@ -78,6 +78,40 @@ APP_ENV = os.getenv("APP_ENV", "development").strip().lower()
 IS_TESTING = os.getenv("TESTING", "false").lower() == "true"
 
 
+def parse_scraper_allowed_schemes(value: str | None, environment: str) -> frozenset[str]:
+    """Return the explicitly supported remote-ingestion URL schemes."""
+    if value is None:
+        if environment == "production":
+            raise ValueError("SCRAPER_ALLOWED_SCHEMES must be configured in production")
+        value = "http,https"
+
+    schemes = frozenset(item.strip().lower() for item in value.split(",") if item.strip())
+    if not schemes or not schemes.issubset({"http", "https"}):
+        raise ValueError("SCRAPER_ALLOWED_SCHEMES may contain only http and https")
+    return schemes
+
+
+def local_authentication_enabled(
+    environment: str | None = None,
+    testing: bool | None = None,
+) -> bool:
+    """Keep password authentication available only to local and test runs."""
+    selected_environment = APP_ENV if environment is None else environment.strip().lower()
+    selected_testing = IS_TESTING if testing is None else testing
+    return selected_testing or selected_environment == "development"
+
+
+def shared_session_store_required(
+    environment: str | None = None,
+    testing: bool | None = None,
+) -> bool:
+    """Require Redis-backed sessions outside development and test runs."""
+    return not local_authentication_enabled(environment, testing)
+
+
+SCRAPER_ALLOWED_SCHEMES = parse_scraper_allowed_schemes(os.getenv("SCRAPER_ALLOWED_SCHEMES"), APP_ENV)
+
+
 def validate_secret_key(secret_key: str | None, environment: str, testing: bool) -> None:
     """Reject absent or documented development signing keys outside local use."""
     if testing or environment == "development":
@@ -191,6 +225,7 @@ class Settings:
     ENTRA_CLIENT_ID = ENTRA_CLIENT_ID
     ENTRA_CLIENT_SECRET = ENTRA_CLIENT_SECRET
     ENTRA_REDIRECT_URI = ENTRA_REDIRECT_URI
+    SCRAPER_ALLOWED_SCHEMES = SCRAPER_ALLOWED_SCHEMES
     BACKEND_DIR = BACKEND_DIR
     TEMPLATES_DIR = TEMPLATES_DIR
     TEMPLATE_SUB_DIRS = TEMPLATE_SUB_DIRS

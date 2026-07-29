@@ -1,140 +1,174 @@
+"""Bounded public-web ingestion helpers."""
+
+import io
+import ipaddress
+import logging
+import os
+import socket
+from collections.abc import Callable
+from urllib.parse import ParseResult, parse_qs, urljoin, urlparse
+
 import requests
 from bs4 import BeautifulSoup
-import logging
-import io
-from urllib.parse import urlparse, parse_qs
 from PyPDF2 import PdfReader
-import os
-import time
-from dotenv import load_dotenv
 
-load_dotenv()
+from backend.core.config import SCRAPER_ALLOWED_SCHEMES
 
 logger = logging.getLogger(__name__)
 
+MAX_RESPONSE_BYTES = int(os.getenv("SCRAPER_MAX_RESPONSE_BYTES", str(10 * 1024 * 1024)))
+MAX_REDIRECTS = int(os.getenv("SCRAPER_MAX_REDIRECTS", "5"))
+MAX_PDF_PAGES = int(os.getenv("SCRAPER_MAX_PDF_PAGES", "100"))
+MAX_RECURSION_DEPTH = 1
+REQUEST_TIMEOUT = (5, 20)
+REDIRECT_STATUSES = {301, 302, 303, 307, 308}
 
-def scrape_url(url: str) -> str | None:
-    """
-    Scrapes the main text content from a given URL.
-    Supports both HTML pages and PDF files.
-    Handles UNHCR PDF.js viewer by extracting and downloading the actual PDF.
-    """
-    logger.info(f"Starting scrape for URL: {url}")
 
+class UnsafeUrlError(ValueError):
+    """Raised when a remote URL could reach a non-public destination."""
+
+
+def validate_remote_url_syntax(url: str) -> ParseResult:
+    """Validate remote URL syntax without performing network resolution."""
     try:
-        headers = {}
-        parsed_url = urlparse(url)
+        parsed = urlparse(url)
+        _ = parsed.port
+    except ValueError as exc:
+        raise UnsafeUrlError("URL authority is invalid") from exc
+    if parsed.scheme.lower() not in SCRAPER_ALLOWED_SCHEMES:
+        raise UnsafeUrlError("URL scheme is not allowed")
+    if not parsed.hostname:
+        raise UnsafeUrlError("URL hostname is required")
+    if parsed.username is not None or parsed.password is not None:
+        raise UnsafeUrlError("Embedded URL credentials are not allowed")
+    return parsed
 
-        # Check if this is a UNHCR PDF.js viewer URL
-        is_unhcr_pdfjs = parsed_url.netloc == "www.unhcr.org" and "/media/" in parsed_url.path
 
-        if parsed_url.netloc == "www.unhcr.org" or is_unhcr_pdfjs:
-            logger.info("UNHCR URL detected, adding authentication headers and delay.")
-            time.sleep(10)  # Add a 10-second delay
-            client_id = os.getenv("cfAccessClientId")
-            client_secret = os.getenv("cfAccessClientSecret")
-            if client_id and client_secret:
-                auth_token = f"{client_id}:{client_secret}"
-                headers["Authorization"] = f"Bearer {auth_token}"
-                headers["CF-Access-Client-Id"] = f"{client_id}"
-            else:
-                logger.warning("Cloudflare credentials not found in environment variables.")
+def validate_public_url(
+    url: str,
+    *,
+    resolver: Callable[..., list[tuple]] = socket.getaddrinfo,
+) -> ParseResult:
+    """Validate the URL scheme, authority, and every resolved address."""
+    parsed = validate_remote_url_syntax(url)
+    port = parsed.port
 
-        # Handle PDF.js viewer URLs - extract the actual PDF URL
-        if is_unhcr_pdfjs:
-            logger.info("UNHCR PDF.js viewer detected, extracting actual PDF URL.")
-            # Extract the file parameter from query string
-            query_params = parse_qs(parsed_url.query)
-            file_param = query_params.get("file", [None])[0]
+    service_port = port or (443 if parsed.scheme.lower() == "https" else 80)
+    try:
+        answers = resolver(parsed.hostname, service_port, type=socket.SOCK_STREAM)
+    except OSError as exc:
+        raise UnsafeUrlError("URL hostname could not be resolved") from exc
+    if not answers:
+        raise UnsafeUrlError("URL hostname could not be resolved")
 
+    for answer in answers:
+        address = ipaddress.ip_address(answer[4][0])
+        if not address.is_global:
+            raise UnsafeUrlError("URL must resolve only to public addresses")
+    return parsed
+
+
+def _headers_for_url(url: str) -> dict[str, str]:
+    """Return host-specific headers without forwarding credentials on redirects."""
+    if urlparse(url).hostname != "www.unhcr.org":
+        return {}
+    client_id = os.getenv("cfAccessClientId")
+    client_secret = os.getenv("cfAccessClientSecret")
+    if not client_id or not client_secret:
+        return {}
+    return {
+        "Authorization": f"Bearer {client_id}:{client_secret}",
+        "CF-Access-Client-Id": client_id,
+    }
+
+
+def _read_bounded_response(response) -> bytes:
+    content = bytearray()
+    for chunk in response.iter_content(chunk_size=64 * 1024):
+        if not chunk:
+            continue
+        content.extend(chunk)
+        if len(content) > MAX_RESPONSE_BYTES:
+            raise UnsafeUrlError("Remote response exceeds the configured size limit")
+    return bytes(content)
+
+
+def _fetch(url: str) -> tuple[str, str, bytes]:
+    current_url = url
+    for redirect_count in range(MAX_REDIRECTS + 1):
+        validate_public_url(current_url)
+        response = requests.get(
+            current_url,
+            timeout=REQUEST_TIMEOUT,
+            headers=_headers_for_url(current_url),
+            allow_redirects=False,
+            stream=True,
+        )
+        try:
+            if response.status_code in REDIRECT_STATUSES:
+                location = response.headers.get("Location")
+                if not location:
+                    raise UnsafeUrlError("Remote redirect is missing a target")
+                if redirect_count >= MAX_REDIRECTS:
+                    raise UnsafeUrlError("Remote response exceeded the redirect limit")
+                target = urljoin(current_url, location)
+                validate_public_url(target)
+                current_url = target
+                continue
+
+            response.raise_for_status()
+            content_type = response.headers.get("Content-Type", "").lower()
+            return current_url, content_type, _read_bounded_response(response)
+        finally:
+            response.close()
+    raise UnsafeUrlError("Remote response exceeded the redirect limit")
+
+
+def _extract_pdf(content: bytes) -> str | None:
+    reader = PdfReader(io.BytesIO(content))
+    if len(reader.pages) > MAX_PDF_PAGES:
+        raise UnsafeUrlError("PDF exceeds the configured page limit")
+    chunks = []
+    for page in reader.pages:
+        text = page.extract_text() or ""
+        if text:
+            chunks.append(text)
+    extracted = "\n".join(chunks).strip()
+    return extracted or None
+
+
+def scrape_url(url: str, *, _depth: int = 0) -> str | None:
+    """Extract bounded text from a public HTML or PDF URL."""
+    try:
+        parsed = validate_public_url(url)
+        if parsed.hostname == "www.unhcr.org" and "/media/" in parsed.path:
+            file_param = parse_qs(parsed.query).get("file", [None])[0]
             if file_param:
-                # Construct the actual PDF URL
-                if file_param.startswith("/"):
-                    # Absolute path
-                    pdf_url = f"https://www.unhcr.org{file_param}"
-                else:
-                    # Relative path - construct based on current path
-                    base_path = parsed_url.path.rsplit("/pdf.js/web/viewer.html", 1)[0]
-                    pdf_url = f"https://www.unhcr.org{base_path}/{file_param}"
+                url = urljoin(url, file_param)
 
-                logger.info(f"Extracted PDF URL: {pdf_url}")
-                url = pdf_url  # Replace URL with the actual PDF URL
+        final_url, content_type, content = _fetch(url)
+        if "application/pdf" in content_type or final_url.lower().endswith(".pdf"):
+            return _extract_pdf(content)
 
-        logger.info("Sending GET request...")
-        response = requests.get(url, timeout=20, headers=headers)
-        logger.info(f"Received response with status code: {response.status_code}")
-        response.raise_for_status()
+        soup = BeautifulSoup(content, "html.parser")
+        if _depth < MAX_RECURSION_DEPTH and ("pdf.js" in soup.get_text().lower() or "viewer.html" in final_url):
+            for link in soup.find_all("a", href=True):
+                href = link.get("href")
+                if isinstance(href, str) and href.lower().endswith(".pdf"):
+                    return scrape_url(urljoin(final_url, href), _depth=_depth + 1)
 
-        content_type = response.headers.get("Content-Type", "").lower()
-        logger.info(f"Detected Content-Type: {content_type}")
-
-        if "application/pdf" in content_type or url.lower().endswith(".pdf"):
-            logger.info("Processing PDF content...")
-            pdf_file = io.BytesIO(response.content)
-            reader = PdfReader(pdf_file)
-
-            text_chunks = []
-            for i, page in enumerate(reader.pages):
-                try:
-                    text = page.extract_text() or ""
-                    logger.info(f"Extracted {len(text)} characters from page {i+1}.")
-                    text_chunks.append(text)
-                except Exception as e:
-                    logger.warning(f"Failed to extract text from page {i+1}: {e}")
-
-            main_content = "\n".join(text_chunks).strip()
-            if main_content:
-                logger.info(f"PDF scraping completed. Extracted {len(main_content)} characters total.")
-            else:
-                logger.warning("PDF parsing completed but no text extracted.")
-            return main_content or None
-
-        else:
-            logger.info("Processing HTML content with BeautifulSoup...")
-            soup = BeautifulSoup(response.content, "html.parser")
-            logger.info("Successfully parsed HTML.")
-
-            # Additional check for PDF.js viewer in HTML content
-            if "pdf.js" in soup.text.lower() or "viewer.html" in url:
-                logger.info("PDF.js viewer detected in HTML, looking for PDF links...")
-                # Look for PDF links in the page
-                pdf_links = []
-                for link in soup.find_all("a", href=True):
-                    href = link.get("href", "")
-                    if isinstance(href, str) and href.lower().endswith(".pdf"):
-                        pdf_links.append(href)
-
-                if pdf_links:
-                    # Use the first PDF link found
-                    pdf_url = pdf_links[0]
-                    if not pdf_url.startswith("http"):
-                        # Convert relative URL to absolute
-                        base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
-                        pdf_url = base_url + pdf_url
-
-                    logger.info(f"Found PDF link, scraping: {pdf_url}")
-                    return scrape_url(pdf_url)  # Recursively scrape the PDF
-
-            paragraphs = soup.find_all("p")
-            logger.info(f"Found {len(paragraphs)} <p> tags.")
-
-            main_content = "\n".join([p.get_text(strip=True) for p in paragraphs])
-
-            if main_content.strip():
-                logger.info("Extracted text content from paragraph tags.")
-            else:
-                logger.warning("No paragraph content found. Falling back to extracting all text.")
-                main_content = soup.get_text(separator="\n", strip=True)
-
-            logger.info(f"HTML scraping completed. Extracted {len(main_content)} characters.")
-            return main_content
-
+        paragraphs = [paragraph.get_text(strip=True) for paragraph in soup.find_all("p")]
+        extracted = "\n".join(text for text in paragraphs if text).strip()
+        return extracted or soup.get_text(separator="\n", strip=True) or None
+    except UnsafeUrlError as exc:
+        logger.warning("Rejected remote content: %s", exc)
+        return None
     except requests.exceptions.Timeout:
-        logger.error(f"Request timed out while scraping {url}")
+        logger.warning("Remote content request timed out")
         return None
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Request error while scraping {url}: {e}")
+    except requests.exceptions.RequestException as exc:
+        logger.warning("Remote content request failed: %s", type(exc).__name__)
         return None
-    except Exception as e:
-        logger.exception(f"Unexpected error while scraping {url}: {e}")
+    except Exception:
+        logger.exception("Remote content processing failed")
         return None

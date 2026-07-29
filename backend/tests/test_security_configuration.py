@@ -38,3 +38,24 @@ def test_auth_cookie_uses_lax_same_site_policy():
 
 def test_allowed_hosts_are_hostnames_not_cors_urls():
     assert all("://" not in host for host in config.allowed_hosts)
+
+
+def test_scraper_schemes_default_to_http_and_https_in_development():
+    assert config.parse_scraper_allowed_schemes(None, "development") == frozenset({"http", "https"})
+
+
+def test_scraper_schemes_are_required_in_production():
+    with pytest.raises(ValueError, match="SCRAPER_ALLOWED_SCHEMES"):
+        config.parse_scraper_allowed_schemes(None, "production")
+
+
+@pytest.mark.parametrize("value", ["file", "http,file", "https,gopher", ""])
+def test_scraper_schemes_reject_non_http_protocols_in_production(value):
+    with pytest.raises(ValueError, match="http and https"):
+        config.parse_scraper_allowed_schemes(value, "production")
+
+
+def test_local_authentication_is_disabled_only_in_production():
+    assert config.local_authentication_enabled("development", testing=False) is True
+    assert config.local_authentication_enabled("production", testing=False) is False
+    assert config.local_authentication_enabled("production", testing=True) is True

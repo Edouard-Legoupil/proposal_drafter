@@ -20,6 +20,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 #  Internal Modules
 from backend.core.db import get_engine
+from backend.core.config import local_authentication_enabled
 from backend.core.redis import redis_client
 from backend.core.middleware import get_cookie_settings
 from backend.core.security import (
@@ -32,6 +33,7 @@ from backend.core.security import (
     ENTRA_CLIENT_ID,
     ENTRA_CLIENT_SECRET,
     ENTRA_REDIRECT_URI,
+    store_session_token,
 )
 from backend.core.rate_limiter import check_api_rate_limit
 from backend.core.error_handlers import get_error_handler
@@ -46,6 +48,12 @@ router = APIRouter()
 def invalid_credentials_response() -> JSONResponse:
     """Return one response for unknown accounts and incorrect passwords."""
     return JSONResponse(status_code=401, content={"error": "Invalid credentials."})
+
+
+def require_local_authentication() -> None:
+    """Hide password-based endpoints outside local development and tests."""
+    if not local_authentication_enabled():
+        raise HTTPException(status_code=404, detail="Not found.")
 
 
 def _has_sso_credentials() -> bool:
@@ -218,10 +226,7 @@ async def callback(request: Request, code: str, state: str | None = None):
         SECRET_KEY,
         algorithm="HS256",
     )
-    try:
-        redis_client.setex(f"user_session:{user_id}", 28800, token)
-    except RedisError as redis_error:
-        logging.error(f"Redis error setting session for user ID {user_id}: {redis_error}")
+    store_session_token(str(user_id), token)
 
     response = RedirectResponse(url="/dashboard")
     cookie_settings = get_cookie_settings(request)
@@ -243,6 +248,7 @@ async def signup(request: Request):
     Handles new user registration.
     It hashes the user's password and security answer before storing them.
     """
+    require_local_authentication()
     # SEC-002: Rate limiting to prevent abuse
     await check_api_rate_limit(request, endpoint_type="signup", max_requests=5, window_seconds=3600)
 
@@ -346,8 +352,9 @@ async def login(request: Request):
     Handles user login.
     On successful authentication, it creates a JWT and sets it in an HttpOnly cookie.
     """
+    require_local_authentication()
+    # SEC-002: Rate limiting to prevent brute force attacks
     try:
-        # SEC-002: Rate limiting to prevent brute force attacks
         await check_api_rate_limit(request, endpoint_type="login", max_requests=10, window_seconds=60)
 
         # 1. Parse request body and validate input
@@ -429,11 +436,7 @@ async def login(request: Request):
             algorithm="HS256",
         )
 
-        try:
-            redis_client.setex(f"user_session:{user_id}", 28800, token)
-        except RedisError as redis_error:
-            logging.error(f"Redis error setting session for user ID {user_id}: {redis_error}")
-            pass
+        store_session_token(str(user_id), token)
 
         # 4. Set cookie and return success response
         response = JSONResponse(content={"message": "Login successful!"})
@@ -450,6 +453,8 @@ async def login(request: Request):
         logging.info(f"User {email} logged in successfully.")
         return response
 
+    except HTTPException:
+        raise
     except Exception as e:
         # This catch-all is a final safety net.
         # It's better to catch specific exceptions where possible.
@@ -590,6 +595,7 @@ async def get_security_question(request: Request):
     Retrieves the security question for a user based on their email.
     This is the first step in the password recovery process.
     """
+    require_local_authentication()
     # SEC-002: Rate limiting to prevent enumeration
     await check_api_rate_limit(request, endpoint_type="get_security_question", max_requests=3, window_seconds=3600)
 
@@ -618,6 +624,7 @@ async def verify_security_answer(request: Request):
     """
     Verifies a user's answer to their security question.
     """
+    require_local_authentication()
     # SEC-002: Rate limiting to prevent brute force
     await check_api_rate_limit(request, endpoint_type="verify_security_answer", max_requests=3, window_seconds=3600)
 
@@ -653,6 +660,7 @@ async def update_password(request: Request):
     """
     Updates a user's password after they have successfully answered their security question.
     """
+    require_local_authentication()
     # SEC-002: Rate limiting to prevent abuse
     await check_api_rate_limit(request, endpoint_type="update_password", max_requests=5, window_seconds=3600)
 

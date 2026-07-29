@@ -18,6 +18,7 @@ from backend.core.config import (
     ENTRA_CLIENT_ID,
     ENTRA_CLIENT_SECRET,
     ENTRA_REDIRECT_URI,
+    shared_session_store_required,
 )
 from backend.core.db import get_engine
 from backend.core.redis import is_redis_available, redis_client
@@ -30,16 +31,33 @@ logger = logging.getLogger(__name__)
 # token handling, and password management.
 
 
+def store_session_token(user_id: str, token: str, ttl: int = 28800) -> None:
+    """Persist an authenticated session, failing closed when Redis is required."""
+    try:
+        redis_client.setex(f"user_session:{user_id}", ttl, token)
+    except RedisError as exc:
+        if shared_session_store_required():
+            logger.error("Could not persist shared session for user %s: %s", user_id, exc)
+            raise HTTPException(status_code=503, detail="Session service temporarily unavailable.") from exc
+        logger.warning("Could not persist local session for user %s: %s", user_id, exc)
+
+
 def is_session_token_active(user_id: str, token: str) -> bool:
     """Validate a JWT against the user's active session when Redis is available."""
     if not is_redis_available():
-        logger.warning("Redis unavailable; accepting cryptographically valid JWT")
+        if shared_session_store_required():
+            logger.error("Shared session store unavailable during token validation")
+            raise HTTPException(status_code=503, detail="Session service temporarily unavailable.")
+        logger.warning("Redis unavailable; using local cryptographic token validation")
         return True
 
     try:
         active_token = redis_client.get(f"user_session:{user_id}")
     except RedisError as exc:
-        logger.warning("Redis session validation failed; accepting valid JWT: %s", exc)
+        if shared_session_store_required():
+            logger.error("Shared session validation failed: %s", exc)
+            raise HTTPException(status_code=503, detail="Session service temporarily unavailable.") from exc
+        logger.warning("Local session validation failed; accepting valid JWT: %s", exc)
         return True
 
     if not isinstance(active_token, str) or not active_token:
