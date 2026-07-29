@@ -15,14 +15,8 @@ redis
 
 
 # Framework for orchestrating role-playing AI agents to collaborate on tasks
-crewai>=0.48
-crewai[tools]
-crewai[azure]
-crewai[azure-ai-inference]
+crewai[tools,azure-ai-inference]>=1.9.3,<2
 pydantic[email]
-
-# Unified interface to call various LLM APIs (OpenAI, Anthropic, etc.) with consistent formatting
-litellm>=1.84.0
 
 # Official Python library for OpenAI API
 openai>=1.109.1,<3

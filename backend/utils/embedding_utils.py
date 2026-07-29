@@ -1,12 +1,11 @@
 import concurrent.futures
 import logging
 from sqlalchemy import text
-import litellm
 import nltk
 from nltk.tokenize import sent_tokenize
 import os
 
-from backend.core.llm import get_embedder_config
+from backend.core.llm import create_embedding
 
 logger = logging.getLogger(__name__)
 
@@ -24,11 +23,10 @@ except LookupError:
 
 
 # --- Embedding helper ---
-def get_embedding(chunk, model, embedder_config):
+def get_embedding(chunk):
     """Get embedding for a text chunk with error handling"""
     try:
-        response = litellm.embedding(model=model, input=[chunk], max_retries=3, **embedder_config)
-        return chunk, response.data[0]["embedding"]
+        return chunk, create_embedding(chunk)
     except Exception as e:
         logger.error(f"[EMBEDDING ERROR] Failed to get embedding for chunk: {e}")
         raise
@@ -68,15 +66,10 @@ async def process_and_store_text(reference_id, text_content, connection):
             logger.warning(f"No chunks generated for reference_id: {reference_id}")
             return
 
-        # Embedding configuration
-        embedder_config = get_embedder_config()["config"]
-        model = f"azure/{embedder_config.pop('deployment_id')}"
-        embedder_config.pop("model", None)
-
         # Generate embeddings in parallel
         logger.info(f"Starting parallel embedding generation for {len(chunks)} chunks...")
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            futures = [executor.submit(get_embedding, chunk, model, embedder_config) for chunk in chunks]
+            futures = [executor.submit(get_embedding, chunk) for chunk in chunks]
             completed = 0
             for future in concurrent.futures.as_completed(futures):
                 try:
@@ -105,7 +98,8 @@ async def process_and_store_text(reference_id, text_content, connection):
         # Update scraped_at timestamp
         connection.execute(
             text(
-                "UPDATE knowledge_card_references SET scraped_at = CURRENT_TIMESTAMP, scraping_error = FALSE WHERE id = :id"
+                "UPDATE knowledge_card_references SET scraped_at = CURRENT_TIMESTAMP, "
+                "scraping_error = FALSE WHERE id = :id"
             ),
             {"id": reference_id},
         )
@@ -115,7 +109,8 @@ async def process_and_store_text(reference_id, text_content, connection):
         # Mark as error
         connection.execute(
             text(
-                "UPDATE knowledge_card_references SET scraping_error = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = :id"
+                "UPDATE knowledge_card_references SET scraping_error = TRUE, "
+                "updated_at = CURRENT_TIMESTAMP WHERE id = :id"
             ),
             {"id": reference_id},
         )

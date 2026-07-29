@@ -49,7 +49,7 @@ def main():
     )
 
     # Suppress verbose logs from external libraries as per user request
-    for logger_name in ["litellm", "httpx", "httpcore", "openai", "urllib3"]:
+    for logger_name in ["httpx", "httpcore", "openai", "urllib3"]:
         logging.getLogger(logger_name).setLevel(logging.WARNING)
 
     logging.info("Starting reference finding process...")
@@ -164,7 +164,9 @@ def main():
                                 reference_id = uuid.uuid4()
                                 cur.execute(
                                     """
-                                    INSERT INTO knowledge_card_references (id, url, reference_type, summary, created_by, updated_by)
+                                    INSERT INTO knowledge_card_references (
+                                        id, url, reference_type, summary, created_by, updated_by
+                                    )
                                     VALUES (%s, %s, %s, %s, %s, %s)
                                 """,
                                     (

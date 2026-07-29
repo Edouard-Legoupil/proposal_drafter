@@ -5,7 +5,8 @@ import os
 from dotenv import load_dotenv
 
 # Third-Party Libraries
-from crewai import LLM
+from crewai.llms.providers.azure.completion import AzureCompletion
+from openai import AzureOpenAI
 
 load_dotenv()
 
@@ -31,13 +32,29 @@ if missing_vars:
 # Initialize the CrewAI LLM for Azure OpenAI
 # This object will be used by the CrewAI agents to interact with the Azure OpenAI service.
 
-llm = LLM(
-    model=f"azure/{os.getenv('AZURE_DEPLOYMENT_NAME')}",
-    api_base=os.getenv("AZURE_OPENAI_ENDPOINT"),
+llm = AzureCompletion(
+    model=os.getenv("AZURE_DEPLOYMENT_NAME"),
+    endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
     api_key=os.getenv("AZURE_OPENAI_API_KEY"),
     api_version=os.getenv("OPENAI_API_VERSION"),
     timeout=30,
 )
+
+
+def create_embedding(content: str) -> list[float]:
+    """Create an embedding through the official Azure OpenAI client."""
+    client = AzureOpenAI(
+        azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT_EMBED"),
+        api_key=os.getenv("AZURE_OPENAI_API_KEY_EMBED"),
+        api_version=os.getenv("AZURE_OPENAI_API_VERSION_EMBED"),
+        timeout=30,
+        max_retries=3,
+    )
+    response = client.embeddings.create(
+        model=os.getenv("AZURE_EMBEDDING_DEPLOYMENT_NAME"),
+        input=[content],
+    )
+    return response.data[0].embedding
 
 
 def get_embedder_config():

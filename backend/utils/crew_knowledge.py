@@ -2,10 +2,9 @@ import re
 from crewai import Agent, Task, Crew, Process
 from crewai.project import CrewBase, agent, crew, task
 from crewai.tools import BaseTool
-from backend.core.llm import llm, get_embedder_config
+from backend.core.llm import create_embedding, llm
 from backend.core.db import get_engine
 from sqlalchemy import text
-import litellm
 
 
 def log_rag_output(output):
@@ -73,12 +72,7 @@ class VectorSearchTool(BaseTool):
         self.knowledge_card_id = knowledge_card_id
 
     def _run(self, search_query: str) -> str:
-        embedder_config = get_embedder_config()["config"]
-        model = f"azure/{embedder_config.pop('deployment_id')}"
-        embedder_config.pop("model", None)
-
-        response = litellm.embedding(model=model, input=[search_query], **embedder_config)
-        query_embedding = response.data[0]["embedding"]
+        query_embedding = create_embedding(search_query)
         with get_engine().connect() as connection:
             # The 1 - (embedding <=> :query_embedding) is for cosine similarity
             # pgvector returns the cosine distance, so we subtract from 1 to get similarity

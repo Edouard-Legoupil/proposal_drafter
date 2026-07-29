@@ -155,7 +155,7 @@ def main():
     )
 
     # Configure specific loggers to capture API calls and other external libs
-    for logger_name in ["litellm", "httpx", "httpcore", "openai"]:
+    for logger_name in ["httpx", "httpcore", "openai"]:
         logger = logging.getLogger(logger_name)
         logger.setLevel(logging.INFO)
         # Avoid adding duplicate handlers if they already propagate to root or have handlers
@@ -205,7 +205,8 @@ def main():
             where_clauses = []
             if args.generate_if_null:
                 where_clauses.append(
-                    "(kc.generated_sections IS NULL OR kc.generated_sections::text = '{}' OR kc.generated_sections::text = 'null')"
+                    "(kc.generated_sections IS NULL OR kc.generated_sections::text = '{}' "
+                    "OR kc.generated_sections::text = 'null')"
                 )
 
             if args.card_type != "all":
