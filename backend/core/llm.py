@@ -1,5 +1,7 @@
 #  Standard Library
+from functools import lru_cache
 import os
+from typing import Any
 
 # Load environment variables from a .env file.
 from dotenv import load_dotenv
@@ -15,6 +17,19 @@ load_dotenv()
 # Third-Party Libraries
 
 # Note: We now use CrewAI's native Azure LLM support instead of LangChain
+
+DEFAULT_EMBEDDING_MODEL = "text-embedding-ada-002"
+DEFAULT_EMBEDDING_API_VERSION = "2023-05-15"
+
+
+class AzureOpenAICompletion(AzureCompletion):
+    """Native Azure OpenAI completion that supports aliased deployments."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        # AzureCompletion otherwise infers this from the deployment alias prefix.
+        self.is_openai_model = True
+
 
 # Validate that all required environment variables are set.
 required_vars = [
@@ -32,7 +47,7 @@ if missing_vars:
 # Initialize the CrewAI LLM for Azure OpenAI
 # This object will be used by the CrewAI agents to interact with the Azure OpenAI service.
 
-llm = AzureCompletion(
+llm = AzureOpenAICompletion(
     model=os.getenv("AZURE_DEPLOYMENT_NAME"),
     endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
     api_key=os.getenv("AZURE_OPENAI_API_KEY"),
@@ -41,17 +56,42 @@ llm = AzureCompletion(
 )
 
 
-def create_embedding(content: str) -> list[float]:
-    """Create an embedding through the official Azure OpenAI client."""
-    client = AzureOpenAI(
-        azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT_EMBED"),
-        api_key=os.getenv("AZURE_OPENAI_API_KEY_EMBED"),
-        api_version=os.getenv("AZURE_OPENAI_API_VERSION_EMBED"),
+def _get_embedding_settings() -> dict[str, str]:
+    required_vars = (
+        "AZURE_OPENAI_ENDPOINT_EMBED",
+        "AZURE_OPENAI_API_KEY_EMBED",
+    )
+    missing_vars = [name for name in required_vars if not os.getenv(name)]
+    if missing_vars:
+        raise ValueError("Missing required environment variables for embeddings: " + ", ".join(missing_vars))
+
+    return {
+        "endpoint": os.environ["AZURE_OPENAI_ENDPOINT_EMBED"],
+        "api_key": os.environ["AZURE_OPENAI_API_KEY_EMBED"],
+        "api_version": os.getenv("AZURE_OPENAI_API_VERSION_EMBED", DEFAULT_EMBEDDING_API_VERSION),
+        "model": os.getenv("AZURE_EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL),
+        "deployment": os.getenv("AZURE_EMBEDDING_DEPLOYMENT_NAME", DEFAULT_EMBEDDING_MODEL),
+    }
+
+
+@lru_cache(maxsize=1)
+def _get_embedding_client() -> AzureOpenAI:
+    """Return the process-wide synchronous client used by embedding workers."""
+    settings = _get_embedding_settings()
+    return AzureOpenAI(
+        azure_endpoint=settings["endpoint"],
+        api_key=settings["api_key"],
+        api_version=settings["api_version"],
         timeout=30,
         max_retries=3,
     )
-    response = client.embeddings.create(
-        model=os.getenv("AZURE_EMBEDDING_DEPLOYMENT_NAME"),
+
+
+def create_embedding(content: str) -> list[float]:
+    """Create an embedding through the official Azure OpenAI client."""
+    settings = _get_embedding_settings()
+    response = _get_embedding_client().embeddings.create(
+        model=settings["deployment"],
         input=[content],
     )
     return response.data[0].embedding
@@ -61,14 +101,15 @@ def get_embedder_config():
     """
     Returns the configuration for the Azure OpenAI embedder.
     """
+    settings = _get_embedding_settings()
     return {
         "provider": "azure",
         "config": {
-            "model": os.getenv("AZURE_EMBEDDING_MODEL", "text-embedding-ada-002"),
-            "deployment_id": os.getenv("AZURE_EMBEDDING_DEPLOYMENT_NAME", "text-embedding-ada-002"),
-            "api_key": os.getenv("AZURE_OPENAI_API_KEY_EMBED"),
-            "api_base": os.getenv("AZURE_OPENAI_ENDPOINT_EMBED"),
-            "api_version": os.getenv("AZURE_OPENAI_API_VERSION_EMBED", "2023-05-15"),
+            "model": settings["model"],
+            "deployment_id": settings["deployment"],
+            "api_key": settings["api_key"],
+            "api_base": settings["endpoint"],
+            "api_version": settings["api_version"],
         },
     }
 
