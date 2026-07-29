@@ -244,7 +244,12 @@ def test_reset_embedding_client_closes_once_and_allows_recreation(monkeypatch):
 
 def test_runtime_has_no_litellm_dependency_or_references():
     backend_root = Path(__file__).resolve().parents[1]
-    runtime_files = [path for path in backend_root.rglob("*.py") if "tests" not in path.relative_to(backend_root).parts]
+    excluded_directories = {"tests", "venv", ".venv", "__pycache__"}
+    runtime_files = [
+        path
+        for path in backend_root.rglob("*.py")
+        if excluded_directories.isdisjoint(path.relative_to(backend_root).parts)
+    ]
     offenders = [
         str(path.relative_to(backend_root.parent))
         for path in runtime_files
