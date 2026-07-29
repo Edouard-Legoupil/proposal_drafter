@@ -170,7 +170,7 @@ def test_embedding_calls_reuse_one_synchronous_client(monkeypatch):
 
 def test_embedding_client_cold_start_is_single_flight(monkeypatch):
     worker_count = 5
-    start_barrier = threading.Barrier(worker_count)
+    start_barrier = threading.Barrier(worker_count + 1)
     constructor_condition = threading.Condition()
     release_constructor = threading.Event()
     construction_count = 0
@@ -201,11 +201,10 @@ def test_embedding_client_cold_start_is_single_flight(monkeypatch):
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=worker_count) as executor:
         futures = [executor.submit(create_from_worker, index) for index in range(worker_count)]
+        start_barrier.wait(timeout=3)
         with constructor_condition:
-            constructor_condition.wait_for(
-                lambda: construction_count == worker_count,
-                timeout=1,
-            )
+            assert constructor_condition.wait_for(lambda: construction_count >= 1, timeout=3)
+            constructor_condition.wait_for(lambda: construction_count > 1, timeout=0.1)
         release_constructor.set()
         results = [future.result(timeout=3) for future in futures]
 
