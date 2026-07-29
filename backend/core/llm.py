@@ -1,6 +1,7 @@
 #  Standard Library
-from functools import lru_cache
+import atexit
 import os
+from threading import Lock
 from typing import Any
 
 # Load environment variables from a .env file.
@@ -20,6 +21,8 @@ load_dotenv()
 
 DEFAULT_EMBEDDING_MODEL = "text-embedding-ada-002"
 DEFAULT_EMBEDDING_API_VERSION = "2023-05-15"
+_embedding_client: AzureOpenAI | None = None
+_embedding_client_lock = Lock()
 
 
 class AzureOpenAICompletion(AzureCompletion):
@@ -74,17 +77,36 @@ def _get_embedding_settings() -> dict[str, str]:
     }
 
 
-@lru_cache(maxsize=1)
 def _get_embedding_client() -> AzureOpenAI:
     """Return the process-wide synchronous client used by embedding workers."""
-    settings = _get_embedding_settings()
-    return AzureOpenAI(
-        azure_endpoint=settings["endpoint"],
-        api_key=settings["api_key"],
-        api_version=settings["api_version"],
-        timeout=30,
-        max_retries=3,
-    )
+    global _embedding_client
+
+    with _embedding_client_lock:
+        if _embedding_client is None:
+            settings = _get_embedding_settings()
+            _embedding_client = AzureOpenAI(
+                azure_endpoint=settings["endpoint"],
+                api_key=settings["api_key"],
+                api_version=settings["api_version"],
+                timeout=30,
+                max_retries=3,
+            )
+        return _embedding_client
+
+
+def reset_embedding_client() -> None:
+    """Close and clear the retained embedding client, if one exists."""
+    global _embedding_client
+
+    with _embedding_client_lock:
+        client = _embedding_client
+        _embedding_client = None
+
+    if client is not None:
+        client.close()
+
+
+atexit.register(reset_embedding_client)
 
 
 def create_embedding(content: str) -> list[float]:

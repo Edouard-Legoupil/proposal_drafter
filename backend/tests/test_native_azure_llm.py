@@ -1,4 +1,6 @@
+import concurrent.futures
 from pathlib import Path
+import threading
 from types import SimpleNamespace
 
 import pytest
@@ -9,9 +11,9 @@ from backend.core import llm as llm_module
 
 @pytest.fixture(autouse=True)
 def clear_embedding_client_cache():
-    llm_module._get_embedding_client.cache_clear()
+    llm_module.reset_embedding_client()
     yield
-    llm_module._get_embedding_client.cache_clear()
+    llm_module.reset_embedding_client()
 
 
 def test_chat_llm_uses_crewai_native_azure_provider():
@@ -57,6 +59,9 @@ def test_create_embedding_uses_official_azure_openai_client(monkeypatch):
         def __init__(self, **kwargs):
             client_kwargs.update(kwargs)
             self.embeddings = FakeEmbeddings()
+
+        def close(self):
+            pass
 
     monkeypatch.setenv("AZURE_OPENAI_ENDPOINT_EMBED", "https://embed.openai.azure.com/")
     monkeypatch.setenv("AZURE_OPENAI_API_KEY_EMBED", "embed-key")
@@ -114,6 +119,9 @@ def test_embedding_config_preserves_legacy_defaults(monkeypatch):
             clients.append(kwargs)
             self.embeddings = FakeEmbeddings()
 
+        def close(self):
+            pass
+
     monkeypatch.setenv("AZURE_OPENAI_ENDPOINT_EMBED", "https://embed.openai.azure.com/")
     monkeypatch.setenv("AZURE_OPENAI_API_KEY_EMBED", "embed-key")
     monkeypatch.delenv("AZURE_OPENAI_API_VERSION_EMBED", raising=False)
@@ -146,6 +154,9 @@ def test_embedding_calls_reuse_one_synchronous_client(monkeypatch):
             client_count += 1
             self.embeddings = FakeEmbeddings()
 
+        def close(self):
+            pass
+
     monkeypatch.setenv("AZURE_OPENAI_ENDPOINT_EMBED", "https://embed.openai.azure.com/")
     monkeypatch.setenv("AZURE_OPENAI_API_KEY_EMBED", "embed-key")
     monkeypatch.setattr(llm_module, "AzureOpenAI", FakeAzureOpenAI)
@@ -155,6 +166,81 @@ def test_embedding_calls_reuse_one_synchronous_client(monkeypatch):
 
     assert client_count == 1
     assert create_inputs == [["first"], ["second"]]
+
+
+def test_embedding_client_cold_start_is_single_flight(monkeypatch):
+    worker_count = 5
+    start_barrier = threading.Barrier(worker_count)
+    constructor_condition = threading.Condition()
+    release_constructor = threading.Event()
+    construction_count = 0
+
+    class FakeEmbeddings:
+        def create(self, **kwargs):
+            return SimpleNamespace(data=[SimpleNamespace(embedding=[1.0])])
+
+    class DelayedAzureOpenAI:
+        def __init__(self, **kwargs):
+            nonlocal construction_count
+            with constructor_condition:
+                construction_count += 1
+                constructor_condition.notify_all()
+            assert release_constructor.wait(timeout=3)
+            self.embeddings = FakeEmbeddings()
+
+        def close(self):
+            pass
+
+    def create_from_worker(index):
+        start_barrier.wait(timeout=3)
+        return llm_module.create_embedding(f"content-{index}")
+
+    monkeypatch.setenv("AZURE_OPENAI_ENDPOINT_EMBED", "https://embed.openai.azure.com/")
+    monkeypatch.setenv("AZURE_OPENAI_API_KEY_EMBED", "embed-key")
+    monkeypatch.setattr(llm_module, "AzureOpenAI", DelayedAzureOpenAI)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=worker_count) as executor:
+        futures = [executor.submit(create_from_worker, index) for index in range(worker_count)]
+        with constructor_condition:
+            constructor_condition.wait_for(
+                lambda: construction_count == worker_count,
+                timeout=1,
+            )
+        release_constructor.set()
+        results = [future.result(timeout=3) for future in futures]
+
+    assert construction_count == 1
+    assert results == [[1.0]] * worker_count
+
+
+def test_reset_embedding_client_closes_once_and_allows_recreation(monkeypatch):
+    clients = []
+
+    class FakeEmbeddings:
+        def create(self, **kwargs):
+            return SimpleNamespace(data=[SimpleNamespace(embedding=[1.0])])
+
+    class ClosableAzureOpenAI:
+        def __init__(self, **kwargs):
+            self.close_count = 0
+            self.embeddings = FakeEmbeddings()
+            clients.append(self)
+
+        def close(self):
+            self.close_count += 1
+
+    monkeypatch.setenv("AZURE_OPENAI_ENDPOINT_EMBED", "https://embed.openai.azure.com/")
+    monkeypatch.setenv("AZURE_OPENAI_API_KEY_EMBED", "embed-key")
+    monkeypatch.setattr(llm_module, "AzureOpenAI", ClosableAzureOpenAI)
+
+    llm_module.create_embedding("first")
+    llm_module.reset_embedding_client()
+    llm_module.reset_embedding_client()
+    llm_module.create_embedding("second")
+    llm_module.reset_embedding_client()
+
+    assert len(clients) == 2
+    assert [client.close_count for client in clients] == [1, 1]
 
 
 def test_runtime_has_no_litellm_dependency_or_references():
