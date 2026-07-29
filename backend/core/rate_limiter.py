@@ -6,11 +6,12 @@ from collections import defaultdict
 
 #  Third-Party Libraries
 from fastapi import Request, HTTPException
+from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer
 
 #  Internal Modules
 from backend.core.error_handlers import get_error_handler
-from backend.core.config import trusted_proxy_ips
+from backend.core.config import shared_session_store_required, trusted_proxy_ips
 from backend.core.redis import is_redis_available, redis_client
 
 #  Configure logging
@@ -232,6 +233,7 @@ class RateLimiter:
             status_code=429,
             detail=f"Rate limit exceeded. Retry after {retry_after} seconds.",
             headers={
+                "Retry-After": str(retry_after),
                 "X-RateLimit-Retry-After": str(retry_after),
                 "X-RateLimit-Tier": tier,
             },
@@ -373,49 +375,33 @@ async def rate_limit_middleware(request: Request, call_next) -> Any:
 
     Can be applied globally or to specific routes.
     """
-    # Skip rate limiting for health checks and other critical endpoints
-    if request.url.path in ["/health", "/api/health", "/metrics"]:
+    path = request.url.path
+    policy = _rate_limit_policy(request.method, path)
+    if policy is None:
         return await call_next(request)
 
-    # Get rate limiter
+    endpoint_type, max_requests, window_seconds = policy
     limiter = get_rate_limiter()
-
-    # Check if this is an LLM endpoint
-    if request.url.path.startswith("/api/llm/"):
-        try:
-            # For LLM endpoints, we need to know the token count
-            # This would typically come from the request body
-            try:
-                body = await request.json()
-                token_count = body.get("token_count", 0)
-            except Exception:
-                token_count = 0
-
-            # Check rate limit
-            await limiter.check_rate_limit(request, "llm", token_count)
-        except HTTPException:
-            # Rate limit exceeded, return the error
-            raise
-        except Exception as e:
-            logger.error(f"Error in rate limiting: {e}")
-            # Allow request to proceed if rate limiting fails
-            pass
-
-    # For non-LLM endpoints, apply basic rate limiting
-    elif not request.url.path.startswith("/api/auth/"):  # Skip auth endpoints
-        try:
-            await limiter.check_rate_limit(request, "api", 0)
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.error(f"Error in rate limiting: {e}")
-            pass
+    try:
+        await limiter.check_rate_limit(
+            request,
+            endpoint_type,
+            0,
+            max_requests=max_requests,
+            window_seconds=window_seconds,
+        )
+    except HTTPException as exc:
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail}, headers=exc.headers)
+    except Exception as exc:
+        logger.error("Rate-limit storage failed: %s", type(exc).__name__)
+        if shared_session_store_required():
+            return JSONResponse(status_code=503, content={"detail": "Request limiting temporarily unavailable."})
 
     # Proceed with the request
     response = await call_next(request)
 
     # Add rate limit headers to response
-    if request.url.path.startswith("/api/llm/"):
+    if endpoint_type == "llm":
         limit_key = await limiter.get_rate_limit_key(request)
         user = request.state.user if hasattr(request.state, "user") else None
         tier = limiter.get_user_tier(user)
@@ -432,6 +418,31 @@ async def rate_limit_middleware(request: Request, call_next) -> Any:
             response.headers["X-RateLimit-Reset"] = str(reset)
 
     return response
+
+
+def _rate_limit_policy(method: str, path: str) -> tuple[str, int, int] | None:
+    """Return a narrow policy for costly or unauthenticated application paths."""
+    if method.upper() not in {"POST", "PUT", "PATCH"}:
+        return None
+    if path == "/api/wizard/search":
+        return ("public_search", 30, 60)
+
+    costly_prefixes = (
+        "/api/generate-proposal-sections/",
+        "/api/process_section/",
+        "/api/regenerate_section/",
+        "/api/regenerate-full-proposal/",
+        "/api/llm/",
+    )
+    if path.startswith(costly_prefixes):
+        return ("llm", 10, 60)
+    if path.startswith("/api/knowledge-cards/") and any(
+        marker in path for marker in ("/ingest", "/reingest", "/generate", "/identify-references", "/upload")
+    ):
+        return ("knowledge_ingestion", 10, 60)
+    if path.endswith("/upload-submitted-pdf"):
+        return ("pdf_upload", 10, 60)
+    return None
 
 
 # Utility functions for common rate limiting scenarios

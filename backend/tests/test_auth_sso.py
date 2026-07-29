@@ -1,3 +1,4 @@
+import json
 import os
 from unittest.mock import MagicMock, patch
 
@@ -189,6 +190,31 @@ async def test_sso_callback_rejects_invalid_state(cookie_state, query_state):
 
     assert response.status_code == 400
     assert any("oauth_state=" in header for header in response.headers.getlist("set-cookie"))
+
+
+@pytest.mark.asyncio
+async def test_sso_callback_does_not_expose_provider_error_description():
+    mock_msal_app = MagicMock()
+    mock_msal_app.acquire_token_by_authorization_code.return_value = {
+        "error": "invalid_grant",
+        "error_description": "tenant secret and internal trace",
+    }
+
+    with patch("backend.api.auth.ENTRA_TENANT_ID", "tenant"), patch(
+        "backend.api.auth.ENTRA_CLIENT_ID", "client"
+    ), patch("backend.api.auth.ENTRA_CLIENT_SECRET", "secret"), patch(
+        "backend.api.auth.ENTRA_REDIRECT_URI", "https://app.example/api/callback"
+    ), patch(
+        "backend.api.auth._get_msal_app", return_value=mock_msal_app
+    ):
+        response = await callback(
+            _mock_request(cookies={"oauth_state": "expected-state"}),
+            "mock_code",
+            state="expected-state",
+        )
+
+    assert response.status_code == 400
+    assert json.loads(response.body) == {"error": "SSO authentication failed."}
 
 
 @pytest.mark.asyncio

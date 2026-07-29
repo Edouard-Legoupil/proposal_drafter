@@ -166,7 +166,7 @@ def test_upload_pdf_reference_success(
     db_session.commit()
 
     # 3. Create a dummy in-memory file to upload
-    dummy_file_content = io.BytesIO(b"This is a dummy pdf.")
+    dummy_file_content = io.BytesIO(b"%PDF-1.7\nThis is a dummy pdf.")
 
     # 4. Make the POST request to the upload endpoint
     response = authenticated_client.post(

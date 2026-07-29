@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 # Third-Party Libraries
 import pytest
 from fastapi import HTTPException
+from starlette.requests import Request
 
 # Local Imports
 from backend.core.error_handlers import (
@@ -13,6 +14,48 @@ from backend.core.error_handlers import (
     get_error_handler,
     llm_circuit_breaker,
 )
+from backend.core.middleware import custom_http_exception_handler
+
+
+def _request(request_id="request-123"):
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/test",
+            "headers": [],
+            "client": ("203.0.113.10", 443),
+            "server": ("app.example.org", 443),
+        }
+    )
+    request.state.request_id = request_id
+    return request
+
+
+@pytest.mark.asyncio
+async def test_http_500_detail_is_not_exposed_and_has_correlation_id():
+    response = await custom_http_exception_handler(
+        _request(),
+        HTTPException(status_code=500, detail="password=secret SQL failed at /internal/db.py"),
+    )
+
+    body = response.body.decode()
+    assert response.status_code == 500
+    assert "password" not in body
+    assert "SQL failed" not in body
+    assert "Internal server error" in body
+    assert "request-123" in body
+    assert response.headers["X-Request-ID"] == "request-123"
+
+
+@pytest.mark.asyncio
+async def test_safe_http_404_detail_remains_actionable():
+    response = await custom_http_exception_handler(
+        _request(),
+        HTTPException(status_code=404, detail="Proposal not found."),
+    )
+
+    assert "Proposal not found." in response.body.decode()
 
 
 class TestSecurityError:
@@ -215,7 +258,7 @@ class TestCircuitBreaker:
         handler._init_llm_circuit_breaker()
 
         # Simulate failures
-        for i in range(5):
+        for _ in range(5):
             handler.record_llm_failure()
 
         cb = handler.circuit_breakers["llm"]
@@ -228,7 +271,7 @@ class TestCircuitBreaker:
         handler._init_llm_circuit_breaker()
 
         # Open the circuit breaker
-        for i in range(5):
+        for _ in range(5):
             handler.record_llm_failure()
 
         # Should block requests
@@ -241,7 +284,7 @@ class TestCircuitBreaker:
         handler._init_llm_circuit_breaker()
 
         # Open the circuit breaker
-        for i in range(5):
+        for _ in range(5):
             handler.record_llm_failure()
 
         # Mock the timeout by setting last_failure_time in the past
@@ -261,7 +304,7 @@ class TestCircuitBreaker:
         handler._init_llm_circuit_breaker()
 
         # Open and transition to half-open
-        for i in range(5):
+        for _ in range(5):
             handler.record_llm_failure()
 
         from datetime import datetime, timedelta
@@ -273,7 +316,7 @@ class TestCircuitBreaker:
         handler.check_llm_circuit_breaker()
 
         # Record successes
-        for i in range(2):
+        for _ in range(2):
             handler.record_llm_success()
 
         # Should now be closed
@@ -332,7 +375,7 @@ class TestCircuitBreakerDecorator:
         handler._init_llm_circuit_breaker()
 
         # Open the circuit breaker
-        for i in range(5):
+        for _ in range(5):
             handler.record_llm_failure()
 
         @llm_circuit_breaker

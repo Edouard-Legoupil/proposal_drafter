@@ -40,6 +40,7 @@ from backend.core.middleware import (
     setup_security_middleware,
     custom_http_exception_handler,
 )
+from backend.core.rate_limiter import rate_limit_middleware
 from backend.utils.sharepoint_sync import (
     initialize_database,
     setup_sharepoint_sync_scheduler,
@@ -118,6 +119,7 @@ app = FastAPI(
 # --- Middleware Configuration ---
 # Middleware functions run for every request, before it's processed by a specific endpoint.
 # They are used here for handling CORS, security headers, and custom exceptions.
+app.middleware("http")(rate_limit_middleware)
 setup_security_middleware(app)  # TASK-SEC-007: Add Security HTTP Headers
 setup_cors_middleware(app)
 

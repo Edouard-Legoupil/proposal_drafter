@@ -9,11 +9,11 @@ This router provides endpoints for the wizard utility including:
 - Searching Q&A content
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func, or_, desc, select
-from typing import List, Optional
+from typing import Annotated, List, Optional
 from datetime import datetime, timedelta
 
 from backend.core.dependencies import get_db_session
@@ -53,8 +53,8 @@ async def get_categories(db: AsyncSession = Depends(get_db_session)):
 async def get_qa_items(
     category_id: Optional[int] = None,
     search: Optional[str] = None,
-    limit: int = 20,
-    offset: int = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
     db: AsyncSession = Depends(get_db_session),
 ):
     """

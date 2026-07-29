@@ -1,10 +1,10 @@
 #  Standard Library
 import json
+import io
 import uuid
 import time
 from datetime import datetime, timedelta
 import logging
-import tempfile
 import os
 from typing import Optional, Dict, Any
 
@@ -67,6 +67,7 @@ from backend.models.schemas import (
     ArtifactType,
 )
 from backend.utils.incident_service import IncidentService
+from backend.utils.upload_security import read_limited_pdf_upload, validate_pdf_page_count
 
 
 from backend.utils.proposal_logic import (
@@ -2288,20 +2289,15 @@ async def upload_submitted_pdf(
             proposal_template = load_proposal_template(template_name)
             section_titles = [section["section_name"] for section in proposal_template.get("sections", [])]
 
-            # Read the PDF content
-            pdf_content = await file.read()
-
-            # Use a temporary file to work with pdfplumber
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
-                temp_pdf.write(pdf_content)
-                temp_pdf_path = temp_pdf.name
+            pdf_content = await read_limited_pdf_upload(file)
 
             # Process the PDF with pdfplumber
             extracted_sections = {}
-            with pdfplumber.open(temp_pdf_path) as pdf:
+            with pdfplumber.open(io.BytesIO(pdf_content)) as pdf:
+                validate_pdf_page_count(pdf)
                 full_text = ""
                 for page in pdf.pages:
-                    full_text += page.extract_text() + "\n"
+                    full_text += (page.extract_text() or "") + "\n"
 
             # This is a simple parsing strategy: find a section title and capture text until the next title
             for i, title in enumerate(section_titles):
@@ -2318,9 +2314,6 @@ async def upload_submitted_pdf(
                         extracted_sections[title] = full_text[content_start:next_title_index].strip()
                     else:
                         extracted_sections[title] = full_text[content_start:].strip()
-
-            # Clean up the temporary file
-            os.unlink(temp_pdf_path)
 
             if not extracted_sections:
                 raise HTTPException(
@@ -2357,10 +2350,7 @@ async def upload_submitted_pdf(
         raise http_exc
     except Exception as e:
         logger.error(f"[PDF UPLOAD ERROR] {e}", exc_info=True)
-        # Clean up temp file in case of error
-        if "temp_pdf_path" in locals() and os.path.exists(temp_pdf_path):
-            os.unlink(temp_pdf_path)
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
+        raise HTTPException(status_code=500, detail="Failed to process PDF file.") from e
 
 
 @router.post("/proposals/{proposal_id}/save-draft-review")

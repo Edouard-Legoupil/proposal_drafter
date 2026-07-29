@@ -149,8 +149,8 @@ async def callback(request: Request, code: str, state: str | None = None):
     )
 
     if "error" in result:
-        logging.error(f"MSAL Error: {result.get('error_description')}")
-        return JSONResponse(status_code=400, content={"error": result.get("error_description")})
+        logging.error("SSO token exchange failed: %s", result.get("error", "unknown_error"))
+        return JSONResponse(status_code=400, content={"error": "SSO authentication failed."})
 
     access_token = result.get("access_token")
     result.get("id_token_claims")

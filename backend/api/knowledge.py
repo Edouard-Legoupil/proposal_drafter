@@ -48,6 +48,7 @@ from backend.models.schemas import (
     ArtifactType,
 )
 from backend.utils.incident_service import IncidentService
+from backend.utils.upload_security import read_limited_pdf_upload, validate_pdf_page_count
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -1251,14 +1252,13 @@ async def upload_pdf_reference(
     Uploads a PDF for a reference, extracts text, and stores embeddings.
     """
     await _check_reference_card_access(reference_id, current_user, "edit")
-    if file.content_type != "application/pdf":
-        raise HTTPException(status_code=400, detail="File must be a PDF.")
-
     try:
-        pdf_reader = PdfReader(file.file)
+        pdf_content = await read_limited_pdf_upload(file)
+        pdf_reader = PdfReader(io.BytesIO(pdf_content))
+        validate_pdf_page_count(pdf_reader)
         text_content = ""
         for page in pdf_reader.pages:
-            text_content += page.extract_text()
+            text_content += page.extract_text() or ""
 
         if not text_content:
             raise HTTPException(status_code=400, detail="Could not extract text from PDF.")
@@ -1273,9 +1273,11 @@ async def upload_pdf_reference(
             )
 
         return {"status": "success", "message": "PDF content ingested successfully."}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error processing PDF for reference {reference_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to process PDF file.")
+        raise HTTPException(status_code=500, detail="Failed to process PDF file.") from e
 
 
 def _update_progress(

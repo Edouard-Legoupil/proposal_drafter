@@ -12,6 +12,13 @@ from starlette.requests import Request
 from backend.core.rate_limiter import RateLimiter, get_rate_limiter
 
 
+def test_rate_limit_middleware_is_registered_on_application():
+    from backend.core.rate_limiter import rate_limit_middleware
+    from backend.main import app
+
+    assert any(middleware.kwargs.get("dispatch") is rate_limit_middleware for middleware in app.user_middleware)
+
+
 def test_rate_limiter_initialization():
     """Test that RateLimiter initializes correctly with proper configurations."""
     limiter = RateLimiter()
@@ -95,6 +102,7 @@ async def test_request_based_rate_limiting():
     # Should be an HTTPException
     assert exc_info.value.status_code == 429
     assert "rate limit exceeded" in str(exc_info.value.detail).lower()
+    assert exc_info.value.headers["Retry-After"]
 
 
 @pytest.mark.asyncio

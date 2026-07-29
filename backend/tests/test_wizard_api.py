@@ -50,6 +50,16 @@ def test_get_qa_items_returns_pagination_contract(wizard_client):
     assert response.json() == {"total": 0, "limit": 5, "offset": 2, "items": []}
 
 
+@pytest.mark.parametrize("query", ["limit=0", "limit=101", "offset=-1"])
+def test_get_qa_items_rejects_unbounded_pagination(wizard_client, query):
+    client, db = wizard_client
+
+    response = client.get(f"/api/wizard/qa?{query}")
+
+    assert response.status_code == 422
+    db.execute.assert_not_awaited()
+
+
 def test_search_qa_returns_search_contract(wizard_client):
     client, db = wizard_client
     db.execute.side_effect = [_result(scalar=0), _result(scalars=[])]

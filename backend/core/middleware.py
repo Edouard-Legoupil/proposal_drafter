@@ -1,5 +1,7 @@
 #  Standard Library
 from datetime import datetime, timedelta, timezone
+import logging
+import uuid
 
 #  Third-Party Libraries
 from fastapi import Request, HTTPException
@@ -12,6 +14,8 @@ from sqlalchemy import text
 #  Internal Modules
 from backend.core.config import APP_ENV, allowed_hosts, origins
 from backend.core.db import engine
+
+logger = logging.getLogger(__name__)
 
 # This module contains all custom middleware, exception handlers, and background tasks.
 
@@ -30,7 +34,9 @@ def setup_security_middleware(app):
         Adds comprehensive security headers to all responses.
         Implements TASK-SEC-007: Add Security HTTP Headers
         """
+        request.state.request_id = str(uuid.uuid4())
         response = await call_next(request)
+        response.headers["X-Request-ID"] = request.state.request_id
 
         # Content Security Policy - strict policy to prevent XSS
         # Allow external resources needed by the frontend
@@ -119,7 +125,21 @@ async def custom_http_exception_handler(request: Request, exc: HTTPException):
     not be able to read error messages from the API.
     """
     origin = request.headers.get("origin")
-    response = JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+    request_id = str(getattr(request.state, "request_id", uuid.uuid4()))
+    headers = dict(exc.headers or {})
+    headers["X-Request-ID"] = request_id
+    if exc.status_code >= 500:
+        logger.error(
+            "HTTP %s failure on %s (request_id=%s): %s",
+            exc.status_code,
+            request.url.path,
+            request_id,
+            exc.detail,
+        )
+        content = {"detail": "Internal server error", "request_id": request_id}
+    else:
+        content = {"detail": exc.detail}
+    response = JSONResponse(status_code=exc.status_code, content=content, headers=headers)
     if origin in origins:
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Access-Control-Allow-Credentials"] = "true"
